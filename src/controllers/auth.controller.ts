@@ -1,8 +1,11 @@
 import { Request, RequestHandler, Response } from "express"
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto'
+
 import UserModel from "../models/user.model";
 import { AuthenticatedUserRequest } from "../types/types";
+import sendResetEmail from "../utils/forgotPasswordMail";
 
 const userlogin = async (req: Request, res: Response) => {
     try {
@@ -199,10 +202,98 @@ const isAuthenticated = async (req: Request, res: Response) => {
     }
 }
 
+const forgotPassword = async (req: Request, res: Response): Promise<any> => {
+  const { email } = req.body;
+
+  // Check if the email exists in the database
+  try {
+    const user = await UserModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found', error: true, ok: false });
+    }
+
+    // Generate a token for password reset (using crypto or JWT)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    // Hash the token and store it in the database for later validation
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    // Store the hashed token and set an expiration time (1 hour)
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpire = (Date.now() + 3600000); // 1 hour in milliseconds
+
+    await user.save();
+
+    // Generate the password reset URL (ensure to use your real app's URL)
+    let resetLink: string;
+    
+    if (process.env.NODE_ENV === "production") {
+      resetLink = `https://www.verticalliving.com/reset-password?token=${resetToken}`;
+    }
+    else {
+      resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
+    }
+
+    // Send the password reset email
+    await sendResetEmail(user.email, user.username, resetLink);
+
+    return res.status(200).json({
+      message: 'Password reset email sent. Please check your inbox.',
+    });
+  } catch (error) {
+    console.error('Error handling forgot password request: ', error);
+    return res.status(500).json({ message: 'Server error. Please try again later.', error: true, ok: false });
+  }
+};
+
+const resetForgotPassword = async (req: Request, res: Response): Promise<any> => {
+  const { token, password } = req.body;
+
+  if (!token || !password) {
+    return res.status(400).json({ message: "Invalid request. Token and password are required.", error: true, ok: false });
+  }
+
+
+  try {
+    // Hash the received token to match the stored one
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    // Find the user with the provided reset token (and check if it’s not expired)
+    const user = await UserModel.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() }, // Ensure token is not expired
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token.", error: true, ok: false });
+    }
+
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+
+    // Clear the reset token fields
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    // Save the updated user data
+    await user.save();
+
+    return res.status(200).json({ message: "Password reset successful. You can now log in.", error: false, ok: true });
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    return res.status(500).json({ message: "Server error. Please try again later.", error: true, ok: false });
+  }
+}
+
 export {
     userlogin,
     userLogout,
     registerUser,
     refreshToken,
-    isAuthenticated
+    isAuthenticated, 
+    resetForgotPassword,
+    forgotPassword
 }
