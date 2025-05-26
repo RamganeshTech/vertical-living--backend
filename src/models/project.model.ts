@@ -8,7 +8,7 @@ interface projectInformation {
     dueDate: (Date | null)
     duration: (Date | null)
     priority: "None" | "Low" | "Medium" | "High"
-    status: "Open" | "In Progress" | "In Review" | "To be Tested" | "On Hold" | "Delayed" | "Closed" | "Cancelled";
+    status: "Active" | "Delayed" | "In Progress" | "In Testing" | "On Track" | "On Hold" | "Approved" | "Cancelled" | "Planning" | "Invoice";
     projectGroup: mongoose.Schema.Types.ObjectId | null,
     completionTime: (string | null),
     TaskAndIssuePrefix: (string | null),
@@ -16,6 +16,7 @@ interface projectInformation {
 
 
 interface IProject extends Document {
+    userId:mongoose.Schema.Types.ObjectId
     projectId: string,
     projectName: string,
     description: (string | null);
@@ -24,10 +25,16 @@ interface IProject extends Document {
     issues: (number | null),
     phases: (number | null),
     completionPercentage: (number | null),
-    projectAccess: string
+    projectAccess: string,
+    taskLists: mongoose.Schema.Types.ObjectId[]
+
 }
 
 const ProjectSchema: Schema<IProject> = new Schema({
+    userId:{
+        type:mongoose.Schema.ObjectId,
+        ref:"UserModel"
+    },
     projectId: {
         type: String,
         required: true,
@@ -44,7 +51,7 @@ const ProjectSchema: Schema<IProject> = new Schema({
     projectInformation: {
         owner: {
             type: String,
-            required: true,
+            // required: true,
         },
         tags: {
             type: [String],
@@ -106,7 +113,11 @@ const ProjectSchema: Schema<IProject> = new Schema({
     },
     projectAccess: {
         type: String
-    }
+    },
+    taskLists: [{
+        type: mongoose.Schema.ObjectId,
+        ref: 'TaskModel'
+    }]
 }, {
     timestamps: true
 })

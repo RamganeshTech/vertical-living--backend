@@ -34,8 +34,8 @@ const userlogin = async (req: Request, res: Response) => {
         }
 
 
-        let token = jwt.sign({ _id: user._id }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: user._id }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: user._id , username:user.username}, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: user._id , username:user.username }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("useraccesstoken", token, {
             httpOnly: true,
@@ -115,8 +115,8 @@ const registerUser = async (req: Request, res: Response) => {
             phoneNo
         })
 
-        let token = jwt.sign({ _id: user._id }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: user._id }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: user._id , username:user.username }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: user._id , username:user.username }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("useraccesstoken", token, {
             httpOnly: true,

@@ -8,6 +8,9 @@ import connectDB from './config/connectDB';
 
 import taskComment from './routers/taskComment.router';
 import task from './routers/task.router';
+import projectRouter from './routers/project.router'
+import taskListRouter from './routers/tasklist.router'
+// import checkRedisConnection from './config/redisClient';
 
 
 dotenv.config()
@@ -22,9 +25,12 @@ app.use(cookieParser())
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 
+// checkRedisConnection() //for redis
 
 app.use('/api/task', task)
 app.use('/api/comment', taskComment)
+app.use('/api/project', projectRouter)
+app.use('/api/tasklist', taskListRouter)
 
 const PORT = process.env.PORT
 connectDB().then(() => {

@@ -36,7 +36,7 @@ export interface TaskDocument {
 }
 
 export interface AssociatedTeams {
-    teamsID:mongoose.Schema.Types.ObjectId
+    teamsID:mongoose.Schema.Types.ObjectId[]
 }
 
 export interface ITask extends Document {
@@ -45,7 +45,7 @@ export interface ITask extends Document {
     taskName: string;
     description: (string | null);
     status: "Open" | "In Progress" | "In Review" | "To be Tested" | "On Hold" | "Delayed" | "Closed" | "Cancelled";
-    associatedTeams: AssociatedTeams[]
+    associatedTeams: AssociatedTeams
     taskInformation: TaskInformation;
     comments: Comments[],
     // document:File
@@ -76,9 +76,9 @@ const TaskSchema = new Schema<ITask>({
         type: String,
         default: "Open"
     },
-    associatedTeams: [{
-        teamsId: {type: mongoose.Schema.ObjectId}
-    }],
+    associatedTeams: {
+        teamsId: [{type: mongoose.Schema.ObjectId,  ref:"TeamModel"}],
+    },
     taskInformation: {
         workHours: {
             type: String,

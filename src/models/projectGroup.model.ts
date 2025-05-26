@@ -2,7 +2,7 @@ import mongoose, { Schema } from "mongoose"
 
 interface IProjectGroup extends Document {
     groupName:string;
-    projectId:mongoose.Schema.Types.ObjectId[]
+        projectId:mongoose.Schema.Types.ObjectId[]
 
 }
 

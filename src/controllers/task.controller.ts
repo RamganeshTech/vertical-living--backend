@@ -8,7 +8,7 @@ import { TaskListModel } from "../models/tasklist.model";
 const createTask = async (req: AuthenticatedUserRequest, res: Response) => {
   try {
     const user = req.user
-    let {taskListId, projectId} = req.params
+    let { taskListId, projectId } = req.params
 
     const {
       taskName,
@@ -24,7 +24,7 @@ const createTask = async (req: AuthenticatedUserRequest, res: Response) => {
     }
 
     // Use provided taskListId or default to "General"
-    let finalTaskListId:any = taskListId;
+    let finalTaskListId: any = taskListId;
 
     if (!finalTaskListId) {
       // Check if a "General" task list exists for the project
@@ -81,7 +81,7 @@ const createTask = async (req: AuthenticatedUserRequest, res: Response) => {
 
 const updateTask = async (req: AuthenticatedUserRequest, res: Response) => {
   try {
-    const { taskId } = req.params;
+    const { taskId, taskListId, projectId } = req.params;
 
     const {
       taskName,
@@ -92,8 +92,8 @@ const updateTask = async (req: AuthenticatedUserRequest, res: Response) => {
       document
     } = req.body;
 
-    if (!taskId) {
-      return res.status(400).json({ message: "Task ID is required", ok: false });
+    if (!taskId || !taskListId || !projectId) {
+      return res.status(400).json({ message: "Task ID, taskList Id , project Id is required", ok: false });
     }
 
     // Build the update object
@@ -113,10 +113,33 @@ const updateTask = async (req: AuthenticatedUserRequest, res: Response) => {
       }
     }
 
+
+
     // Find the task first
-    const task = await TaskModel.findByIdAndUpdate({ taskId });
+    const task = await TaskModel.findById({ taskId });
     if (!task) {
       return res.status(404).json({ message: "Task not found", ok: false });
+    }
+
+    // const project = await ProjectModel.findById(projectId);
+    // if (!project) {
+    //   return res.status(404).json({ message: "Associated project not found", ok: false });
+    // }
+
+    // // Optional: validate taskList too
+    // const taskList = await TaskListModel.findById(taskListId);
+    // if (!taskList) {
+    //   return res.status(404).json({ message: "Associated task list not found", ok: false });
+    // }
+
+
+     const [taskList, project] = await Promise.all([
+      TaskListModel.findById(taskListId).select("tasks projectId").lean(),
+      ProjectModel.findById(projectId).select("taskLists").lean(),
+    ]);
+
+    if (!taskList || !project) {
+      return res.status(404).json({ message: "Associated TaskList or Project not found", ok: false });
     }
 
     // Append comment if valid
