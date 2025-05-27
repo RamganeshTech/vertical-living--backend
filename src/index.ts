@@ -10,6 +10,7 @@ import taskComment from './routers/taskComment.router';
 import task from './routers/task.router';
 import projectRouter from './routers/project.router'
 import taskListRouter from './routers/tasklist.router'
+import phaseRoutes from './routers/phase routers/phase.router'
 // import checkRedisConnection from './config/redisClient';
 
 
@@ -31,6 +32,8 @@ app.use('/api/task', task)
 app.use('/api/comment', taskComment)
 app.use('/api/project', projectRouter)
 app.use('/api/tasklist', taskListRouter)
+app.use('/api/phase', phaseRoutes)
+
 
 const PORT = process.env.PORT
 connectDB().then(() => {
