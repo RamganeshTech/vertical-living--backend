@@ -7,13 +7,17 @@ export interface ILabourList {
     labours: Types.ObjectId[]
 }
 
-const LaborListSchema = new Schema<ILabourList>(
+const LabourListSchema = new Schema<ILabourList>(
     {
         projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", required: true },
         labourListName: { type: String, required: true },
-        labours: [{ type: Schema.Types.ObjectId, ref: "LaborEstimateModel" }]
+        labours: {
+            type: [Schema.Types.ObjectId],
+            ref: "LabourEstimateModel",
+            default: []
+        }
     },
     { timestamps: true }
 );
 
-export const LaborListModel = model("LaborListModel", LaborListSchema);
+export const LabourListModel = model("LabourListModel", LabourListSchema);

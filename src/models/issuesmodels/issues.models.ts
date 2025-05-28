@@ -52,7 +52,7 @@ const IssueSchema = new Schema<PhaseIssues>({
         type: String,
         enum: ["none", "show stopper", "Critical", "Minor", "Major"]
     },
-    issuecomments:[{types: Schema.Types.ObjectId, ref:"IssueCommentModel"}]
+    issuecomments:[{type: Schema.Types.ObjectId, ref:"IssueCommentModel"}]
 
 })
 

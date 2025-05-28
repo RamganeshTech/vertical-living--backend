@@ -27,7 +27,8 @@ const UserSchema: Schema<IUser> = new Schema({
     },
     phoneNo: {
         type: String,
-        unique: true
+        unique: true,
+        maxlength:[10, "it should be exactly 10 digits"]
     },
     resetPasswordToken: { type: String },  // Token for password reset
     resetPasswordExpire: { type: Number },

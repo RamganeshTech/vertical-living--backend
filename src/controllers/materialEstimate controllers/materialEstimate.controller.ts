@@ -3,7 +3,6 @@ import { AuthenticatedUserRequest } from "../../types/types";
 import { materialValidations } from "../../validations/materialValidations/materialValidations";
 import MaterialEstimateModel from "../../models/Material Estimate Model/materialEstimate.model";
 import MaterialListModel from "../../models/Material Estimate Model/materialList.model";
-import { Types } from "mongoose";
 
 const createMaterial = async (req: AuthenticatedUserRequest, res: Response): Promise<void> => {
     try {
@@ -129,7 +128,7 @@ const getMaterial = async (req: AuthenticatedUserRequest, res: Response): Promis
             return
         }
 
-        let materials = await MaterialEstimateModel.findOne({ materialListId: { $in: materialListId } })
+        let materials = await MaterialEstimateModel.findOne({ materialListId })
 
         res.status(200).json({ message: "Material fetched successfully", ok: true, data: materials });
 
@@ -168,12 +167,12 @@ const deleteMaterial = async (req: AuthenticatedUserRequest, res: Response): Pro
     try {
         let { materialListId, materialId } = req.params
 
-        if (!materialListId || materialId) {
+        if (!materialListId || !materialId) {
             res.status(400).json({ message: "Material ID and MaterialList Id is required", ok: false });
             return
         }
 
-        let materials = await MaterialEstimateModel.findByIdAndDelete(materialId, { returnDocument: "after" })
+        let materials = await MaterialEstimateModel.findByIdAndDelete(materialId)
 
         res.status(200).json({ message: "Material fetched successfully", ok: true, data: materials });
 
@@ -206,7 +205,7 @@ const deleteMaterialLists = async (req: AuthenticatedUserRequest, res: Response)
 
         await MaterialEstimateModel.deleteMany({ _id: { $in: itemsToBeDeleted } })
 
-        const existingMaterailLists = await MaterialListModel.findByIdAndDelete({ _id: materailListId, projectId })
+        const existingMaterailLists = await MaterialListModel.findOneAndDelete({ _id: materailListId, projectId })
 
         res.status(200).json({ message: "Material fetched successfully", ok: true, data: existingMaterailLists });
 
@@ -260,6 +259,11 @@ const deleteMaterialList = async (req: AuthenticatedUserRequest, res: Response):
 const updateMaterialItem = async (req: AuthenticatedUserRequest, res: Response): Promise<void> => {
     try {
         let { materialListId, materialId } = req.params
+
+        if(!materialId || !materialListId){
+            res.status(400).json({message:"Material Id and Materail List Id is required", ok:false})
+            return;
+        }
 
         let updatedData = req.body
 
@@ -336,7 +340,7 @@ const updateMaterialLists = async (req: AuthenticatedUserRequest, res: Response)
             return
         }
 
-        let materialLists = await MaterialListModel.findByIdAndUpdate({ _id: materailListId, projectId }, { materialListName }, { returnDocument: "after" })
+        let materialLists = await MaterialListModel.findOneAndUpdate({ _id: materailListId, projectId }, { materialListName }, { returnDocument: "after" })
 
         if (!materialLists) {
             res.status(404).json({ message: "material lists not exists", ok: false })

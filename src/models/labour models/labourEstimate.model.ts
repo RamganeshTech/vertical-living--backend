@@ -17,25 +17,25 @@ export interface LabourEstimate {
 }
 
 
-const LaborItemSchema = new Schema<LabourItem>(
+const LabourItemSchema = new Schema<LabourItem>(
   {
     role: { type: String, required: true }, // e.g. plumber, electrician
     numberOfPeople: { type: Number, required: true, default:0 },
     estimatedHours: { type: Number, required: true, default:0 },
     hourlyRate: { type: Number, required: true, default:0 },
     totalCost: { type: Number, default:0},
-    notes: { type: String },
+    notes: { type: String , default:null},
   },
   { _id: true, timestamps:true }
 );
 
-const LaborEstimateSchema = new Schema<LabourEstimate>(
+const LabourEstimateSchema = new Schema<LabourEstimate>(
   {
-    labourListId: { type: Schema.Types.ObjectId, ref: "LaborListModel", required: true },
-    labourItems: { type: [LaborItemSchema], default: [] },
+    labourListId: { type: Schema.Types.ObjectId, ref: "LabourListModel", required: true },
+    labourItems: { type: [LabourItemSchema], default: [] },
     totalLabourCost: { type: Number, default:0 },
   },
   { timestamps: true }
 );
 
-export const LaborEstimateModel = model("LaborEstimateModel", LaborEstimateSchema);
+export const LabourEstimateModel = model<LabourEstimate>("LabourEstimateModel", LabourEstimateSchema);

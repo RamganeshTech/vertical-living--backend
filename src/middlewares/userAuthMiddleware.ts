@@ -7,7 +7,8 @@ const userAuthenticatedMiddleware = (req: AuthenticatedUserRequest, res: Respons
         let token = req.cookies.useraccesstoken
 
         if (!token) {
-            return res.status(401).json({ message: "Unauthorized: Please login", error: true, ok: false })
+             res.status(401).json({ message: "Unauthorized: Please login", error: true, ok: false })
+             return
         }
 
         let decodedData = jwt.verify(token, process.env.JWT_ACCESS_SECRET as string)

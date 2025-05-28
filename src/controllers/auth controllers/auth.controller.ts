@@ -34,8 +34,8 @@ const userlogin = async (req: Request, res: Response) => {
         }
 
 
-        let token = jwt.sign({ _id: user._id , username:user.username}, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: user._id , username:user.username }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: user._id, username: user.username }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: user._id, username: user.username }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("useraccesstoken", token, {
             httpOnly: true,
@@ -98,9 +98,14 @@ const userLogout = async (req: Request, res: Response) => {
 
 const registerUser = async (req: Request, res: Response) => {
     try {
-        const { email, password, username, phoneNo } = req.body
+        let { email, password, username, phoneNo } = req.body
 
-        const isExist = await UserModel.findOne({ email: email })
+        if (!email || !password || !username) {
+            res.status(400).json({ message: "email, password and username is reequired", ok: false })
+            return;
+        }
+
+        const isExist = await UserModel.findOne({ email })
 
         if (isExist) {
             return res.status(400).json({ message: "user aleady there with this email and username", error: true, ok: false })
@@ -108,15 +113,22 @@ const registerUser = async (req: Request, res: Response) => {
 
         const hashPassword = await bcrypt.hash(password, 10)
 
+        phoneNo = String(phoneNo)
+ 
+        if (phoneNo && phoneNo.length !== 10) {
+            res.status(400).json({ message: "phone number shoud be 10 digits is required", ok: false })
+            return
+        }
+
         const user = await UserModel.create({
             email,
             password: hashPassword,
             username,
-            phoneNo
+            phoneNo: phoneNo ?? null
         })
 
-        let token = jwt.sign({ _id: user._id , username:user.username }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: user._id , username:user.username }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: user._id, username: user.username }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: user._id, username: user.username }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("useraccesstoken", token, {
             httpOnly: true,
@@ -135,7 +147,7 @@ const registerUser = async (req: Request, res: Response) => {
         )
 
 
-        res.status(200).json({ message: `${user.username} account created successfull`, ok: true, error: false })
+        res.status(200).json({ message: `${user.username} account created successfull`, ok: true, error: false, data: user })
 
     }
     catch (error) {
@@ -203,89 +215,104 @@ const isAuthenticated = async (req: Request, res: Response) => {
 }
 
 const forgotPassword = async (req: Request, res: Response): Promise<any> => {
-  const { email } = req.body;
+    const { email } = req.body;
 
-  // Check if the email exists in the database
-  try {
-    const user = await UserModel.findOne({ email });
+    // Check if the email exists in the database
+    try {
+        const user = await UserModel.findOne({ email });
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found', error: true, ok: false });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found', error: true, ok: false });
+        }
+
+        // Generate a token for password reset (using crypto or JWT)
+        const resetToken = crypto.randomBytes(32).toString('hex');
+
+        // Hash the token and store it in the database for later validation
+        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+        // Store the hashed token and set an expiration time (1 hour)
+        user.resetPasswordToken = hashedToken;
+        user.resetPasswordExpire = (Date.now() + 3600000); // 1 hour in milliseconds
+
+        await user.save();
+
+        // Generate the password reset URL (ensure to use your real app's URL)
+        let resetLink: string;
+
+        if (process.env.NODE_ENV === "production") {
+            resetLink = `https://www.verticalliving.com/reset-password?token=${resetToken}`;
+        }
+        else {
+            resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
+        }
+
+        // Send the password reset email
+        await sendResetEmail(user.email, user.username, resetLink);
+
+        return res.status(200).json({
+            message: 'Password reset email sent. Please check your inbox.',
+        });
+    } catch (error) {
+        console.error('Error handling forgot password request: ', error);
+        return res.status(500).json({ message: 'Server error. Please try again later.', error: true, ok: false });
     }
-
-    // Generate a token for password reset (using crypto or JWT)
-    const resetToken = crypto.randomBytes(32).toString('hex');
-
-    // Hash the token and store it in the database for later validation
-    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-
-    // Store the hashed token and set an expiration time (1 hour)
-    user.resetPasswordToken = hashedToken;
-    user.resetPasswordExpire = (Date.now() + 3600000); // 1 hour in milliseconds
-
-    await user.save();
-
-    // Generate the password reset URL (ensure to use your real app's URL)
-    let resetLink: string;
-    
-    if (process.env.NODE_ENV === "production") {
-      resetLink = `https://www.verticalliving.com/reset-password?token=${resetToken}`;
-    }
-    else {
-      resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
-    }
-
-    // Send the password reset email
-    await sendResetEmail(user.email, user.username, resetLink);
-
-    return res.status(200).json({
-      message: 'Password reset email sent. Please check your inbox.',
-    });
-  } catch (error) {
-    console.error('Error handling forgot password request: ', error);
-    return res.status(500).json({ message: 'Server error. Please try again later.', error: true, ok: false });
-  }
 };
 
 const resetForgotPassword = async (req: Request, res: Response): Promise<any> => {
-  const { token, password } = req.body;
+    const { token, password } = req.body;
 
-  if (!token || !password) {
-    return res.status(400).json({ message: "Invalid request. Token and password are required.", error: true, ok: false });
-  }
-
-
-  try {
-    // Hash the received token to match the stored one
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-
-    // Find the user with the provided reset token (and check if it’s not expired)
-    const user = await UserModel.findOne({
-      resetPasswordToken: hashedToken,
-      resetPasswordExpire: { $gt: Date.now() }, // Ensure token is not expired
-    });
-
-    if (!user) {
-      return res.status(400).json({ message: "Invalid or expired token.", error: true, ok: false });
+    if (!token || !password) {
+        return res.status(400).json({ message: "Invalid request. Token and password are required.", error: true, ok: false });
     }
 
 
-    // Hash the new password
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
+    try {
+        // Hash the received token to match the stored one
+        const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-    // Clear the reset token fields
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
+        // Find the user with the provided reset token (and check if it’s not expired)
+        const user = await UserModel.findOne({
+            resetPasswordToken: hashedToken,
+            resetPasswordExpire: { $gt: Date.now() }, // Ensure token is not expired
+        });
 
-    // Save the updated user data
-    await user.save();
+        if (!user) {
+            return res.status(400).json({ message: "Invalid or expired token.", error: true, ok: false });
+        }
 
-    return res.status(200).json({ message: "Password reset successful. You can now log in.", error: false, ok: true });
-  } catch (error) {
-    console.error("Error resetting password:", error);
-    return res.status(500).json({ message: "Server error. Please try again later.", error: true, ok: false });
-  }
+
+        // Hash the new password
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(password, salt);
+
+        // Clear the reset token fields
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+
+        // Save the updated user data
+        await user.save();
+
+        return res.status(200).json({ message: "Password reset successful. You can now log in.", error: false, ok: true });
+    } catch (error) {
+        console.error("Error resetting password:", error);
+        return res.status(500).json({ message: "Server error. Please try again later.", error: true, ok: false });
+    }
+}
+
+const deleteuser = async (req: Request, res: Response):Promise<any> => {
+    try {
+
+        let { userId } = req.params
+        const user = await UserModel.findByIdAndDelete(userId)
+
+        return res.status(200).json({ message: "user deleted successful. You can now log in.", error: false, ok: true, data: user });
+
+    }
+    catch (error) {
+        console.error("Error deleting user:", error);
+        return res.status(500).json({ message: "Server error. Please try again later.", error: true, ok: false });
+    }
 }
 
 export {
@@ -293,7 +320,8 @@ export {
     userLogout,
     registerUser,
     refreshToken,
-    isAuthenticated, 
+    isAuthenticated,
     resetForgotPassword,
-    forgotPassword
+    forgotPassword,
+    deleteuser
 }
