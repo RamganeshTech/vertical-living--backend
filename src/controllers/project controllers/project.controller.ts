@@ -1,8 +1,8 @@
 import { Response } from "express";
-import { AuthenticatedUserRequest } from "../types/types";
-import ProjectModel from "../models/project.model";
+import { AuthenticatedUserRequest } from "../../types/types";
+import ProjectModel from "../../models/project.model";
 
-import redisClient from '../config/redisClient'
+import redisClient from '../../config/redisClient'
 
 const createProject = async (req: AuthenticatedUserRequest, res: Response) => {
     try {

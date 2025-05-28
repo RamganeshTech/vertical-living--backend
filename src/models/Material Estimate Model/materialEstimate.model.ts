@@ -25,7 +25,7 @@ const MaterialItemSchema = new Schema<MaterialItem>(
     vendor: { type: String , default:null},
     notes: { type: String, default:null },
   },
-  { _id: false }
+  { _id: true, timestamps:true }
 );
 
 const MaterialEstimateSchema = new Schema<MaterialEstimate>(

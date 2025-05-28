@@ -1,9 +1,9 @@
 import { Response } from "express";
-import { AuthenticatedUserRequest } from "../types/types";
-import TaskModel, { ITask, TaskInformation } from "../models/task.model";
-import { isObjectHasValue } from "../utils/isObjectHasValue";
-import ProjectModel from "../models/project.model";
-import { TaskListModel } from "../models/tasklist.model";
+import { AuthenticatedUserRequest } from "../../types/types";
+import TaskModel, { ITask, TaskInformation } from "../../models/task.model";
+import { isObjectHasValue } from "../../utils/isObjectHasValue";
+import ProjectModel from "../../models/project.model";
+import { TaskListModel } from "../../models/tasklist.model";
 
 const createTask = async (req: AuthenticatedUserRequest, res: Response) => {
   try {

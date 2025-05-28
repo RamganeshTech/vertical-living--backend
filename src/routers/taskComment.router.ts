@@ -1,5 +1,5 @@
 import express, { RequestHandler } from 'express';
-import { deleteComment, editComment } from '../controllers/taskcomment.controller';
+import { deleteComment, editComment } from '../controllers/taskComment controllers/taskcomment.controller';
 
 const router = express.Router()
 

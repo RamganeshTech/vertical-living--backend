@@ -1,6 +1,6 @@
 
 import express, { RequestHandler }  from 'express';
-import {createTaskList, getTaskList} from "../controllers/taskList.controller"
+import {createTaskList, getTaskList} from "../controllers/taskList controllers/taskList.controller"
 
 const router = express.Router()
 

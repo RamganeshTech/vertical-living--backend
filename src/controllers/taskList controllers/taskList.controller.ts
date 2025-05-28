@@ -1,7 +1,7 @@
 import { Response } from "express";
-import { AuthenticatedUserRequest } from "../types/types";
-import { TaskListModel } from "../models/tasklist.model";
-import redisClient from "../config/redisClient";
+import { AuthenticatedUserRequest } from "../../types/types";
+import { TaskListModel } from "../../models/tasklist.model";
+import redisClient from "../../config/redisClient";
 
 const createTaskList = async (req: AuthenticatedUserRequest, res: Response) => {
     try {

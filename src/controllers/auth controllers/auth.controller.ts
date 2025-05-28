@@ -3,9 +3,9 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto'
 
-import UserModel from "../models/usermodel/user.model";
-import { AuthenticatedUserRequest } from "../types/types";
-import sendResetEmail from "../utils/forgotPasswordMail";
+import UserModel from "../../models/usermodel/user.model";
+import { AuthenticatedUserRequest } from "../../types/types";
+import sendResetEmail from "../../utils/forgotPasswordMail";
 
 const userlogin = async (req: Request, res: Response) => {
     try {

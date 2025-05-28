@@ -1,6 +1,6 @@
 
 import express, { RequestHandler }  from 'express';
-import { createProject, getProjects } from '../controllers/project.controller';
+import { createProject, getProjects } from '../controllers/project controllers/project.controller';
 
 const router = express.Router()
 

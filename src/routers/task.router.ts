@@ -1,6 +1,6 @@
 import express, { RequestHandler } from 'express';
-import { deleteComment,  } from '../controllers/taskcomment.controller';
-import { createTask, updateTask } from '../controllers/task.controller';
+import { deleteComment,  } from '../controllers/taskComment controllers/taskcomment.controller';
+import { createTask, updateTask } from '../controllers/task controllers/task.controller';
 
 const router = express.Router()
 
