@@ -1,43 +1,42 @@
-import { Request, RequestHandler, Response } from "express"
-import jwt from 'jsonwebtoken';
+import { Request, Response } from "express";
+import ClientModel from "../../models/client model/client.model";
 import bcrypt from 'bcrypt';
-import crypto from 'crypto'
-
-import UserModel from "../../models/usermodel/user.model";
-import { AuthenticatedUserRequest } from "../../types/types";
+import jwt from 'jsonwebtoken';
+import { AuthenticatedClientRequest } from "../../types/types";
+import crypto from 'crypto';
 import sendResetEmail from "../../utils/forgotPasswordMail";
 
-const userlogin = async (req: Request, res: Response) => {
+const clientLogin = async (req: Request, res: Response) => {
     try {
         let { email, password } = req.body
 
-        let isTokenExists = req.cookies.useraccesstoken
+        let isTokenExists = req.cookies.clientaccesstoken
 
         if (isTokenExists) {
-            return res.status(403).json({ error: true, message: "Already logged in", ok: false });
+            return res.status(403).json({ error: true, message: "Client Already logged in", ok: false });
         }
 
         if (!email || !password) {
             res.status(404).json({ message: "please provide the input properly", error: true, ok: false })
         }
 
-        const user = await UserModel.findOne({ email: email })
+        const client = await ClientModel.findOne({ email: email })
 
-        if (!user) {
+        if (!client) {
             return res.status(404).json({ message: "invalid credentials", error: true, ok: false })
         }
 
-        const isMatching = await bcrypt.compare(password, user?.password)
+        const isMatching = await bcrypt.compare(password, client?.password)
 
         if (!isMatching) {
             return res.status(404).json({ message: "invalid credentials", error: true, ok: false })
         }
 
 
-        let token = jwt.sign({ _id: user._id, username: user.username }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: user._id, username: user.username }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: client._id, clientName: client.clientName }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: client._id, clientName: client.clientName }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
-        res.cookie("useraccesstoken", token, {
+        res.cookie("clientaccesstoken", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -46,7 +45,7 @@ const userlogin = async (req: Request, res: Response) => {
         )
 
 
-        res.cookie("userrefreshtoken", refreshToken, {
+        res.cookie("clientrefreshtoken", refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -54,10 +53,10 @@ const userlogin = async (req: Request, res: Response) => {
         }
         )
 
-        res.status(200).json({ message: `${user.username} loggedin successfull`, ok: true, error: false })
+        res.status(200).json({ message: `${client.clientName} loggedin successfull`, ok: true, error: false })
     }
     catch (error) {
-        console.log("error from userlogin", error)
+        console.log("error from cleintlogin", error)
         const err = error as Error;
         console.error(err.message);
         return res.status(500).json({
@@ -69,16 +68,16 @@ const userlogin = async (req: Request, res: Response) => {
 }
 
 
-const userLogout = async (req: Request, res: Response) => {
+const clientLogout = async (req: Request, res: Response) => {
     try {
-        res.clearCookie("useraccesstoken", {
+        res.clearCookie("clientaccesstoken", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production", // Only secure in production
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             path: "/", // Clear the cookie for the entire domain
         });
 
-        res.clearCookie("userrefreshtoken", {
+        res.clearCookie("clientrefreshtoken", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production", // Only secure in production
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -96,41 +95,62 @@ const userLogout = async (req: Request, res: Response) => {
     }
 }
 
-const registerUser = async (req: Request, res: Response) => {
+const registerClient = async (req: Request, res: Response) => {
     try {
-        let { email, password, username, phoneNo } = req.body
+        let { email, password, clientName, phoneNo, company } = req.body
 
-        if (!email || !password || !username) {
-            res.status(400).json({ message: "email, password and username is reequired", ok: false })
+        if (!email || !password || !clientName) {
+            res.status(400).json({ message: "email, password and client name is reequired", ok: false })
             return;
         }
 
-        const isExist = await UserModel.findOne({ email })
+        const orConditions:Array<any> = [
+            { email },
+            { clientName }
+        ];
 
-        if (isExist) {
-            return res.status(400).json({ message: "user aleady there with this email and username", error: true, ok: false })
+        // Add phone check only if it's provided
+        if (phoneNo) {
+            if (String(phoneNo).length !== 10) {
+                return res.status(400).json({
+                    message: "Phone number should be exactly 10 digits",
+                    ok: false,
+                });
+            }
+            orConditions.push({ phoneNo });
         }
+
+        // One DB call to check if any of the unique fields are already taken
+        const existingClient = await ClientModel.findOne({ $or: orConditions });
+
+        if (existingClient) {
+            // Determine exactly which field is duplicated
+            if (existingClient.email === email) {
+                return res.status(400).json({ message: "Email already in use", ok: false });
+            }
+            if (existingClient.clientName === clientName) {
+                return res.status(400).json({ message: "Client name already in use", ok: false });
+            }
+            if (phoneNo && existingClient.phoneNo === phoneNo) {
+                return res.status(400).json({ message: "Phone number already in use", ok: false });
+            }
+        }
+
+
 
         const hashPassword = await bcrypt.hash(password, 10)
 
-        phoneNo = String(phoneNo)
- 
-        if (phoneNo && phoneNo.length !== 10) {
-            res.status(400).json({ message: "phone number shoud be 10 digits is required", ok: false })
-            return
-        }
-
-        const user = await UserModel.create({
+        const client = await ClientModel.create({
             email,
             password: hashPassword,
-            username,
+            clientName,
             phoneNo: phoneNo ?? null
         })
 
-        let token = jwt.sign({ _id: user._id, username: user.username }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: user._id, username: user.username }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: client._id, clientName: client.clientName }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: client._id, clientName: client.clientName }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
-        res.cookie("useraccesstoken", token, {
+        res.cookie("clientaccesstoken", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -138,7 +158,7 @@ const registerUser = async (req: Request, res: Response) => {
         }
         )
 
-        res.cookie("userrefreshtoken", refreshToken, {
+        res.cookie("clientrefreshtoken", refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -147,20 +167,20 @@ const registerUser = async (req: Request, res: Response) => {
         )
 
 
-        res.status(200).json({ message: `${user.username} account created successfull`, ok: true, error: false, data: user })
+        res.status(200).json({ message: `${client.clientName} account created successfull`, ok: true, error: false, data: client })
 
     }
     catch (error) {
         if (error instanceof Error) {
-            console.log("erorr from register user", error)
+            console.log("erorr from register client", error)
             res.status(500).json({ message: "internal error ocuured", errorMssage: error, ok: false })
         }
     }
 }
 
-const refreshToken = async (req: Request, res: Response) => {
+const clientRefreshToken = async (req: Request, res: Response) => {
     try {
-        let refreshtoken = req.cookies.userrefreshtoken
+        let refreshtoken = req.cookies.clientrefreshtoken
 
         if (!refreshtoken) {
             return res.status(403).json({ message: "no refresh token provided please login", ok: false })
@@ -168,15 +188,15 @@ const refreshToken = async (req: Request, res: Response) => {
 
         let isDataExists = jwt.verify(refreshtoken, process.env.JWT_REFRESH_SECRET as string) as { _id: string };
 
-        let isExists = await UserModel.findById(isDataExists._id)
+        let isExists = await ClientModel.findById(isDataExists._id)
 
         if (!isExists) {
             return res.status(404).json({ message: "user not found", ok: false })
         }
 
-        let useraccesstoken = jwt.sign({ _id: isExists._id }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let clientaccesstoken = jwt.sign({ _id: isExists._id }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
 
-        res.cookie("useraccesstoken", useraccesstoken, {
+        res.cookie("clientaccesstoken", clientaccesstoken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -188,41 +208,41 @@ const refreshToken = async (req: Request, res: Response) => {
     }
     catch (error) {
         if (error instanceof Error) {
-            console.log("erorr from refreshtoken user", error)
+            console.log("erorr from client refreshtoken user", error)
             res.status(500).json({ message: "internal error ocuured", errorMssage: error, ok: false })
         }
     }
 }
 
-const isAuthenticated = async (req: Request, res: Response) => {
+const isClientAuthenticated = async (req: AuthenticatedClientRequest, res: Response) => {
     try {
-        const user = (req as AuthenticatedUserRequest).user as { _id: string }
+        const client = req.client
 
-        const isExist = await UserModel.findById(user._id)
+        const isExist = await ClientModel.findById(client._id).select(["clientName","email", "phoneNo", "createdAt","comapany","updatedAt"])
 
         if (!isExist) {
-            return res.status(404).json({ message: "user not found", ok: false })
+            return res.status(404).json({ message: "client not found", ok: false })
         }
 
-        res.status(200).json({ data: isExist, message: "user is authenticated", ok: true })
+        res.status(200).json({ data: isExist, message: "client is authenticated", ok: true })
     }
     catch (error) {
         if (error instanceof Error) {
-            console.log("erorr from isAutneticated user", error)
+            console.log("erorr from isAutneticated client", error)
             res.status(500).json({ message: "internal error ocuured", errorMssage: error, ok: false })
         }
     }
 }
 
-const forgotPassword = async (req: Request, res: Response): Promise<any> => {
+const clientForgotPassword = async (req: Request, res: Response): Promise<any> => {
     const { email } = req.body;
 
     // Check if the email exists in the database
     try {
-        const user = await UserModel.findOne({ email });
+        const client = await ClientModel.findOne({ email });
 
-        if (!user) {
-            return res.status(404).json({ message: 'User not found', error: true, ok: false });
+        if (!client) {
+            return res.status(404).json({ message: 'client not found', error: true, ok: false });
         }
 
         // Generate a token for password reset (using crypto or JWT)
@@ -232,10 +252,10 @@ const forgotPassword = async (req: Request, res: Response): Promise<any> => {
         const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
         // Store the hashed token and set an expiration time (1 hour)
-        user.resetPasswordToken = hashedToken;
-        user.resetPasswordExpire = (Date.now() + 3600000); // 1 hour in milliseconds
+        client.resetPasswordToken = hashedToken;
+        client.resetPasswordExpire = (Date.now() + 3600000); // 1 hour in milliseconds
 
-        await user.save();
+        await client.save();
 
         // Generate the password reset URL (ensure to use your real app's URL)
         let resetLink: string;
@@ -248,7 +268,7 @@ const forgotPassword = async (req: Request, res: Response): Promise<any> => {
         }
 
         // Send the password reset email
-        await sendResetEmail(user.email, user.username, resetLink);
+        await sendResetEmail(client.email, client.clientName, resetLink);
 
         return res.status(200).json({
             message: 'Password reset email sent. Please check your registered email inbox.',
@@ -259,7 +279,7 @@ const forgotPassword = async (req: Request, res: Response): Promise<any> => {
     }
 };
 
-const resetForgotPassword = async (req: Request, res: Response): Promise<any> => {
+const clientResetForgotPassword = async (req: Request, res: Response): Promise<any> => {
     const { token, password } = req.body;
 
     if (!token || !password) {
@@ -272,26 +292,26 @@ const resetForgotPassword = async (req: Request, res: Response): Promise<any> =>
         const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
         // Find the user with the provided reset token (and check if it’s not expired)
-        const user = await UserModel.findOne({
+        const client = await ClientModel.findOne({
             resetPasswordToken: hashedToken,
             resetPasswordExpire: { $gt: Date.now() }, // Ensure token is not expired
         });
 
-        if (!user) {
+        if (!client) {
             return res.status(400).json({ message: "Invalid or expired token.", error: true, ok: false });
         }
 
 
         // Hash the new password
         const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(password, salt);
+        client.password = await bcrypt.hash(password, salt);
 
         // Clear the reset token fields
-        user.resetPasswordToken = undefined;
-        user.resetPasswordExpire = undefined;
+        client.resetPasswordToken = undefined;
+        client.resetPasswordExpire = undefined;
 
-        // Save the updated user data
-        await user.save();
+        // Save the updated client data
+        await client.save();
 
         return res.status(200).json({ message: "Password reset successful. You can now log in.", error: false, ok: true });
     } catch (error) {
@@ -300,28 +320,28 @@ const resetForgotPassword = async (req: Request, res: Response): Promise<any> =>
     }
 }
 
-const deleteuser = async (req: Request, res: Response):Promise<any> => {
+const deleteClient = async (req: Request, res: Response): Promise<any> => {
     try {
 
-        let { userId } = req.params
-        const user = await UserModel.findByIdAndDelete(userId)
+        let { clientId } = req.params
+        const client = await ClientModel.findByIdAndDelete(clientId)
 
-        return res.status(200).json({ message: "user deleted successful. You can now log in.", error: false, ok: true, data: user });
+        return res.status(200).json({ message: "clientId deleted successful. You can now log in.", error: false, ok: true, data: client });
 
     }
     catch (error) {
-        console.error("Error deleting user:", error);
+        console.error("Error deleting client:", error);
         return res.status(500).json({ message: "Server error. Please try again later.", error: true, ok: false });
     }
 }
 
 export {
-    userlogin,
-    userLogout,
-    registerUser,
-    refreshToken,
-    isAuthenticated,
-    resetForgotPassword,
-    forgotPassword,
-    deleteuser
+    clientLogin,
+    clientLogout,
+    registerClient,
+    clientRefreshToken,
+    isClientAuthenticated,
+    clientForgotPassword,
+    clientResetForgotPassword,
+    deleteClient
 }

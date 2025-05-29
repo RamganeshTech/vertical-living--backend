@@ -1,4 +1,4 @@
-import mongoose, { Schema } from "mongoose"
+import mongoose, { Schema, Types } from "mongoose"
 
 interface projectInformation {
     owner: string
@@ -16,9 +16,10 @@ interface projectInformation {
 
 
 interface IProject extends Document {
-    userId:mongoose.Schema.Types.ObjectId
+    userId: mongoose.Schema.Types.ObjectId
     projectId: string,
     projectName: string,
+    accessibleClientId: Types.ObjectId[],
     description: (string | null);
     projectInformation: projectInformation
     tasks: (number | null),
@@ -26,14 +27,18 @@ interface IProject extends Document {
     phases: (number | null),
     completionPercentage: (number | null),
     projectAccess: string,
-    taskLists: mongoose.Schema.Types.ObjectId[]
+    taskLists: mongoose.Schema.Types.ObjectId[],
+    materials: Types.ObjectId[]
+    labours: Types.ObjectId[],
+    materialsFullyApproved: "approved" | "rejected" | "pending"
+    laboursFullyApproved: "approved" | "rejected" | "pending"
 
 }
 
 const ProjectSchema: Schema<IProject> = new Schema({
-    userId:{
-        type:mongoose.Schema.ObjectId,
-        ref:"UserModel"
+    userId: {
+        type: mongoose.Schema.ObjectId,
+        ref: "UserModel"
     },
     projectId: {
         type: String,
@@ -43,7 +48,12 @@ const ProjectSchema: Schema<IProject> = new Schema({
     projectName: {
         type: String,
         required: true,
-        unique:true
+        unique: true
+    },
+    accessibleClientId: {
+        type: [Schema.Types.ObjectId],
+        ref: "ClientModel",
+        default: []
     },
     description: {
         type: String,
@@ -115,10 +125,31 @@ const ProjectSchema: Schema<IProject> = new Schema({
     projectAccess: {
         type: String
     },
+
     taskLists: [{
         type: mongoose.Schema.ObjectId,
         ref: 'TaskModel'
-    }]
+    }],
+    materials: {
+        type: [Schema.Types.ObjectId],
+        ref: "MaterialListModel",
+        default: []
+    },
+    labours: {
+        type: [Schema.Types.ObjectId],
+        ref: "LabourListModel",
+        default: []
+    },
+    materialsFullyApproved: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
+    },
+     laboursFullyApproved: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
+    }
 }, {
     timestamps: true
 })

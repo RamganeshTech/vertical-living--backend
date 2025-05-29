@@ -1,0 +1,49 @@
+{
+  "projectName": "Modern Villa",
+  "materials": [
+    {
+      "materialListName": "Foundation Materials",
+      "materials": [
+        {
+          "materials": [
+            {
+              "materialName": "Cement",
+              "unit": "bags",
+              "unitPrice": 350,
+              "materialQuantity": 100,
+              "vendor": "ABC Supply",
+              "notes": "Use premium quality"
+            },
+            {
+              "materialName": "Sand",
+              "unit": "tons",
+              "unitPrice": 1200,
+              "materialQuantity": 5
+            }
+          ],
+          "totalCost": 25000
+        }
+      ]
+    }
+  ],
+  "labours": [
+    {
+      "labourListName": "Phase 1 Work",
+      "labours": [
+        {
+          "labourItems": [
+            {
+              "role": "Mason",
+              "numberOfPeople": 4,
+              "estimatedHours": 20,
+              "hourlyRate": 200,
+              "totalCost": 16000,
+              "notes": "Skilled workers only"
+            }
+          ],
+          "totalLabourCost": 16000
+        }
+      ]
+    }
+  ]
+}

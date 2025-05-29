@@ -3,7 +3,8 @@ import { model, Schema, Types } from "mongoose";
 export interface MaterialList {
     projectId: Types.ObjectId;
     materialListName: string;
-    materials: Types.ObjectId[]
+    materials: Types.ObjectId[],
+    // clientApproval:"approved" | "rejected" | "pending"
 }
 
 
@@ -18,6 +19,11 @@ const MaterialListSchema = new Schema<MaterialList>({
         ref: "MaterialEstimateModel",
         default: [], //this will be array of strings not in array of objects ["34fvg78", "34fvg78"]
     },
+    // clientApproval:{
+    //     type:String,
+    //    enum: ['pending', 'approved', 'rejected'], 
+    //    default: 'pending' 
+    // }
 })
 
 const MaterialListModel = model("MaterialListModel", MaterialListSchema)

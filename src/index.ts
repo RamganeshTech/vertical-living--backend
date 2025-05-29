@@ -6,6 +6,8 @@ import dotenv  from 'dotenv';
 
 import connectDB from './config/connectDB';
 
+import clientRoutes from './routers/client routes/clientAuth.routes';
+import clientApprovalRoutes from './routers/client routes/clientApproval.routes';
 import authRoutes from './routers/auth.routers';
 import taskComment from './routers/taskComment.router';
 import task from './routers/task.router';
@@ -32,6 +34,8 @@ app.use(express.json())
 // checkRedisConnection() //for redis
 
 app.use('/api/auth', authRoutes)
+app.use('/api/auth/client', clientRoutes)
+app.use('/api/auth/clientapproval', clientApprovalRoutes)
 app.use('/api/task', task)
 app.use('/api/comment', taskComment)
 app.use('/api/project', projectRouter)

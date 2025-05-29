@@ -3,6 +3,7 @@ import { AuthenticatedUserRequest } from "../../types/types";
 import { materialValidations } from "../../validations/materialValidations/materialValidations";
 import MaterialEstimateModel from "../../models/Material Estimate Model/materialEstimate.model";
 import MaterialListModel from "../../models/Material Estimate Model/materialList.model";
+import { MaterialApprovalModel } from "../../models/client model/materialApproval.model";
 
 const createMaterial = async (req: AuthenticatedUserRequest, res: Response): Promise<void> => {
     try {
@@ -128,9 +129,42 @@ const getMaterial = async (req: AuthenticatedUserRequest, res: Response): Promis
             return
         }
 
-        let materials = await MaterialEstimateModel.findOne({ materialListId })
+         const materialEstimateDoc = await MaterialEstimateModel.findOne({ materialListId });
 
-        res.status(200).json({ message: "Material fetched successfully", ok: true, data: materials });
+    if (!materialEstimateDoc) {
+      res.status(404).json({ message: "Material estimate not found", ok: false });
+      return;
+    }
+
+    // 2️⃣ Get approval doc
+    const approvalDoc = await MaterialApprovalModel.findOne({ materialListId });
+
+    const approvedMap: Record<string, { approved: string; feedback: string | null }> = {};
+
+    if (approvalDoc?.approvedItems?.length) {
+      approvalDoc.approvedItems.forEach((item:any) => {
+        approvedMap[item.materialItemId.toString()] = {
+          approved: item.approved,
+          feedback: item.feedback
+        };
+      });
+    }
+
+    // 3️⃣ Merge each material item with approval status
+    const mergedMaterials = materialEstimateDoc.materials.map((material:any) => {
+      const itemId = material._id.toString();
+      return {
+        ...material.toObject(), //here teh material means to material items array where it will contain the array of objects
+        clientApproved: approvedMap[itemId]?.approved || "pending",     // default fallback
+        clientFeedback: approvedMap[itemId]?.feedback || null
+      };
+    });
+
+    res.status(200).json({
+      message: "Material items fetched successfully",
+      ok: true,
+      data: mergedMaterials
+    });
 
     }
     catch (error) {
@@ -150,9 +184,53 @@ const getMaterialLists = async (req: AuthenticatedUserRequest, res: Response): P
             return
         }
 
-        let materialLists = await MaterialListModel.findOne({ projectId })
+          // 1. Fetch all material lists for the project
+        const materialLists = await MaterialListModel.find({ projectId });
 
-        res.status(200).json({ message: "Material fetched successfully", ok: true, data: materialLists });
+        // 2. Prepare output with clientApproved field
+        const result = await Promise.all(materialLists.map(async (list) => {
+            const materialEstimate = await MaterialEstimateModel.findOne({ materialListId: list._id });
+            const materialApproval = await MaterialApprovalModel.findOne({ materialListId: list._id });
+
+            let status = "pending";
+
+            if (materialEstimate && materialApproval) {
+                const totalItems = materialEstimate.materials.length;
+                const approvals = materialApproval.approvedItems;
+
+                const statusCounts = {
+                    approved: 0,
+                    pending: 0,
+                    rejected: 0,
+                };
+
+                for (let item of approvals) {
+                    if (item.approved === "approved") statusCounts.approved++;
+                    else if (item.approved === "pending") statusCounts.pending++;
+                    else if (item.approved === "rejected") statusCounts.rejected++;
+                }
+
+                // Determine the overall status
+                if (statusCounts.approved === totalItems) {
+                    status = "approved";
+                } else if (statusCounts.rejected === totalItems) {
+                    status = "rejected";
+                } else {
+                    status = "pending";
+                }
+            }
+
+            return {
+                ...list.toObject(),
+                clientApproval: status,
+            };
+        }));
+
+        res.status(200).json({
+            message: "Material lists fetched successfully",
+            ok: true,
+            data: result,
+        });
 
     }
     catch (error) {
@@ -260,8 +338,8 @@ const updateMaterialItem = async (req: AuthenticatedUserRequest, res: Response):
     try {
         let { materialListId, materialId } = req.params
 
-        if(!materialId || !materialListId){
-            res.status(400).json({message:"Material Id and Materail List Id is required", ok:false})
+        if (!materialId || !materialListId) {
+            res.status(400).json({ message: "Material Id and Materail List Id is required", ok: false })
             return;
         }
 
@@ -318,7 +396,7 @@ const updateMaterialItem = async (req: AuthenticatedUserRequest, res: Response):
 
         await material.save()
 
-        res.status(200).json({ message: "Material fetched successfully", ok: true, data:material });
+        res.status(200).json({ message: "Material fetched successfully", ok: true, data: material });
 
     }
     catch (error) {
