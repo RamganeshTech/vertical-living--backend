@@ -8,7 +8,7 @@ import { createLabour, createLabourList, deleteLabourItem,
 const router = express.Router()
 
 router.post('/createlabourlist/:projectId', createLabourList as RequestHandler)
-router.post('/createlabour/:labourListId/:projectId', createLabour as RequestHandler)
+router.post('/createlabour/:projectId', createLabour as RequestHandler)
 router.get('/getlabour/:labourListId', getLabourItems as RequestHandler)
 router.get('/getlabourlist/:projectId', getLabourLists as RequestHandler)
 router.put('/updatelabouritem/:labourListId/:labourItemId', updateLabourItem as RequestHandler)

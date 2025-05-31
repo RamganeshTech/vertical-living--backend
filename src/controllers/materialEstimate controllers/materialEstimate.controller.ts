@@ -56,7 +56,6 @@ const createMaterial = async (req: AuthenticatedUserRequest, res: Response): Pro
                     return
                 }
 
-                console.log("hello im in ", materialListId)
                 await MaterialListModel.findOneAndUpdate({ materialListId },
                     {
                         $push: { materials: (newlyAdded as any)._id },
@@ -385,44 +384,6 @@ const deleteMaterialLists = async (req: AuthenticatedUserRequest, res: Response)
     }
 }
 
-// CHATGPT PROVIDED FOR DELETING MATERAIL LISTS
-const deleteMaterialList = async (req: AuthenticatedUserRequest, res: Response): Promise<void> => {
-    try {
-        const { projectId, materailListId } = req.params;
-
-        if (!projectId || !materailListId) {
-            res.status(400).json({ message: "Project ID and Material List ID are required", ok: false });
-            return;
-        }
-
-        // Step 1: Delete the MaterialList
-        const deletedMaterialList = await MaterialListModel.findOneAndDelete({
-            _id: materailListId,
-            projectId,
-        });
-
-        if (!deletedMaterialList) {
-            res.status(404).json({ message: "Material List not found", ok: false });
-            return;
-        }
-
-        // Step 2: Delete associated MaterialEstimate(s)
-        const deletedMaterials = await MaterialEstimateModel.deleteMany({
-            MaterialListId: materailListId,
-        });
-
-        res.status(200).json({
-            message: "Material list and associated materials deleted successfully",
-            ok: true,
-            deletedMaterialList,
-            deletedMaterialsCount: deletedMaterials.deletedCount,
-        });
-    } catch (error) {
-        console.error("Error deleting material list:", error);
-        res.status(500).json({ message: "Server error", ok: false, error });
-    }
-};
-
 // UPDATE THE MATERIAL 
 const updateMaterialItem = async (req: AuthenticatedUserRequest, res: Response): Promise<void> => {
     try {
@@ -450,12 +411,12 @@ const updateMaterialItem = async (req: AuthenticatedUserRequest, res: Response):
         }
 
         // Manually update fields
-        itemToUpdate.materialName = updatedData.materialName || itemToUpdate.materialName;
+        itemToUpdate.materialName = updatedData.materialName?.trim() || itemToUpdate.materialName;
         itemToUpdate.unit = updatedData.unit || itemToUpdate.unit;
         itemToUpdate.unitPrice = updatedData.unitPrice ?? itemToUpdate.unitPrice;
         itemToUpdate.materialQuantity = updatedData.materialQuantity ?? itemToUpdate.materialQuantity;
-        itemToUpdate.vendor = updatedData.vendor ?? itemToUpdate.vendor;
-        itemToUpdate.notes = updatedData.notes ?? itemToUpdate.notes;
+        itemToUpdate.vendor = updatedData.vendor?.trim() ?? itemToUpdate.vendor;
+        itemToUpdate.notes = updatedData.notes?.trim() ?? itemToUpdate.notes;
 
         material.totalCost = material?.materials.reduce(
             (acc, curr) => acc + curr.unitPrice * curr.materialQuantity,
@@ -464,11 +425,11 @@ const updateMaterialItem = async (req: AuthenticatedUserRequest, res: Response):
 
         await material.save()
 
-        res.status(200).json({ message: "Material fetched successfully", ok: true, data: material });
+        res.status(200).json({ message: "Material item updated successfully", ok: true, data: material });
 
     }
     catch (error) {
-        console.error("Error from delete material list :", error);
+        console.error("Error from update material list :", error);
         res.status(500).json({ message: "Server error", ok: false, error });
         return
     }
@@ -493,7 +454,7 @@ const updateMaterialLists = async (req: AuthenticatedUserRequest, res: Response)
             return;
         }
 
-        res.status(200).json({ message: "Material fetched successfully", ok: true, data: materialLists });
+        res.status(200).json({ message: "Material list updated successfully", ok: true, data: materialLists });
         return;
     }
     catch (error) {
