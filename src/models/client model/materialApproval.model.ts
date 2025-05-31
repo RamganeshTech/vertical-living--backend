@@ -3,7 +3,7 @@ import { model, Schema, Types } from "mongoose";
 interface IMaterialItemApproval {
   materialItemId: Types.ObjectId;
   approved: 'pending' | 'approved' | 'rejected';
-  feedback?: string;
+  feedback?: string | null;
 }
 
 interface IMaterialApproval extends Document {
@@ -12,7 +12,7 @@ interface IMaterialApproval extends Document {
   materialListId: Types.ObjectId;
   approvedItems: IMaterialItemApproval[];
   approvalStatus: 'pending' | 'approved' | 'rejected';
-  approvedAt?: Date;
+  approvedAt?: Date | null;
 }
 
 const MaterialItemApprovalSchema = new Schema<IMaterialItemApproval>({
@@ -27,7 +27,7 @@ const MaterialApprovalSchema = new Schema<IMaterialApproval>({
   materialListId: { type: Schema.Types.ObjectId, ref: 'MaterialListModel', required: true },
   approvedItems: { type: [MaterialItemApprovalSchema], default: [] },
   approvalStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
-  approvedAt: { type: Date }
+  approvedAt: { type: Date , default:null}
 }, { timestamps: true });
 
 export const MaterialApprovalModel = model<IMaterialApproval>('MaterialApprovalModel', MaterialApprovalSchema);

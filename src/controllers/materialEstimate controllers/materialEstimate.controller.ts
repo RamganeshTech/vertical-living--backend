@@ -4,22 +4,19 @@ import { materialValidations } from "../../validations/materialValidations/mater
 import MaterialEstimateModel from "../../models/Material Estimate Model/materialEstimate.model";
 import MaterialListModel from "../../models/Material Estimate Model/materialList.model";
 import { MaterialApprovalModel } from "../../models/client model/materialApproval.model";
+import { Error } from "mongoose";
 
 const createMaterial = async (req: AuthenticatedUserRequest, res: Response): Promise<void> => {
     try {
 
-        const { materialListId, projectId } = req.params;
+        const { projectId } = req.params;
+        const { materialListId } = req.query
         const { materialName, unit,
             unitPrice,
             materialQuantity,
             vendor,
             notes } = req.body
 
-
-        if (!materialListId) {
-            res.status(400).json({ message: "MaterialList ID is required", ok: false });
-            return
-        }
 
         const isValidData = materialValidations({
             materialName, unit, unitPrice, materialQuantity, vendor, notes
@@ -32,60 +29,112 @@ const createMaterial = async (req: AuthenticatedUserRequest, res: Response): Pro
 
         let material;
 
-        material = await MaterialEstimateModel.findOne({ materialListId })
+        if (materialListId) {
+            material = await MaterialEstimateModel.findOne({ materialListId })
 
-        if (material?.materials && material?.materials.length > 0) {
-            material.materials.push({
-                materialName,
-                unit,
-                unitPrice,
-                materialQuantity,
-                vendor: vendor || null,
-                notes: notes || null
-            })
+            if (material?.materials) {
 
-            let newlyAdded = material.materials.at(-1) //it gets the last element of the array
+                material.materials.push({
+                    materialName: materialName.trim(),
+                    unit: unit.trim(),
+                    unitPrice,
+                    materialQuantity,
+                    vendor: vendor?.trim() || null,
+                    notes: notes?.trim() || null
+                })
 
-            await material.save()
 
-            if (!newlyAdded) {
-                res.status(404).json({ message: "last element not found", ok: false })
-                return
+
+                let newlyAdded = material.materials.at(-1) //it gets the last element of the array
+
+                material.totalCost = material.materials.reduce((acc, curr) => acc + curr.unitPrice * curr.materialQuantity, 0)
+
+                await material.save()
+
+                if (!newlyAdded) {
+                    res.status(404).json({ message: "last element not found", ok: false })
+                    return
+                }
+
+                console.log("hello im in ", materialListId)
+                await MaterialListModel.findOneAndUpdate({ materialListId },
+                    {
+                        $push: { materials: (newlyAdded as any)._id },
+                    },
+                    { returnDocument: "after" })
             }
-
-            await MaterialListModel.findByIdAndUpdate({ materialListId }, { $push: { materials: (newlyAdded as any)._id } }, { returnDocument: "after" })
         }
         else {
-            let materialList = await MaterialListModel.create({ projectId, materialListName: "general" })
+            // this will work only if the materialId is not provided which means if the user is trying to add in general list
+            let materialList = await MaterialListModel.findOne({ projectId, materialListName: "general" });
 
             if (!materialList) {
-                res.status(400).json({ message: "problem in creating Materail List", ok: false, });
-                return;
-            }
+                // creating only for first time , next this part will ownt work, it will move on to the else part
+                materialList = await MaterialListModel.create({
+                    projectId,
+                    materialListName: "general"
+                });
 
-            material = await MaterialEstimateModel.create({
-                materialListId: materialList._id,
-                materials: [{
-                    materialName,
-                    unit,
+                if (!materialList) {
+                    res.status(400).json({ message: "Problem creating Material List", ok: false });
+                    return;
+                }
+
+                material = await MaterialEstimateModel.create({
+                    materialListId: materialList._id,
+                    materials: [{
+                        materialName: materialName.trim(),
+                        unit: unit?.trim(),
+                        unitPrice,
+                        materialQuantity,
+                        vendor: vendor || null,
+                        notes: notes?.trim() || null
+                    }],
+                    totalCost: materialQuantity * unitPrice
+                })
+
+                materialList.materials.push(material._id)
+
+                await materialList.save()
+            }
+            else {
+                material = await MaterialEstimateModel.findOne({ materialListId: materialList._id })
+
+                if (!material) {
+                    res.status(404).json({ message: "no material list found", ok: false })
+                    return
+
+                }
+
+                material?.materials.push({
+                    materialName: materialName.trim(),
+                    unit: unit?.trim(),
                     unitPrice,
                     materialQuantity,
                     vendor: vendor || null,
-                    notes: notes || null
-                }],
-                totalCost: materialQuantity * unitPrice
-            })
+                    notes: notes?.trim() || null
+                })
 
-            materialList.materials.push(material._id)
-            await materialList.save()
+
+
+                material.totalCost = material?.materials.reduce(
+                    (acc, curr) => acc + curr.unitPrice * curr.materialQuantity,
+                    0
+                );
+
+                await material.save();
+            }
+
         }
 
         res.status(200).json({ message: "Material added successfully", ok: true, data: material });
 
     } catch (error) {
-        console.error("Error from createMaterail:", error);
-        res.status(500).json({ message: "Server error", ok: false, error });
-        return
+        if (error instanceof Error) {
+            console.error("Error from createMaterail:", error);
+            res.status(500).json({ message: "Server error", ok: false, error: error.message });
+            return
+        }
     }
 }
 
@@ -111,6 +160,22 @@ const createMaterailList = async (req: AuthenticatedUserRequest, res: Response):
             materials: []
         })
 
+        if (!materialLists) {
+            res.status(400).json({ message: "problem in createing the matrial lists", ok: false })
+            return
+        }
+
+        const materials = await MaterialEstimateModel.create({
+            materialListId: materialLists._id,
+            materials: [],
+            totalCost: 0
+        })
+
+        if (!materials) {
+            res.status(400).json({ message: "problem in createing the matrial Items list", ok: false })
+            return
+        }
+
         res.status(201).json({ message: "created material lists", data: materialLists, ok: true })
     }
     catch (error) {
@@ -129,42 +194,44 @@ const getMaterial = async (req: AuthenticatedUserRequest, res: Response): Promis
             return
         }
 
-         const materialEstimateDoc = await MaterialEstimateModel.findOne({ materialListId });
+        const materialEstimateDoc = await MaterialEstimateModel.findOne({ materialListId });
 
-    if (!materialEstimateDoc) {
-      res.status(404).json({ message: "Material estimate not found", ok: false });
-      return;
-    }
+        if (!materialEstimateDoc) {
+            res.status(404).json({ message: "Material items not found", ok: false });
+            return;
+        }
 
-    // 2️⃣ Get approval doc
-    const approvalDoc = await MaterialApprovalModel.findOne({ materialListId });
+        // 2️⃣ Get approval doc
+        const approvalDoc = await MaterialApprovalModel.findOne({ materialListId });
 
-    const approvedMap: Record<string, { approved: string; feedback: string | null }> = {};
+        const approvedMap: Record<string, { approved: string; feedback: string | null }> = {};
 
-    if (approvalDoc?.approvedItems?.length) {
-      approvalDoc.approvedItems.forEach((item:any) => {
-        approvedMap[item.materialItemId.toString()] = {
-          approved: item.approved,
-          feedback: item.feedback
-        };
-      });
-    }
+        if (approvalDoc?.approvedItems?.length) {
+            approvalDoc.approvedItems.forEach((item: any) => {
+                approvedMap[item.materialItemId.toString()] = {
+                    approved: item.approved,
+                    feedback: item.feedback
+                };
+            });
+        }
 
-    // 3️⃣ Merge each material item with approval status
-    const mergedMaterials = materialEstimateDoc.materials.map((material:any) => {
-      const itemId = material._id.toString();
-      return {
-        ...material.toObject(), //here teh material means to material items array where it will contain the array of objects
-        clientApproved: approvedMap[itemId]?.approved || "pending",     // default fallback
-        clientFeedback: approvedMap[itemId]?.feedback || null
-      };
-    });
+        // 3️⃣ Merge each material item with approval status
+        const mergedMaterials = materialEstimateDoc.materials.map((material: any) => {
+            const itemId = material._id.toString();
+            return {
+                ...material.toObject(), //here teh material means to material items array where it will contain the array of objects
+                clientApproved: approvalDoc ? (approvedMap[itemId]?.approved || "pending") : "no client assigned",
+                clientFeedback: approvalDoc ? (approvedMap[itemId]?.feedback || null) : null
+            };
+        });
 
-    res.status(200).json({
-      message: "Material items fetched successfully",
-      ok: true,
-      data: mergedMaterials
-    });
+        const totalCost = materialEstimateDoc.totalCost
+
+        res.status(200).json({
+            message: "Material items fetched successfully",
+            ok: true,
+            data: { materialListId, mergedMaterials, totalCost }
+        });
 
     }
     catch (error) {
@@ -184,15 +251,20 @@ const getMaterialLists = async (req: AuthenticatedUserRequest, res: Response): P
             return
         }
 
-          // 1. Fetch all material lists for the project
+        // 1. Fetch all material lists for the project
         const materialLists = await MaterialListModel.find({ projectId });
+
+        if (!materialLists.length) {
+            res.status(200).json({ message: "materials List not found", ok: false, data: materialLists })
+            return
+        }
 
         // 2. Prepare output with clientApproved field
         const result = await Promise.all(materialLists.map(async (list) => {
             const materialEstimate = await MaterialEstimateModel.findOne({ materialListId: list._id });
             const materialApproval = await MaterialApprovalModel.findOne({ materialListId: list._id });
 
-            let status = "pending";
+            let status = "no client assigned";
 
             if (materialEstimate && materialApproval) {
                 const totalItems = materialEstimate.materials.length;
@@ -250,9 +322,27 @@ const deleteMaterial = async (req: AuthenticatedUserRequest, res: Response): Pro
             return
         }
 
-        let materials = await MaterialEstimateModel.findByIdAndDelete(materialId)
+        let material = await MaterialEstimateModel.findOne({ materialListId })
 
-        res.status(200).json({ message: "Material fetched successfully", ok: true, data: materials });
+        if (!material) {
+            res.status(404).json({ message: "material list not found", ok: false })
+            return
+        }
+
+        material.materials = material?.materials.filter((item: any) => {
+            return (
+                item._id.toString() !== materialId.toString()
+            )
+        })
+
+        material.totalCost = material?.materials.reduce(
+            (acc, curr) => acc + curr.unitPrice * curr.materialQuantity,
+            0
+        );
+
+        await material.save()
+
+        res.status(200).json({ message: "Material fetched successfully", ok: true, data: material });
 
     }
     catch (error) {
@@ -285,7 +375,7 @@ const deleteMaterialLists = async (req: AuthenticatedUserRequest, res: Response)
 
         const existingMaterailLists = await MaterialListModel.findOneAndDelete({ _id: materailListId, projectId })
 
-        res.status(200).json({ message: "Material fetched successfully", ok: true, data: existingMaterailLists });
+        res.status(200).json({ message: "Material deleted successfully", ok: true, data: existingMaterailLists });
 
     }
     catch (error) {
@@ -345,33 +435,6 @@ const updateMaterialItem = async (req: AuthenticatedUserRequest, res: Response):
 
         let updatedData = req.body
 
-        // APPROACH PROVIDED BY CHATGPT
-        //      const updated = await MaterialEstimateModel.findOneAndUpdate(
-        //   {
-        //     materialListId,
-        //     "materials._id": materialId, // Match the subdocument inside the array
-        //   },
-        //   {
-        //     $set: {
-        //       "materials.$.materialName": updatedData.materialName,
-        //       "materials.$.unit": updatedData.unit,
-        //       "materials.$.unitPrice": updatedData.unitPrice,
-        //       "materials.$.materialQuantity": updatedData.materialQuantity,
-        //       "materials.$.vendor": updatedData.vendor || null,
-        //       "materials.$.notes": updatedData.notes || null,
-        //     },
-        //   },
-        //   { returnDocument: "after" }
-        // );
-
-        // if (!updated) {
-        //   res.status(404).json({ message: "Material item not found", ok: false });
-        //   return;
-        // }
-
-        // res.status(200).json({ message: "Material item updated successfully", ok: true, data: updated });
-
-
         let material = await MaterialEstimateModel.findOne({ materialListId })
 
         if (!material) {
@@ -393,6 +456,11 @@ const updateMaterialItem = async (req: AuthenticatedUserRequest, res: Response):
         itemToUpdate.materialQuantity = updatedData.materialQuantity ?? itemToUpdate.materialQuantity;
         itemToUpdate.vendor = updatedData.vendor ?? itemToUpdate.vendor;
         itemToUpdate.notes = updatedData.notes ?? itemToUpdate.notes;
+
+        material.totalCost = material?.materials.reduce(
+            (acc, curr) => acc + curr.unitPrice * curr.materialQuantity,
+            0
+        );
 
         await material.save()
 
@@ -443,7 +511,6 @@ export {
     getMaterialLists,
     deleteMaterial,
     deleteMaterialLists,
-
     updateMaterialLists,
     updateMaterialItem
 }
