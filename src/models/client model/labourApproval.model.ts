@@ -3,7 +3,7 @@ import { model, Schema, Types } from "mongoose";
 interface ILabourItemApproval {
   labourItemId: Types.ObjectId;
   approved: 'pending' | 'approved' | 'rejected';
-  feedback?: string;
+  feedback?: string | null;
 }
 
 interface ILabourApproval extends Document {
@@ -12,7 +12,7 @@ interface ILabourApproval extends Document {
   labourListId: Types.ObjectId;
   approvedItems: ILabourItemApproval[];
   approvalStatus: 'pending' | 'approved' | 'rejected';
-  approvedAt?: Date;
+  approvedAt?: Date | null;
 }
 
 const LabourItemApprovalSchema = new Schema<ILabourItemApproval>({

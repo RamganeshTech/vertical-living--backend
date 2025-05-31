@@ -7,6 +7,7 @@ import { MaterialApprovalModel } from "../../models/client model/materialApprova
 import { LabourApprovalModel } from "../../models/client model/labourApproval.model";
 import MaterialEstimateModel from "../../models/Material Estimate Model/materialEstimate.model";
 import { Types } from "mongoose";
+import { LabourEstimateModel } from "../../models/labour models/labourEstimate.model";
 
 const getAccessedProjects = async (req: AuthenticatedClientRequest, res: Response) => {
     try {
@@ -18,7 +19,7 @@ const getAccessedProjects = async (req: AuthenticatedClientRequest, res: Respons
     }
     catch (error) {
         console.log("error form getProjects", error)
-         res.status(500).json({ message: 'Server error. Please try again later.', errorMessage: error, error: true, ok: false });
+        res.status(500).json({ message: 'Server error. Please try again later.', errorMessage: error, error: true, ok: false });
         return
     }
 }
@@ -146,27 +147,27 @@ const updateMaterialStatus = async (req: AuthenticatedClientRequest, res: Respon
         const { approved, feedback } = req.body;
 
         if (!materialListId || !materialItemId || projectId) {
-            res.status(400).json({ message: "MaterialList Id and MaterialItem Id is required", ok: false })
+            res.status(400).json({ message: "MaterialList Id, projectId and  MaterialItem Id is required", ok: false })
             return;
         }
 
         if (approved && !["approved", "pending", "rejected"].includes(approved)) {
-             res.status(400).json({ message: "Invalid approval status", ok: false });
-             return
+            res.status(400).json({ message: "Invalid approval status", ok: false });
+            return
         }
 
         // Confirm the materialItem exists
         const materialEstimate = await MaterialEstimateModel.findOne({ materialListId });
         if (!materialEstimate) {
-             res.status(404).json({ message: "MaterialEstimate not found for this MaterialList", ok: false });
-             return
+            res.status(404).json({ message: "MaterialEstimate not found for this MaterialList", ok: false });
+            return
         }
 
         const materialItemExists = materialEstimate.materials.some((item: any) => item._id.toString() === materialItemId);
 
         if (!materialItemExists) {
-             res.status(404).json({ message: "MaterialItem not found in MaterialEstimate", ok: false });
-             return
+            res.status(404).json({ message: "MaterialItem not found in MaterialEstimate", ok: false });
+            return
         }
 
         // Get clientId and projectId from the authenticated user or request body/context
@@ -231,15 +232,15 @@ const updateMaterialStatus = async (req: AuthenticatedClientRequest, res: Respon
         await materialApproval.save();
 
 
-         res.status(200).json({ message: "Material item status updated", ok: true });
-         return
+        res.status(200).json({ message: "Material item status updated", ok: true });
+        return
 
 
     }
     catch (error) {
         console.log("error form update material status", error)
-         res.status(500).json({ message: 'Server error. Please try again later.', errorMessage: error, error: true, ok: false });
-         return;
+        res.status(500).json({ message: 'Server error. Please try again later.', errorMessage: error, error: true, ok: false });
+        return;
     }
 }
 
@@ -298,13 +299,13 @@ const updateMaterialListStatus = async (req: AuthenticatedClientRequest, res: Re
         const { status } = req.body;
 
         if (!materialListId || !projectId) {
-             res.status(400).json({ message: "MaterialList Id and Project Id are required", ok: false });
-             return
+            res.status(400).json({ message: "MaterialList Id and Project Id are required", ok: false });
+            return
         }
 
         if (!["approved", "pending", "rejected"].includes(status)) {
-             res.status(400).json({ message: "Invalid approval status", ok: false });
-             return
+            res.status(400).json({ message: "Invalid approval status", ok: false });
+            return
         }
 
         const clientId = req.client?._id;
@@ -313,8 +314,8 @@ const updateMaterialListStatus = async (req: AuthenticatedClientRequest, res: Re
         const materialEstimate = await MaterialEstimateModel.findOne({ materialListId });
 
         if (!materialEstimate) {
-             res.status(404).json({ message: "MaterialEstimate not found for this list", ok: false });
-             return
+            res.status(404).json({ message: "MaterialEstimate not found for this list", ok: false });
+            return
         }
 
         // Fetch or create MaterialApproval
@@ -349,7 +350,7 @@ const updateMaterialListStatus = async (req: AuthenticatedClientRequest, res: Re
 
         await materialApproval.save();
 
-         res.status(200).json({
+        res.status(200).json({
             message: `Material list marked as ${status} successfully`,
             ok: true,
             data: materialApproval
@@ -358,15 +359,191 @@ const updateMaterialListStatus = async (req: AuthenticatedClientRequest, res: Re
 
     } catch (error) {
         console.log("Error in updateMaterialListApprovalStatus", error);
-        return res.status(500).json({ message: "Server error", errorMessage: error, error: true, ok: false });
+        res.status(500).json({ message: "Server error", errorMessage: error, error: true, ok: false });
         return
     }
 };
+
+const updateLabourStatus = async (req: AuthenticatedClientRequest, res: Response) => {
+    try {
+
+        const { labourListId, labourItemId, projectId } = req.params;
+        const { approved, feedback } = req.body;
+
+        if (!labourListId || !labourItemId || projectId) {
+            res.status(400).json({ message: "labourList Id, projectId and  labourItem Id is required", ok: false })
+            return;
+        }
+
+        if (approved && !["approved", "pending", "rejected"].includes(approved)) {
+            res.status(400).json({ message: "Invalid approval status", ok: false });
+            return
+        }
+
+        // Confirm the materialItem exists
+        const labourEstimate = await LabourEstimateModel.findOne({ labourListId });
+        if (!labourEstimate) {
+            res.status(404).json({ message: "Labour Estimate not found for this Labour List", ok: false });
+            return
+        }
+
+        const labourItemExists = labourEstimate.labourItems.some((item: any) => item._id.toString() === labourItemId);
+
+        if (!labourItemExists) {
+            res.status(404).json({ message: "Labour Item not found in Labour Estimate", ok: false });
+            return
+        }
+
+        // Get clientId and projectId from the authenticated user or request body/context
+        const clientId = req.client?._id; // Adjust as per your auth system
+
+        let labourApproval = await LabourApprovalModel.findOne({ labourListId });
+
+        if (!labourApproval) {
+            labourApproval = new LabourApprovalModel({
+                clientId,
+                projectId,
+                labourListId,
+                approvedItems: [],
+            });
+        }
+
+        // Update or insert the item in approvedItems array
+        const existingIndex = labourApproval.approvedItems.findIndex(
+            (item) => item.labourItemId.toString() === labourItemId
+        );
+
+        if (existingIndex !== -1) {
+            // Update existing item and it will preserve the db data if either one of them is not provided and ("pending" is falsy value)
+            if (approved) labourApproval.approvedItems[existingIndex].approved = approved;
+            if (feedback !== undefined) labourApproval.approvedItems[existingIndex].feedback = feedback;
+        } else {
+            // Add new item
+            labourApproval.approvedItems.push({
+                labourItemId: new Types.ObjectId(labourItemId),
+                approved: approved || "pending",
+                feedback: feedback || null,
+            });
+        }
+
+        // Recalculate approvalStatus after change
+        const totalItems = labourEstimate.labourItems.length;
+        const approvedItems = labourApproval.approvedItems;
+
+        const statusCounts = {
+            approved: 0,
+            pending: 0,
+            rejected: 0,
+        };
+
+        for (const item of approvedItems) {
+            if (item.approved === 'approved') statusCounts.approved++;
+            else if (item.approved === 'rejected') statusCounts.rejected++;
+            else statusCounts.pending++;
+        }
+
+        // Default to "pending"
+        let newStatus: 'pending' | 'approved' | 'rejected' = 'pending';
+
+        if (statusCounts.approved === totalItems) {
+            newStatus = 'approved';
+        } else if (statusCounts.rejected === totalItems) {
+            newStatus = 'rejected';
+        }
+
+        labourApproval.approvalStatus = newStatus;
+        labourApproval.approvedAt = newStatus === 'approved' ? new Date() : null;
+        await labourApproval.save();
+
+
+        res.status(200).json({ message: "Labour item status updated", ok: true });
+        return
+    }
+    catch (error) {
+        console.log("Error in update Labour item ApprovalStatus", error);
+        res.status(500).json({ message: "Server error", errorMessage: error, error: true, ok: false });
+        return
+    }
+}
+
+const updateLabourListStatus = async (req: AuthenticatedClientRequest, res: Response) => {
+    try {
+        const { projectId, labourListId } = req.params
+        const clientId = req.client?._id;
+        let { status } = req.body
+
+        if (!labourListId || !projectId) {
+            res.status(400).json({ message: "Labour list Id and Project Id are required", ok: false });
+            return
+        }
+
+        if (!["approved", "pending", "rejected"].includes(status)) {
+            res.status(400).json({ message: "Invalid approval status", ok: false });
+            return
+        }
+
+
+        // Get the material estimate for the list
+        const labourEstimate = await LabourEstimateModel.findOne({ labourListId });
+
+        if (!labourEstimate) {
+            res.status(404).json({ message: "Labour Estimate not found for this list", ok: false });
+            return
+        }
+
+        // Fetch or create MaterialApproval
+        let labourApproval = await LabourApprovalModel.findOne({ labourListId, projectId, clientId });
+
+        if (!labourApproval) {
+            labourApproval = new LabourApprovalModel({
+                labourListId,
+                projectId,
+                clientId,
+                approvedItems: [],
+            });
+        }
+
+
+        // Replace approvedItems with the new status
+        const updatedItems = labourEstimate.labourItems.map((item: any) => {
+            const existingItem = labourApproval.approvedItems.find(
+                (approvedItem) => approvedItem.labourItemId.toString() === item._id.toString()
+            );
+
+            return {
+                labourItemId: item._id,
+                approved: status,
+                feedback: existingItem?.feedback ?? null, // ✅ Preserve old feedback if exists
+            };
+        });
+
+        labourApproval.approvedItems = updatedItems;
+        labourApproval.approvalStatus = status;
+        labourApproval.approvedAt = status === "approved" ? new Date() : null;
+
+        await labourApproval.save();
+
+        res.status(200).json({
+            message: `Labour list marked as ${status} successfully`,
+            ok: true,
+            data: labourApproval
+        });
+        return
+    }
+    catch (error) {
+        console.log("Error in update Labour list ApprovalStatus", error);
+        res.status(500).json({ message: "Server error", errorMessage: error, error: true, ok: false });
+        return
+    }
+}
+
 
 
 export {
     getAccessedProjects,
     getProjectDetails,
     updateMaterialStatus,
-    updateMaterialListStatus
+    updateMaterialListStatus,
+    updateLabourStatus,
+    updateLabourListStatus
 }
