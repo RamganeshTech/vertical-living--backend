@@ -54,7 +54,7 @@ const userlogin = async (req: Request, res: Response) => {
         }
         )
 
-        res.status(200).json({ message: `${user.username} loggedin successfull`, ok: true, error: false })
+        res.status(200).json({ message: `${user.username} loggedin successfully`, data:{userName:user.username, email:user.email, phoneNo:user.phoneNo}, ok: true, error: false })
     }
     catch (error) {
         console.log("error from userlogin", error)

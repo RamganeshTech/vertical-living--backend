@@ -6,35 +6,39 @@ interface IUser extends Document {
     username: string,
     phoneNo: string,
     resetPasswordToken?: string;
-  resetPasswordExpire?: number;
+    resetPasswordExpire?: number;
 }
 
 
-const UserSchema: Schema<IUser> = new Schema({
+const UserSchema: Schema<IUser> = new Schema({ 
     email: {
         type: String,
         maxLength: [50, "it shoud be within 50 digits"],
-        unique: true,
         require: true
     },
     password: {
         type: String,
-        require: true
+        require: true,
+        maxlength: [100, "password should be under 100 characters"]
     },
     username: {
         type: String,
-        unique: true
+        unique: true,
+        maxlength: [100, "username should be under 100 characters"]
     },
     phoneNo: {
         type: String,
         unique: true,
-        maxlength:[10, "it should be exactly 10 digits"]
+        maxlength: [10, "it should be exactly 10 digits"]
     },
     resetPasswordToken: { type: String },  // Token for password reset
     resetPasswordExpire: { type: Number },
 }, {
     timestamps: true
 })
+
+
+UserSchema.index({ email: 1 }, {unique: true})
 
 
 const UserModel = mongoose.model<IUser>("UserModel", UserSchema)

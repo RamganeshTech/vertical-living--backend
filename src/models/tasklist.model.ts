@@ -9,7 +9,7 @@ interface ITaskList extends Document {
 const TaskListSchema = new Schema<ITaskList>({
   title: { type: String, required: true },
   projectId: { type: Schema.Types.ObjectId, ref: 'ProjectModel', required: true },
-  tasks: [{ type: Schema.Types.ObjectId, ref: 'TaskModel'}]
+  tasks: [{ type: Schema.Types.ObjectId, ref: 'TaskModel', }]
 });
 
 export const TaskListModel = mongoose.model<ITaskList>('TaskListModel', TaskListSchema);

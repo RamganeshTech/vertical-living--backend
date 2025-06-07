@@ -8,6 +8,9 @@ import { LabourApprovalModel } from "../../models/client model/labourApproval.mo
 import MaterialEstimateModel from "../../models/Material Estimate Model/materialEstimate.model";
 import { Types } from "mongoose";
 import { LabourEstimateModel } from "../../models/labour models/labourEstimate.model";
+import { TaskApprovalModel } from "../../models/client model/taskApproval.model";
+import TaskModel from "../../models/task.model";
+import { TaskListModel } from './../../models/tasklist.model';
 
 const getAccessedProjects = async (req: AuthenticatedClientRequest, res: Response) => {
     try {
@@ -117,12 +120,12 @@ const getProjectDetails = async (req: AuthenticatedClientRequest, res: Response)
         // Attach approval status to each item
         const materialItemsWithStatus: any = materialList.materials.map((item: any) => ({
             ...item.toObject(),
-            approval: approvedMaterialsMap[item._id.toString()] || null,
+            approval: approvedMaterialsMap[item._id.toString()] || { approved: null, feedback: null },
         }));
 
         const labourItemsWithStatus = labourList.labours.map((item: any) => ({
             ...item.toObject(),
-            approval: approvedLaboursMap[item._id.toString()] || null,
+            approval: approvedLaboursMap[item._id.toString()] || { approved: null, feedback: null },
         }));
 
         return res.status(200).json({
@@ -537,6 +540,186 @@ const updateLabourListStatus = async (req: AuthenticatedClientRequest, res: Resp
     }
 }
 
+const updateTaskItemStatus = async (req: AuthenticatedClientRequest, res: Response) => {
+    try {
+
+        const { projectId, taskListId, taskItemId } = req.params
+        const { approved, feedback } = req.body;
+
+        if (!taskListId || !projectId || !taskItemId) {
+            res.status(400).json({ message: "taskItem Id , Task list Id and Project Id are required", ok: false });
+            return
+        }
+
+        if (approved && !["approved", "pending", "rejected"].includes(approved)) {
+            res.status(400).json({ message: "Invalid approval status", ok: false });
+            return
+        }
+
+        // Confirm the materialItem exists
+        const taskModel = await TaskModel.findOne({ taskListId, _id: taskItemId });
+        if (!taskModel) {
+            res.status(404).json({ message: "taskModel not found for this TaskList", ok: false });
+            return
+        }
+
+        let taskList = await TaskListModel.findOne({_id:taskListId})
+
+        if (!taskList) {
+            res.status(404).json({ message: "task list not found for this TaskList", ok: false });
+            return
+        }
+
+        // Get clientId and projectId from the authenticated user or request body/context
+        const clientId = req.client?._id; // Adjust as per your auth system
+
+        let taskApproval = await TaskApprovalModel.findOne({ taskListId });
+
+        if (!taskApproval) {
+            taskApproval = new TaskApprovalModel({
+                clientId,
+                projectId,
+                taskListId,
+                approvedItems: [],
+            });
+        }
+
+        // Update or insert the item in approvedItems array
+        const existingIndex = taskApproval.approvedItems.findIndex(
+            (item) => item.taskItemId.toString() === taskItemId
+        );
+
+        if (existingIndex !== -1) {
+            // Update existing item and it will preserve the db data if either one of them is not provided and ("pending" is falsy value)
+            if (approved) taskApproval.approvedItems[existingIndex].approved = approved;
+            if (feedback !== undefined) taskApproval.approvedItems[existingIndex].feedback = feedback;
+        } else {
+            // Add new item
+            taskApproval.approvedItems.push({
+                taskItemId: new Types.ObjectId(taskItemId),
+                approved: approved || "pending",
+                feedback: feedback || null,
+            });
+        }
+
+        // Recalculate approvalStatus after change
+        const totalItems = taskList.tasks.length;
+        const approvedItems = taskApproval.approvedItems;
+
+        const statusCounts = {
+            approved: 0,
+            pending: 0,
+            rejected: 0,
+        };
+
+        for (const item of approvedItems) {
+            if (item.approved === 'approved') statusCounts.approved++;
+            else if (item.approved === 'rejected') statusCounts.rejected++;
+            else statusCounts.pending++;
+        }
+
+        // Default to "pending"
+        let newStatus: 'pending' | 'approved' | 'rejected' = 'pending';
+
+        if (statusCounts.approved === totalItems) {
+            newStatus = 'approved';
+        } else if (statusCounts.rejected === totalItems) {
+            newStatus = 'rejected';
+        }
+
+        taskApproval.approvalStatus = newStatus;
+        taskApproval.approvedAt = newStatus === 'approved' ? new Date() : null;
+        await taskApproval.save();
+
+
+        res.status(200).json({ message: "Task item status updated", ok: true });
+        return
+
+    }
+    catch (error) {
+        console.log("Error in update Task item ApprovalStatus", error);
+        res.status(500).json({ message: "Server error", errorMessage: error, error: true, ok: false });
+        return
+    }
+}
+
+
+const updateTaskListStatus = async (req: AuthenticatedClientRequest, res: Response) => {
+    try {
+        const { projectId, taskListId } = req.params
+        const clientId = req.client?._id;
+        let { status } = req.body
+
+        if (!taskListId || !projectId) {
+            res.status(400).json({ message: "task list Id and Project Id are required", ok: false });
+            return
+        }
+
+        if (!["approved", "pending", "rejected"].includes(status)) {
+            res.status(400).json({ message: "Invalid approval status", ok: false });
+            return
+        }
+
+        let taskList = await TaskListModel.findOne({_id:taskListId})
+
+          if (!taskList) {
+            res.status(404).json({ message: "taks lists not found for the provided Id", ok: false });
+            return
+        }
+
+        // Get the material estimate for the list
+        const taskModel = await TaskModel.findOne({ taskListId });
+
+        if (!taskModel) {
+            res.status(404).json({ message: "tasks not found for this list", ok: false });
+            return
+        }
+
+        // Fetch or create MaterialApproval
+        let taskApproval = await TaskApprovalModel.findOne({ taskListId, projectId, clientId });
+
+        if (!taskApproval) {
+            taskApproval = new TaskApprovalModel({
+                taskListId,
+                projectId,
+                clientId,
+                approvedItems: [],
+            });
+        }
+
+
+        // Replace approvedItems with the new status
+        const updatedItems = taskList.tasks.map((item: any) => {
+            const existingItem = taskApproval.approvedItems.find(
+                (approvedItem) => approvedItem.taskItemId.toString() === item._id.toString()
+            );
+
+            return {
+                taskItemId: item._id,
+                approved: status,
+                feedback: existingItem?.feedback ?? null, // ✅ Preserve old feedback if exists
+            };
+        });
+
+        taskApproval.approvedItems = updatedItems;
+        taskApproval.approvalStatus = status;
+        taskApproval.approvedAt = status === "approved" ? new Date() : null;
+
+        await taskApproval.save();
+
+        res.status(200).json({
+            message: `task list marked as ${status} successfully`,
+            ok: true,
+            data: taskApproval
+        });
+        return
+    }
+    catch (error) {
+        console.log("Error in update Task list ApprovalStatus", error);
+        res.status(500).json({ message: "Server error", errorMessage: error, error: true, ok: false });
+        return
+    }
+}
 
 
 export {
@@ -545,5 +728,6 @@ export {
     updateMaterialStatus,
     updateMaterialListStatus,
     updateLabourStatus,
-    updateLabourListStatus
+    updateLabourListStatus,
+    updateTaskItemStatus
 }

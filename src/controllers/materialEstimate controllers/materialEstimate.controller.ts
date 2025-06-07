@@ -15,11 +15,12 @@ const createMaterial = async (req: AuthenticatedUserRequest, res: Response): Pro
             unitPrice,
             materialQuantity,
             vendor,
-            notes } = req.body
+            notes, 
+        singleMaterialCost } = req.body
 
 
         const isValidData = materialValidations({
-            materialName, unit, unitPrice, materialQuantity, vendor, notes
+            materialName, unit, unitPrice, materialQuantity, vendor, notes, singleMaterialCost
         })
 
         if (!isValidData.valid) {
@@ -28,6 +29,8 @@ const createMaterial = async (req: AuthenticatedUserRequest, res: Response): Pro
         }
 
         let material;
+
+        const totalSingleMaterialCost = unitPrice * materialQuantity
 
         if (materialListId) {
             material = await MaterialEstimateModel.findOne({ materialListId })
@@ -40,7 +43,8 @@ const createMaterial = async (req: AuthenticatedUserRequest, res: Response): Pro
                     unitPrice,
                     materialQuantity,
                     vendor: vendor?.trim() || null,
-                    notes: notes?.trim() || null
+                    notes: notes?.trim() || null,
+                    singleMaterialCost: totalSingleMaterialCost ?? 0
                 })
 
 
@@ -87,7 +91,8 @@ const createMaterial = async (req: AuthenticatedUserRequest, res: Response): Pro
                         unitPrice,
                         materialQuantity,
                         vendor: vendor || null,
-                        notes: notes?.trim() || null
+                        notes: notes?.trim() || null,
+                        singleMaterialCost: totalSingleMaterialCost ?? 0
                     }],
                     totalCost: materialQuantity * unitPrice
                 })
@@ -111,7 +116,8 @@ const createMaterial = async (req: AuthenticatedUserRequest, res: Response): Pro
                     unitPrice,
                     materialQuantity,
                     vendor: vendor || null,
-                    notes: notes?.trim() || null
+                    notes: notes?.trim() || null,
+                    singleMaterialCost: totalSingleMaterialCost ?? 0
                 })
 
 
@@ -417,6 +423,7 @@ const updateMaterialItem = async (req: AuthenticatedUserRequest, res: Response):
         itemToUpdate.materialQuantity = updatedData.materialQuantity ?? itemToUpdate.materialQuantity;
         itemToUpdate.vendor = updatedData.vendor?.trim() ?? itemToUpdate.vendor;
         itemToUpdate.notes = updatedData.notes?.trim() ?? itemToUpdate.notes;
+        itemToUpdate.singleMaterialCost = itemToUpdate.unitPrice * itemToUpdate.materialQuantity || itemToUpdate.singleMaterialCost
 
         material.totalCost = material?.materials.reduce(
             (acc, curr) => acc + curr.unitPrice * curr.materialQuantity,

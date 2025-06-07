@@ -6,8 +6,8 @@ interface projectInformation {
     startDate: (Date | null)
     endDate: (Date | null)
     dueDate: (Date | null)
-    duration: (Date | null)
-    priority: "None" | "Low" | "Medium" | "High"
+    duration: (number | null)
+    priority: "none" | "low" | "medium" | "high"
     status: "Active" | "Delayed" | "In Progress" | "In Testing" | "On Track" | "On Hold" | "Approved" | "Cancelled" | "Planning" | "Invoice";
     projectGroup: mongoose.Schema.Types.ObjectId | null,
     completionTime: (string | null),
@@ -81,7 +81,7 @@ const ProjectSchema: Schema<IProject> = new Schema({
             default: null
         },
         duration: {
-            type: Date,
+            type: Number,
             default: null
         },
         priority: {
@@ -90,7 +90,7 @@ const ProjectSchema: Schema<IProject> = new Schema({
         },
         status: {
             type: String,
-            default: "Open"
+            default: "Active"
         },
         completionTime: {
             type: String,
@@ -123,9 +123,9 @@ const ProjectSchema: Schema<IProject> = new Schema({
         default: 0,
     },
     projectAccess: {
-        type: String
+        type: String,
+        default:"private"
     },
-
     taskLists: [{
         type: mongoose.Schema.ObjectId,
         ref: 'TaskModel'

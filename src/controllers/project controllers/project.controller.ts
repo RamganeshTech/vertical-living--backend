@@ -3,31 +3,63 @@ import { AuthenticatedUserRequest } from "../../types/types";
 import ProjectModel from "../../models/project.model";
 
 import redisClient from '../../config/redisClient'
+import ClientModel from "../../models/client model/client.model";
 
 const createProject = async (req: AuthenticatedUserRequest, res: Response) => {
     try {
         let user = req.user
 
-        let { projectName,
+        let {
+            projectName,
             description,
-            projectInformation,
-            projectAccess } = req.body
+            tags,
+            startDate,
+            endDate,
+            dueDate,
+            priority,
+            status
+        } = req.body
 
         if (!projectName) {
             return res.status(400).json({ message: "project name is required", ok: false })
         }
 
-        console.log("user form middleware", user)
 
-        projectInformation.owner = user.username
+        if (!startDate) {
+            return res.status(400).json({ message: "start date is required", ok: false })
+        }
+
+        if (endDate && startDate > endDate) {
+            res.status(400).json({ message: "end date should be after start date" })
+            return
+        }
+
+        if (dueDate && startDate > dueDate) {
+            res.status(400).json({ message: "Due date should be after start date" })
+            return
+        }
+
+        const durationInDays = Math.ceil(
+            (new Date(dueDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+
 
         const project = await ProjectModel.create({
             userId: user._id,
             projectId: Date.now(),
             projectName,
             description: description ? description : null,
-            projectInformation,
-            projectAccess
+            projectInformation: {
+                owner: user.username,
+                tags,
+                startDate,
+                endDate,
+                dueDate,
+                duration: durationInDays,
+                priority,
+                status,
+            },
         })
 
         const cacheKey = `projects:${user._id}`;
@@ -106,8 +138,125 @@ const deleteProject = async (req: AuthenticatedUserRequest, res: Response): Prom
     }
 }
 
+const assignClient = async (req: AuthenticatedUserRequest, res: Response): Promise<void> => {
+    try {
+        const { clientId, projectId } = req.params
+
+        const user = req.user
+
+        if (!clientId || !projectId) {
+            res.status(400).json({ message: 'client id and project id is required', ok: false });
+            return
+        }
+
+        const client = await ClientModel.findById(clientId)
+
+        if (!client) {
+            res.status(404).json({ message: "client not found", ok: false })
+            return
+        }
+
+        const project = await ProjectModel.findByIdAndUpdate(projectId, { $push: { accessibleClientId: clientId } }, { returnDocument: "after" })
+
+        if (!project) {
+            res.status(404).json({ message: "proejct not found", ok: false })
+            return
+        }
+
+         const cacheKey = `projects:${user._id}`;
+        await redisClient.del(cacheKey);
+
+
+        res.status(200).json({ message: `client ${client.clientName} has been assigned to the ${project.projectName} project`, ok: true });
+    }
+    catch (error) {
+        console.log("error form assign client projects", error)
+        res.status(500).json({ message: 'Server error. Please try again later.', errorMessage: error, error: true, ok: false });
+        return
+    }
+}
+
+const updateProject = async (req: AuthenticatedUserRequest, res: Response): Promise<void> => {
+    try {
+        let user = req.user
+
+        const { projectId } = req.params
+
+        let {
+            projectName,
+            description,
+            tags,
+            startDate,
+            endDate,
+            dueDate,
+            priority,
+            status
+        } = req.body
+
+        if (!projectName) {
+            res.status(400).json({ message: "project name is required", ok: false })
+            return
+        }
+
+        if (!startDate) {
+            res.status(400).json({ message: "start date is required", ok: false })
+            return
+        }
+
+        if (endDate && startDate > endDate) {
+            res.status(400).json({ message: "end date should be after start date" })
+            return
+        }
+
+        if (dueDate && startDate > dueDate) {
+            res.status(400).json({ message: "Due date should be after start date" })
+            return
+        }
+
+        const durationInDays = Math.ceil(
+            (new Date(dueDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        const data = await ProjectModel.findByIdAndUpdate(projectId, {
+            projectName,
+            description: description ? description : null,
+            projectInformation: {
+                owner: user.username,
+                tags,
+                startDate,
+                endDate,
+                dueDate,
+                duration: durationInDays,
+                priority,
+                status,
+            },
+        }, {
+            returnDocument: "after"
+        })
+
+        if (!data) {
+            res.status(404).json({ message: "project not found" })
+            return;
+        }
+
+         const cacheKey = `projects:${user._id}`;
+        await redisClient.del(cacheKey);
+
+
+        res.status(200).json({ message: "project information updated", data, ok: true })
+
+    }
+    catch (error) {
+        console.log("error form edit projects", error)
+        res.status(500).json({ message: 'Server error. Please try again later.', errorMessage: error, error: true, ok: false });
+        return
+    }
+}
 
 export {
     createProject,
-    getProjects, deleteProject
+    getProjects,
+    deleteProject,
+    assignClient,
+    updateProject
 }

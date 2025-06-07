@@ -19,11 +19,6 @@ const MaterialListSchema = new Schema<MaterialList>({
         ref: "MaterialEstimateModel",
         default: [], //this will be array of strings not in array of objects ["34fvg78", "34fvg78"]
     },
-// clientApproval:{
-    //     type:String,
-    //    enum: ['pending', 'approved', 'rejected'], 
-    //    default: 'pending' 
-    // }
 })
 
 const MaterialListModel = model("MaterialListModel", MaterialListSchema)

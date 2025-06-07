@@ -5,6 +5,7 @@ export interface MaterialItem {
   unit: string;
   unitPrice: number;
   materialQuantity: number;
+  singleMaterialCost:number;
   vendor?: string;
   notes?: string;
 }
@@ -20,8 +21,9 @@ const MaterialItemSchema = new Schema<MaterialItem>(
   {
     materialName: { type: String, required: true },
     unit: { type: String, required: true },
-    unitPrice: { type: Number, required: true },
-    materialQuantity: { type: Number, required: true },
+    unitPrice: { type: Number },
+    materialQuantity: { type: Number },
+    singleMaterialCost: { type: Number },
     vendor: { type: String , default:null},
     notes: { type: String, default:null },
   },

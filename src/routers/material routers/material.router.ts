@@ -16,7 +16,7 @@ import {
 const router = express.Router()
 
 router.post('/createmateriallist/:projectId', createMaterailList as RequestHandler)
-router.post('/creatematerial/:projectId', createMaterial as RequestHandler)
+router.post('/creatematerial/:projectId/:materialListId', createMaterial as RequestHandler)
 router.get('/getmaterial/:materialListId', getMaterial as RequestHandler)
 router.get('/getmateriallist/:projectId', getMaterialLists as RequestHandler)
 router.put('/updatematerialitem/:materialListId/:materialId', updateMaterialItem as RequestHandler)

@@ -22,9 +22,9 @@ import labourRoutes from './routers/labour routes/labour.routes'
 dotenv.config()
 
 const app = express()
-
+// console.log("env file", process.env.FRONTEND_URL)
 app.use(cors({
-  origin: process.env.FROTEND_URL,
+  origin: process.env.FRONTEND_URL,
   credentials: true
 }))
 app.use(cookieParser())
