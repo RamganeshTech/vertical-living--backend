@@ -41,6 +41,7 @@ const MaterialEstimateSchema = new Schema<MaterialEstimate>(
   }
 );
 
+MaterialEstimateSchema.index({materialListId:1})
 
 const MaterialEstimateModel = model("MaterialEstimateModel", MaterialEstimateSchema)
 export default MaterialEstimateModel;

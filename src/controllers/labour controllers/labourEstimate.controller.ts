@@ -223,7 +223,7 @@ const getLabourItems = async (req: AuthenticatedUserRequest, res: Response): Pro
         res.status(200).json({
             message: "labour items fetched successfully",
             ok: true,
-            data: { labourListId, mergedMaterials, totalLabourCost }
+            data: { _id: labourEstimateDoc._id, labourListId, mergedMaterials, totalLabourCost }
         });
 
     }
@@ -297,7 +297,7 @@ const getLabourLists = async (req: AuthenticatedUserRequest, res: Response): Pro
         });
 
 
-        res.status(200).json({ message: "fetched labour lists", data: labourList, ok: true })
+        // res.status(200).json({ message: "fetched labour lists", data: labourList, ok: true })
     }
     catch (error) {
         console.error("Error from create labour:", error);

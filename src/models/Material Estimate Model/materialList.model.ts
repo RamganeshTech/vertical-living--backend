@@ -19,6 +19,8 @@ const MaterialListSchema = new Schema<MaterialList>({
         ref: "MaterialEstimateModel",
         default: [], //this will be array of strings not in array of objects ["34fvg78", "34fvg78"]
     },
+}, {
+    timestamps:true
 })
 
 const MaterialListModel = model("MaterialListModel", MaterialListSchema)

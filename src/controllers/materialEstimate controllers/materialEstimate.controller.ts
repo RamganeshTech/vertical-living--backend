@@ -15,8 +15,8 @@ const createMaterial = async (req: AuthenticatedUserRequest, res: Response): Pro
             unitPrice,
             materialQuantity,
             vendor,
-            notes, 
-        singleMaterialCost } = req.body
+            notes,
+            singleMaterialCost } = req.body
 
 
         const isValidData = materialValidations({
@@ -32,12 +32,14 @@ const createMaterial = async (req: AuthenticatedUserRequest, res: Response): Pro
 
         const totalSingleMaterialCost = unitPrice * materialQuantity
 
+        console.log("material List Id", materialListId)
+
         if (materialListId) {
-            material = await MaterialEstimateModel.findOne({ materialListId })
+            console.log("entering into the if condition")
 
-            if (material?.materials) {
-
-                material.materials.push({
+            material = await MaterialEstimateModel.findOneAndUpdate({ materialListId }, {
+                $push:{
+                    materials : {
                     materialName: materialName.trim(),
                     unit: unit.trim(),
                     unitPrice,
@@ -45,27 +47,65 @@ const createMaterial = async (req: AuthenticatedUserRequest, res: Response): Pro
                     vendor: vendor?.trim() || null,
                     notes: notes?.trim() || null,
                     singleMaterialCost: totalSingleMaterialCost ?? 0
-                })
+                }
+                }
+            }, { returnDocument: "after" })
 
+            console.log("material", material)
 
+           if (!material) {
+                res.status(404).json({ message: "material item not created successfully", ok: false })
+                return;
+            }
 
-                let newlyAdded = material.materials.at(-1) //it gets the last element of the array
 
                 material.totalCost = material.materials.reduce((acc, curr) => acc + curr.unitPrice * curr.materialQuantity, 0)
 
-                await material.save()
+                 await material.save()
 
-                if (!newlyAdded) {
-                    res.status(404).json({ message: "last element not found", ok: false })
-                    return
-                }
-
-                await MaterialListModel.findOneAndUpdate({ materialListId },
+                   await MaterialListModel.findByIdAndUpdate(materialListId,
                     {
-                        $push: { materials: (newlyAdded as any)._id },
+                        $addToSet: { materials: material._id },
                     },
                     { returnDocument: "after" })
-            }
+
+
+        //     if (material?.materials) {
+
+        //         material.materials.push({
+        //             materialName: materialName.trim(),
+        //             unit: unit.trim(),
+        //             unitPrice,
+        //             materialQuantity,
+        //             vendor: vendor?.trim() || null,
+        //             notes: notes?.trim() || null,
+        //             singleMaterialCost: totalSingleMaterialCost ?? 0
+        //         })
+
+
+
+        //         // let newlyAdded = material.materials.at(-1) //it gets the last element of the array
+
+        //         material.totalCost = material.materials.reduce((acc, curr) => acc + curr.unitPrice * curr.materialQuantity, 0)
+
+        //        console.log("first material", material)
+
+
+        //        material =  await material.save()
+
+        //        console.log("second material", material)
+
+        //         // if (!newlyAdded) {
+        //         //     res.status(404).json({ message: "last element not found", ok: false })
+        //         //     return
+        //         // }
+
+        //         await MaterialListModel.findOneAndUpdate({ materialListId },
+        //             {
+        //                 $push: { materials: material._id },
+        //             },
+        //             { returnDocument: "after" })
+        //     }
         }
         else {
             // this will work only if the materialId is not provided which means if the user is trying to add in general list
@@ -132,7 +172,7 @@ const createMaterial = async (req: AuthenticatedUserRequest, res: Response): Pro
 
         }
 
-        res.status(200).json({ message: "Material added successfully", ok: true, data: material });
+        res.status(201).json({ message: "Material added successfully", ok: true, data: material });
 
     } catch (error) {
         if (error instanceof Error) {
@@ -165,6 +205,9 @@ const createMaterailList = async (req: AuthenticatedUserRequest, res: Response):
             materials: []
         })
 
+
+        console.log("material lists", materialLists)
+
         if (!materialLists) {
             res.status(400).json({ message: "problem in createing the matrial lists", ok: false })
             return
@@ -175,6 +218,8 @@ const createMaterailList = async (req: AuthenticatedUserRequest, res: Response):
             materials: [],
             totalCost: 0
         })
+
+    console.log("materials", materials)
 
         if (!materials) {
             res.status(400).json({ message: "problem in createing the matrial Items list", ok: false })
@@ -199,10 +244,12 @@ const getMaterial = async (req: AuthenticatedUserRequest, res: Response): Promis
             return
         }
 
+        console.log("materialListid", materialListId)
+
         const materialEstimateDoc = await MaterialEstimateModel.findOne({ materialListId });
 
         if (!materialEstimateDoc) {
-            res.status(404).json({ message: "Material items not found", ok: false });
+            res.status(404).json({ message: "Material items not found", data: [], ok: false });
             return;
         }
 
@@ -235,7 +282,7 @@ const getMaterial = async (req: AuthenticatedUserRequest, res: Response): Promis
         res.status(200).json({
             message: "Material items fetched successfully",
             ok: true,
-            data: { materialListId, mergedMaterials, totalCost }
+            data: { _id: materialEstimateDoc._id, materialListId, mergedMaterials, totalCost }
         });
 
     }
@@ -374,7 +421,9 @@ const deleteMaterialLists = async (req: AuthenticatedUserRequest, res: Response)
             return;
         }
 
-        const itemsToBeDeleted = materialLists.materials
+        const itemsToBeDeleted = materialLists.materials.map(item => item._id)
+
+        console.log("itemsToBeDeleted", itemsToBeDeleted)
 
         await MaterialEstimateModel.deleteMany({ _id: { $in: itemsToBeDeleted } })
 
