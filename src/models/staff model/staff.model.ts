@@ -1,9 +1,9 @@
 import mongoose, { Schema, Types } from "mongoose"
 
-interface IUser extends Document {
+interface IStaff extends Document {
     email: string,
     password: string,
-    username: string,
+    staffName: string,
     phoneNo: string,
     role: string;
     organizationId?: [Types.ObjectId];
@@ -12,7 +12,7 @@ interface IUser extends Document {
 }
 
 
-const UserSchema: Schema<IUser> = new Schema({
+const StaffSchema: Schema<IStaff> = new Schema({
     email: {
         type: String,
         maxLength: [50, "it shoud be within 50 digits"],
@@ -23,10 +23,10 @@ const UserSchema: Schema<IUser> = new Schema({
         require: true,
         maxlength: [100, "password should be under 100 characters"]
     },
-    username: {
+    staffName: {
         type: String,
         unique: true,
-        maxlength: [100, "username should be under 100 characters"]
+        maxlength: [100, "staffname should be under 100 characters"]
     },
     phoneNo: {
         type: String,
@@ -35,8 +35,7 @@ const UserSchema: Schema<IUser> = new Schema({
     },
     role: {
         type: String,
-        enum: [
-            "product owner", null],
+        enum: ["staff", null],
         default: null
     },
     organizationId: {
@@ -51,10 +50,10 @@ const UserSchema: Schema<IUser> = new Schema({
 })
 
 
-UserSchema.index({ email: 1 }, { unique: true })
+StaffSchema.index({ email: 1 }, { unique: true })
 
 
-const UserModel = mongoose.model<IUser>("UserModel", UserSchema)
+const StaffModel = mongoose.model<IStaff>("StaffModel", StaffSchema)
 
 
-export default UserModel
+export default StaffModel

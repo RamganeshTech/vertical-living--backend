@@ -34,8 +34,8 @@ const userlogin = async (req: Request, res: Response) => {
         }
 
 
-        let token = jwt.sign({ _id: user._id, username: user.username }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: user._id, username: user.username }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: user._id, username: user.username, organization:user.organizationId }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: user._id, username: user.username, organization:user.organizationId }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("useraccesstoken", token, {
             httpOnly: true,
@@ -98,7 +98,7 @@ const userLogout = async (req: Request, res: Response) => {
 
 const registerUser = async (req: Request, res: Response) => {
     try {
-        let { email, password, username, phoneNo } = req.body
+        let { email, password, username, phoneNo , role} = req.body
 
         if (!email || !password || !username) {
             res.status(400).json({ message: "email, password and username is reequired", ok: false })
@@ -124,11 +124,12 @@ const registerUser = async (req: Request, res: Response) => {
             email,
             password: hashPassword,
             username,
-            phoneNo: phoneNo ?? null
+            phoneNo: phoneNo ?? null,
+            role,
         })
 
-        let token = jwt.sign({ _id: user._id, username: user.username }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: user._id, username: user.username }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: user._id, username: user.username, organization:user.organizationId }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: user._id, username: user.username, organization:user.organizationId }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("useraccesstoken", token, {
             httpOnly: true,
@@ -174,7 +175,7 @@ const refreshToken = async (req: Request, res: Response) => {
             return res.status(404).json({ message: "user not found", ok: false })
         }
 
-        let useraccesstoken = jwt.sign({ _id: isExists._id }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let useraccesstoken = jwt.sign({ _id: isExists._id, username: isExists.username, organization:isExists.organizationId }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
 
         res.cookie("useraccesstoken", useraccesstoken, {
             httpOnly: true,
