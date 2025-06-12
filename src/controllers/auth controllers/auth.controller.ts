@@ -164,7 +164,7 @@ const refreshToken = async (req: Request, res: Response) => {
         let refreshtoken = req.cookies.userrefreshtoken
 
         if (!refreshtoken) {
-            return res.status(403).json({ message: "no refresh token provided please login", ok: false })
+            return res.status(404).json({ message: "no refresh token provided please login", ok: false })
         }
 
         let isDataExists = jwt.verify(refreshtoken, process.env.JWT_REFRESH_SECRET as string) as { _id: string };

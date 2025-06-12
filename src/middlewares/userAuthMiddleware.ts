@@ -11,7 +11,7 @@ const userAuthenticatedMiddleware = (req: AuthenticatedUserRequest, res: Respons
              return
         }
 
-        let decodedData = jwt.verify(token, process.env.JWT_ACCESS_SECRET as string)
+        let decodedData = jwt.verify(token, process.env.JWT_ACCESS_SECRET!)
 
         req.user = decodedData
         // req.user = decodedData as Record<string, any>;

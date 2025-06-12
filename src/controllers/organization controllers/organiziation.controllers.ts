@@ -59,15 +59,15 @@ const getMyOrganizations = async (req: AuthenticatedUserRequest, res: Response) 
     try {
         const user = req.user;
 
-        if (!user || user.organization) {
-            res.status(404).json({ message: "No organization linked", data:{}, ok: false });
+        if (!user || !user.organization) {
+            res.status(404).json({ message: "No organization linked", data:[], ok: false });
             return
         }
 
         const organization = await OrganizationModel.find({userId: user._id});
 
         if (!organization) {
-            res.status(200).json({ message: "No organizations  found", ok: false, data: {} });
+            res.status(200).json({ message: "No organizations  found", ok: false, data: [] });
             return
         }
 
@@ -103,6 +103,8 @@ const getOrganizationById = async (req: AuthenticatedUserRequest, res: Response)
             return
         }
 
+        console.log(organization)
+
         return res.status(200).json({ ok: true, message:"fetched successfully", data: organization });
     } catch (error) {
         if (error instanceof Error) {
@@ -113,36 +115,35 @@ const getOrganizationById = async (req: AuthenticatedUserRequest, res: Response)
 };
 
 
-const updateOrganizationName = async (req: AuthenticatedUserRequest, res: Response) => {
+const updateOrganizationDetails = async (req: AuthenticatedUserRequest, res: Response) => {
     try {
         const user = req.user;
-        const { organizationName } = req.body;
+    const updatedData = req.body;
+    const { orgId } = req.params;
 
-        const {orgId} = req.params
+    if (!user || !user.organization) {
+      return res.status(404).json({ message: "User not associated with this organization", ok: false });
+    }
 
-        if (!user || !user.organization) {
-            res.status(404).json({ message: "User Not associated with this organization", ok: false });
-            return
-        }
+    // Validate that exactly one field is being updated
+    const fields = Object.keys(updatedData);
+    if (fields.length !== 1) {
+      return res.status(400).json({ message: "Exactly one field must be updated at a time", ok: false });
+    }
 
-        if (!organizationName) {
-            res.status(400).json({ message: "Organization name is required", ok: false });
-            return
-        }
+    const updatedOrg = await OrganizationModel.findByIdAndUpdate(
+      orgId,
+      { $set: updatedData }, // directly apply updatedData
+      { returnDocument:"after" }
+    );
 
-        const updatedOrg = await OrganizationModel.findByIdAndUpdate(
-            orgId,
-            { organizationName },
-            { returnDocument: "after" }
-        );
+    if (!updatedOrg) {
+      return res.status(404).json({ message: "Organization not found", ok: false });
+    }
 
-        if (!updatedOrg) {
-            res.status(404).json({ message: "Organization not found", ok: false });
-            return
-        }
+    return res.status(200).json({ ok: true, message: "Organization field updated", data: updatedOrg });
 
-        return res.status(200).json({ ok: true, message: "Organization name updated", data: updatedOrg });
-    } catch (error) {
+} catch (error) {
         if (error instanceof Error) {
             console.error("Error in updateOrganizationName:", error);
             res.status(500).json({ message: "Server error", ok: false, error: error.message });
@@ -250,7 +251,7 @@ const inviteStaff = async (req: AuthenticatedUserRequest, res: Response) => {
             ? "http://localhost:5173"
             : "https://verticalliving.com";
 
-        const inviteLink = `${baseUrl}/staff/register?invite=${encodedPayload}`;
+        const inviteLink = `${baseUrl}/staffregister?invite=${encodedPayload}`;
 
          res.status(200).json({
             message: "Invitation link generated successfully",
@@ -283,7 +284,7 @@ const removeStaffFromOrganization = async (req: AuthenticatedUserRequest, res: R
             return
         }
 
-        res.status(200).json({ message: "Removed staff from organization", data:staff });
+        res.status(200).json({ message: "Removed staff from organization", data:staff , ok:true});
 
     } catch (error) {
         if (error instanceof Error) {
@@ -300,7 +301,7 @@ export {
     createOrganziation,
     getMyOrganizations,
     getOrganizationById,
-    updateOrganizationName,
+    updateOrganizationDetails,
     deleteOrganization,
     getStaffsByOrganization,
     inviteStaff,

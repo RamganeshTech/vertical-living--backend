@@ -3,34 +3,13 @@ import StaffModel from "../../models/staff model/staff.model";
 
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import { AuthenticatedStaffRequest } from "../../types/types";
 
 // POST /api/staff/register
 const registerStaff = async (req: Request, res: Response) => {
     try {
-        // const { invite, email, password, phoneNo, staffName } = req.body;
 
-        // if (!invite || !email || !password || !phoneNo || !staffName) {
-        //     res.status(400).json({ message: "All fields are required", ok: false });
-        //     return
-        // }
-
-
-
-        // const decoded = Buffer.from(invite, "base64").toString("utf-8");
-
-        // const { organizationId, role, expiresAt } = JSON.parse(decoded);
-
-        // if (new Date(expiresAt) < new Date()) {
-        //     return res.status(400).json({ message: "Invitation link has expired", ok: false });
-        // }
-
-        // const staffExists = await StaffModel.findOne({ email });
-        // if (staffExists) {
-        //     res.status(409).json({ message: "Staff with this email already exists", ok: false });
-        //     return
-        // }
-
-         const { invite, email, password, phoneNo, staffName } = req.body;
+        const { invite, email, password, phoneNo, staffName } = req.body;
 
         // 1. Validate required fields
         if (!invite || !email || !password || !phoneNo || !staffName) {
@@ -78,7 +57,7 @@ const registerStaff = async (req: Request, res: Response) => {
         });
 
         let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId }, process.env.JWT_STAFF_REFERESH_SECRET as string, { expiresIn: "7d" })
+        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("staffaccesstoken", token, {
             httpOnly: true,
@@ -96,7 +75,7 @@ const registerStaff = async (req: Request, res: Response) => {
         }
         )
 
-        res.status(201).json({ message: "Staff registered successfully", staff });
+        res.status(201).json({ message: "Staff registered successfully", staff, ok: true });
     } catch (error) {
         if (error instanceof Error) {
             console.error("Staff registration failed:", error);
@@ -121,20 +100,20 @@ const loginStaff = async (req: Request, res: Response) => {
         // Find staff by email
         const staff = await StaffModel.findOne({ email });
         if (!staff) {
-            res.status(401).json({ message: "Invalid email or password", ok: false });
+            res.status(404).json({ message: "Invalid email or password", ok: false });
             return
         }
 
         // Compare passwords
         const isPasswordCorrect = await bcrypt.compare(password, staff.password);
         if (!isPasswordCorrect) {
-            res.status(401).json({ message: "Invalid email or password", ok: false });
+            res.status(400).json({ message: "Invalid email or password", ok: false });
             return
         }
 
         // Generate JWT Token
         let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId }, process.env.JWT_STAFF_REFERESH_SECRET as string, { expiresIn: "7d" })
+        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("staffaccesstoken", token, {
             httpOnly: true,
@@ -202,9 +181,82 @@ const staffLogout = async (req: Request, res: Response) => {
     }
 }
 
+const refreshTokenStaff = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const refreshtoken = req.cookies.staffrefreshtoken;
+
+        if (!refreshtoken) {
+            res.status(404).json({
+                message: "No refresh token provided. Please login again.",
+                ok: false,
+            });
+            return;
+        }
+
+        const decoded = jwt.verify(
+            refreshtoken,
+            process.env.JWT_STAFF_REFRESH_SECRET as string
+        ) as { id: string };
+
+        const staff = await StaffModel.findById(decoded.id);
+
+        if (!staff) {
+            res.status(404).json({ message: "staff not found", ok: false });
+            return;
+        }
+
+        let staffaccesstoken = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+
+
+        res.cookie("staffaccesstoken", staffaccesstoken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            maxAge: 1000 * 60 * 60 * 24, // 1d
+        });
+
+        res.status(200).json({
+            message: "staff access token generated successfully",
+            ok: true,
+            error:false
+        });
+
+    } catch (error) {
+        console.error("Error from refreshWorkerToken:", error);
+        res.status(500).json({
+            message: "Internal error occurred while refreshing token",
+            errorMessage: (error as Error).message,
+            ok: false,
+        });
+    }
+};
+
+
+
+const staffIsAuthenticated = async (req: AuthenticatedStaffRequest, res: Response) => {
+    try {
+        const staff = req.staff
+
+        const isExist = await StaffModel.findById(staff._id)
+
+        if (!isExist) {
+            return res.status(404).json({ message: "staff not found", ok: false })
+        }
+
+        res.status(200).json({ data: isExist, message: "staff is authenticated", ok: true })
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            console.log("erorr from staffisAutneticated staff", error)
+            res.status(500).json({ message: "internal error ocuured", errorMssage: error, ok: false })
+        }
+    }
+}
 
 export {
     registerStaff,
     loginStaff,
-    staffLogout
+    staffLogout,
+    refreshTokenStaff,
+    staffIsAuthenticated
 }

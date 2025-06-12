@@ -17,6 +17,9 @@ import phaseRoutes from './routers/phase routers/phase.router'
 import materailRoutes from './routers/material routers/material.router'
 import labourRoutes from './routers/labour routes/labour.routes'
 import orgsRouter from './routers/organization routes/organization.routes';
+import orgOwnerRoutes from './routers/OrgOwner routes/orgOwner.routes';
+import workerRoutes from './routers/worker routes/worker.router';
+import staffRoutes from './routers/staff routes/staff.routes';
 // import checkRedisConnection from './config/redisClient';
 
 
@@ -44,7 +47,13 @@ app.use('/api/tasklist', taskListRouter)
 app.use('/api/phase', phaseRoutes)
 app.use('/api/material', materailRoutes)
 app.use('/api/labour', labourRoutes )
+
 app.use('/api/orgs/', orgsRouter)
+
+
+app.use('/api/owner/', orgOwnerRoutes)
+app.use('/api/staff/', staffRoutes)
+app.use('/api/worker/', workerRoutes)
 
 
 const PORT = process.env.PORT
