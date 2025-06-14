@@ -2,15 +2,16 @@ import { Request, Response } from "express";
 import { WorkerModel } from "../../models/worker model/worker.model";
 import jwt from "jsonwebtoken";
 import { AuthenticatedWorkerRequest } from "../../types/types";
+import { ObjectId, Schema, Types } from "mongoose";
 
 // Helper: Token generator
-const generateTokens = (workerId: string) => {
-  const workeraccesstoken = jwt.sign({ _id: workerId }, process.env.JWT_WORKER_ACCESS_SECRET!, { expiresIn: "1d" });
-  const workerrefreshtoken = jwt.sign({ _id: workerId }, process.env.JWT_WORKER_REFRESH_SECRET!, { expiresIn: "7d" });
+const generateWorkerTokens = (workerId: string, role: string, workerName: string, projectId: string[]) => {
+  const workeraccesstoken = jwt.sign({ _id: workerId, role, workerName, projectId }, process.env.JWT_WORKER_ACCESS_SECRET!, { expiresIn: "1d" });
+  const workerrefreshtoken = jwt.sign({ _id: workerId, role, workerName, projectId }, process.env.JWT_WORKER_REFRESH_SECRET!, { expiresIn: "7d" });
   return { workeraccesstoken, workerrefreshtoken };
 };
 
- const registerWorker = async (req: Request, res: Response): Promise<void> => {
+const registerWorker = async (req: Request, res: Response): Promise<void> => {
   try {
     const { invite } = req.query;
     const { workerName, phoneNo, email, password } = req.body;
@@ -36,7 +37,7 @@ const generateTokens = (workerId: string) => {
     }
 
     const decoded = JSON.parse(Buffer.from(invite, "base64").toString("utf-8"));
-    const { projectId, role, specificRole, expiresAt , invitedBy, invitedByModel} = decoded;
+    const { projectId, role, specificRole, expiresAt, invitedBy, invitedByModel } = decoded;
 
     if (!projectId || !role || !specificRole || !expiresAt) {
       res.status(400).json({ message: "Invite token is missing required fields." });
@@ -61,35 +62,38 @@ const generateTokens = (workerId: string) => {
       password, // hash in real app
       role,
       specificRole,
-      projectId : [projectId],
-      invitedBy, 
+      projectId: [projectId],
+      invitedBy,
       invitedByModel,
       isRegistered: true,
     });
 
-    const { workeraccesstoken, workerrefreshtoken } = generateTokens((newWorker as any)._id.toString());
+    const projectIdStrings = newWorker.projectId.map(id => id.toString());
 
-      res.cookie("workeraccesstoken", workeraccesstoken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            maxAge: 1000 * 60 * 60 * 24
-        }
-        )
 
-        res.cookie("workerrefreshtoken", workerrefreshtoken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            maxAge: 1000 * 60 * 60 * 24 * 7
-        }
-        )
+    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((newWorker as any)._id.toString(), newWorker.role, newWorker.workerName, projectIdStrings);
+
+    res.cookie("workeraccesstoken", workeraccesstoken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24
+    }
+    )
+
+    res.cookie("workerrefreshtoken", workerrefreshtoken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7
+    }
+    )
 
     res.status(201).json({
       message: "Worker registered successfully",
       workeraccesstoken,
       workerrefreshtoken,
-      ok:true
+      ok: true
     });
 
   } catch (error) {
@@ -99,50 +103,53 @@ const generateTokens = (workerId: string) => {
 };
 
 
- const loginWorker = async (req: Request, res: Response): Promise<void> => {
+const loginWorker = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      res.status(400).json({ message: "Email and password are required.", ok:false });
+      res.status(400).json({ message: "Email and password are required.", ok: false });
       return;
     }
 
     const worker = await WorkerModel.findOne({ email });
 
     if (!worker || !worker.isRegistered) {
-      res.status(404).json({ message: "Worker not found or not registered." , ok:false});
+      res.status(404).json({ message: "Worker not found or not registered.", ok: false });
       return;
     }
 
     if (worker.password !== password) {
-      res.status(400).json({ message: "Incorrect password.", ok:false });
+      res.status(400).json({ message: "Incorrect password.", ok: false });
       return;
     }
 
-    const { workeraccesstoken, workerrefreshtoken } = generateTokens((worker as any)._id.toString());
+    const projectIdStrings = worker.projectId.map(id => id.toString());
+
+
+    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((worker as any)._id.toString(), worker.role, worker.workerName, projectIdStrings);
 
     res.cookie("workeraccesstoken", workeraccesstoken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            maxAge: 1000 * 60 * 60 * 24
-        }
-        )
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24
+    }
+    )
 
-        res.cookie("workerrefreshtoken", workerrefreshtoken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            maxAge: 1000 * 60 * 60 * 24 * 7
-        }
-        )
+    res.cookie("workerrefreshtoken", workerrefreshtoken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7
+    }
+    )
 
     res.status(200).json({
       message: "Login successful",
       workeraccesstoken,
       workerrefreshtoken,
-      ok:true
+      ok: true
     });
 
   } catch (error) {
@@ -154,30 +161,30 @@ const generateTokens = (workerId: string) => {
 
 
 const workerLogout = async (req: Request, res: Response) => {
-    try {
-        res.clearCookie("workeraccesstoken", {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production", // Only secure in production
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            path: "/", // Clear the cookie for the entire domain
-        });
+  try {
+    res.clearCookie("workeraccesstoken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // Only secure in production
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      path: "/", // Clear the cookie for the entire domain
+    });
 
-        res.clearCookie("workerrefreshtoken", {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production", // Only secure in production
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            path: "/", // Clear the cookie for the entire domain
-        });
+    res.clearCookie("workerrefreshtoken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // Only secure in production
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      path: "/", // Clear the cookie for the entire domain
+    });
 
 
-        res.status(200).json({ message: "Logout successful", ok: true, error: false });
-        return;
-    }
-    catch (error) {
-        console.log(error)
-        res.status(500).json({ message: "internal server error", errormessage: error, ok: false, error: true });
+    res.status(200).json({ message: "Logout successful", ok: true, error: false });
+    return;
+  }
+  catch (error) {
+    console.log(error)
+    res.status(500).json({ message: "internal server error", errormessage: error, ok: false, error: true });
 
-    }
+  }
 }
 
 const refreshTokenWorker = async (req: Request, res: Response): Promise<void> => {
@@ -204,8 +211,10 @@ const refreshTokenWorker = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
+    const projectIdStrings = worker.projectId.map(id => id.toString());
+
     const workeraccesstoken = jwt.sign(
-      { id: worker._id, email: worker.email, projectId: worker.projectId },
+      { id: (worker as any)._id.toString(), email: worker.email, projectId: projectIdStrings },
       process.env.WORKER_ACCESS_SECRET as string,
       { expiresIn: "15m" }
     );
@@ -233,26 +242,35 @@ const refreshTokenWorker = async (req: Request, res: Response): Promise<void> =>
 };
 
 const workerIsAuthenticated = async (req: AuthenticatedWorkerRequest, res: Response) => {
-    try {
-        const worker = req.worker
+  try {
+    const worker = req.worker
 
-        const isExist = await WorkerModel.findById(worker._id)
+    const isExist = await WorkerModel.findById(worker._id)
 
-        if (!isExist) {
-            return res.status(404).json({ message: "worker not found", ok: false })
-        }
-
-        res.status(200).json({ data: isExist, message: "worker is authenticated", ok: true })
+    if (!isExist) {
+      return res.status(404).json({ message: "worker not found", ok: false })
     }
-    catch (error) {
-        if (error instanceof Error) {
-            console.log("erorr from workerisAutneticated worker", error)
-            res.status(500).json({ message: "internal error ocuured", errorMssage: error, ok: false })
-        }
+
+    res.status(200).json({
+        data: {
+                workerId: isExist._id,
+                role: isExist.role,
+                email: isExist.email,
+                phoneNo: isExist.phoneNo,
+                workerName: isExist.workerName,
+                isauthenticated: true,
+            },
+     message: "worker is authenticated", ok: true })
+  }
+  catch (error) {
+    if (error instanceof Error) {
+      console.log("erorr from workerisAutneticated worker", error)
+      res.status(500).json({ message: "internal error ocuured", errorMssage: error, ok: false })
     }
+  }
 }
 
 
 export {
-loginWorker, registerWorker, workerLogout, refreshTokenWorker, workerIsAuthenticated
+  loginWorker, registerWorker, workerLogout, refreshTokenWorker, workerIsAuthenticated
 }

@@ -34,8 +34,8 @@ const userlogin = async (req: Request, res: Response) => {
         }
 
 
-        let token = jwt.sign({ _id: user._id, username: user.username, organization:user.organizationId }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: user._id, username: user.username, organization:user.organizationId }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: user._id, username: user.username, organization: user.organizationId, role: user.role }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: user._id, username: user.username, organization: user.organizationId, role: user.role }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("useraccesstoken", token, {
             httpOnly: true,
@@ -54,7 +54,7 @@ const userlogin = async (req: Request, res: Response) => {
         }
         )
 
-        res.status(200).json({ message: `${user.username} loggedin successfully`, data:{userName:user.username, email:user.email, phoneNo:user.phoneNo}, ok: true, error: false })
+        res.status(200).json({ message: `${user.username} loggedin successfully`, data: { userName: user.username, email: user.email, phoneNo: user.phoneNo }, ok: true, error: false })
     }
     catch (error) {
         console.log("error from userlogin", error)
@@ -98,7 +98,7 @@ const userLogout = async (req: Request, res: Response) => {
 
 const registerUser = async (req: Request, res: Response) => {
     try {
-        let { email, password, username, phoneNo , role} = req.body
+        let { email, password, username, phoneNo } = req.body
 
         if (!email || !password || !username) {
             res.status(400).json({ message: "email, password and username is reequired", ok: false })
@@ -114,7 +114,7 @@ const registerUser = async (req: Request, res: Response) => {
         const hashPassword = await bcrypt.hash(password, 10)
 
         phoneNo = String(phoneNo)
- 
+
         if (phoneNo && phoneNo.length !== 10) {
             res.status(400).json({ message: "phone number shoud be 10 digits is required", ok: false })
             return
@@ -125,11 +125,11 @@ const registerUser = async (req: Request, res: Response) => {
             password: hashPassword,
             username,
             phoneNo: phoneNo ?? null,
-            role,
+            role: "owner",
         })
 
-        let token = jwt.sign({ _id: user._id, username: user.username, organization:user.organizationId }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: user._id, username: user.username, organization:user.organizationId }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: user._id, username: user.username, role: user.role, organization: user.organizationId }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: user._id, username: user.username, role: user.role, organization: user.organizationId }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("useraccesstoken", token, {
             httpOnly: true,
@@ -175,7 +175,7 @@ const refreshToken = async (req: Request, res: Response) => {
             return res.status(404).json({ message: "user not found", ok: false })
         }
 
-        let useraccesstoken = jwt.sign({ _id: isExists._id, username: isExists.username, organization:isExists.organizationId }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let useraccesstoken = jwt.sign({ _id: isExists._id, username: isExists.username, role: isExists.role, organization: isExists.organizationId }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
 
         res.cookie("useraccesstoken", useraccesstoken, {
             httpOnly: true,
@@ -205,7 +205,17 @@ const isAuthenticated = async (req: Request, res: Response) => {
             return res.status(404).json({ message: "user not found", ok: false })
         }
 
-        res.status(200).json({ data: isExist, message: "user is authenticated", ok: true })
+        res.status(200).json({
+            message: "user is authenticated", ok: true,
+            data: {
+                userId: isExist._id,
+                role: isExist.role,
+                email: isExist.email,
+                phoneNo: isExist.phoneNo,
+                userName: isExist.username,
+                isauthenticated: true,
+            }
+        })
     }
     catch (error) {
         if (error instanceof Error) {
@@ -301,7 +311,7 @@ const resetForgotPassword = async (req: Request, res: Response): Promise<any> =>
     }
 }
 
-const deleteuser = async (req: Request, res: Response):Promise<any> => {
+const deleteuser = async (req: Request, res: Response): Promise<any> => {
     try {
 
         let { userId } = req.params

@@ -1,5 +1,5 @@
-import { Response } from "express";
-import { AuthenticatedUserRequest } from "../../types/types";
+import { Request, Response } from "express";
+import { AuthenticatedStaffRequest, AuthenticatedUserRequest } from "../../types/types";
 import ProjectModel from "../../models/project.model";
 
 import redisClient from '../../config/redisClient'
@@ -19,6 +19,14 @@ const createProject = async (req: AuthenticatedUserRequest, res: Response) => {
             priority,
             status
         } = req.body
+
+
+        const { organizationId } = req.params
+
+        if (!organizationId) {
+            res.status(400).json({ message: "organization Id is required", ok: false })
+            return
+        }
 
         if (!projectName) {
             return res.status(400).json({ message: "project name is required", ok: false })
@@ -50,6 +58,7 @@ const createProject = async (req: AuthenticatedUserRequest, res: Response) => {
             projectId: Date.now(),
             projectName,
             description: description ? description : null,
+            organizationId,
             projectInformation: {
                 owner: user.username,
                 tags,
@@ -81,14 +90,20 @@ const createProject = async (req: AuthenticatedUserRequest, res: Response) => {
 }
 
 
-const getProjects = async (req: AuthenticatedUserRequest, res: Response) => {
+const getProjects = async (req: Request, res: Response) => {
     try {
 
-        let user = req.user
+        const { organizationId } = req.params
 
-        const cacheKey = `projects:${user._id}`;
+        console.log("jklsahdjlk")
+        if (!organizationId) {
+            res.status(400).json({ message: "organization Id is required", ok: false })
+            return
+        }
 
-        // await redisClient.del(`projects:${user._id}`);
+        const cacheKey = `projects:${organizationId}`;
+
+        await redisClient.del(`projects:${organizationId}`);
         let cachedData = await redisClient.get(cacheKey);
 
 
@@ -97,7 +112,7 @@ const getProjects = async (req: AuthenticatedUserRequest, res: Response) => {
             return res.status(200).json({ message: "Projects retrieved from cache", data: parsedData, ok: true });
         }
 
-        const projects = await ProjectModel.find({ userId: user._id })
+        const projects = await ProjectModel.find({ organizationId })
 
         await redisClient.set(cacheKey, JSON.stringify(projects), { EX: 300 }); // expires in 5 mins (put in secondsj)
 
@@ -163,7 +178,7 @@ const assignClient = async (req: AuthenticatedUserRequest, res: Response): Promi
             return
         }
 
-         const cacheKey = `projects:${user._id}`;
+        const cacheKey = `projects:${user._id}`;
         await redisClient.del(cacheKey);
 
 
@@ -239,7 +254,7 @@ const updateProject = async (req: AuthenticatedUserRequest, res: Response): Prom
             return;
         }
 
-         const cacheKey = `projects:${user._id}`;
+        const cacheKey = `projects:${user._id}`;
         await redisClient.del(cacheKey);
 
 
@@ -253,10 +268,17 @@ const updateProject = async (req: AuthenticatedUserRequest, res: Response): Prom
     }
 }
 
+
+
+// FOR STAFFS 
+
+
+
 export {
     createProject,
     getProjects,
     deleteProject,
     assignClient,
-    updateProject
+    updateProject,
+
 }

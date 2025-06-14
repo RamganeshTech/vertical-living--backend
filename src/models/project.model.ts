@@ -31,8 +31,8 @@ interface IProject extends Document {
     materials: Types.ObjectId[]
     labours: Types.ObjectId[],
     materialsFullyApproved: "approved" | "rejected" | "pending"
-    laboursFullyApproved: "approved" | "rejected" | "pending"
-
+    laboursFullyApproved: "approved" | "rejected" | "pending",
+    organizationId: Types.ObjectId
 }
 
 const ProjectSchema: Schema<IProject> = new Schema({
@@ -149,6 +149,11 @@ const ProjectSchema: Schema<IProject> = new Schema({
         type: String,
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending'
+    },
+    organizationId:{
+        type: Schema.Types.ObjectId,
+        ref: "OrganizationModel",
+        required:true
     }
 }, {
     timestamps: true

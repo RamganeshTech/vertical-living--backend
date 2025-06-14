@@ -2,10 +2,11 @@ import { Response } from "express";
 import { generateWorkerInviteLink } from "../../utils/generateInvitationworker";
 import { AuthenticatedUserRequest } from "../../types/types";
 import { getWorkerUtils, removeWorkerUtils } from "../../utils/workerUtils";
+import StaffModel from "../../models/staff model/staff.model";
 
 const inviteWorkerByOwner = async (req: AuthenticatedUserRequest, res: Response) => {
     try {
-        const { projectId, role, specificRole ,  organizationId} = req.body;
+        const { projectId, role, specificRole, organizationId } = req.body;
         const user = req.user
 
 
@@ -15,7 +16,7 @@ const inviteWorkerByOwner = async (req: AuthenticatedUserRequest, res: Response)
 
         const inviteLink = generateWorkerInviteLink({
             projectId,
-             organizationId,
+            organizationId,
             role,
             specificRole,
             invitedBy: user._id,
@@ -33,14 +34,14 @@ const inviteWorkerByOwner = async (req: AuthenticatedUserRequest, res: Response)
 // PUT /api/worker/remove/:workerId/:projectId
 const removeWorkerFromProject = async (req: AuthenticatedUserRequest, res: Response): Promise<void> => {
     try {
-        const { workerId, projectId  } = req.params;
+        const { workerId, projectId } = req.params;
 
         if (!workerId) {
             res.status(400).json({ message: "workerId is required", ok: false });
             return;
         }
 
-        const deletedWorker = await removeWorkerUtils({workerId, projectId})
+        const deletedWorker = await removeWorkerUtils({ workerId, projectId })
 
         if (!deletedWorker) {
             res.status(404).json({ message: "Worker not found", ok: false });
@@ -71,7 +72,7 @@ const getWorkersByProject = async (req: AuthenticatedUserRequest, res: Response)
             return;
         }
 
-        const workers = await getWorkerUtils({projectId})
+        const workers = await getWorkerUtils({ projectId })
 
         res.status(200).json({
             message: "Workers fetched successfully",
@@ -89,5 +90,33 @@ const getWorkersByProject = async (req: AuthenticatedUserRequest, res: Response)
 };
 
 
-export { inviteWorkerByOwner , getWorkersByProject, removeWorkerFromProject}
+const getAllStaffs = async (req:AuthenticatedUserRequest, res:Response)=> {
+   try{
+    const user = req.user;
+
+        if (!user._id) {
+            res.status(400).json({ message: "userId is required", ok: false });
+            return;
+        }
+
+        const staffs = await StaffModel.find({ownerId:user._id})
+
+        res.status(200).json({
+            message: "Staffs fetched successfully",
+            data: staffs,
+            ok: true,
+        });
+    } 
+    catch (error) {
+        console.error("Error fetching staffs:", error);
+        res.status(500).json({
+            message: "Server error",
+            ok: false,
+            error: (error as Error).message,
+        });
+    }
+}
+
+
+export { inviteWorkerByOwner, getWorkersByProject, removeWorkerFromProject, getAllStaffs }
 

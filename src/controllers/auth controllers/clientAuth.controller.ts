@@ -33,8 +33,8 @@ const clientLogin = async (req: Request, res: Response) => {
         }
 
 
-        let token = jwt.sign({ _id: client._id, clientName: client.clientName }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: client._id, clientName: client.clientName }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: client._id,  role: client.role, clientName: client.clientName }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: client._id,  role: client.role, clientName: client.clientName }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("clientaccesstoken", token, {
             httpOnly: true,
@@ -144,11 +144,12 @@ const registerClient = async (req: Request, res: Response) => {
             email,
             password: hashPassword,
             clientName,
-            phoneNo: phoneNo ?? null
+            phoneNo: phoneNo ?? null,
+            role:"client"
         })
 
-        let token = jwt.sign({ _id: client._id, clientName: client.clientName }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: client._id, clientName: client.clientName }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: client._id, clientName: client.clientName, role: client.role }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: client._id, clientName: client.clientName,  role: client.role }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("clientaccesstoken", token, {
             httpOnly: true,
@@ -194,7 +195,7 @@ const clientRefreshToken = async (req: Request, res: Response) => {
             return res.status(404).json({ message: "user not found", ok: false })
         }
 
-        let clientaccesstoken = jwt.sign({ _id: isExists._id }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let clientaccesstoken = jwt.sign({ _id: isExists._id, clientName: isExists.clientName, role: isExists.role }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
 
         res.cookie("clientaccesstoken", clientaccesstoken, {
             httpOnly: true,
@@ -224,7 +225,14 @@ const isClientAuthenticated = async (req: AuthenticatedClientRequest, res: Respo
             return res.status(404).json({ message: "client not found", ok: false })
         }
 
-        res.status(200).json({ data: isExist, message: "client is authenticated", ok: true })
+        res.status(200).json({ data: {
+                clientId: isExist._id,
+                role: isExist.role,
+                email: isExist.email,
+                phoneNo: isExist.phoneNo,
+                clientName: isExist.clientName,
+                isauthenticated: true,
+            }, message: "client is authenticated", ok: true })
     }
     catch (error) {
         if (error instanceof Error) {

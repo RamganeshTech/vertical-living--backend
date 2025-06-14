@@ -4,6 +4,7 @@ import StaffModel from "../../models/staff model/staff.model";
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { AuthenticatedStaffRequest } from "../../types/types";
+import { ObjectId } from "mongoose";
 
 // POST /api/staff/register
 const registerStaff = async (req: Request, res: Response) => {
@@ -17,11 +18,11 @@ const registerStaff = async (req: Request, res: Response) => {
         }
 
         // 2. Decode the invite token safely
-        let organizationId: string, role: string, expiresAt: string;
+        let organizationId: string, role: string, expiresAt: string, ownerId:string;
 
         try {
             const decoded = Buffer.from(invite, "base64").toString("utf-8");
-            ({ organizationId, role, expiresAt } = JSON.parse(decoded));
+            ({ organizationId, role, expiresAt, ownerId } = JSON.parse(decoded));
         } catch (error) {
             return res.status(400).json({ message: "Invalid invitation link", ok: false });
         }
@@ -53,11 +54,12 @@ const registerStaff = async (req: Request, res: Response) => {
             phoneNo,
             staffName,
             role,
-            organizationId: [organizationId]
+            organizationId: [organizationId],
+            ownerId
         });
 
-        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId, role:staff.role }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId , role:staff.role}, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("staffaccesstoken", token, {
             httpOnly: true,
@@ -112,8 +114,8 @@ const loginStaff = async (req: Request, res: Response) => {
         }
 
         // Generate JWT Token
-        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, role:staff.role, organizationId: staff.organizationId }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role:staff.role, organizationId: staff.organizationId }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("staffaccesstoken", token, {
             httpOnly: true,
@@ -205,7 +207,7 @@ const refreshTokenStaff = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        let staffaccesstoken = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let staffaccesstoken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role:staff.role, organizationId: staff.organizationId }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
 
 
         res.cookie("staffaccesstoken", staffaccesstoken, {
@@ -243,7 +245,15 @@ const staffIsAuthenticated = async (req: AuthenticatedStaffRequest, res: Respons
             return res.status(404).json({ message: "staff not found", ok: false })
         }
 
-        res.status(200).json({ data: isExist, message: "staff is authenticated", ok: true })
+        res.status(200).json({ data: {
+                staffId: isExist._id,
+                role: isExist.role,
+                email: isExist.email,
+                phoneNo: isExist.phoneNo,
+                staffName: isExist.staffName,
+                isauthenticated: true,
+            }, 
+            message: "staff is authenticated", ok: true })
     }
     catch (error) {
         if (error instanceof Error) {

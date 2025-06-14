@@ -35,8 +35,7 @@ const UserSchema: Schema<IUser> = new Schema({
     },
     role: {
         type: String,
-        enum: [
-            "product owner", null],
+        enum: ["owner", null],
         default: null
     },
     organizationId: {

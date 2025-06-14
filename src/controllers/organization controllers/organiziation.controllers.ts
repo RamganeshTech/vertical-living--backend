@@ -226,7 +226,7 @@ const getStaffsByOrganization = async (req: AuthenticatedUserRequest, res: Respo
 const inviteStaff = async (req: AuthenticatedUserRequest, res: Response) => {
     try {
          const { organizationId, role } = req.body;
-
+        const user = req.user
         if (!organizationId || !role) {
              res.status(400).json({
                 message: "organizationId and role are required",
@@ -242,7 +242,8 @@ const inviteStaff = async (req: AuthenticatedUserRequest, res: Response) => {
         const invitationPayload = {
             organizationId,
             role,
-            expiresAt
+            expiresAt,
+            ownerId:user._id
         };
 
         const encodedPayload = Buffer.from(JSON.stringify(invitationPayload)).toString("base64");

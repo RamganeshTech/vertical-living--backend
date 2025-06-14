@@ -4,6 +4,7 @@ import mongoose, { Document, Schema, Model } from "mongoose";
 export interface IClient extends Document {
     clientName: string;
     email: string;
+    role: string;
     phoneNo?: string;
     company?: (string | null);
     password: string; // optional if you want login

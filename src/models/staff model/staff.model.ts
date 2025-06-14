@@ -7,6 +7,7 @@ interface IStaff extends Document {
     phoneNo: string,
     role: string;
     organizationId?: [Types.ObjectId];
+    ownerId: Types.ObjectId | null
     resetPasswordToken?: string;
     resetPasswordExpire?: number;
 }
@@ -41,7 +42,12 @@ const StaffSchema: Schema<IStaff> = new Schema({
     organizationId: {
         type: [Schema.Types.ObjectId],
         ref: "OrganizationModel",
-        default:[]
+        default: []
+    },
+    ownerId: {
+        type: Schema.Types.ObjectId,
+        ref: "UserModel",
+        default: null
     },
     resetPasswordToken: { type: String },  // Token for password reset
     resetPasswordExpire: { type: Number },
@@ -50,7 +56,7 @@ const StaffSchema: Schema<IStaff> = new Schema({
 })
 
 
-StaffSchema.index({ email: 1 }, { unique: true })
+StaffSchema.index({ email: 1 , ownerId:1}, { unique: true })
 
 
 const StaffModel = mongoose.model<IStaff>("StaffModel", StaffSchema)

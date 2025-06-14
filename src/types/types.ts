@@ -17,3 +17,12 @@ export interface AuthenticatedStaffRequest extends Request {
     staff?:any
 }
 
+
+export interface RoleUserPayload {
+  _id: string;
+  role: "owner" | "staff" | "worker";
+}
+
+export interface RoleBasedRequest extends Request {
+  user?: RoleUserPayload;
+}

@@ -2,7 +2,7 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface IWorker extends Document {
-    workerName?: string;
+    workerName: string;
     email: string;
     phoneNo?: string;
     password: string;
