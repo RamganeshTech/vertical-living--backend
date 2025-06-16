@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { AuthenticatedUserRequest } from "../../types/types";
-import TaskModel from "../../models/task.model";
+import TaskModel from "../../models/task model/task.model";
 
 const editComment = async (req: AuthenticatedUserRequest, res: Response) => {
     try {

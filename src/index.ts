@@ -20,6 +20,8 @@ import orgsRouter from './routers/organization routes/organization.routes';
 import orgOwnerRoutes from './routers/OrgOwner routes/orgOwner.routes';
 import workerRoutes from './routers/worker routes/worker.router';
 import staffRoutes from './routers/staff routes/staff.routes';
+import CTORoutes from './routers/CTO routes/CTO.routes';
+import requirementRoutes from './routers/requirement routes/requirement.routes';
 // import checkRedisConnection from './config/redisClient';
 
 
@@ -51,9 +53,12 @@ app.use('/api/labour', labourRoutes )
 app.use('/api/orgs/', orgsRouter)
 
 
-app.use('/api/owner/', orgOwnerRoutes)
-app.use('/api/staff/', staffRoutes)
-app.use('/api/worker/', workerRoutes)
+app.use('/api/owner', orgOwnerRoutes)
+app.use('/api/staff', staffRoutes)
+app.use('/api/worker', workerRoutes)
+app.use('/api/CTO', CTORoutes)
+
+app.use('/api/requirements', requirementRoutes)
 
 
 const PORT = process.env.PORT

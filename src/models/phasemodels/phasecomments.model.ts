@@ -1,6 +1,6 @@
 // models/phaseComment.model.ts
 import mongoose, { Schema } from "mongoose";
-import { Comments } from "../task.model";
+import { Comments } from "../task model/task.model";
 
 export interface PhaseComment extends Comments {
   phaseId: mongoose.Schema.Types.ObjectId;

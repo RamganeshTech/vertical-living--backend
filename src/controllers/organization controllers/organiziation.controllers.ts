@@ -4,6 +4,7 @@ import UserModel from "../../models/usermodel/user.model";
 import bcrypt from 'bcrypt';
 import OrganizationModel from "../../models/organization models/organization.model";
 import StaffModel from "../../models/staff model/staff.model";
+import CTOModel from "../../models/CTO model/CTO.model";
 
 const createOrganziation = async (req: AuthenticatedUserRequest, res: Response) => {
     try {
@@ -298,13 +299,124 @@ const removeStaffFromOrganization = async (req: AuthenticatedUserRequest, res: R
 
 
 
+
+const getCTOByOrganization = async (req: AuthenticatedUserRequest, res: Response) => {
+    try {
+        const { orgId } = req.params;
+
+        if (!orgId) {
+            return res.status(400).json({ message: "Organization ID is required", ok: false });
+        }
+
+        const CTO = await CTOModel.find({
+            organizationId: orgId
+        }).select("-password -resetPasswordToken -resetPasswordExpire"); // Exclude sensitive fields
+
+        return res.status(200).json({
+            message: "CTOs fetched successfully",
+            ok: true,
+            data: CTO
+        });
+
+    } catch (error) {
+        if (error instanceof Error) {
+            console.error("Error fetching CTO:", error);
+            res.status(500).json({ message: "Server error", ok: false, error: error.message });
+            return
+        }
+    }
+};
+
+
+const inviteCTO = async (req: AuthenticatedUserRequest, res: Response) => {
+    try {
+          const { organizationId } = req.body;
+        const user = req.user
+
+        if (!organizationId) {
+             res.status(400).json({
+                message: "organizationId and role are required",
+                ok: false
+            });
+            return
+        }
+
+        
+
+        // Set expiry: 1 day from now
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day in milliseconds
+
+        // Payload with expiry
+        const invitationPayload = {
+            organizationId,
+            role: "CTO",
+            expiresAt,
+            ownerId:user._id
+        };
+
+        const encodedPayload = Buffer.from(JSON.stringify(invitationPayload)).toString("base64");
+
+        const baseUrl = process.env.NODE_ENV === "development"
+            ? "http://localhost:5173"
+            : "https://verticalliving.com";
+
+        const inviteLink = `${baseUrl}/ctoregister?invite=${encodedPayload}`;
+
+         res.status(200).json({
+            message: "Invitation link generated successfully",
+            data: inviteLink,
+            ok: true
+        });
+
+    } catch (error) {
+        if (error instanceof Error) {
+            console.error("Error inviting CTO:", error);
+            res.status(500).json({ message: "Server error", ok: false, error: error.message });
+            return
+        }
+    }
+};
+
+const removeCTOFromOrganization = async (req: AuthenticatedUserRequest, res: Response) => {
+    const { CTOId, orgId } = req.query;
+
+    try {
+        const CTO = await CTOModel.findByIdAndUpdate(
+            CTOId,
+            { $pull: { organizationId: orgId } },
+            { new: true }
+        );
+
+        if (!CTO) {
+            res.status(404).json({ message: "CTO not found", ok: false });
+            return
+        }
+
+        res.status(200).json({ message: "Removed CTO from organization", data:CTO , ok:true});
+
+    } catch (error) {
+        if (error instanceof Error) {
+            console.error("Error removing CTO from org:", error);
+            res.status(500).json({ message: "Server error", ok: false });
+            return
+        }
+    }
+};
+
+
+
 export {
     createOrganziation,
     getMyOrganizations,
     getOrganizationById,
     updateOrganizationDetails,
     deleteOrganization,
+
     getStaffsByOrganization,
     inviteStaff,
-    removeStaffFromOrganization
+    removeStaffFromOrganization,
+
+    getCTOByOrganization,
+    inviteCTO,
+    removeCTOFromOrganization
 }

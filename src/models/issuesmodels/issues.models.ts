@@ -1,5 +1,5 @@
 import { model, Schema, Types } from "mongoose";
-import { Reminder } from "../task.model";
+import { Reminder } from "../task model/task.model";
 
 interface PhaseIssues {
     projectId: Types.ObjectId

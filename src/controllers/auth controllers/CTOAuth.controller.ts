@@ -1,24 +1,23 @@
 import { Request, Response } from "express";
-import StaffModel from "../../models/staff model/staff.model";
 
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { AuthenticatedStaffRequest } from "../../types/types";
-import { ObjectId } from "mongoose";
+import { AuthenticatedCTORequest } from "../../types/types";
+import CTOModel from "../../models/CTO model/CTO.model";
 
-// POST /api/staff/register
-const registerStaff = async (req: Request, res: Response) => {
+// POST /api/CTO/register
+const registerCTO = async (req: Request, res: Response) => {
     try {
 
-        const { invite, email, password, phoneNo, staffName } = req.body;
+        const { invite, email, password, phoneNo, CTOName } = req.body;
 
         // 1. Validate required fields
-        if (!invite || !email || !password || !phoneNo || !staffName) {
+        if (!invite || !email || !password || !phoneNo || !CTOName) {
             return res.status(400).json({ message: "All fields are required", ok: false });
         }
 
         // 2. Decode the invite token safely
-        let organizationId: string, role: string, expiresAt: string, ownerId:string;
+        let organizationId: string, role: string, expiresAt: string, ownerId: string;
 
         try {
             const decoded = Buffer.from(invite, "base64").toString("utf-8");
@@ -37,10 +36,21 @@ const registerStaff = async (req: Request, res: Response) => {
             return res.status(400).json({ message: "Invalid invitation data", ok: false });
         }
 
-        // 5. Check for duplicate staff
-        const staffExists = await StaffModel.findOne({ email });
-        if (staffExists) {
-            return res.status(409).json({ message: "Staff with this email already exists", ok: false });
+        // 5. Check for duplicate cTO
+        const CTOExists = await CTOModel.findOne({
+            ownerId, 
+            $or: [
+                { email },
+                { CTOName },
+                { phoneNo }
+            ]
+        });
+
+        if (CTOExists) {
+            return res.status(409).json({
+                message: "CTO with this email, name, or phone number already exists",
+                ok: false
+            });
         }
 
         // 6. Hash password
@@ -48,20 +58,20 @@ const registerStaff = async (req: Request, res: Response) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
 
-        const staff = await StaffModel.create({
+        const CTO = await CTOModel.create({
             email,
             password: hashedPassword, // Make sure to hash this in middleware
             phoneNo,
-            staffName,
+            CTOName,
             role,
             organizationId: [organizationId],
             ownerId
         });
 
-        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId, role:staff.role }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId , role:staff.role}, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, organizationId: CTO.organizationId, ownerId: CTO.ownerId, role: CTO.role }, process.env.JWT_CTO_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, organizationId: CTO.organizationId, ownerId: CTO.ownerId, role: CTO.role }, process.env.JWT_CTO_REFRESH_SECRET as string, { expiresIn: "7d" })
 
-        res.cookie("staffaccesstoken", token, {
+        res.cookie("ctoaccesstoken", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -69,7 +79,7 @@ const registerStaff = async (req: Request, res: Response) => {
         }
         )
 
-        res.cookie("staffrefreshtoken", refreshToken, {
+        res.cookie("ctorefreshtoken", refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -77,10 +87,10 @@ const registerStaff = async (req: Request, res: Response) => {
         }
         )
 
-        res.status(201).json({ message: "Staff registered successfully", staff, ok: true });
+        res.status(201).json({ message: "CTO registered successfully", data: CTO, ok: true });
     } catch (error) {
         if (error instanceof Error) {
-            console.error("Staff registration failed:", error);
+            console.error("CTO registration failed:", error);
             res.status(500).json({ message: "Server error", ok: false, error: error.message });
             return
         }
@@ -89,7 +99,7 @@ const registerStaff = async (req: Request, res: Response) => {
 
 
 
-const loginStaff = async (req: Request, res: Response) => {
+const loginCTO = async (req: Request, res: Response) => {
     try {
         const { email, password } = req.body;
 
@@ -99,25 +109,25 @@ const loginStaff = async (req: Request, res: Response) => {
             return
         }
 
-        // Find staff by email
-        const staff = await StaffModel.findOne({ email });
-        if (!staff) {
+        // Find CTO by email
+        const CTO = await CTOModel.findOne({ email });
+        if (!CTO) {
             res.status(404).json({ message: "Invalid email or password", ok: false });
             return
         }
 
         // Compare passwords
-        const isPasswordCorrect = await bcrypt.compare(password, staff.password);
+        const isPasswordCorrect = await bcrypt.compare(password, CTO.password);
         if (!isPasswordCorrect) {
             res.status(400).json({ message: "Invalid email or password", ok: false });
             return
         }
 
         // Generate JWT Token
-        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, role:staff.role, organizationId: staff.organizationId }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role:staff.role, organizationId: staff.organizationId }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, role: CTO.role, ownerId: CTO.ownerId, organizationId: CTO.organizationId }, process.env.JWT_CTO_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, role: CTO.role, ownerId: CTO.ownerId, organizationId: CTO.organizationId }, process.env.JWT_CTO_REFRESH_SECRET as string, { expiresIn: "7d" })
 
-        res.cookie("staffaccesstoken", token, {
+        res.cookie("ctoaccesstoken", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -125,7 +135,7 @@ const loginStaff = async (req: Request, res: Response) => {
         }
         )
 
-        res.cookie("staffrefreshtoken", refreshToken, {
+        res.cookie("ctorefreshtoken", refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -138,11 +148,11 @@ const loginStaff = async (req: Request, res: Response) => {
             message: "Login successful",
             token,
             data: {
-                staffName: staff.staffName,
-                email: staff.email,
-                phoneNo: staff.phoneNo,
-                organizationId: staff.organizationId,
-                role: staff.role,
+                CTOName: CTO.CTOName,
+                email: CTO.email,
+                phoneNo: CTO.phoneNo,
+                organizationId: CTO.organizationId,
+                role: CTO.role,
             },
             ok: true
         });
@@ -156,16 +166,16 @@ const loginStaff = async (req: Request, res: Response) => {
 };
 
 
-const staffLogout = async (req: Request, res: Response) => {
+const CTOLogout = async (req: Request, res: Response) => {
     try {
-        res.clearCookie("staffaccesstoken", {
+        res.clearCookie("ctoaccesstoken", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production", // Only secure in production
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             path: "/", // Clear the cookie for the entire domain
         });
 
-        res.clearCookie("staffrefreshtoken", {
+        res.clearCookie("ctorefreshtoken", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production", // Only secure in production
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -183,9 +193,9 @@ const staffLogout = async (req: Request, res: Response) => {
     }
 }
 
-const refreshTokenStaff = async (req: Request, res: Response): Promise<void> => {
+const refreshTokenCTO = async (req: Request, res: Response): Promise<void> => {
     try {
-        const refreshtoken = req.cookies.staffrefreshtoken;
+        const refreshtoken = req.cookies.ctorefreshtoken;
 
         if (!refreshtoken) {
             res.status(404).json({
@@ -197,20 +207,20 @@ const refreshTokenStaff = async (req: Request, res: Response): Promise<void> => 
 
         const decoded = jwt.verify(
             refreshtoken,
-            process.env.JWT_STAFF_REFRESH_SECRET as string
+            process.env.JWT_CTO_REFRESH_SECRET as string
         ) as { id: string };
 
-        const staff = await StaffModel.findById(decoded.id);
+        const CTO = await CTOModel.findById(decoded.id);
 
-        if (!staff) {
-            res.status(404).json({ message: "staff not found", ok: false });
+        if (!CTO) {
+            res.status(404).json({ message: "CTO not found", ok: false });
             return;
         }
 
-        let staffaccesstoken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role:staff.role, organizationId: staff.organizationId }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let CTOaccesstoken = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, role: CTO.role, ownerId: CTO.ownerId, organizationId: CTO.organizationId }, process.env.JWT_CTO_ACCESS_SECRET as string, { expiresIn: "1d" })
 
 
-        res.cookie("staffaccesstoken", staffaccesstoken, {
+        res.cookie("ctoaccesstoken", CTOaccesstoken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -218,13 +228,13 @@ const refreshTokenStaff = async (req: Request, res: Response): Promise<void> => 
         });
 
         res.status(200).json({
-            message: "staff access token generated successfully",
+            message: "CTO access token generated successfully",
             ok: true,
-            error:false
+            error: false
         });
 
     } catch (error) {
-        console.error("Error from refreshStaffToken:", error);
+        console.error("Error from refreshCTOToken:", error);
         res.status(500).json({
             message: "Internal error occurred while refreshing token",
             errorMessage: (error as Error).message,
@@ -235,38 +245,40 @@ const refreshTokenStaff = async (req: Request, res: Response): Promise<void> => 
 
 
 
-const staffIsAuthenticated = async (req: AuthenticatedStaffRequest, res: Response) => {
+const CTOIsAuthenticated = async (req: AuthenticatedCTORequest, res: Response) => {
     try {
-        const staff = req.staff
+        const CTO = req.CTO
 
-        const isExist = await StaffModel.findById(staff._id)
+        const isExist = await CTOModel.findById(CTO._id)
 
         if (!isExist) {
-            return res.status(404).json({ message: "staff not found", ok: false })
+            return res.status(404).json({ message: "CTO not found", ok: false })
         }
 
-        res.status(200).json({ data: {
-                staffId: isExist._id,
+        res.status(200).json({
+            data: {
+                CTOId: isExist._id,
                 role: isExist.role,
                 email: isExist.email,
                 phoneNo: isExist.phoneNo,
-                staffName: isExist.staffName,
+                CTOName: isExist.CTOName,
                 isauthenticated: true,
-            }, 
-            message: "staff is authenticated", ok: true })
+            },
+            message: "CTO is authenticated", ok: true
+        })
     }
     catch (error) {
         if (error instanceof Error) {
-            console.log("erorr from staffisAutneticated staff", error)
+            console.log("erorr from CTOisAutneticated CTO", error)
             res.status(500).json({ message: "internal error ocuured", errorMssage: error, ok: false })
         }
     }
 }
 
 export {
-    registerStaff,
-    loginStaff,
-    staffLogout,
-    refreshTokenStaff,
-    staffIsAuthenticated
+    registerCTO,
+    loginCTO,
+    CTOLogout,
+    refreshTokenCTO,
+    CTOIsAuthenticated
 }

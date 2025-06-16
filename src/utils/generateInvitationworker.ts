@@ -11,7 +11,7 @@ export const generateWorkerInviteLink = ({
   role: string;
   specificRole: string;
   invitedBy: string;
-  invitedByModel: "UserModel" | "StaffModel";
+  invitedByModel: "UserModel" | "StaffModel" | "CTOModel";
 }) => {
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day
 

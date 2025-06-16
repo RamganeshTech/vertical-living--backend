@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { AuthenticatedClientRequest } from "../../types/types";
-import ProjectModel from "../../models/project.model";
+import ProjectModel from "../../models/project model/project.model";
 import { LabourListModel } from "../../models/labour models/labourList.model";
 import MaterialListModel from "../../models/Material Estimate Model/materialList.model";
 import { MaterialApprovalModel } from "../../models/client model/materialApproval.model";
@@ -9,8 +9,8 @@ import MaterialEstimateModel from "../../models/Material Estimate Model/material
 import { Types } from "mongoose";
 import { LabourEstimateModel } from "../../models/labour models/labourEstimate.model";
 import { TaskApprovalModel } from "../../models/client model/taskApproval.model";
-import TaskModel from "../../models/task.model";
-import { TaskListModel } from './../../models/tasklist.model';
+import TaskModel from "../../models/task model/task.model";
+import { TaskListModel } from '../../models/task model/tasklist.model';
 
 const getAccessedProjects = async (req: AuthenticatedClientRequest, res: Response) => {
     try {

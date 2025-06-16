@@ -32,7 +32,7 @@ const workerSchema = new Schema<IWorker>({
     invitedByModel: {
         type: String,
         required: true,
-        enum: ["UserModel", "StaffModel"]
+        enum: ["UserModel", "StaffModel", "CTOModel"]
     },
     isRegistered: { type: Boolean, default: false },
     

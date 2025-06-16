@@ -18,9 +18,14 @@ export interface AuthenticatedStaffRequest extends Request {
 }
 
 
+export interface AuthenticatedCTORequest extends Request {
+    CTO?:any
+}
+
+
 export interface RoleUserPayload {
   _id: string;
-  role: "owner" | "staff" | "worker";
+  role: "owner" | "staff" | "worker" | "CTO";
 }
 
 export interface RoleBasedRequest extends Request {

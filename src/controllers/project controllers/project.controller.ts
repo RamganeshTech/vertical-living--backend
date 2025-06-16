@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { AuthenticatedStaffRequest, AuthenticatedUserRequest } from "../../types/types";
-import ProjectModel from "../../models/project.model";
+import ProjectModel from "../../models/project model/project.model";
 
 import redisClient from '../../config/redisClient'
 import ClientModel from "../../models/client model/client.model";

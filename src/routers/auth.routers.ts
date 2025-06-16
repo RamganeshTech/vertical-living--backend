@@ -5,6 +5,8 @@ import { loginStaff, refreshTokenStaff, registerStaff, staffIsAuthenticated, sta
 import { loginWorker, refreshTokenWorker, registerWorker, workerIsAuthenticated, workerLogout } from '../controllers/auth controllers/workerAuth.controller';
 import staffAuthenticatedMiddleware from '../middlewares/staffAuthMiddleware';
 import workerAuthenticatedMiddleware from '../middlewares/workerAuthMiddleware';
+import CTOAuthenticatedMiddleware from '../middlewares/CTOAuthMiddleware';
+import { CTOIsAuthenticated, CTOLogout, loginCTO, refreshTokenCTO, registerCTO } from '../controllers/auth controllers/CTOAuth.controller';
 
 
 const authRoutes = express.Router()
@@ -34,6 +36,15 @@ authRoutes.post('/worker/registerworker', registerWorker as RequestHandler)
 authRoutes.post('/worker/logout', workerLogout as RequestHandler)
 authRoutes.get('/worker/refreshtoken', refreshTokenWorker as RequestHandler)
 authRoutes.get('/worker/isauthenticated', workerAuthenticatedMiddleware, workerIsAuthenticated as RequestHandler)
+
+
+
+// CTO ROUTES
+authRoutes.post('/CTO/login', loginCTO as RequestHandler)
+authRoutes.post('/CTO/registerCTO', registerCTO as RequestHandler)
+authRoutes.post('/CTO/logout', CTOLogout as RequestHandler)
+authRoutes.get('/CTO/refreshtoken', refreshTokenCTO as RequestHandler)
+authRoutes.get('/CTO/isauthenticated', CTOAuthenticatedMiddleware, CTOIsAuthenticated as RequestHandler)
 
 
 

@@ -1,5 +1,5 @@
 import { model, Schema, Types } from "mongoose";
-import { Comments } from "../task.model";
+import { Comments } from "../task model/task.model";
 
 interface issueComments extends Comments {
     issueId: Types.ObjectId

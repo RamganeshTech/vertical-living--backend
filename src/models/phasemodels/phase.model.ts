@@ -1,5 +1,5 @@
 import mongoose, { Schema, Types } from "mongoose";
-import { Comments } from "../task.model"
+import { Comments } from "../task model/task.model"
 import { PhaseTaskList } from "./phaseTaskList.model";
 
 interface IPhase extends Document {
