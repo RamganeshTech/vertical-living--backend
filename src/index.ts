@@ -58,7 +58,7 @@ app.use('/api/staff', staffRoutes)
 app.use('/api/worker', workerRoutes)
 app.use('/api/CTO', CTORoutes)
 
-app.use('/api/requirements', requirementRoutes)
+app.use('/api/requirementform', requirementRoutes)
 
 
 const PORT = process.env.PORT

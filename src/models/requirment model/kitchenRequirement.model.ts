@@ -1,4 +1,4 @@
-import {  Schema } from "mongoose";
+import { Schema } from "mongoose";
 
 export interface IKitchenRequirement {
     layoutType: "L-shaped" | "Straight" | "U-shaped" | "Parallel";
@@ -24,7 +24,6 @@ export const KitchenRequirementSchema = new Schema<IKitchenRequirement>({
     layoutType: {
         type: String,
         enum: ["L-shaped", "Straight", "U-shaped", "Parallel"],
-        required: true,
     },
     measurements: {
         A: { type: Number, required: false },
@@ -34,7 +33,6 @@ export const KitchenRequirementSchema = new Schema<IKitchenRequirement>({
     kitchenPackage: {
         type: String,
         enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package"],
-        required: true,
     },
     // packageDetails: {
     //     affordablePricing: Boolean,

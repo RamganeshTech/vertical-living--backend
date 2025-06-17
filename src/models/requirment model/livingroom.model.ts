@@ -42,7 +42,6 @@ export const LivingHallRequirementSchema = new Schema<ILivingHallRequirement>({
   livingHallPackage: {
     type: String,
     enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package"],
-    required: true,
   },
   notes: {
     type: String,

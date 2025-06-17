@@ -1,6 +1,7 @@
 import express, { RequestHandler } from 'express';
-import { createOrganziation, deleteOrganization, getCTOByOrganization, getMyOrganizations, getOrganizationById, getStaffsByOrganization, inviteCTO, inviteStaff, removeCTOFromOrganization, removeStaffFromOrganization, updateOrganizationDetails } from '../../controllers/organization controllers/organiziation.controllers';
+import { createOrganziation, deleteOrganization, getCTOByOrganization, getMyOrganizations, getOrganizationById, getStaffsByOrganization, inviteClient, inviteCTO, inviteStaff, removeCTOFromOrganization, removeStaffFromOrganization, updateOrganizationDetails } from '../../controllers/organization controllers/organiziation.controllers';
 import userAuthenticatedMiddleware from '../../middlewares/userAuthMiddleware';
+import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
 
 
 const orgsRouter = express.Router()
@@ -22,6 +23,8 @@ orgsRouter.patch('/removestafffromorganziation', userAuthenticatedMiddleware, re
 orgsRouter.get('/getctooforganization/:orgId', userAuthenticatedMiddleware, getCTOByOrganization as RequestHandler)
 orgsRouter.post('/invitectotoorganization', userAuthenticatedMiddleware, inviteCTO as RequestHandler)
 orgsRouter.patch('/removectofromorganziation', userAuthenticatedMiddleware, removeCTOFromOrganization as RequestHandler)
+
+orgsRouter.post('/inviteclienttoproject', multiRoleAuthMiddleware("owner", "CTO"), inviteClient )
 
 
 

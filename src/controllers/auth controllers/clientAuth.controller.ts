@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { AuthenticatedClientRequest } from "../../types/types";
 import crypto from 'crypto';
 import sendResetEmail from "../../utils/forgotPasswordMail";
+import { Types } from "mongoose";
 
 const clientLogin = async (req: Request, res: Response) => {
     try {
@@ -33,8 +34,8 @@ const clientLogin = async (req: Request, res: Response) => {
         }
 
 
-        let token = jwt.sign({ _id: client._id,  role: client.role, clientName: client.clientName }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: client._id,  role: client.role, clientName: client.clientName }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: client._id, role: client.role, clientName: client.clientName, ownerId: client.ownerId }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: client._id, role: client.role, clientName: client.clientName, ownerId: client.ownerId }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("clientaccesstoken", token, {
             httpOnly: true,
@@ -97,44 +98,112 @@ const clientLogout = async (req: Request, res: Response) => {
 
 const registerClient = async (req: Request, res: Response) => {
     try {
-        let { email, password, clientName, phoneNo, company } = req.body
+        const { invite } = req.query;
+        let { email, password, clientName, phoneNo } = req.body
 
-        if (!email || !password || !clientName) {
-            res.status(400).json({ message: "email, password and client name is reequired", ok: false })
+        if (!invite) {
+            return res.status(400).json({ ok: false, message: "Invite token is required" });
+        }
+
+
+        let decoded: any;
+        try {
+            decoded = JSON.parse(Buffer.from(invite as string, "base64").toString());
+        } catch (err) {
+            return res.status(400).json({ ok: false, message: "Invalid invite token" });
+        }
+
+        const { projectId, ownerId, expiresAt, role } = decoded;
+
+        if (!projectId || !Types.ObjectId.isValid(projectId)) {
+            return res.status(400).json({ ok: false, message: "Invalid project ID in invite" });
+        }
+
+        if (expiresAt && new Date() > new Date(expiresAt)) {
+            return res.status(410).json({ ok: false, message: "Invite link has expired" });
+        }
+
+        if (!email || !password || !clientName || !phoneNo) {
+            res.status(400).json({ message: "email, password , client name and phone number is reequired", ok: false })
             return;
         }
 
-        const orConditions:Array<any> = [
-            { email },
-            { clientName }
-        ];
+
+        // const orConditions: Array<any> = [
+        //     { email },
+        //     { clientName },
+        //     { phoneNo }
+        // ];
 
         // Add phone check only if it's provided
-        if (phoneNo) {
-            if (String(phoneNo).length !== 10) {
-                return res.status(400).json({
-                    message: "Phone number should be exactly 10 digits",
-                    ok: false,
-                });
-            }
-            orConditions.push({ phoneNo });
-        }
+        // if (phoneNo) {
+        //     if (String(phoneNo).length !== 10) {
+        //         return res.status(400).json({
+        //             message: "Phone number should be exactly 10 digits",
+        //             ok: false,
+        //         });
+        //     }
+        //     orConditions.push({ phoneNo });
+        // }
 
         // One DB call to check if any of the unique fields are already taken
-        const existingClient = await ClientModel.findOne({ $or: orConditions });
+        const existingClient = await ClientModel.findOne({
+            $or: [
+                { projectId }, // Any client already assigned to this project
+                {
+                    ownerId,
+                    $or: [
+                        { email },
+                        { phoneNo }
+                    ]
+                }
+            ]
+        });
 
         if (existingClient) {
-            // Determine exactly which field is duplicated
-            if (existingClient.email === email) {
-                return res.status(400).json({ message: "Email already in use", ok: false });
+            if (existingClient.projectId.toString() === projectId) {
+                return res.status(400).json({
+                    ok: false,
+                    message: "A client is already assigned to this project.",
+                });
             }
-            if (existingClient.clientName === clientName) {
-                return res.status(400).json({ message: "Client name already in use", ok: false });
+
+            if (existingClient.ownerId.toString() === ownerId && existingClient.email === email) {
+                return res.status(400).json({
+                    ok: false,
+                    message: "A client with this email already exists ",
+                });
             }
-            if (phoneNo && existingClient.phoneNo === phoneNo) {
-                return res.status(400).json({ message: "Phone number already in use", ok: false });
+
+             if (existingClient.ownerId.toString() === ownerId && existingClient.clientName === clientName) {
+                return res.status(400).json({
+                    ok: false,
+                    message: "A client with this name already exists",
+                });
             }
+
+            if (existingClient.ownerId.toString() === ownerId && existingClient.phoneNo === phoneNo) {
+                return res.status(400).json({
+                    ok: false,
+                    message: "A client with this phone number already exists",
+                });
+            }
+
+
         }
+
+        // if (existingClient) {
+        //     // Determine exactly which field is duplicated
+        //     if (existingClient.email === email) {
+        //         return res.status(400).json({ message: "Email already in use", ok: false });
+        //     }
+        //     if (existingClient.clientName === clientName) {
+        //         return res.status(400).json({ message: "Client name already in use", ok: false });
+        //     }
+        //     if (phoneNo && existingClient.phoneNo === phoneNo) {
+        //         return res.status(400).json({ message: "Phone number already in use", ok: false });
+        //     }
+        // }
 
 
 
@@ -145,11 +214,13 @@ const registerClient = async (req: Request, res: Response) => {
             password: hashPassword,
             clientName,
             phoneNo: phoneNo ?? null,
-            role:"client"
+            role,
+            ownerId,
+            projectId
         })
 
-        let token = jwt.sign({ _id: client._id, clientName: client.clientName, role: client.role }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: client._id, clientName: client.clientName,  role: client.role }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: client._id, clientName: client.clientName, role: client.role, ownerId: client.ownerId }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: client._id, clientName: client.clientName, role: client.role, ownerId: client.ownerId }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("clientaccesstoken", token, {
             httpOnly: true,
@@ -184,7 +255,7 @@ const clientRefreshToken = async (req: Request, res: Response) => {
         let refreshtoken = req.cookies.clientrefreshtoken
 
         if (!refreshtoken) {
-            return res.status(403).json({ message: "no refresh token provided please login", ok: false })
+            return res.status(400).json({ message: "no refresh token provided please login", ok: false })
         }
 
         let isDataExists = jwt.verify(refreshtoken, process.env.JWT_REFRESH_SECRET as string) as { _id: string };
@@ -195,7 +266,7 @@ const clientRefreshToken = async (req: Request, res: Response) => {
             return res.status(404).json({ message: "user not found", ok: false })
         }
 
-        let clientaccesstoken = jwt.sign({ _id: isExists._id, clientName: isExists.clientName, role: isExists.role }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let clientaccesstoken = jwt.sign({ _id: isExists._id, clientName: isExists.clientName, role: isExists.role, ownerId: isExists.ownerId }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
 
         res.cookie("clientaccesstoken", clientaccesstoken, {
             httpOnly: true,
@@ -219,20 +290,22 @@ const isClientAuthenticated = async (req: AuthenticatedClientRequest, res: Respo
     try {
         const client = req.client
 
-        const isExist = await ClientModel.findById(client._id).select(["clientName","email", "phoneNo", "createdAt","comapany","updatedAt"])
+        const isExist = await ClientModel.findById(client._id).select(["clientName", "email", "phoneNo", "createdAt", "comapany", "updatedAt"])
 
         if (!isExist) {
             return res.status(404).json({ message: "client not found", ok: false })
         }
 
-        res.status(200).json({ data: {
+        res.status(200).json({
+            data: {
                 clientId: isExist._id,
                 role: isExist.role,
                 email: isExist.email,
                 phoneNo: isExist.phoneNo,
                 clientName: isExist.clientName,
                 isauthenticated: true,
-            }, message: "client is authenticated", ok: true })
+            }, message: "client is authenticated", ok: true
+        })
     }
     catch (error) {
         if (error instanceof Error) {
@@ -328,6 +401,57 @@ const clientResetForgotPassword = async (req: Request, res: Response): Promise<a
     }
 }
 
+ const updateClientProfile = async (req: AuthenticatedClientRequest, res: Response) : Promise<any>=> {
+  try {
+    const clientId = req.client?._id;
+    const { clientName, phoneNo, location } = req.body;
+
+    if (!clientName && !phoneNo && !location) {
+      return res.status(400).json({ok: false,message: "At least one field (clientName, phoneNo, or location) is required to update.",});
+    }
+
+    const client = await ClientModel.findById(clientId);
+
+    if (!client) {
+      return res.status(404).json({ok: false,message: "Client not found"});
+    }
+
+    // Check if phone number is valid and not used by another client under same owner
+    if (phoneNo && phoneNo !== client.phoneNo) {
+      if (String(phoneNo).length !== 10) {
+        return res.status(400).json({ok: false,message: "Phone number must be exactly 10 digits",});
+      }
+
+      const phoneTaken = await ClientModel.findOne({
+        phoneNo,
+        ownerId: client.ownerId,
+        _id: { $ne: clientId }
+      });
+
+      if (phoneTaken) {
+        return res.status(400).json({  ok: false,  message: "Phone number already in use by another client under this owner",});
+      }
+
+      client.phoneNo = phoneNo;
+    }
+
+    if (clientName) client.clientName = clientName;
+    if (location) client.location = location;
+
+    await client.save();
+
+    return res.status(200).json({ok: true,message: "Client profile updated successfully",data: client,});
+    
+  } catch (err) {
+    console.error("Error updating client profile:", err);
+    return res.status(500).json({
+      ok: false,
+      message: "Server error",
+    });
+  }
+};
+
+
 const deleteClient = async (req: Request, res: Response): Promise<any> => {
     try {
 
@@ -351,5 +475,6 @@ export {
     isClientAuthenticated,
     clientForgotPassword,
     clientResetForgotPassword,
+    updateClientProfile,
     deleteClient
 }

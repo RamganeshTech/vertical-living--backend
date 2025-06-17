@@ -1,10 +1,13 @@
-import { Response } from "express";
-import { AuthenticatedUserRequest } from "../../types/types";
+import { Request, Response } from "express";
+import { AuthenticatedCTORequest, AuthenticatedUserRequest, RoleBasedRequest } from "../../types/types";
 import UserModel from "../../models/usermodel/user.model";
 import bcrypt from 'bcrypt';
 import OrganizationModel from "../../models/organization models/organization.model";
 import StaffModel from "../../models/staff model/staff.model";
 import CTOModel from "../../models/CTO model/CTO.model";
+
+import jwt  from 'jsonwebtoken';
+
 
 const createOrganziation = async (req: AuthenticatedUserRequest, res: Response) => {
     try {
@@ -25,7 +28,7 @@ const createOrganziation = async (req: AuthenticatedUserRequest, res: Response) 
             address: address || null,
             logoUrl: logoUrl || null,
             organizationPhoneNo: organizationPhoneNo || null,
-            userId:user._id
+            userId: user._id
         });
 
         if (!organization) {
@@ -33,7 +36,7 @@ const createOrganziation = async (req: AuthenticatedUserRequest, res: Response) 
             return
         }
 
-        const existingUser = await UserModel.findByIdAndUpdate(user._id, { $push: {organizationId: organization._id} }, { returnDocument: "after" })
+        const existingUser = await UserModel.findByIdAndUpdate(user._id, { $push: { organizationId: organization._id } }, { returnDocument: "after" })
 
         if (!existingUser) {
             res.status(404).json({ message: "user not found", ok: false })
@@ -43,7 +46,7 @@ const createOrganziation = async (req: AuthenticatedUserRequest, res: Response) 
         return res.status(201).json({
             message: "Organization successfully",
             data: organization,
-            ok:true
+            ok: true
         });
     }
     catch (error) {
@@ -61,18 +64,18 @@ const getMyOrganizations = async (req: AuthenticatedUserRequest, res: Response) 
         const user = req.user;
 
         if (!user || !user.organization) {
-            res.status(404).json({ message: "No organization linked", data:[], ok: false });
+            res.status(404).json({ message: "No organization linked", data: [], ok: false });
             return
         }
 
-        const organization = await OrganizationModel.find({userId: user._id});
+        const organization = await OrganizationModel.find({ userId: user._id });
 
         if (!organization) {
             res.status(200).json({ message: "No organizations  found", ok: false, data: [] });
             return
         }
 
-         res.status(200).json({ ok: true, message:"fetched successfully", data: organization });
+        res.status(200).json({ ok: true, message: "fetched successfully", data: organization });
     } catch (error) {
         if (error instanceof Error) {
             console.error("Error in getMyOrganizations:", error);
@@ -85,15 +88,15 @@ const getMyOrganizations = async (req: AuthenticatedUserRequest, res: Response) 
 const getOrganizationById = async (req: AuthenticatedUserRequest, res: Response) => {
     try {
         const user = req.user;
-        const {orgs} = req.params
-        
+        const { orgs } = req.params
+
         if (!user) {
             res.status(404).json({ message: "No organization linked", ok: false });
             return
         }
 
-         if (!orgs) {
-            res.status(404).json({ message: "No organization id provided",  ok: false });
+        if (!orgs) {
+            res.status(404).json({ message: "No organization id provided", ok: false });
             return
         }
 
@@ -106,7 +109,7 @@ const getOrganizationById = async (req: AuthenticatedUserRequest, res: Response)
 
         console.log(organization)
 
-        return res.status(200).json({ ok: true, message:"fetched successfully", data: organization });
+        return res.status(200).json({ ok: true, message: "fetched successfully", data: organization });
     } catch (error) {
         if (error instanceof Error) {
             console.error("Error in get organization by id:", error);
@@ -119,32 +122,32 @@ const getOrganizationById = async (req: AuthenticatedUserRequest, res: Response)
 const updateOrganizationDetails = async (req: AuthenticatedUserRequest, res: Response) => {
     try {
         const user = req.user;
-    const updatedData = req.body;
-    const { orgId } = req.params;
+        const updatedData = req.body;
+        const { orgId } = req.params;
 
-    if (!user || !user.organization) {
-      return res.status(404).json({ message: "User not associated with this organization", ok: false });
-    }
+        if (!user || !user.organization) {
+            return res.status(404).json({ message: "User not associated with this organization", ok: false });
+        }
 
-    // Validate that exactly one field is being updated
-    const fields = Object.keys(updatedData);
-    if (fields.length !== 1) {
-      return res.status(400).json({ message: "Exactly one field must be updated at a time", ok: false });
-    }
+        // Validate that exactly one field is being updated
+        const fields = Object.keys(updatedData);
+        if (fields.length !== 1) {
+            return res.status(400).json({ message: "Exactly one field must be updated at a time", ok: false });
+        }
 
-    const updatedOrg = await OrganizationModel.findByIdAndUpdate(
-      orgId,
-      { $set: updatedData }, // directly apply updatedData
-      { returnDocument:"after" }
-    );
+        const updatedOrg = await OrganizationModel.findByIdAndUpdate(
+            orgId,
+            { $set: updatedData }, // directly apply updatedData
+            { returnDocument: "after" }
+        );
 
-    if (!updatedOrg) {
-      return res.status(404).json({ message: "Organization not found", ok: false });
-    }
+        if (!updatedOrg) {
+            return res.status(404).json({ message: "Organization not found", ok: false });
+        }
 
-    return res.status(200).json({ ok: true, message: "Organization field updated", data: updatedOrg });
+        return res.status(200).json({ ok: true, message: "Organization field updated", data: updatedOrg });
 
-} catch (error) {
+    } catch (error) {
         if (error instanceof Error) {
             console.error("Error in updateOrganizationName:", error);
             res.status(500).json({ message: "Server error", ok: false, error: error.message });
@@ -156,8 +159,8 @@ const updateOrganizationDetails = async (req: AuthenticatedUserRequest, res: Res
 const deleteOrganization = async (req: AuthenticatedUserRequest, res: Response) => {
     try {
         const user = req.user;
-        const {orgId} = req.params
-        
+        const { orgId } = req.params
+
         if (!orgId) {
             res.status(400).json({ ok: false, message: "No organization found for user" });
             return
@@ -226,10 +229,10 @@ const getStaffsByOrganization = async (req: AuthenticatedUserRequest, res: Respo
 // POST /api/staff/invite
 const inviteStaff = async (req: AuthenticatedUserRequest, res: Response) => {
     try {
-         const { organizationId, role } = req.body;
+        const { organizationId, role } = req.body;
         const user = req.user
         if (!organizationId || !role) {
-             res.status(400).json({
+            res.status(400).json({
                 message: "organizationId and role are required",
                 ok: false
             });
@@ -244,7 +247,7 @@ const inviteStaff = async (req: AuthenticatedUserRequest, res: Response) => {
             organizationId,
             role,
             expiresAt,
-            ownerId:user._id
+            ownerId: user._id
         };
 
         const encodedPayload = Buffer.from(JSON.stringify(invitationPayload)).toString("base64");
@@ -255,7 +258,7 @@ const inviteStaff = async (req: AuthenticatedUserRequest, res: Response) => {
 
         const inviteLink = `${baseUrl}/staffregister?invite=${encodedPayload}`;
 
-         res.status(200).json({
+        res.status(200).json({
             message: "Invitation link generated successfully",
             data: inviteLink,
             ok: true
@@ -286,7 +289,7 @@ const removeStaffFromOrganization = async (req: AuthenticatedUserRequest, res: R
             return
         }
 
-        res.status(200).json({ message: "Removed staff from organization", data:staff , ok:true});
+        res.status(200).json({ message: "Removed staff from organization", data: staff, ok: true });
 
     } catch (error) {
         if (error instanceof Error) {
@@ -330,18 +333,16 @@ const getCTOByOrganization = async (req: AuthenticatedUserRequest, res: Response
 
 const inviteCTO = async (req: AuthenticatedUserRequest, res: Response) => {
     try {
-          const { organizationId } = req.body;
+        const { organizationId } = req.body;
         const user = req.user
 
         if (!organizationId) {
-             res.status(400).json({
+            res.status(400).json({
                 message: "organizationId and role are required",
                 ok: false
             });
             return
         }
-
-        
 
         // Set expiry: 1 day from now
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day in milliseconds
@@ -351,7 +352,7 @@ const inviteCTO = async (req: AuthenticatedUserRequest, res: Response) => {
             organizationId,
             role: "CTO",
             expiresAt,
-            ownerId:user._id
+            ownerId: user._id
         };
 
         const encodedPayload = Buffer.from(JSON.stringify(invitationPayload)).toString("base64");
@@ -362,7 +363,7 @@ const inviteCTO = async (req: AuthenticatedUserRequest, res: Response) => {
 
         const inviteLink = `${baseUrl}/ctoregister?invite=${encodedPayload}`;
 
-         res.status(200).json({
+        res.status(200).json({
             message: "Invitation link generated successfully",
             data: inviteLink,
             ok: true
@@ -392,7 +393,7 @@ const removeCTOFromOrganization = async (req: AuthenticatedUserRequest, res: Res
             return
         }
 
-        res.status(200).json({ message: "Removed CTO from organization", data:CTO , ok:true});
+        res.status(200).json({ message: "Removed CTO from organization", data: CTO, ok: true });
 
     } catch (error) {
         if (error instanceof Error) {
@@ -400,6 +401,57 @@ const removeCTOFromOrganization = async (req: AuthenticatedUserRequest, res: Res
             res.status(500).json({ message: "Server error", ok: false });
             return
         }
+    }
+};
+
+
+// CLIENT CONTROLLERS
+const inviteClient = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.body;
+
+        const { ownerId } = (req as any).user
+
+        if (!projectId) {
+            return res.status(400).json({
+                ok: false,
+                message: "projectId is required",
+            });
+        }
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+        const payload = {
+            projectId,
+            ownerId,
+            expiresAt,
+            role: "client"
+        };
+
+        const encodedToken = Buffer.from(JSON.stringify(payload)).toString("base64");
+
+
+        // const token = jwt.sign(payload, process.env.JWT_CLIENT_INVITE_SECRET!, {
+        //     expiresIn: "1d", // invite link valid for 1 day
+        // });
+
+        const baseUrl = process.env.NODE_ENV === "development"
+            ? process.env.FRONTEND_URL!
+            : "https://yourdomain.com";
+
+        const registerLink = `${baseUrl}/clientregister?invite=${encodedToken}`;
+
+        return res.status(200).json({
+            ok: true,
+            message: "Client registration link generated successfully",
+            data: registerLink,
+        });
+
+    } catch (error: any) {
+        console.error("Error generating client invite link:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Server error while generating invite link",
+        });
     }
 };
 
@@ -418,5 +470,7 @@ export {
 
     getCTOByOrganization,
     inviteCTO,
-    removeCTOFromOrganization
+    removeCTOFromOrganization,
+
+    inviteClient,
 }

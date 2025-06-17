@@ -14,7 +14,6 @@ export interface IBedroomRequirement {
 export const BedroomRequirementSchema = new Schema<IBedroomRequirement>({
   numberOfBedrooms: {
     type: Number,
-    required: true,
     min: 1,
   },
   bedType: {
@@ -40,7 +39,6 @@ export const BedroomRequirementSchema = new Schema<IBedroomRequirement>({
   bedroomPackage: {
     type: String,
     enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package"],
-    required: true,
   },
   notes: {
     type: String,

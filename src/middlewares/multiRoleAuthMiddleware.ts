@@ -8,6 +8,7 @@ export const multiRoleAuthMiddleware =
     try {
       console.log("usera cecess token", req.cookies.useraccesstoken)
       const ownerToken = req.cookies?.useraccesstoken;
+      const ctoToken = req.cookies?.ctoaccesstoken;
       const staffToken = req.cookies?.staffaccesstoken;
       const workerToken = req.cookies?.workeraccesstoken;
 
@@ -16,10 +17,16 @@ export const multiRoleAuthMiddleware =
       if (ownerToken) {
         decoded = jwt.verify(ownerToken, process.env.JWT_ACCESS_SECRET!);
         decoded.role = "owner";
-      } else if (staffToken) {
+      }
+      else if (ctoToken) {
+       decoded = jwt.verify(ctoToken, process.env.JWT_CTO_ACCESS_SECRET!);
+        decoded.role = "CTO";
+      }
+       else if (staffToken) {
         decoded = jwt.verify(staffToken, process.env.JWT_STAFF_ACCESS_SECRET!);
         decoded.role = "staff";
-      } else if (workerToken) {
+      }
+       else if (workerToken) {
         decoded = jwt.verify(workerToken, process.env.JWT_WORKER_ACCESS_SECRET!);
         decoded.role = "worker";
       } else {
@@ -36,7 +43,11 @@ export const multiRoleAuthMiddleware =
       req.user = {
         _id: decoded._id,
         role: decoded.role,
+        ownerId: decoded.ownerId || decoded._id
       };
+
+      // console.log("owner", decoded)
+      // console.log("req.user",req.user)
 
       next();
     } catch (error) {
