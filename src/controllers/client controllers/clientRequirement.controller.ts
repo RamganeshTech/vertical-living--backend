@@ -7,10 +7,10 @@ import { AuthenticatedClientRequest } from "../../types/types";
 const updateKitchenSection = async (req: AuthenticatedClientRequest, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
-        const kitchenData = req.body;
+        const {kitchen} = req.body;
         const client = req.client;
 
-        if (!kitchenData) {
+        if (!kitchen) {
             return res.status(400).json({ ok: false, message: "Kitchen data is required" });
         }
 
@@ -26,11 +26,11 @@ const updateKitchenSection = async (req: AuthenticatedClientRequest, res: Respon
         }
 
         // Ensure client is the one who submitted
-        if (form.filledBy?.clientName?.toString() !== client.clientName.toString()) {
+        if (form.clientData?.clientName?.toString() !== client.clientName.toString()) {
             return res.status(400).json({ ok: false, message: "Not authorized to edit this form" });
         }
 
-        form.kitchen = kitchenData;
+        form.kitchen = kitchen;
         await form.save();
 
         return res.status(200).json({ ok: true, message: "Kitchen section updated successfully", data: form.kitchen });
@@ -57,7 +57,7 @@ const updateBedroomSection = async (req: AuthenticatedClientRequest, res: Respon
             return res.status(403).json({ ok: false, message: "Form is not editable" });
         }
 
-        if (form.filledBy?.clientName?.toString() !== client.clientName.toString()) {
+        if (form.clientData?.clientName?.toString() !== client.clientName.toString()) {
             return res.status(403).json({ ok: false, message: "Not authorized" });
         }
 
@@ -89,7 +89,7 @@ const updateWardrobeSection = async (req: AuthenticatedClientRequest, res: Respo
             return res.status(403).json({ ok: false, message: "Form is not editable" });
         }
 
-        if (form.filledBy?.clientName?.toString() !== client.clientName.toString()) {
+        if (form.clientData?.clientName?.toString() !== client.clientName.toString()) {
             return res.status(403).json({ ok: false, message: "Not authorized" });
         }
 
@@ -122,7 +122,7 @@ const updateLivingHallSection = async (req: AuthenticatedClientRequest, res: Res
             return res.status(403).json({ ok: false, message: "Form is not editable" });
         }
 
-        if (form.filledBy?.clientName?.toString() !== client.clientName.toString()) {
+        if (form.clientData?.clientName?.toString() !== client.clientName.toString()) {
             return res.status(403).json({ ok: false, message: "Not authorized" });
         }
 

@@ -17,7 +17,7 @@ const submitRequirementForm = async (req: Request, res: Response,): Promise<void
     }
 
     // Validate required client info
-    if (!clientData.clientName || !clientData.email || !clientData.whatsappNumber) {
+    if (!clientData.clientName || !clientData.email || !clientData.whatsapp) {
       res.status(400).json({
         success: false,
         message: "Missing required client information.",
@@ -68,7 +68,7 @@ const submitRequirementForm = async (req: Request, res: Response,): Promise<void
 
 
 
-    form.filledBy = {
+    form.clientData = {
       clientName: clientData.clientName,
       email: clientData.email,
       whatsapp: clientData.whatsapp,
@@ -85,10 +85,31 @@ const submitRequirementForm = async (req: Request, res: Response,): Promise<void
 
     res.status(201).json({ ok: true, message: "Requirement form submitted successfully.", data: form, });
   } catch (error: any) {
-    res.status(500).json({ ok: false, message: "Server error while submitting requirement form.", error: error.message, });
+    res.status(500).json({ ok: false, message: "Server error, try again after some time", error: error.message, });
     return
   }
 };
+
+
+const getFormFilledDetails = async (req: Request, res: Response,): Promise<void> => {
+  try {
+    const { projectId } = req.params
+
+    const form = await RequirementFormModel.findOne({ projectId })
+
+    if (!form) {
+      res.status(404).json({ ok: false, message: "Form not found or token invalid." });
+      return;
+    }
+
+
+    res.status(200).json({ ok: true, message: "Requirement from fetched succesfully.", data: form });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, message: "Server error please try again", error: error.message, });
+    return
+  }
+};
+
 
 
 const generateShareableFormLink = async (req: Request, res: Response): Promise<any> => {
@@ -105,14 +126,60 @@ const generateShareableFormLink = async (req: Request, res: Response): Promise<a
     let form = await RequirementFormModel.findOne({ projectId });
 
     if (form?.clientConfirmed) {
-       res.status(400).json({ ok: false, message: "Form already submitted. Cannot generate new link." });
+       res.status(400).json({ ok: false, message: "Client Has confirmed, Cannot generate new link." });
        return
     }
 
     if (!form) {
       form = new RequirementFormModel({
-        projectId,
+         projectId,
         shareToken: token,
+        shareTokenExpiredAt: null,
+        clientConfirmed: false,
+        isEditable: true,
+        status: "pending",
+        clientData: {
+          clientName: "",
+          email: "",
+          whatsapp: "",
+          location: ""
+        },
+        kitchen: {
+        //   layoutType: "L-shaped",
+        //   measurements: { top: 0, left: 0, right: 0 },
+        //   kitchenPackage: "Essentials",
+        },
+        livingHall: {
+        //   seatingStyle: "Sofa Set",
+        //   tvUnitDesignRequired: false,
+        //   falseCeilingRequired: false,
+        //   wallDecorStyle: "Paint",
+        //   numberOfFans: 0,
+        //   numberOfLights: 0,
+        //   livingHallPackage: "Essentials",
+        //   notes: ""
+        },
+        bedroom: {
+        //   numberOfBedrooms: 0,
+        //   bedType: "Single",
+        //   wardrobeIncluded: false,
+        //   falseCeilingRequired: false,
+        //   tvUnitRequired: false,
+        //   studyTableRequired: false,
+        //   bedroomPackage: "Essentials",
+        //   notes: ""
+        },
+        wardrobe: {
+        //   wardrobeType: "Sliding",
+        //   lengthInFeet: 0,
+        //   heightInFeet: 0,
+        //   mirrorIncluded: false,
+        //   wardrobePackage: "Essentials",
+        //   numberOfShelves: 0,
+        //   numberOfDrawers: 0,
+        //   notes: ""
+        },
+        // additionalNotes: ""
       });
     } else {
       form.shareToken = token;
@@ -126,7 +193,7 @@ const generateShareableFormLink = async (req: Request, res: Response): Promise<a
     return res.status(200).json({ ok: true, data: link });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ ok: false, message: "Server error" });
+    return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
   }
 };
 
@@ -144,7 +211,7 @@ const lockRequirementForm = async (req: Request, res: Response): Promise<any> =>
     return res.status(200).json({ ok: true, message: "Form has been locked", data:form });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ ok: false, message: "Server error" });
+    return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
   }
 };
 
@@ -162,14 +229,18 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
     return res.status(200).json({ ok: true, message: "Requirement stage marked as completed", data:form });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ ok: false, message: "Server error" });
+    return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
   }
 };
 
 
 
+
+
+
 export { 
   submitRequirementForm,
+  getFormFilledDetails,
    generateShareableFormLink,
    lockRequirementForm,
    markFormAsCompleted 

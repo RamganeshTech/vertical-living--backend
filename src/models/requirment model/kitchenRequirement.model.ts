@@ -3,9 +3,9 @@ import { Schema } from "mongoose";
 export interface IKitchenRequirement {
     layoutType: "L-shaped" | "Straight" | "U-shaped" | "Parallel";
     measurements?: {
-        A?: number;
-        B?: number;
-        C?: number;
+        top?: number;
+        left?: number;
+        right?: number;
     };
     kitchenPackage: "Essentials" | "Premium" | "Luxury" | "Build Your Own Package";
     // packageDetails?: {
@@ -16,7 +16,7 @@ export interface IKitchenRequirement {
     // };
     graniteCountertop?: boolean;
     numberOfShelves?: (number | null);
-    notes?: string;
+    notes?: string | null;
 }
 
 
@@ -24,6 +24,7 @@ export const KitchenRequirementSchema = new Schema<IKitchenRequirement>({
     layoutType: {
         type: String,
         enum: ["L-shaped", "Straight", "U-shaped", "Parallel"],
+        default: null
     },
     measurements: {
         A: { type: Number, required: false },
@@ -33,24 +34,19 @@ export const KitchenRequirementSchema = new Schema<IKitchenRequirement>({
     kitchenPackage: {
         type: String,
         enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package"],
+        default: null
     },
-    // packageDetails: {
-    //     affordablePricing: Boolean,
-    //     premiumDesigns: Boolean,
-    //     elitePricing: Boolean,
-    //     customDesign: Boolean,
-    // },
     graniteCountertop: {
         type: Boolean,
-        default: false,
+        default: null,
     },
     numberOfShelves: {
         type: Number,
-        min: 0,
         default: null
     },
     notes: {
         type: String, // for any custom client input
+        default: null
     },
 },
     {

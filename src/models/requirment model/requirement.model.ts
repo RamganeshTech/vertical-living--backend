@@ -15,7 +15,7 @@ import { ILivingHallRequirement, LivingHallRequirementSchema } from "./livingroo
 
 interface IRequirementFormSchema extends Document {
   projectId: Types.ObjectId,
-  filledBy: {
+  clientData: {
     clientName: string,
     email: string,
     whatsapp: string,
@@ -41,10 +41,10 @@ const RequirementFormSchema = new Schema<IRequirementFormSchema>(
       ref: "ProjectModel",
       required: true,
     },
-    filledBy: {
-      clientName: { type: String, required: true },
-      email: { type: String, required: true },
-      whatsapp: { type: String, required: true },
+    clientData: {
+      clientName: { type: String },
+      email: { type: String },
+      whatsapp: { type: String },
       location: { type: String },
     },
     isEditable: {
@@ -70,9 +70,11 @@ const RequirementFormSchema = new Schema<IRequirementFormSchema>(
     },
     additionalNotes: {
       type: String,
+      default: null
     },
     status: {
       type: String,
+      default:"pending"
     },
     shareToken: {
       type: String,

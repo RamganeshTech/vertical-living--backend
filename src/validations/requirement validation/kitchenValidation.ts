@@ -14,26 +14,26 @@ const validateKitchenInput = (kitchen: any): string | null => {
     return "Measurements must be provided as an object.";
   }
 
-  const { A, B, C } = measurements;
+  const { top, left, right } = measurements;
 
   switch (layoutType) {
     case "L-shaped":
     case "U-shaped":
-      if (!isPositiveNumber(A) || !isPositiveNumber(B) || !isPositiveNumber(C)) {
+      if (!isPositiveNumber(top) || !isPositiveNumber(left) || !isPositiveNumber(right)) {
         return `All measurements (A, B, C) must be numbers greater than 0 for ${layoutType} kitchen.`;
       }
       break;
 
     case "Straight":
-      if (!isPositiveNumber(B)) return "Measurement B must be a number greater than 0 for Straight kitchen.";
-      if (A != null || C != null) return "Only measurement B should be provided for Straight kitchen.";
+      if (!isPositiveNumber(left)) return "Measurement B must be a number greater than 0 for Straight kitchen.";
+      if (top != null || right != null) return "Only measurement B should be provided for Straight kitchen.";
       break;
 
     case "Parallel":
-      if (!isPositiveNumber(A) || !isPositiveNumber(C)) {
+      if (!isPositiveNumber(top) || !isPositiveNumber(right)) {
         return "Measurements A and C must be numbers greater than 0 for Parallel kitchen.";
       }
-      if (B != null) return "Measurement B should not be provided for Parallel kitchen.";
+      if (left != null) return "Measurement B should not be provided for Parallel kitchen.";
       break;
   }
 

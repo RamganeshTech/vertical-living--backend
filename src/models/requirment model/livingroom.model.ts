@@ -5,8 +5,8 @@ export interface ILivingHallRequirement {
   tvUnitDesignRequired?: boolean;
   falseCeilingRequired?: boolean;
   wallDecorStyle?: "Paint" | "Wallpaper" | "Wood Paneling" | "Stone Cladding";
-  numberOfFans?: number;
-  numberOfLights?: number;
+  numberOfFans?: (number | null);
+  numberOfLights?: (number | null);
   livingHallPackage: "Essentials" | "Premium" | "Luxury" | "Build Your Own Package";
   notes?: (string | null);
 }
@@ -16,37 +16,41 @@ export const LivingHallRequirementSchema = new Schema<ILivingHallRequirement>({
   seatingStyle: {
     type: String,
     enum: ["Sofa Set", "L-Shaped Sofa", "Recliner Chairs", "Floor Seating"],
+    default: null
   },
   tvUnitDesignRequired: {
     type: Boolean,
-    default: false,
+    default: null,
   },
   falseCeilingRequired: {
     type: Boolean,
-    default: false,
+    default: null,
   },
   wallDecorStyle: {
     type: String,
     enum: ["Paint", "Wallpaper", "Wood Paneling", "Stone Cladding"],
+    default: null
   },
   numberOfFans: {
     type: Number,
-    default: 1,
-    min: 0,
+    default: null
+
   },
   numberOfLights: {
     type: Number,
-    default: 1,
-    min: 0,
+    default: null
+
   },
   livingHallPackage: {
     type: String,
     enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package"],
+    default: null
   },
   notes: {
     type: String,
+    default: null
   },
-}, 
-{
+},
+  {
     timestamps: true
-});
+  });

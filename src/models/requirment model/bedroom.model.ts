@@ -14,34 +14,38 @@ export interface IBedroomRequirement {
 export const BedroomRequirementSchema = new Schema<IBedroomRequirement>({
   numberOfBedrooms: {
     type: Number,
-    min: 1,
+    default: null
   },
   bedType: {
     type: String,
     enum: ["Single", "Double", "Queen", "King"],
+    default: null
   },
   wardrobeIncluded: {
     type: Boolean,
-    default: false,
+    default: null,
   },
   falseCeilingRequired: {
     type: Boolean,
-    default: false,
+    default: null,
   },
   tvUnitRequired: {
     type: Boolean,
-    default: false,
+    default: null,
   },
   studyTableRequired: {
     type: Boolean,
-    default: false,
+    default: null,
   },
   bedroomPackage: {
     type: String,
     enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package"],
+    default: null
   },
   notes: {
     type: String,
+    default: null
+
   },
 },
 {

@@ -11,6 +11,7 @@ export const multiRoleAuthMiddleware =
       const ctoToken = req.cookies?.ctoaccesstoken;
       const staffToken = req.cookies?.staffaccesstoken;
       const workerToken = req.cookies?.workeraccesstoken;
+      const clientToken = req.cookies?.clientaccesstoken;
 
       let decoded: any = null;
 
@@ -25,6 +26,10 @@ export const multiRoleAuthMiddleware =
        else if (staffToken) {
         decoded = jwt.verify(staffToken, process.env.JWT_STAFF_ACCESS_SECRET!);
         decoded.role = "staff";
+      }
+       else if (clientToken) {
+        decoded = jwt.verify(clientToken, process.env.JWT_CLIENT_ACCESS_SECRET!);
+        decoded.role = "client";
       }
        else if (workerToken) {
         decoded = jwt.verify(workerToken, process.env.JWT_WORKER_ACCESS_SECRET!);

@@ -11,7 +11,7 @@ const ClientAuthMiddleware = async (req: AuthenticatedClientRequest, res: Respon
             return;
         }
 
-        const decodeddata = jwt.verify(accesstoken, process.env.JWT_ACCESS_SECRET!)
+        const decodeddata = jwt.verify(accesstoken, process.env.JWT_CLIENT_ACCESS_SECRET!)
 
         req.client = decodeddata
         next()

@@ -21,29 +21,31 @@ export const WardrobeRequirementSchema = new Schema<IWardrobeRequirement>({
   wardrobeType: {
     type: String,
     enum: ["Sliding", "Openable"],
+    default: null
   },
   lengthInFeet: {
     type: Number,
+    default: null
   },
   heightInFeet: {
     type: Number,
+    default: null
   },
   mirrorIncluded: {
     type: Boolean,
-    default: false,
+    default: null,
   },
   wardrobePackage: {
     type: String,
     enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package"],
+    default: null
   },
   numberOfShelves: {
     type: Number,
-    min: 0,
     default: null
   },
   numberOfDrawers: {
     type: Number,
-    min: 0,
     default: null
   },
   notes: {
