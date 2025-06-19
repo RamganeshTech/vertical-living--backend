@@ -21,11 +21,13 @@ import orgOwnerRoutes from './routers/OrgOwner routes/orgOwner.routes';
 import workerRoutes from './routers/worker routes/worker.router';
 import staffRoutes from './routers/staff routes/staff.routes';
 import CTORoutes from './routers/CTO routes/CTO.routes';
-import requirementRoutes from './routers/requirement routes/requirement.routes';
+import requirementRoutes from './routers/Stage routes/requirement routes/requirement.routes';
+import siteMeasurementRoutes from './routers/Stage routes/siteMeasurement.route';
 // import checkRedisConnection from './config/redisClient';
 
 
 dotenv.config()
+// console.log("S3_BUCKET", process.env.AWS_S3_BUCKET); // 👈 Add this
 
 const app = express()
 // console.log("env file", process.env.FRONTEND_URL)
@@ -58,7 +60,9 @@ app.use('/api/staff', staffRoutes)
 app.use('/api/worker', workerRoutes)
 app.use('/api/CTO', CTORoutes)
 
+// STAGE APIS
 app.use('/api/requirementform', requirementRoutes)
+app.use('/api/sitemeasurement', siteMeasurementRoutes)
 
 
 const PORT = process.env.PORT

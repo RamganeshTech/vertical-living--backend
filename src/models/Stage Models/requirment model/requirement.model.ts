@@ -30,7 +30,18 @@ interface IRequirementFormSchema extends Document {
   status: "locked" | "pending" | "completed",
   clientConfirmed: boolean,
   shareToken: string,
-  shareTokenExpiredAt: Date | null
+  shareTokenExpiredAt: Date | null,
+  timer: {
+    startedAt: Date | null,
+    completedAt: Date | null,
+    deadLine: Date | null
+  },
+  uploads: {
+      url: string,
+      uploadedAt: Date,
+      originalName: string,
+    }[]
+  
 }
 
 const RequirementFormSchema = new Schema<IRequirementFormSchema>(
@@ -74,7 +85,7 @@ const RequirementFormSchema = new Schema<IRequirementFormSchema>(
     },
     status: {
       type: String,
-      default:"pending"
+      default: "pending"
     },
     shareToken: {
       type: String,
@@ -88,7 +99,21 @@ const RequirementFormSchema = new Schema<IRequirementFormSchema>(
     clientConfirmed: {
       type: Boolean,
       default: false
+    },
+    timer:{
+      startedAt: {type : Date, default: null},
+      completedAt: {type: Date, default: null},
+      deadLine: {type: Date, default: null},
+    },
+    uploads: [
+    {
+      type: { type: String, enum: ["image", "pdf"] },
+      url: String,
+       originalName: { type: String, required: true }, 
+      uploadedAt: { type: Date, default: Date.now }
     }
+  ],
+
   },
   { timestamps: true }
 )

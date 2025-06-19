@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { RequirementFormModel } from "../../models/requirment model/requirement.model";
+import { RequirementFormModel } from "../../models/Stage Models/requirment model/requirement.model";
 import { AuthenticatedClientRequest } from "../../types/types";
 
 
