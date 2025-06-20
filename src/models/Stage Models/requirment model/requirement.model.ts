@@ -110,7 +110,7 @@ const RequirementFormSchema = new Schema<IRequirementFormSchema>(
       type: { type: String, enum: ["image", "pdf"] },
       url: String,
        originalName: { type: String, required: true }, 
-      uploadedAt: { type: Date, default: Date.now }
+      uploadedAt: { type: Date, default: new Date() }
     }
   ],
 

@@ -1,15 +1,14 @@
 import { Request, Response } from "express";
 import { RequirementFormModel } from "../../models/Stage Models/requirment model/requirement.model";
 import { SiteMeasurementModel } from "../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
+import { handleSetStageDeadline } from "../../utils/common features/timerFuncitonality";
+import { SampleDesignModel } from "../../models/Stage Models/sampleDesing model/sampleDesign.model";
 
 const createSiteMeasurement = async (req: Request, res: Response): Promise<any> => {
   try {
 
     const { projectId } = req.params
-    const {
-      siteDetails,
-      rooms
-    } = req.body;
+    const { siteDetails } = req.body;
 
     if (!projectId) {
       return res.status(400).json({ ok: false, message: "projectId is required" });
@@ -56,38 +55,14 @@ const createSiteMeasurement = async (req: Request, res: Response): Promise<any> 
       return res.status(400).json({ ok: false, message: "additionalNotes must be a string or null." });
     }
 
-    if (!Array.isArray(rooms)) {
-      return res.status(400).json({ ok: false, message: "rooms must be an array." });
-    }
 
-    for (const [index, room] of rooms.entries()) {
-      if (!room || typeof room !== "object") {
-        return res.status(400).json({ ok: false, message: `Room at index ${index} is invalid.` });
-      }
-
-      const { name, length, breadth, height } = room;
-
-      if (name !== null && typeof name !== "string") {
-        return res.status(400).json({ ok: false, message: `Room name at index ${index} must be a string or null.` });
-      }
-      if (length !== null && typeof length !== "number" && length < 0) {
-        return res.status(400).json({ ok: false, message: `Room length at index ${index} must be a number or null.` });
-      }
-      if (breadth !== null && typeof breadth !== "number" && breadth < 0) {
-        return res.status(400).json({ ok: false, message: `Room breadth at index ${index} must be a number or null.` });
-      }
-      if (height !== null && typeof height !== "number" && height < 0) {
-        return res.status(400).json({ ok: false, message: `Room height at index ${index} must be a number or null.` });
-      }
-    }
 
     let form = await SiteMeasurementModel.findOne({ projectId });
 
     if (!form) {
-      form = new SiteMeasurementModel({ projectId, siteDetails, rooms });
+      form = new SiteMeasurementModel({ projectId, siteDetails, rooms: [] });
     } else {
       form.siteDetails = siteDetails;
-      form.rooms = rooms;
     }
 
     await form.save();
@@ -100,6 +75,42 @@ const createSiteMeasurement = async (req: Request, res: Response): Promise<any> 
   }
 };
 
+const createRoom = async (req: Request, res: Response): Promise<any> => {
+  try {
+
+    const { projectId } = req.params
+    const { room } = req.body;
+
+    if (!projectId) {
+      return res.status(400).json({ ok: false, message: "projectId is required" });
+    }
+
+
+    const { name, length, breadth, height } = room;
+
+    if (name !== null || typeof name !== "string") {
+      return res.status(400).json({ ok: false, message: `Room name must be a string or null.` });
+    }
+    if (length !== null || typeof length !== "number" || length < 0) {
+      return res.status(400).json({ ok: false, message: `Room length must be a number or null.` });
+    }
+    if (breadth !== null || typeof breadth !== "number" || breadth < 0) {
+      return res.status(400).json({ ok: false, message: `Room breadth must be a number or null.` });
+    }
+    if (height !== null || typeof height !== "number" || height < 0) {
+      return res.status(400).json({ ok: false, message: `Room height must be a number or null.` });
+    }
+
+
+    let form = await SiteMeasurementModel.findOneAndUpdate({ projectId }, { $push: { rooms: room } });
+
+    return res.status(201).json({ ok: true, message: "room has created successfully.", data: form });
+
+  } catch (err) {
+    console.error("Error create room  measurement :", err);
+    res.status(500).json({ message: "Server error", ok: false });
+  }
+};
 
 
 
@@ -175,7 +186,7 @@ const updateCommonSiteMeasurements = async (req: Request, res: Response): Promis
 const updateRoomSiteMeasurements = async (req: Request, res: Response): Promise<any> => {
   try {
     const { projectId, roomId } = req.params;
-    const { name, length, breadth, height } = req.body;
+    const { room } = req.body;
 
     if (!projectId || !roomId) {
       return res.status(400).json({ ok: false, message: "projectId and roomId are required" });
@@ -190,7 +201,11 @@ const updateRoomSiteMeasurements = async (req: Request, res: Response): Promise<
       return res.status(403).json({ ok: false, message: "Site measurement is not editable" });
     }
 
-    if (!length || !breadth || !height) {
+    if (!room.name) {
+      return res.status(400).json({ message: `name must be provided`, ok: false })
+    }
+
+    if (!room.length || !room.breadth || !room.height) {
       return res.status(400).json({ message: `negative values were not allowed `, ok: false })
     }
 
@@ -199,13 +214,13 @@ const updateRoomSiteMeasurements = async (req: Request, res: Response): Promise<
       return res.status(404).json({ message: "Room not found", ok: false });
     }
 
-    const room = siteDoc.rooms[roomIndex];
+    const existingRoom = siteDoc.rooms[roomIndex];
 
     // Update only valid fields
-    if (name !== undefined) room.name = name;
-    if (length !== undefined) room.length = length;
-    if (breadth !== undefined) room.breadth = breadth;
-    if (height !== undefined) room.height = height;
+    if (room.name !== undefined) existingRoom.name = room.name;
+    if (room.length !== undefined) existingRoom.length = room.length;
+    if (room.breadth !== undefined) existingRoom.breadth = room.breadth;
+    if (room.height !== undefined) existingRoom.height = room.height;
 
     await siteDoc.save();
 
@@ -226,10 +241,37 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
     const siteDoc = await SiteMeasurementModel.findOne({ projectId });
     if (!siteDoc) return res.status(404).json({ ok: false, message: "Site measurement not found" });
 
-    if (!siteDoc.isEditable) return res.status(403).json({ ok: false, message: "Already completed" });
+    if (siteDoc.status === "completed") return res.status(400).json({ ok: false, message: "Already completed" });
 
     siteDoc.status = "completed";
     siteDoc.isEditable = false;
+
+    if (siteDoc.status === "completed") {
+      let design = await SampleDesignModel.findOne({ projectId });
+
+
+      if (!design) {
+        design = new SampleDesignModel({
+          projectId,
+          rooms: [],
+          status: "pending",
+          isEditable: true,
+          timer: {
+            startedAt: new Date(),
+            completedAt: null,
+            deadLine: null
+          },
+          additionalNotes: null,
+        })
+       } else {
+        design.status = "pending";
+        design.isEditable = true;
+        design.timer.startedAt = new Date();
+
+      }
+      await design.save()
+
+    }
 
     await siteDoc.save();
     return res.status(200).json({ ok: true, message: "Site measurement marked as completed", data: siteDoc });
@@ -271,13 +313,15 @@ const deleteSiteMeasurement = async (req: Request, res: Response): Promise<any> 
     if (!projectId) return res.status(400).json({ ok: false, message: "projectId are required" });
 
     const siteDoc = await SiteMeasurementModel.findOneAndUpdate({ projectId }, {
-      status:"pending",
-      isEditable:true,
-      timer:{
+      status: "pending",
+      isEditable: true,
+      timer: {
         startedAt: new Date(),
+        deadLine: null,
+        completedAt: null
       },
-      uploads:[],
-      siteInformation: {
+      uploads: [],
+      siteDetails: {
         totalPlotAreaSqFt: null,
         builtUpAreaSqFt: null,
         roadFacing: null,
@@ -291,9 +335,7 @@ const deleteSiteMeasurement = async (req: Request, res: Response): Promise<any> 
 
     if (!siteDoc) return res.status(404).json({ ok: false, message: "Site measurement not found" });
 
-
-
-    return res.status(200).json({ message: "Site details deleted successfully", data: siteDoc, ok: true });
+    return res.status(200).json({ message: "Site details deleted adn timer restarted successfully", data: siteDoc, ok: true });
   } catch (err) {
     console.error("Delete site Error:", err);
     return res.status(500).json({ message: "Internal server error", ok: false });
@@ -301,8 +343,16 @@ const deleteSiteMeasurement = async (req: Request, res: Response): Promise<any> 
 }
 
 
+export const setSiteMeasurementStageDeadline = (req: Request, res: Response): Promise<any> => {
+  return handleSetStageDeadline(req, res, {
+    model: SiteMeasurementModel,
+    stageName: "Site Measurement"
+  });
+};
+
 export {
   createSiteMeasurement,
+  createRoom,
   getTheSiteMeasurements,
   updateCommonSiteMeasurements,
   updateRoomSiteMeasurements,

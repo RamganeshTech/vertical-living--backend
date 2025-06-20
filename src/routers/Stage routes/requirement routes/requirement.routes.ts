@@ -1,5 +1,5 @@
 import express from 'express';
-import { delteRequirementForm, generateShareableFormLink, getFormFilledDetails, lockRequirementForm, markFormAsCompleted, setRequirementStageDeadline, submitRequirementForm } from '../../../controllers/requirement controllers/mainRequirement.controller';
+import { delteRequirementForm, generateShareableFormLink, getFormFilledDetails, lockRequirementForm, markFormAsCompleted, setRequirementStageDeadline, submitRequirementForm } from '../../../controllers/stage controllers/requirement controllers/mainRequirement.controller';
 import ClientAuthMiddleware from '../../../middlewares/clientAuthMiddleware';
 import { updateBedroomSection, updateKitchenSection, updateLivingHallSection, updateWardrobeSection } from '../../../controllers/client controllers/clientRequirement.controller';
 import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware';

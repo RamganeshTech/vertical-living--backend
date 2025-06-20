@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from "express";
-import { RequirementFormModel } from "../../models/Stage Models/requirment model/requirement.model";
-import { validateBedroomInput, validateKitchenInput, validateLivingHallInput, validateWardrobeInput } from "../../validations/requirement validation/kitchenValidation";
+import { RequirementFormModel } from "../../../models/Stage Models/requirment model/requirement.model";
+import { validateBedroomInput, validateKitchenInput, validateLivingHallInput, validateWardrobeInput } from "../../../validations/requirement validation/kitchenValidation";
 import { Types } from "mongoose";
 import crypto from 'crypto';
-import { handleSetStageDeadline, timerFunctionlity } from "../../utils/common features/timerFuncitonality";
+import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import { isDate } from "util/types";
-import { SiteMeasurementModel } from "../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
+import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
 
 const submitRequirementForm = async (req: Request, res: Response,): Promise<void> => {
   try {
@@ -290,7 +290,9 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
         siteMeasurement.status = "pending";
         siteMeasurement.isEditable = true;
         siteMeasurement.timer.startedAt = new Date();
+
       }
+      await siteMeasurement.save()
     }
 
 

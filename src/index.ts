@@ -22,7 +22,9 @@ import workerRoutes from './routers/worker routes/worker.router';
 import staffRoutes from './routers/staff routes/staff.routes';
 import CTORoutes from './routers/CTO routes/CTO.routes';
 import requirementRoutes from './routers/Stage routes/requirement routes/requirement.routes';
-import siteMeasurementRoutes from './routers/Stage routes/siteMeasurement.route';
+import siteMeasurementRoutes from './routers/Stage routes/siteMeasurement routes/siteMeasurement.route';
+import sampleDesignRoutes from './routers/Stage routes/sample desing routes/sampleDesign.routes';
+import technicalConsultRoutes from './routers/Stage routes/technicalConsultation.routes';
 // import checkRedisConnection from './config/redisClient';
 
 
@@ -63,6 +65,8 @@ app.use('/api/CTO', CTORoutes)
 // STAGE APIS
 app.use('/api/requirementform', requirementRoutes)
 app.use('/api/sitemeasurement', siteMeasurementRoutes)
+app.use('/api/sampledesign', sampleDesignRoutes)
+app.use('/api/technicalconsultation', technicalConsultRoutes)
 
 
 const PORT = process.env.PORT
