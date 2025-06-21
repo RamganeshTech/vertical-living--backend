@@ -1,8 +1,10 @@
 import { Request, Response } from "express";
-import { RequirementFormModel } from "../../models/Stage Models/requirment model/requirement.model";
-import { SiteMeasurementModel } from "../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
-import { handleSetStageDeadline } from "../../utils/common features/timerFuncitonality";
-import { SampleDesignModel } from "../../models/Stage Models/sampleDesing model/sampleDesign.model";
+import { RequirementFormModel } from "../../../models/Stage Models/requirment model/requirement.model";
+import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
+import { handleSetStageDeadline } from "../../../utils/common features/timerFuncitonality";
+import { SampleDesignModel } from "../../../models/Stage Models/sampleDesing model/sampleDesign.model";
+import { syncRoomsToMaterialConfirmation } from "../../../utils/syncings/syncRoomsWithMaterialConfimation";
+import { syncSampleDesignModel } from "../../../utils/syncings/syncSampleDesign";
 
 const createSiteMeasurement = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -247,29 +249,9 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
     siteDoc.isEditable = false;
 
     if (siteDoc.status === "completed") {
-      let design = await SampleDesignModel.findOne({ projectId });
-
-
-      if (!design) {
-        design = new SampleDesignModel({
-          projectId,
-          rooms: [],
-          status: "pending",
-          isEditable: true,
-          timer: {
-            startedAt: new Date(),
-            completedAt: null,
-            deadLine: null
-          },
-          additionalNotes: null,
-        })
-       } else {
-        design.status = "pending";
-        design.isEditable = true;
-        design.timer.startedAt = new Date();
-
-      }
-      await design.save()
+      const siteRooms = siteDoc.rooms || [];
+      await syncSampleDesignModel(projectId, siteRooms)
+      await syncRoomsToMaterialConfirmation(projectId, siteRooms)
 
     }
 

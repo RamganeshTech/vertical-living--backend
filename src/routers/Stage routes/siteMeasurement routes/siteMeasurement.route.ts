@@ -3,7 +3,7 @@ import ClientAuthMiddleware from '../../../middlewares/clientAuthMiddleware';
 import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware'; 
 import { uploadGenericController } from '../../../utils/common features/uploadFiles'; 
 import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader'; 
-import { createRoom, createSiteMeasurement, DeleteRooms, deleteSiteMeasurement, getTheSiteMeasurements, setSiteMeasurementStageDeadline, siteMeasurementCompletionStatus, updateCommonSiteMeasurements, updateRoomSiteMeasurements } from '../../../controllers/stage controllers/siteMeasurements.controller';
+import { createRoom, createSiteMeasurement, DeleteRooms, deleteSiteMeasurement, getTheSiteMeasurements, setSiteMeasurementStageDeadline, siteMeasurementCompletionStatus, updateCommonSiteMeasurements, updateRoomSiteMeasurements } from '../../../controllers/stage controllers/site measurement controller/siteMeasurements.controller';
 import { SiteMeasurementModel } from '../../../models/Stage Models/siteMeasurement models/siteMeasurement.model';
 
 

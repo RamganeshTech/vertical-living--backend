@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { TechnicalConsultationModel } from "../../../models/Stage Models/technical consulatation/technicalconsultation.model";
-import { handleSetStageDeadline } from "../../../utils/common features/timerFuncitonality";
+import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
+import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
 
 const addConsultationMessage = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -83,9 +84,9 @@ const getConsultationMessages = async (req: Request, res: Response): Promise<any
     const doc = await TechnicalConsultationModel.findOne({ projectId })
       .populate("messages.sender"); // if you're using refPath
 
-    // if (!doc || !doc.messages || doc.messages.length === 0) {
-    //   return res.status(404).json({ ok: false, message: "No consultation messages found." });
-    // }
+    if (!doc) {
+      return res.status(404).json({ ok: false, message: "No confirmation found on last stage" });
+    }
 
     return res.status(200).json({ ok: true, data: doc });
   } catch (err) {
@@ -193,32 +194,34 @@ const tehnicalConsultantCompletionStatus = async (req: Request, res: Response): 
         if (techDoc.status === "completed") return res.status(400).json({ ok: false, message: "Already completed" });
 
         techDoc.status = "completed";
+        timerFunctionlity(techDoc, "completedAt")
         techDoc.isEditable = false;
 
-        // if (techDoc.status === "completed") {
-        //   let material = await MaterialConfirmationModel.findOne({ projectId });
+        if (techDoc.status === "completed") {
+          let material = await MaterialRoomConfirmationModel.findOne({ projectId });
 
 
-        //   if (!material) {
-        //     material = new MaterialConfirmationModel({
-        //       projectId,
-        //       status: "pending",
-        //       isEditable: true,
-        //       timer: {
-        //         startedAt: new Date(),
-        //         completedAt: null,
-        //         deadLine: null
-        //       },
-        //     })
-        //    } else {
-        //     material.status = "pending";
-        //     material.isEditable = true;
-        //     material.timer.startedAt = new Date();
+          if (!material) {
+            material = new MaterialRoomConfirmationModel({
+              projectId,
+              status: "pending",
+              isEditable: true,
+              timer: {
+                startedAt: new Date(),
+                completedAt: null,
+                deadLine: null
+              },
+              rooms:[]
+            })
+           } else {
+            material.status = "pending";
+            material.isEditable = true;
+            material.timer.startedAt = new Date();
 
-        //   }
-        //     await material.save()
+          }
+            await material.save()
 
-        // }
+        }
 
         await techDoc.save();
         return res.status(200).json({ ok: true, message: "Technical consultant marked as completed", data: techDoc });

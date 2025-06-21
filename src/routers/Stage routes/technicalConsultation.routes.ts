@@ -2,6 +2,7 @@ import express from 'express';
 import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware'; 
 import { imageUploadToS3 } from '../../utils/s3Uploads/s3ImageUploader'; 
 import { addConsultationMessage, deleteConsultationMessage, editConsultationMessage, getConsultationMessages, setTechnicalConsultantStageDeadline, tehnicalConsultantCompletionStatus } from '../../controllers/stage controllers/technicalConsultant controllers/technicalConsultant.controller';
+import { TechnicalConsultationModel } from '../../models/Stage Models/technical consulatation/technicalconsultation.model';
 
 
 const technicalConsultRoutes = express.Router()
@@ -24,7 +25,7 @@ technicalConsultRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddlewa
 technicalConsultRoutes.put('/deadline/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), setTechnicalConsultantStageDeadline)
 
 
-// technicalConsultRoutes.post( "/upload/multiple/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), imageUploadToS3.array("file"), uploadGenericController(SiteMeasurementModel))
+// technicalConsultRoutes.post( "/upload/multiple/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), imageUploadToS3.array("file"), uploadGenericController(TechnicalConsultationModel))
 
 export default technicalConsultRoutes
 
