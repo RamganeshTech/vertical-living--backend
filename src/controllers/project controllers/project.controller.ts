@@ -4,6 +4,8 @@ import ProjectModel from "../../models/project model/project.model";
 
 import redisClient from '../../config/redisClient'
 import ClientModel from "../../models/client model/client.model";
+import CTOModel from "../../models/CTO model/CTO.model";
+import UserModel from "../../models/usermodel/user.model";
 
 const createProject = async (req: AuthenticatedUserRequest, res: Response) => {
     try {
@@ -70,6 +72,28 @@ const createProject = async (req: AuthenticatedUserRequest, res: Response) => {
                 status,
             },
         })
+
+
+        await Promise.all([
+            UserModel.updateOne(
+                {
+                    role: "owner",
+                    organizationId: organizationId,
+                },
+                {
+                    $addToSet: { projectId: project._id },
+                }
+            ),
+
+            CTOModel.updateMany(
+                {
+                    organizationId: organizationId,
+                },
+                {
+                    $addToSet: { projectId: project._id },
+                }
+            ),
+        ]);
 
         const cacheKey = `projects:${user._id}`;
         await redisClient.del(cacheKey);
@@ -142,6 +166,28 @@ const deleteProject = async (req: AuthenticatedUserRequest, res: Response): Prom
             res.status(404).json({ message: "no project found with given projectid", ok: false })
             return;
         }
+
+
+        await Promise.all([
+            UserModel.updateMany(
+                {
+                    role: "owner",
+                    projectId: projectId,
+                },
+                {
+                    $pull: { projectId },
+                }
+            ),
+
+            CTOModel.updateMany(
+                {
+                    projectId: projectId,
+
+                },{
+                    $pull: { projectId },
+                }
+            ),
+        ]);
 
         res.status(200).json({ message: "project deleted successfully", data, ok: true })
 

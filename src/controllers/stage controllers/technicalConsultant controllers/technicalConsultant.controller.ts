@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { TechnicalConsultationModel } from "../../../models/Stage Models/technical consulatation/technicalconsultation.model";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
+import { initializeMaterialSelection } from "../material Room confirmation/materialRoomConfirmation.controller";
 
 const addConsultationMessage = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -202,24 +203,25 @@ const tehnicalConsultantCompletionStatus = async (req: Request, res: Response): 
 
 
           if (!material) {
-            material = new MaterialRoomConfirmationModel({
-              projectId,
-              status: "pending",
-              isEditable: true,
-              timer: {
-                startedAt: new Date(),
-                completedAt: null,
-                deadLine: null
-              },
-              rooms:[]
-            })
+            // material = new MaterialRoomConfirmationModel({
+            //   projectId,
+            //   status: "pending",
+            //   isEditable: true,
+            //   timer: {
+            //     startedAt: new Date(),
+            //     completedAt: null,
+            //     deadLine: null
+            //   },
+            //   rooms:[]
+            // })
+            material = await initializeMaterialSelection(req, res)
            } else {
             material.status = "pending";
             material.isEditable = true;
             material.timer.startedAt = new Date();
 
-          }
             await material.save()
+          }
 
         }
 

@@ -7,6 +7,7 @@ interface IUser extends Document {
     phoneNo: string,
     role: string;
     organizationId?: [Types.ObjectId];
+    projectId?: [Types.ObjectId];
     resetPasswordToken?: string;
     resetPasswordExpire?: number;
 }
@@ -41,6 +42,11 @@ const UserSchema: Schema<IUser> = new Schema({
     organizationId: {
         type: [Schema.Types.ObjectId],
         ref: "OrganizationModel",
+        default:[]
+    },
+     projectId: {
+        type: [Schema.Types.ObjectId],
+        ref: "ProjectModel",
         default:[]
     },
     resetPasswordToken: { type: String },  // Token for password reset

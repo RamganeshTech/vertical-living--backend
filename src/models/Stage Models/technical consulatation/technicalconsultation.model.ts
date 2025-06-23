@@ -24,6 +24,7 @@ export interface IConsultationTimer {
     startedAt: Date | null;
     completedAt: Date | null;
     deadLine: Date | null;
+    reminderSent: boolean
 }
 
 export interface ITechnicalConsultation {
@@ -63,6 +64,8 @@ const technicalConsultationSchema = new Schema<ITechnicalConsultation>({
         startedAt: { type: Date, default: null },
         completedAt: { type: Date, default: null },
         deadLine: { type: Date, default: null },
+        reminderSent: { type: Boolean, default: false },
+
     },
     status: {
         type: String,

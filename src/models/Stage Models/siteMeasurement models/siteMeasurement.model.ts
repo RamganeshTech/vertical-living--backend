@@ -8,6 +8,8 @@ export interface ISiteMeasurement extends Document {
         startedAt: Date | null;
         completedAt: Date | null;
         deadLine: Date | null;
+      reminderSent: boolean
+
     };
 
     uploads: {
@@ -46,6 +48,8 @@ const SiteMeasurementSchema = new Schema<ISiteMeasurement>({
         startedAt: { type: Date, default: new Date() },
         completedAt: { type: Date, default: null },
         deadLine: { type: Date, default: null },
+      reminderSent: {type: Boolean, default: false},
+
     },
 
     uploads: [

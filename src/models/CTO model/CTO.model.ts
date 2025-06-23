@@ -7,13 +7,14 @@ interface ICTO extends Document {
     phoneNo: string,
     role: string;
     organizationId?: [Types.ObjectId];
+    projectId?: [Types.ObjectId];
     ownerId: Types.ObjectId | null
     resetPasswordToken?: string;
     resetPasswordExpire?: number;
 }
 
 
-const StaffSchema: Schema<ICTO> = new Schema({
+const CTOSchema: Schema<ICTO> = new Schema({
     email: {
         type: String,
         maxLength: [50, "it shoud be within 50 digits"],
@@ -45,6 +46,11 @@ const StaffSchema: Schema<ICTO> = new Schema({
         ref: "OrganizationModel",
         default: []
     },
+     projectId: {
+        type: [Schema.Types.ObjectId],
+        ref: "ProjectModel",
+        default: []
+    },
     ownerId: {
         type: Schema.Types.ObjectId,
         ref: "UserModel",
@@ -57,10 +63,10 @@ const StaffSchema: Schema<ICTO> = new Schema({
 })
 
 
-StaffSchema.index({ email: 1 , ownerId:1}, { unique: true })
+CTOSchema.index({ email: 1 , ownerId:1}, { unique: true })
 
 
-const CTOModel = mongoose.model<ICTO>("CTOModel", StaffSchema)
+const CTOModel = mongoose.model<ICTO>("CTOModel", CTOSchema)
 
 
 export default CTOModel

@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+// import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface IMaterialRoomUpload {
   type: "image" | "pdf";
@@ -7,30 +7,115 @@ export interface IMaterialRoomUpload {
   uploadedAt: Date
 }
 
-export interface IMaterialWork {
-  workName: string;
-  notes?: string;
-  materials: string[]; // Can be expanded to object if needed later
-}
+// export interface IMaterialWork {
+//   workName: string;
+//   notes?: string;
+//   materials: string[]; // Can be expanded to object if needed later
+// }
 
-export interface IMaterialRoom {
-  _id?: string;
-  roomName: string;
+// export interface IMaterialRoom {
+//   _id?: string;
+//   roomName: string;
+//   uploads: IMaterialRoomUpload[];
+//   modularWorks: IMaterialWork[];
+// }
+
+// export interface IMaterialRoomConfirmation {
+//   projectId: Types.ObjectId;
+//   rooms: IMaterialRoom[];
+//   status: "pending" | "completed";
+//   isEditable: boolean;
+//   timer: {
+//     startedAt: Date | null;
+//     completedAt: Date | null;
+//     deadLine: Date | null;
+//     reminderSent:boolean
+//   };
+// }
+
+
+
+
+// const uploadSchema = new Schema<IMaterialRoomUpload>({
+//   type: { type: String, enum: ["image", "pdf"], required: true },
+//   url: { type: String, required: true },
+//   originalName: { type: String },
+//   uploadedAt: { type: Date, },
+// }, { _id: true });
+
+// const modularWorkSchema = new Schema<IMaterialWork>({
+//   workName: { type: String, },
+//   notes: { type: String, default: null },
+//   materials: [{ type: String }],
+// }, { _id: true });
+
+// const roomSchema = new Schema<IMaterialRoom>({
+//   roomName: { type: String, required: true },
+//   uploads: [uploadSchema],
+//   modularWorks: [modularWorkSchema],
+// }, { _id: true });
+
+// const timerSchema = new Schema({
+//   startedAt: { type: Date, default: null },
+//   completedAt: { type: Date, default: null },
+//   deadLine: { type: Date, default: null },
+//   reminderSent: { type: Boolean, default: false },
+// }, { _id: false });
+
+// const materialRoomConfirmationSchema = new Schema<IMaterialRoomConfirmation>({
+//   projectId: { type: mongoose.Schema.Types.ObjectId, ref: "ProjectModel", required: true },
+//   rooms: [roomSchema],
+//   status: { type: String, enum: ["pending", "completed"], default: "pending" },
+//   isEditable: { type: Boolean, default: true },
+//   timer: timerSchema,
+// }, { timestamps: true });
+
+// const MaterialRoomConfirmationModel = mongoose.model("MaterialRoomConfirmationModel", materialRoomConfirmationSchema);
+// export default MaterialRoomConfirmationModel;
+
+
+
+import mongoose, { Document, model, Schema, Types } from "mongoose";
+import { IRoomItemEntry, itemEntrySchema, livingRoomSchema } from './MaterialRoomTypes'
+
+
+// 👇 Room with a set of predefined items
+export interface IPredefinedRoom {
+  name: string; // predefined names only
+  roomFields: {
+    [key: string]: IRoomItemEntry | { [key: string]: IRoomItemEntry }; // support for attachedBathroom etc.
+  };
   uploads: IMaterialRoomUpload[];
-  modularWorks: IMaterialWork[];
 }
 
-export interface IMaterialRoomConfirmation {
+export interface ICustomRoom {
+  name: string;
+  items: {
+    itemKey: string;
+    quantity: number;
+    unit: string;
+    remarks?: string;
+  }[];
+  uploads: IMaterialRoomUpload[];
+}
+
+
+
+// 👇 Final model interface for Material Selection
+export interface IMaterialRoomConfirmation extends Document {
   projectId: Types.ObjectId;
-  rooms: IMaterialRoom[];
+  rooms: IPredefinedRoom[];
+  customRooms: ICustomRoom[];
   status: "pending" | "completed";
   isEditable: boolean;
   timer: {
     startedAt: Date | null;
     completedAt: Date | null;
     deadLine: Date | null;
+    reminderSent: boolean;
   };
 }
+
 
 
 
@@ -42,31 +127,62 @@ const uploadSchema = new Schema<IMaterialRoomUpload>({
   uploadedAt: { type: Date, },
 }, { _id: true });
 
-const modularWorkSchema = new Schema<IMaterialWork>({
-  workName: { type: String,  },
-  notes: { type: String , default:null},
-  materials: [{ type: String }],
+
+const timerSchema = new Schema(
+  {
+    startedAt: { type: Date, default: null },
+    completedAt: { type: Date, default: null },
+    deadLine: { type: Date, default: null },
+    reminderSent: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+
+const roomSchema = new Schema(
+  {
+    name: { type: String },
+    roomFields: {
+      type: Schema.Types.Mixed, // Holds one of the schemas
+    },
+    uploads: [uploadSchema],
+  },
+  { _id: true }
+)
+
+
+const customRoomSchema = new Schema({
+  name: { type: String, required: true },
+  items: [{
+    itemKey: { type: String, required: true },
+    quantity: { type: Number, default: 0 },
+    unit: { type: String, default: "" },
+    remarks: { type: String, default: null },
+  }],
+  uploads: [uploadSchema]
 }, { _id: true });
 
-const roomSchema = new Schema<IMaterialRoom>({
-  roomName: { type: String, required: true },
-  uploads: [uploadSchema],
-  modularWorks: [modularWorkSchema],
-}, { _id: true });
 
-const timerSchema = new Schema({
-  startedAt: { type: Date, default: null },
-  completedAt: { type: Date, default: null },
-  deadLine: { type: Date, default: null },
-}, { _id: false });
+const materialRoomConfirmationSchema = new Schema<IMaterialRoomConfirmation>(
+  {
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ProjectModel",
+      required: true,
+      index: true,
+    },
+    rooms: [roomSchema],
+    customRooms: [customRoomSchema],
+    status: { type: String, enum: ["pending", "completed"], default: "pending" },
+    isEditable: { type: Boolean, default: true },
+    timer: timerSchema,
+  },
+  { timestamps: true }
+);
 
-const materialRoomConfirmationSchema = new Schema<IMaterialRoomConfirmation>({
-  projectId: { type: mongoose.Schema.Types.ObjectId, ref: "ProjectModel", required: true },
-  rooms: [roomSchema],
-  status: { type: String, enum: ["pending", "completed"], default: "pending" },
-  isEditable: { type: Boolean, default: true },
-  timer: timerSchema,
-}, { timestamps: true });
+const MaterialRoomConfirmationModel = model<IMaterialRoomConfirmation>(
+  "MaterialRoomConfirmationModel",
+  materialRoomConfirmationSchema
+);
 
-const MaterialRoomConfirmationModel = mongoose.model("MaterialRoomConfirmationModel", materialRoomConfirmationSchema);
-export default MaterialRoomConfirmationModel;
+export default MaterialRoomConfirmationModel

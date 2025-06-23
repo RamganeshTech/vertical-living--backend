@@ -94,6 +94,7 @@ export interface ISampleDesign {
     startedAt: Date | null;
     completedAt: Date | null;
     deadLine: Date | null;
+    reminderSent: boolean
   };
   status: "pending" | "completed";
   additionalNotes?: string | null;
@@ -120,6 +121,7 @@ const sampleDesignSchema = new Schema<ISampleDesign>({
     startedAt: { type: Date, default: null },
     completedAt: { type: Date, default: null },
     deadLine: { type: Date, default: null },
+    reminderSent: { type: Boolean, default: false },
   },
   status: { type: String, enum: ["pending", "completed"], default: "pending" },
   additionalNotes: { type: String, default: null },

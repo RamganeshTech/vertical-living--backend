@@ -34,7 +34,8 @@ interface IRequirementFormSchema extends Document {
   timer: {
     startedAt: Date | null,
     completedAt: Date | null,
-    deadLine: Date | null
+    deadLine: Date | null,
+    reminderSent: boolean
   },
   uploads: {
       url: string,
@@ -104,6 +105,7 @@ const RequirementFormSchema = new Schema<IRequirementFormSchema>(
       startedAt: {type : Date, default: null},
       completedAt: {type: Date, default: null},
       deadLine: {type: Date, default: null},
+      reminderSent: {type: Boolean, default: false},
     },
     uploads: [
     {
