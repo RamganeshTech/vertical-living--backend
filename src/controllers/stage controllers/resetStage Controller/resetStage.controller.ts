@@ -94,5 +94,48 @@ export const resetStage7 = async (req: Request, res: Response): Promise<any> => 
 
 
 
+export const resetStage8 = async (req: Request, res: Response): Promise<any> => {
+  const { projectId } = req.params;
+  const upToStageNumber = 8;
+
+  try {
+    await resetStages(projectId, upToStageNumber);
+    res.status(200).json({ ok: true, message: `Stages up to ${upToStageNumber} have been reset.` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, message: "Failed to reset stages." });
+  }
+};
+
+
+export const resetStage9 = async (req: Request, res: Response): Promise<any> => {
+  const { projectId } = req.params;
+  const upToStageNumber = 9;
+
+  try {
+    await resetStages(projectId, upToStageNumber);
+    res.status(200).json({ ok: true, message: `Stages up to ${upToStageNumber} have been reset.` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, message: "Failed to reset stages." });
+  }
+};
+
+
+export const resetStage10 = async (req: Request, res: Response): Promise<any> => {
+  const { projectId } = req.params;
+  const upToStageNumber = 10;
+
+  try {
+    await resetStages(projectId, upToStageNumber);
+    res.status(200).json({ ok: true, message: `Stages up to ${upToStageNumber} have been reset.` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, message: "Failed to reset stages." });
+  }
+};
+
+
+
 
 

@@ -87,7 +87,6 @@ const createRoom = async (req: Request, res: Response): Promise<any> => {
       return res.status(400).json({ ok: false, message: "projectId is required" });
     }
 
-
     const { name, length, breadth, height } = room;
 
     if (name === null || typeof name !== "string"  || !name?.trim()) {
@@ -345,6 +344,9 @@ export const setSiteMeasurementStageDeadline = (req: Request, res: Response): Pr
   });
 };
 
+
+
+
 export {
   createSiteMeasurement,
   createRoom,
@@ -353,6 +355,5 @@ export {
   updateRoomSiteMeasurements,
   siteMeasurementCompletionStatus,
   DeleteRooms,
-
   deleteSiteMeasurement
 }

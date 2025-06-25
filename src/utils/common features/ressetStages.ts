@@ -5,6 +5,8 @@ import { RequirementFormModel } from "../../models/Stage Models/requirment model
 import { SampleDesignModel } from "../../models/Stage Models/sampleDesing model/sampleDesign.model";
 import { SiteMeasurementModel } from "../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
 import { TechnicalConsultationModel } from "../../models/Stage Models/technical consulatation/technicalconsultation.model";
+import PaymentConfirmationModel from "../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
+import OrderingMaterialModel from "../../models/Stage Models/Ordering Material Model/orderingMaterial.model";
 
 export const resetStages = async (projectId: string, upToStageNumber: number) => {
     // const now = new Date();
@@ -16,6 +18,8 @@ export const resetStages = async (projectId: string, upToStageNumber: number) =>
         TechnicalConsultationModel,      // Stage 4
         MaterialRoomConfirmationModel,      // Stage 5
         CostEstimationModel,                // Stage 6
+        PaymentConfirmationModel,    //stage 7
+        OrderingMaterialModel,  //Stage 8
         // ...up to Stage 14
     ];
 

@@ -7,20 +7,6 @@ import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddl
 
 const sampleDesignRoutes = express.Router();
 
-// Kitchen routes
-// sampleDesignRoutes.post("/kitchen/upload/:projectId", imageUploadToS3.array("files"), uploadKitchenFiles);
-// sampleDesignRoutes.patch("/kitchen/delete/:projectId/:fileIndex", imageUploadToS3.array("files"), deleteKitchenFile);
-// sampleDesignRoutes.get("/kitchen/:projectId", getKitchenDesign); // Kitchen only
-
-// // wardrobe routes
-// sampleDesignRoutes.post("/wardrobe/upload/:projectId", imageUploadToS3.array("files"), uploadWardrobeFiles);
-// sampleDesignRoutes.patch("/wardrobe/delete/:projectId/:fileIndex", imageUploadToS3.array("files"), deleteWardrobeFile);
-// sampleDesignRoutes.get("/wardrobe/:projectId", getWardrobeDesign); // Kitchen only
-
-
-// sampleDesignRoutes.post("/livinghall/upload/:projectId", imageUploadToS3.array("files"), uploadLivingHallFiles);
-// sampleDesignRoutes.patch("/livinghall/delete/:projectId/:fileIndex", imageUploadToS3.array("files"), deleteLivingHallFile);
-// sampleDesignRoutes.get("/livinghall/:projectId", getLivingHallFiles); // Kitchen only
 
 
 

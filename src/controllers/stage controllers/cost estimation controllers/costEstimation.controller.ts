@@ -267,6 +267,7 @@ const addLabourEstimation = async (req: Request, res: Response): Promise<any> =>
         const {
             workType,
             // workerId,
+            noOfPeople,
             daysPlanned,
             perdaySalary,
             // uploads
@@ -293,13 +294,14 @@ const addLabourEstimation = async (req: Request, res: Response): Promise<any> =>
         if (!doc) return res.status(404).json({ ok: false, message: "Project not found" });
 
 
-        const weeklySalary = perdaySalary * 7;
-        const totalCost = perdaySalary * daysPlanned;
+        const weeklySalary = (perdaySalary * noOfPeople) * 7;
+        const totalCost = (perdaySalary * daysPlanned) * noOfPeople;
 
 
         const newEntry = {
             workType,
             // workerId,
+            noOfPeople,
             daysPlanned,
             weeklySalary,
             perdaySalary,
@@ -331,12 +333,12 @@ const addLabourEstimation = async (req: Request, res: Response): Promise<any> =>
 const editLabourEstimation = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId, labourId } = req.params;
-        const { daysPlanned, perdaySalary, workType } = req.body;
+        const { daysPlanned, perdaySalary, workType, noOfPeople } = req.body;
 
-        if (daysPlanned === null || perdaySalary === null || workType === null) {
+        if (daysPlanned === null || perdaySalary === null || workType === null || noOfPeople===null) {
             return res.status(400).json({
                 ok: false,
-                message: "workType, daysPlanned, or perdaySalary should not be null",
+                message: "workType, daysPlanned, perdaySalary or noOfPeople should not be null",
             });
         }
 
@@ -350,9 +352,10 @@ const editLabourEstimation = async (req: Request, res: Response): Promise<any> =
         if (typeof workType === "string") labour.workType = workType;
         if (typeof daysPlanned === "number") labour.daysPlanned = daysPlanned;
         if (typeof perdaySalary === "number") labour.perdaySalary = perdaySalary;
+        if (typeof noOfPeople === "number") labour.noOfPeople = noOfPeople;
 
         // 🔁 Recalculate dependent fields
-        labour.weeklySalary = labour.perdaySalary * 7;
+        labour.weeklySalary = (labour.perdaySalary * labour.noOfPeople) * 7;
         labour.totalCost = labour.perdaySalary * labour.daysPlanned;
 
         // 🔁 Recalculate total labour cost and overall total

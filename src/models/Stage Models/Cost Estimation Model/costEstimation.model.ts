@@ -8,14 +8,14 @@ export interface ICostEstimaionUpload {
     uploadedAt: Date
 }
 
-export interface IMaterialCostItems{
-            key: string;
-            areaSqFt: number | null;
-            predefinedRate: number | null;
-            overriddenRate?: number | null;
-            finalRate: number | null;
-            totalCost: number | null;
-        }
+export interface IMaterialCostItems {
+    key: string;
+    areaSqFt: number | null;
+    predefinedRate: number | null;
+    overriddenRate?: number | null;
+    finalRate: number | null;
+    totalCost: number | null;
+}
 
 
 export interface ICostEstimation {
@@ -31,6 +31,7 @@ export interface ICostEstimation {
     labourEstimations: {
         workType: string;
         // workerId?: Types.ObjectId;
+        noOfPeople: number,
         daysPlanned: number;
         weeklySalary: number;
         perdaySalary: number;
@@ -88,6 +89,7 @@ const roomSchema = new Schema({
 const labourEstimationSchema = new Schema({
     workType: { type: String, required: true }, //carpentror
     // workerId: { type: mongoose.Schema.Types.ObjectId, ref: "WorkerModel", default: null },
+    noOfPeople: { type: Number, default:null },
     daysPlanned: { type: Number, default: null },
     weeklySalary: { type: Number, default: null },
     perdaySalary: { type: Number, default: null },

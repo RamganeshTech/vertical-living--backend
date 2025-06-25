@@ -1,3 +1,4 @@
+import { PREDEFINED_ROOMS } from "../../constants/phaseConstants";
 import { SampleDesignModel } from "../../models/Stage Models/sampleDesing model/sampleDesign.model";
 import { siteRooms } from "./syncRoomsWithMaterialConfimation";
 
@@ -9,10 +10,12 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
     if (!design) {
         design = new SampleDesignModel({
             projectId,
-            rooms: siteRooms.map(room => ({
-                roomName: room.name,
-                files: []
-            })),
+            rooms: PREDEFINED_ROOMS.map(roomName => {
+                    return {
+                      roomName,
+                      files: []
+                    }
+                  }),
             status: "pending",
             isEditable: true,
             timer: {
@@ -23,8 +26,8 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
             additionalNotes: null,
         })
     } else {
-        // design.status = "pending";
-        // design.isEditable = true;
+        design.status = "pending";
+        design.isEditable = true;
         // design.timer.startedAt = new Date();
         const existingRoomNames = design.rooms.map((room: any) => room.roomName);
         siteRooms.forEach((room: any) => {
