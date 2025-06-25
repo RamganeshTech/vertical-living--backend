@@ -6,6 +6,8 @@ import crypto from 'crypto';
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import { isDate } from "util/types";
 import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
+import { resetStages } from "../../../utils/common features/ressetStages";
+import { initializeSiteRequirement } from "../../../utils/Stage Utils/siteRequirementsInitialize";
 
 const submitRequirementForm = async (req: Request, res: Response,): Promise<void> => {
   try {
@@ -284,7 +286,7 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
             boundaryWallExists: { type: Boolean, default: null },
             additionalNotes: { type: String, default: null }
           },
-          rooms: [],
+          rooms: initializeSiteRequirement,
         });
       } else {
         siteMeasurement.status = "pending";

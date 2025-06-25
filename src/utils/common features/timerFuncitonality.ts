@@ -19,6 +19,8 @@ export const handleSetStageDeadline = async (req: Request, res: Response,{model,
     const { formId } = req.params;
     const { deadLine } = req.body;
 
+    console.log("deadline", deadLine)
+
     if (!isValidObjectId(formId)) {
       return res.status(400).json({ ok: false, message: "Form Id required" });
     }

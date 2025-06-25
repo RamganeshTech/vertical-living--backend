@@ -90,31 +90,44 @@ const createRoom = async (req: Request, res: Response): Promise<any> => {
 
     const { name, length, breadth, height } = room;
 
-    if (name !== null || typeof name !== "string") {
-      return res.status(400).json({ ok: false, message: `Room name must be a string or null.` });
+    if (name === null || typeof name !== "string"  || !name?.trim()) {
+      return res.status(400).json({ ok: false, message: `Room name must be a provided` });
     }
     if (length !== null || typeof length !== "number" || length < 0) {
-      return res.status(400).json({ ok: false, message: `Room length must be a number or null.` });
+      return res.status(400).json({ ok: false, message: `Room length must be a number or non-negative number.` });
     }
     if (breadth !== null || typeof breadth !== "number" || breadth < 0) {
-      return res.status(400).json({ ok: false, message: `Room breadth must be a number or null.` });
+      return res.status(400).json({ ok: false, message: `Room breadth must be a number or non-negative number.` });
     }
     if (height !== null || typeof height !== "number" || height < 0) {
-      return res.status(400).json({ ok: false, message: `Room height must be a number or null.` });
+      return res.status(400).json({ ok: false, message: `Room height must be a number or non-negative number.` });
     }
 
 
-    let form = await SiteMeasurementModel.findOneAndUpdate({ projectId }, { $push: { rooms: room } });
+    // let form = await SiteMeasurementModel.findOneAndUpdate({ projectId }, { $push: { rooms: room } });
 
-    return res.status(201).json({ ok: true, message: "room has created successfully.", data: form });
+     const existingDoc = await SiteMeasurementModel.findOne({ projectId });
+    if (!existingDoc) {
+      return res.status(404).json({ ok: false, message: "Site measurement document not found" });
+    }
+
+    const duplicateRoom = existingDoc.rooms.find(r => r.name?.toLowerCase() === name?.toLowerCase());
+    if (duplicateRoom) {
+      return res.status(400).json({ ok: false, message: "A room with this name already exists." });
+    }
+
+    // ✅ Safe to push
+    existingDoc.rooms.push(room);
+    await existingDoc.save();
+
+
+    return res.status(201).json({ ok: true, message: "room has created successfully.", data: existingDoc });
 
   } catch (err) {
     console.error("Error create room  measurement :", err);
     res.status(500).json({ message: "Server error", ok: false });
   }
 };
-
-
 
 
 const getTheSiteMeasurements = async (req: Request, res: Response): Promise<any> => {
@@ -251,7 +264,7 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
     if (siteDoc.status === "completed") {
       const siteRooms = siteDoc.rooms || [];
       await syncSampleDesignModel(projectId, siteRooms)
-      await syncRoomsToMaterialConfirmation(projectId, siteRooms)
+      // await syncRoomsToMaterialConfirmation(projectId, siteRooms)
 
     }
 

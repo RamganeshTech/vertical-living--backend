@@ -8,19 +8,6 @@ import { addItemToCustomRoom, createCustomRoom, deleteCustomRoomField, deleteMat
 
 const materialConfirmationRoutes = express.Router();
 
-// // Add a new room
-// materialConfirmationRoutes.get("/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO", "client", "worker"), getAllMaterialRooms);
-
-// // get rooms sepecifically 
-// materialConfirmationRoutes.get("/:projectId/room/:roomId", multiRoleAuthMiddleware("owner", "staff", "CTO", "client", "worker"), getRoomById);
-
-// materialConfirmationRoutes.post("/:projectId/createroom/", multiRoleAuthMiddleware("owner", "staff", "CTO",), addMaterialRoom);
-// materialConfirmationRoutes.post("/:projectId/creatematerial/:roomId", multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), createModularWork);
-// materialConfirmationRoutes.put("/:projectId/editmaterial/:roomId/:workId", multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), editModularWork);
-// materialConfirmationRoutes.put("/:projectId/deletematerial/:roomId/:workId", multiRoleAuthMiddleware("owner", "staff", "CTO"), deleteModularWork);
-// materialConfirmationRoutes.put("/:projectId/deleteroom/:roomId", multiRoleAuthMiddleware("owner", "staff", "CTO"), deleteMaterialRoom);
-
-
 
 // 📌 Get full material room confirmation stage for a project
 materialConfirmationRoutes.get("/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO", "client", "worker"), getMaterialRoomConfirmationByProject);
@@ -41,8 +28,9 @@ materialConfirmationRoutes.post("/:projectId/customroom/:roomId/field", multiRol
 materialConfirmationRoutes.delete("/:projectId/customroom/:roomId/field/:fieldKey", multiRoleAuthMiddleware("owner", "staff", "CTO"), deleteCustomRoomField);
 
 
-materialConfirmationRoutes.patch("/:projectId/deleteuploadedfile/:roomId/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",) , deleteMaterialRoomFile);
 materialConfirmationRoutes.post("/:projectId/uploads/:roomId", imageUploadToS3.array("files"), multiRoleAuthMiddleware("owner", "staff", "CTO",) , uploadMaterialRoomFiles);
+materialConfirmationRoutes.patch("/:projectId/deleteuploadedfile/:roomId/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",) , deleteMaterialRoomFile);
+
 materialConfirmationRoutes.put('/deadline/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setMaterialConfirmationStageDeadline)
 materialConfirmationRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), materialSelectionCompletionStatus)
 

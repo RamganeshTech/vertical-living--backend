@@ -26,6 +26,8 @@ import siteMeasurementRoutes from './routers/Stage routes/siteMeasurement routes
 import sampleDesignRoutes from './routers/Stage routes/sample desing routes/sampleDesign.routes';
 import technicalConsultRoutes from './routers/Stage routes/technicalConsultation.routes';
 import materialConfirmationRoutes from './routers/Stage routes/MaterialRoomConfirmation routes/materialRoomConfirmation.routes';
+import resetRouter from './routers/resetStage Routes/resetStage.routes';
+import costEstimationRoutes from './routers/Stage routes/cost estimation routes/costEstimation.routes';
 // import checkRedisConnection from './config/redisClient';
 
 
@@ -69,6 +71,11 @@ app.use('/api/sitemeasurement', siteMeasurementRoutes)
 app.use('/api/sampledesign', sampleDesignRoutes)
 app.use('/api/technicalconsultation', technicalConsultRoutes)
 app.use('/api/materialconfirmation', materialConfirmationRoutes)
+app.use('/api/costestimation', costEstimationRoutes)
+
+
+// RESET STAGE
+app.use('/api', resetRouter)
 
 
 const PORT = process.env.PORT

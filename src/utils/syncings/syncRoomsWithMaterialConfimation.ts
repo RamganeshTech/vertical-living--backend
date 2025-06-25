@@ -31,9 +31,9 @@ export const syncRoomsToMaterialConfirmation = async (projectId: string, siteRoo
     siteRooms.forEach((room: any) => {
       if (!existingRoomNames.includes(room.roomName)) {
         materialDoc!.rooms.push({
-          roomName: room.roomName,
+          name: room.roomName,
           uploads: [],
-          modularWorks: [],
+          roomFields: {}
         });
       }
     });
