@@ -29,6 +29,7 @@ import materialConfirmationRoutes from './routers/Stage routes/MaterialRoomConfi
 import resetRouter from './routers/resetStage Routes/resetStage.routes';
 import costEstimationRoutes from './routers/Stage routes/cost estimation routes/costEstimation.routes';
 import orderMaterialRoutes from './routers/Stage routes/order Material routes/orderMaterial.routes';
+import materialArrivalRoutes from './routers/Stage routes/Material Arrival Routes/MaterialArrival.routes';
 // import checkRedisConnection from './config/redisClient';
 
 
@@ -74,6 +75,7 @@ app.use('/api/technicalconsultation', technicalConsultRoutes)
 app.use('/api/materialconfirmation', materialConfirmationRoutes)
 app.use('/api/costestimation', costEstimationRoutes)
 app.use('/api/orderingmaterial', orderMaterialRoutes)
+app.use('/api/materialarrivalcheck', materialArrivalRoutes)
 
 
 // RESET STAGE

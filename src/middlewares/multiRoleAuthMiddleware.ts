@@ -6,7 +6,7 @@ export const multiRoleAuthMiddleware =
   (...allowedRoles: string[]) =>
   async (req: RoleBasedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      console.log("usera cecess token", req.cookies.useraccesstoken)
+      // console.log("usera cecess token", req.cookies.useraccesstoken)
       const ownerToken = req.cookies?.useraccesstoken;
       const ctoToken = req.cookies?.ctoaccesstoken;
       const staffToken = req.cookies?.staffaccesstoken;
@@ -35,7 +35,7 @@ export const multiRoleAuthMiddleware =
         decoded = jwt.verify(workerToken, process.env.JWT_WORKER_ACCESS_SECRET!);
         decoded.role = "worker";
       } else {
-        console.log("im getting called")
+        // console.log("im getting called")
         res.status(401).json({ message: "Unauthorized: Please login", ok: false });
         return;
       }

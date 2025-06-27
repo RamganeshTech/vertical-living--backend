@@ -5,6 +5,7 @@ import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common
 
 import { predefinedRooms } from "../../../utils/Stage Utils/initalizeMaterialSelectionStage";
 import { generateCostEstimationFromMaterialSelection } from "../cost estimation controllers/costEstimation.controller";
+import { syncOrderingMaterials } from "../ordering material controller/orderingMaterial.controller";
 
 
 export const initializeMaterialSelection = async (req: Request, res: Response): Promise<any> => {
@@ -351,9 +352,10 @@ const materialSelectionCompletionStatus = async (req: Request, res: Response): P
     timerFunctionlity(form, "completedAt")
     await form.save();
 
-    if (form.status === "completed") {
+    // if (form.status === "completed") {
       await generateCostEstimationFromMaterialSelection(form, projectId )
-    }
+      await syncOrderingMaterials(projectId)
+    // }
 
 
     return res.status(200).json({ ok: true, message: "Material Selection stage marked as completed", data: form });

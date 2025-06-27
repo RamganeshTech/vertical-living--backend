@@ -16,7 +16,6 @@ const generateCostEstimationFromMaterialSelection = async (
     const existing = await CostEstimationModel.findOne({ projectId });
     if (existing) {
         return
-
     }
 
 
