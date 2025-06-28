@@ -35,7 +35,6 @@ const workerSchema = new Schema<IWorker>({
         enum: ["UserModel", "StaffModel", "CTOModel"]
     },
     isRegistered: { type: Boolean, default: false },
-    
 }, {
     timestamps:true
 });

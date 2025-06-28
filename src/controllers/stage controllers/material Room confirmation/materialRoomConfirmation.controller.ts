@@ -6,6 +6,7 @@ import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common
 import { predefinedRooms } from "../../../utils/Stage Utils/initalizeMaterialSelectionStage";
 import { generateCostEstimationFromMaterialSelection } from "../cost estimation controllers/costEstimation.controller";
 import { syncOrderingMaterials } from "../ordering material controller/orderingMaterial.controller";
+import { syncWorkSchedule } from "../workTasksmain controllers/workMain.controller";
 
 
 export const initializeMaterialSelection = async (req: Request, res: Response): Promise<any> => {
@@ -355,6 +356,7 @@ const materialSelectionCompletionStatus = async (req: Request, res: Response): P
     // if (form.status === "completed") {
       await generateCostEstimationFromMaterialSelection(form, projectId )
       await syncOrderingMaterials(projectId)
+      await syncWorkSchedule(projectId)
     // }
 
 
