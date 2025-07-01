@@ -5,6 +5,7 @@ import { SiteMeasurementModel } from '../../../models/Stage Models/siteMeasureme
 import MaterialRoomConfirmationModel, { IMaterialRoomConfirmation } from './../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model';
 import { PREDEFINED_ROOMS } from '../../../constants/phaseConstants';
 import { handleSetStageDeadline, timerFunctionlity } from '../../../utils/common features/timerFuncitonality';
+import { syncInstallationWork } from '../installation controllers/installation.controller';
 
 
 const generateCostEstimationFromMaterialSelection = async (
@@ -433,17 +434,20 @@ const costEstimationCompletionStatus = async (req: Request, res: Response): Prom
 
         if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
+        // if(form.status === "completed"){
+        //     return res.status(400).json({ ok: false, message: "already set to completed stage" });
+        // }
+
         form.status = "completed";
         form.isEditable = false
         timerFunctionlity(form, "completedAt")
         await form.save();
 
-        // if (form.status === "completed") {
-        //   await autoCreateCostEstimationRooms(req, res, projectId)
-        // }
+        if (form.status === "completed") {
+          await syncInstallationWork(projectId)
+        }
 
-
-        return res.status(200).json({ ok: true, message: "cost estimation stage marked as completed", data: form });
+        return res.status(200).json({ ok: true, message: "cost estimation stage markjjjjjjjjjjed as completed", data: form });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

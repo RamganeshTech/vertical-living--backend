@@ -31,6 +31,8 @@ import costEstimationRoutes from './routers/Stage routes/cost estimation routes/
 import orderMaterialRoutes from './routers/Stage routes/order Material routes/orderMaterial.routes';
 import materialArrivalRoutes from './routers/Stage routes/Material Arrival Routes/MaterialArrival.routes';
 import workTaskRoutes from './routers/Stage routes/workTask routes/workmaintasks.routes';
+import installationRoutes from './routers/Stage routes/installation routes/installation.routes';
+import qualityCheckRoutes from './routers/Stage routes/QualityCheck routes/QualityCheck.routes';
 // import checkRedisConnection from './config/redisClient';
 
 
@@ -78,6 +80,8 @@ app.use('/api/costestimation', costEstimationRoutes)
 app.use('/api/orderingmaterial', orderMaterialRoutes)
 app.use('/api/materialarrivalcheck', materialArrivalRoutes)
 app.use('/api/worktasks', workTaskRoutes)
+app.use('/api/installation', installationRoutes)
+app.use('/api/qualitycheck', qualityCheckRoutes)
 
 
 // RESET STAGE

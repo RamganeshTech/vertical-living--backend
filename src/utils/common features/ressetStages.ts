@@ -7,6 +7,9 @@ import { SiteMeasurementModel } from "../../models/Stage Models/siteMeasurement 
 import { TechnicalConsultationModel } from "../../models/Stage Models/technical consulatation/technicalconsultation.model";
 import PaymentConfirmationModel from "../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
 import OrderingMaterialModel from "../../models/Stage Models/Ordering Material Model/orderingMaterial.model";
+import MaterialArrivalModel from "../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheck.model";
+import WorkMainStageScheduleModel from "../../models/Stage Models/WorkTask Model/WorkTask.model";
+import InstallationModel from "../../models/Stage Models/installation model/Installation.model";
 
 export const resetStages = async (projectId: string, upToStageNumber: number) => {
     // const now = new Date();
@@ -20,6 +23,12 @@ export const resetStages = async (projectId: string, upToStageNumber: number) =>
         CostEstimationModel,                // Stage 6
         PaymentConfirmationModel,    //stage 7
         OrderingMaterialModel,  //Stage 8
+        MaterialArrivalModel, // //Stage 9
+        WorkMainStageScheduleModel,  //Stage 10
+        InstallationModel , //Stage 11
+        // QualityCheck,
+        // CleaningSanitizing,
+        // ProjectDelivery,
         // ...up to Stage 14
     ];
 

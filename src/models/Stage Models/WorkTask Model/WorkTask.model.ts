@@ -84,7 +84,8 @@ interface WorkMainStageScheduleDocument extends IWorkMainStageSchedule, Document
 
 const WorkMainStageScheduleSchema = new Schema<WorkMainStageScheduleDocument>({
     projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", required: true },
-    dailyScheduleId: { type: Schema.Types.ObjectId, ref: "DailyScheduleModel" },
+    dailyScheduleId: { type: Schema.Types.ObjectId, ref: "DailyScheduleModel"
+     },
     workScheduleId: { type: Schema.Types.ObjectId, ref: "WorkScheduleModel", },
     mdApproval: {
         status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },

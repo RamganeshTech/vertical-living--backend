@@ -40,7 +40,7 @@ export const validateMaterialFieldsByRoom = (roomKey: string, item: any): { succ
 
   // 🔍 Upload validation
  if (Object.keys(item.upload).length) {
-  console.log(item.upload, "item.uploda is te sfl;sjflsjflk;j")
+  // console.log(item.upload, "item.uploda is te sfl;sjflsjflk;j")
     if (typeof item.upload !== "object") {
       return { success: false, message: "Invalid upload field structure" };
     }

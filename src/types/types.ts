@@ -25,7 +25,7 @@ export interface AuthenticatedCTORequest extends Request {
 
 export interface RoleUserPayload {
   _id: string;
-  role: "owner" | "staff" | "worker" | "CTO";
+  role: "owner" | "staff" | "worker" | "CTO" | "client";
   ownerId?: string
 }
 

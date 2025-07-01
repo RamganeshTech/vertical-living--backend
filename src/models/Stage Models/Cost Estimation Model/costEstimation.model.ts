@@ -65,8 +65,6 @@ const uploadSchema = new Schema<ICostEstimaionUpload>({
 }, { _id: true });
 
 
-
-
 const materialItemSchema = new Schema({
     key: { type: String, }, // e.g., "tvUnit", "lightingFixtures"
     areaSqFt: { type: Number, default: null },
