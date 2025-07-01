@@ -8,12 +8,6 @@ export interface IKitchenRequirement {
         right?: number;
     };
     kitchenPackage: "Essentials" | "Premium" | "Luxury" | "Build Your Own Package";
-    // packageDetails?: {
-    //     affordablePricing?: boolean;
-    //     premiumDesigns?: boolean;
-    //     elitePricing?: boolean;
-    //     customDesign?: boolean;
-    // };
     graniteCountertop?: boolean;
     numberOfShelves?: (number | null);
     notes?: string | null;

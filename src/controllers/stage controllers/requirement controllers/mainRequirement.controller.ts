@@ -8,6 +8,85 @@ import { isDate } from "util/types";
 import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
 import { resetStages } from "../../../utils/common features/ressetStages";
 import { initializeSiteRequirement } from "../../../utils/Stage Utils/siteRequirementsInitialize";
+import { isObjectHasValue } from "../../../utils/isObjectHasValue";
+
+export const syncRequirmentForm = async (projectId: Types.ObjectId) => {
+
+  const form = await RequirementFormModel.findOne({ projectId })
+
+  if (!form) {
+    await RequirementFormModel.create({
+      projectId,
+      shareToken: null,
+      clientData: {
+        clientName: "",
+        email: "",
+        whatsapp: "",
+        location: "",
+      },
+      isEditable: true, // ✅ your default
+      status: "pending", // ✅ your default
+      kitchen: {
+        layoutType: null,
+        measurements: {
+          top: null,
+          left: null,
+          right: null
+        },
+        kitchenPackage: null,
+        graniteCountertop: null,
+        numberOfShelves: null,
+        notes: null
+      },
+      bedroom: {
+        numberOfBedrooms: null,
+        bedType: null,
+        wardrobeIncluded: null,
+        falseCeilingRequired: null,
+        tvUnitRequired: null,
+        studyTableRequired: null,
+        bedroomPackage: null,
+        notes: null,
+      },
+      wardrobe: {
+        wardrobeType: null,
+        lengthInFeet: null,
+        heightInFeet: null,
+        mirrorIncluded: null,
+        wardrobePackage: null,
+        numberOfShelves: null,
+        numberOfDrawers: null,
+        notes: null,
+      },
+      livingHall: {
+        seatingStyle: null,
+        tvUnitDesignRequired: null,
+        falseCeilingRequired: null,
+        wallDecorStyle: null,
+        numberOfFans: null,
+        numberOfLights: null,
+        livingHallPackage: null,
+        notes: null,
+      },
+      additionalNotes: null,
+      timer: {
+        startedAt: null,
+        completedAt: null,
+        deadLine: null,
+        reminderSent: false,
+      },
+      uploads: [],
+    });
+  }
+  else{
+    form.timer.startedAt = new Date()
+    form.timer.completedAt = null
+    form.timer.deadLine = null
+    form.timer.reminderSent =false
+    await form.save()
+  }
+
+}
 
 const submitRequirementForm = async (req: Request, res: Response,): Promise<void> => {
   try {
@@ -47,28 +126,45 @@ const submitRequirementForm = async (req: Request, res: Response,): Promise<void
     //   return
     // }
 
-    const kitchenError = validateKitchenInput(kitchen);
-    if (kitchenError) {
-      res.status(400).json({ message: `Kitchen input validation failed: ${kitchenError}`, ok: false });
-      return
+
+
+
+
+    let executeValidationForKitchen = isObjectHasValue(kitchen)
+    let executeValidationForBedroom = isObjectHasValue(bedroom)
+    let executeValidationForWardrobe = isObjectHasValue(wardrobe)
+    let executeValidationForLivingHall = isObjectHasValue(livingHall)
+
+    if (executeValidationForKitchen) {
+      const kitchenError = validateKitchenInput(kitchen);
+      if (kitchenError) {
+        res.status(400).json({ message: `Kitchen input validation failed: ${kitchenError}`, ok: false });
+        return
+      }
     }
 
-    const wardrobeError = validateWardrobeInput(wardrobe);
-    if (wardrobeError) {
-      res.status(400).json({ message: `Wardrobe input validation failed: ${wardrobeError}`, ok: false });
-      return
+    if (executeValidationForBedroom) {
+      const wardrobeError = validateWardrobeInput(wardrobe);
+      if (wardrobeError) {
+        res.status(400).json({ message: `Wardrobe input validation failed: ${wardrobeError}`, ok: false });
+        return
+      }
     }
 
-    const bedroomError = validateBedroomInput(bedroom);
-    if (bedroomError) {
-      res.status(400).json({ message: `Bedroom input validation failed: ${bedroomError}`, ok: false });
-      return
+    if (executeValidationForWardrobe) {
+      const bedroomError = validateBedroomInput(bedroom);
+      if (bedroomError) {
+        res.status(400).json({ message: `Bedroom input validation failed: ${bedroomError}`, ok: false });
+        return
+      }
     }
 
-    const livingError = validateLivingHallInput(livingHall);
-    if (livingError) {
-      res.status(400).json({ message: `Living Hall input validation failed: ${livingError}`, ok: false });
-      return
+    if (executeValidationForLivingHall) {
+      const livingError = validateLivingHallInput(livingHall);
+      if (livingError) {
+        res.status(400).json({ message: `Living Hall input validation failed: ${livingError}`, ok: false });
+        return
+      }
     }
 
 
@@ -274,7 +370,8 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
           timer: {
             startedAt: new Date(),
             completedAt: null,
-            deadLine: null
+            deadLine: null,
+            reminderSent: false
           },
           uploads: [],
           siteDetails: {
@@ -292,11 +389,10 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
         siteMeasurement.status = "pending";
         siteMeasurement.isEditable = true;
         siteMeasurement.timer.startedAt = new Date();
-
+        siteMeasurement.timer.reminderSent = false
       }
       await siteMeasurement.save()
     }
-
 
     return res.status(200).json({ ok: true, message: "Requirement stage marked as completed", data: form });
   } catch (err) {
@@ -313,44 +409,6 @@ export const setRequirementStageDeadline = (req: Request, res: Response): Promis
     stageName: "Requirement Form"
   });
 };
-
-
-// controllers/requirementForm/uploadMultipleFiles.controller.ts
-
-// export const uploadMultipleFilesController = async (req: Request, res: Response): Promise<any> => {
-//   try {
-//     const { formId } = req.params;
-//     const files = req.files as Express.Multer.File[];
-
-//     if (!files || files.length === 0) {
-//       return res.status(400).json({ message: "No files uploaded" });
-//     }
-
-//     const form = await RequirementFormModel.findById(formId);
-//     if (!form) {
-//       return res.status(404).json({ message: "Form not found" });
-//     }
-
-//     for (const file of files) {
-//       const fileType = file.mimetype.includes("pdf") ? "pdf" : "image";
-//       form.uploads.push({
-//         type: fileType,
-//         url: (file as any).transforms?.[0]?.location || (file as any).location,
-//         originalName: file.originalname,
-//         uploadedAt: new Date(),
-//       });
-//     }
-
-//     await form.save();
-
-//     return res.status(200).json({ ok: true, message: "Files uploaded", count: files.length });
-//   } catch (err) {
-//     console.error(err);
-//     return res.status(500).json({ message: "Internal server error" });
-//   }
-// };
-
-
 
 export {
   submitRequirementForm,

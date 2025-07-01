@@ -260,7 +260,7 @@ const installationCompletionStatus = async (req: Request, res: Response): Promis
         // }
 
 
-        return res.status(200).json({ ok: true, message: "cost estimation stage marked as completed", data: form });
+        return res.status(200).json({ ok: true, message: "installation check stage marked as completed", data: form });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

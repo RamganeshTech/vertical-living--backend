@@ -6,6 +6,7 @@ import MaterialRoomConfirmationModel, { IMaterialRoomConfirmation } from './../.
 import { PREDEFINED_ROOMS } from '../../../constants/phaseConstants';
 import { handleSetStageDeadline, timerFunctionlity } from '../../../utils/common features/timerFuncitonality';
 import { syncInstallationWork } from '../installation controllers/installation.controller';
+import { syncQualityCheck } from '../QualityCheck controllers/QualityCheck.controller';
 
 
 const generateCostEstimationFromMaterialSelection = async (
@@ -445,6 +446,7 @@ const costEstimationCompletionStatus = async (req: Request, res: Response): Prom
 
         if (form.status === "completed") {
           await syncInstallationWork(projectId)
+          await syncQualityCheck(projectId)
         }
 
         return res.status(200).json({ ok: true, message: "cost estimation stage markjjjjjjjjjjed as completed", data: form });

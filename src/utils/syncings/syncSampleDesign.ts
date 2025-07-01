@@ -11,23 +11,28 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
         design = new SampleDesignModel({
             projectId,
             rooms: PREDEFINED_ROOMS.map(roomName => {
-                    return {
-                      roomName,
-                      files: []
-                    }
-                  }),
+                return {
+                    roomName,
+                    files: []
+                }
+            }),
             status: "pending",
             isEditable: true,
             timer: {
                 startedAt: new Date(),
                 completedAt: null,
-                deadLine: null
+                deadLine: null,
+                reminderSent: false
             },
             additionalNotes: null,
         })
     } else {
         design.status = "pending";
         design.isEditable = true;
+        design.timer.startedAt = new Date()
+        design.timer.deadLine = null
+        design.timer.completedAt = null
+        design.timer.reminderSent = false
         // design.timer.startedAt = new Date();
         const existingRoomNames = design.rooms.map((room: any) => room.roomName);
         siteRooms.forEach((room: any) => {
@@ -40,5 +45,4 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
         });
     }
     await design.save()
-
 }

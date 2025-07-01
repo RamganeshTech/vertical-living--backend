@@ -5,7 +5,9 @@ import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader";
 import { createQualityCheckItem, editQualityCheckItem,
 deleteQualityCheckItem,
 getQualityCheckup,
-getQualityCheckRoomItems, } from "../../../controllers/stage controllers/QualityCheck controllers/QualityCheck.controller";
+getQualityCheckRoomItems,
+setQualityCheckStageDeadline,
+qualityCheckCompletionStatus, } from "../../../controllers/stage controllers/QualityCheck controllers/QualityCheck.controller";
 
 
 const qualityCheckRoutes = Router();
@@ -51,4 +53,12 @@ qualityCheckRoutes.get(
   multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
   getQualityCheckRoomItems
 );
+
+
+
+
+
+qualityCheckRoutes.put('/deadline/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setQualityCheckStageDeadline)
+qualityCheckRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), qualityCheckCompletionStatus)
+
 export default qualityCheckRoutes;

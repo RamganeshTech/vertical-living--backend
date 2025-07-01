@@ -1,4 +1,4 @@
-export const isObjectHasValue: (obj:Object) => boolean = (obj: Object) => {
+export const isObjectHasValue: (obj:object) => boolean = (obj: Object) => {
     if (typeof obj !== "object") {
         throw Error("not an object")
     }

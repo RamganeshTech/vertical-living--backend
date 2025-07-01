@@ -1,10 +1,16 @@
 import { Request, Response } from "express";
-import { RequirementFormModel } from "../../../models/Stage Models/requirment model/requirement.model";
 import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
 import { handleSetStageDeadline } from "../../../utils/common features/timerFuncitonality";
 import { SampleDesignModel } from "../../../models/Stage Models/sampleDesing model/sampleDesign.model";
 import { syncRoomsToMaterialConfirmation } from "../../../utils/syncings/syncRoomsWithMaterialConfimation";
 import { syncSampleDesignModel } from "../../../utils/syncings/syncSampleDesign";
+
+import redisClient from './../../../config/redisClient';
+import { updateStageStatusInCache } from "../../../utils/updateStageStatusInCache ";
+import { Model } from "mongoose";
+
+
+
 
 const createSiteMeasurement = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -14,11 +20,6 @@ const createSiteMeasurement = async (req: Request, res: Response): Promise<any> 
 
     if (!projectId) {
       return res.status(400).json({ ok: false, message: "projectId is required" });
-    }
-
-    const requirementForm = await RequirementFormModel.findOne({ projectId });
-    if (!requirementForm || requirementForm.status !== "completed") {
-      return res.status(400).json({ ok: false, message: "Requirement stage must be completed first." });
     }
 
     if (!siteDetails || typeof siteDetails !== "object") {
@@ -69,6 +70,8 @@ const createSiteMeasurement = async (req: Request, res: Response): Promise<any> 
 
     await form.save();
 
+    await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(form.toObject()), { EX: 60 * 15 });
+
     return res.status(201).json({ ok: true, message: "Site measurement data saved successfully.", data: form });
 
   } catch (err) {
@@ -89,7 +92,7 @@ const createRoom = async (req: Request, res: Response): Promise<any> => {
 
     const { name, length, breadth, height } = room;
 
-    if (name === null || typeof name !== "string"  || !name?.trim()) {
+    if (name === null || typeof name !== "string" || !name?.trim()) {
       return res.status(400).json({ ok: false, message: `Room name must be a provided` });
     }
     if (length !== null || typeof length !== "number" || length < 0) {
@@ -102,10 +105,7 @@ const createRoom = async (req: Request, res: Response): Promise<any> => {
       return res.status(400).json({ ok: false, message: `Room height must be a number or non-negative number.` });
     }
 
-
-    // let form = await SiteMeasurementModel.findOneAndUpdate({ projectId }, { $push: { rooms: room } });
-
-     const existingDoc = await SiteMeasurementModel.findOne({ projectId });
+    const existingDoc = await SiteMeasurementModel.findOne({ projectId });
     if (!existingDoc) {
       return res.status(404).json({ ok: false, message: "Site measurement document not found" });
     }
@@ -119,6 +119,10 @@ const createRoom = async (req: Request, res: Response): Promise<any> => {
     existingDoc.rooms.push(room);
     await existingDoc.save();
 
+    await redisClient.set(
+      `stage:SiteMeasurementModel:${projectId}:room:${name}`,
+      JSON.stringify(room),
+      { EX: 60 * 15 })
 
     return res.status(201).json({ ok: true, message: "room has created successfully.", data: existingDoc });
 
@@ -138,7 +142,29 @@ const getTheSiteMeasurements = async (req: Request, res: Response): Promise<any>
       return res.status(400).json({ ok: false, message: "projectId is required" });
     }
 
+    const cacheKey = `stage:SiteMeasurementModel:${projectId}`;
+    const cachedForm = await redisClient.get(cacheKey);
+
+    if (cachedForm) {
+      return res.status(200).json({
+        ok: true,
+        message: "Site measurement data from cache.",
+        data: JSON.parse(cachedForm),
+      });
+    }
+
     let form = await SiteMeasurementModel.findOne({ projectId });
+
+    if (!form) {
+      return res.status(400).json({ message: "site measurement not found", ok: false })
+    }
+
+    // 3. Cache Mongo data after cache miss
+    await redisClient.set(
+      cacheKey,
+      JSON.stringify(form.toObject()), // always store plain object
+      { EX: 60 * 15 } // 15 min
+    );
 
     return res.status(200).json({ ok: true, message: "Site measurement fetched successfully.", data: form });
   } catch (err) {
@@ -189,6 +215,8 @@ const updateCommonSiteMeasurements = async (req: Request, res: Response): Promis
 
     await siteDoc.save();
 
+    await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(siteDoc.toObject()), { EX: 60 * 15 }); // 15min
+
     return res.status(200).json({ ok: true, message: "Common site details updated successfully", data: siteDoc.siteDetails });
   } catch (err) {
     console.error("Update Common Site Measurement Error:", err);
@@ -238,6 +266,11 @@ const updateRoomSiteMeasurements = async (req: Request, res: Response): Promise<
 
     await siteDoc.save();
 
+    await redisClient.set(
+      `stage:SiteMeasurementModel:${projectId}:room:${room.name}`,
+      JSON.stringify(existingRoom),
+      { EX: 60 * 15 })
+
     return res.status(200).json({ message: "Room updated successfully", data: room, ok: true });
   } catch (err) {
     console.error("Update Room Measurement Error:", err);
@@ -264,10 +297,13 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
       const siteRooms = siteDoc.rooms || [];
       await syncSampleDesignModel(projectId, siteRooms)
       // await syncRoomsToMaterialConfirmation(projectId, siteRooms)
-
     }
 
     await siteDoc.save();
+
+
+    await updateStageStatusInCache(SiteMeasurementModel, projectId, "completed");
+
     return res.status(200).json({ ok: true, message: "Site measurement marked as completed", data: siteDoc });
   } catch (err) {
     console.error("Site Measurement Complete Error:", err);
@@ -289,8 +325,11 @@ const DeleteRooms = async (req: Request, res: Response): Promise<any> => {
     const roomIndex = siteDoc.rooms.findIndex((r: any) => r._id.toString() === roomId);
     if (roomIndex === -1) return res.status(404).json({ ok: false, message: "Room not found" });
 
+    let cacheRoom = siteDoc.rooms[roomIndex]
     siteDoc.rooms.splice(roomIndex, 1);
     await siteDoc.save();
+
+    await redisClient.set(`stage:SiteMeasurementModel:${projectId}:room:${cacheRoom.name}`, JSON.stringify(cacheRoom), { EX: 60 * 15 })
 
     return res.status(200).json({ message: "Room deleted successfully", data: siteDoc.rooms, ok: true });
   } catch (err) {
@@ -325,9 +364,12 @@ const deleteSiteMeasurement = async (req: Request, res: Response): Promise<any> 
         additionalNotes: null
       },
       rooms: [],
-    });
+    }, { returnDocument: "after" });
 
     if (!siteDoc) return res.status(404).json({ ok: false, message: "Site measurement not found" });
+
+    await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(siteDoc.toObject()), { EX: 60 * 15 }); // 15min
+
 
     return res.status(200).json({ message: "Site details deleted adn timer restarted successfully", data: siteDoc, ok: true });
   } catch (err) {
@@ -338,7 +380,7 @@ const deleteSiteMeasurement = async (req: Request, res: Response): Promise<any> 
 
 
 export const setSiteMeasurementStageDeadline = (req: Request, res: Response): Promise<any> => {
-  return handleSetStageDeadline(req, res, {
+   return handleSetStageDeadline(req, res, {
     model: SiteMeasurementModel,
     stageName: "Site Measurement"
   });

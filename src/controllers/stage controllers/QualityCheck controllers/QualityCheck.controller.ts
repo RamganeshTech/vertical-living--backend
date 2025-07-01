@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { Types } from "mongoose";
 import { validRooms } from "../installation controllers/installation.controller";
 import { RoleBasedRequest } from "../../../types/types";
+import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 
 
 export const syncQualityCheck = async (projectId: string) => {
@@ -271,6 +272,41 @@ const getQualityCheckRoomItems = async (req: Request, res: Response): Promise<an
 };
 
 
+// COMMON CONTOROLLER
+
+
+const setQualityCheckStageDeadline = (req: Request, res: Response): Promise<any> => {
+    return handleSetStageDeadline(req, res, {
+        model: QualityCheckupModel,
+        stageName: "Quality Checkup"
+    });
+};
+
+
+
+const qualityCheckCompletionStatus = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params;
+        const form = await QualityCheckupModel.findOne({ projectId });
+
+        if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
+
+        form.status = "completed";
+        form.isEditable = false
+        timerFunctionlity(form, "completedAt")
+        await form.save();
+
+        // if (form.status === "completed") {
+        //   await autoCreateCostEstimationRooms(req, res, projectId)
+        // }
+
+
+        return res.status(200).json({ ok: true, message: "Quality Checkup stage marked as completed", data: form });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
+    }
+};
 
 
 export {
@@ -279,4 +315,7 @@ export {
     deleteQualityCheckItem,
     getQualityCheckup,
     getQualityCheckRoomItems,
+
+    setQualityCheckStageDeadline,
+    qualityCheckCompletionStatus
 }

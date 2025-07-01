@@ -6,7 +6,7 @@ export interface IWardrobeRequirement {
   heightInFeet?: number;
   mirrorIncluded?: boolean;
   wardrobePackage: "Essentials" | "Premium" | "Luxury" | "Build Your Own Package";
-//   packageDetails?: {
+
 //     affordablePricing?: boolean;
 //     premiumDesigns?: boolean;
 //     elitePricing?: boolean;

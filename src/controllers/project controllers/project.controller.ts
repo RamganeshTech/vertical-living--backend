@@ -6,6 +6,7 @@ import redisClient from '../../config/redisClient'
 import ClientModel from "../../models/client model/client.model";
 import CTOModel from "../../models/CTO model/CTO.model";
 import UserModel from "../../models/usermodel/user.model";
+import { syncRequirmentForm } from "../stage controllers/requirement controllers/mainRequirement.controller";
 
 const createProject = async (req: AuthenticatedUserRequest, res: Response) => {
     try {
@@ -73,7 +74,6 @@ const createProject = async (req: AuthenticatedUserRequest, res: Response) => {
             },
         })
 
-
         await Promise.all([
             UserModel.updateOne(
                 {
@@ -93,7 +93,12 @@ const createProject = async (req: AuthenticatedUserRequest, res: Response) => {
                     $addToSet: { projectId: project._id },
                 }
             ),
+
+            syncRequirmentForm(project._id)
         ]);
+
+
+        
 
         const cacheKey = `projects:${user._id}`;
         await redisClient.del(cacheKey);

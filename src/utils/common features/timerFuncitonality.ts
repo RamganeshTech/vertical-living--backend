@@ -13,13 +13,15 @@ export const timerFunctionlity = (
 import { Request, Response } from "express";
 import { isValidObjectId } from "mongoose";
 import { isDate } from "util/types";
+import { updateCachedeadline } from "../updateStageStatusInCache ";
+import { Model } from "mongoose";
 
-export const handleSetStageDeadline = async (req: Request, res: Response,{model,stageName}: {model: any;stageName: string;}): Promise<Response> => {
+export const handleSetStageDeadline = async (req: Request, res: Response, { model, stageName }: { model: Model<any>; stageName: string; }): Promise<Response> => {
   try {
-    const { formId } = req.params;
+    const { formId, projectId } = req.params;
     const { deadLine } = req.body;
 
-    console.log("deadline", deadLine)
+    // console.log("deadline", deadLine)
 
     if (!isValidObjectId(formId)) {
       return res.status(400).json({ ok: false, message: "Form Id required" });
@@ -34,7 +36,7 @@ export const handleSetStageDeadline = async (req: Request, res: Response,{model,
     //  if (!isDate(deadLine)) {
     //       return res.status(400).json({ ok: false, message: "Deadline shoudl be a date" });
     //     }
-    
+
 
     const doc = await model.findById(formId);
     if (!doc) {
@@ -52,7 +54,11 @@ export const handleSetStageDeadline = async (req: Request, res: Response,{model,
 
     await doc.save();
 
-  return res.status(200).json({
+    if (model.modelName !== "CostEstimation"){
+      await updateCachedeadline(model, projectId, doc)
+    }
+
+    return res.status(200).json({
       ok: true,
       message: `${stageName} deadline set successfully`,
       data: doc,
