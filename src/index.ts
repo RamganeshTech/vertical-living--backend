@@ -33,6 +33,7 @@ import materialArrivalRoutes from './routers/Stage routes/Material Arrival Route
 import workTaskRoutes from './routers/Stage routes/workTask routes/workmaintasks.routes';
 import installationRoutes from './routers/Stage routes/installation routes/installation.routes';
 import qualityCheckRoutes from './routers/Stage routes/QualityCheck routes/QualityCheck.routes';
+import cleaningRoutes from './routers/Stage routes/Cleaning Routes/cleaning.routes';
 // import checkRedisConnection from './config/redisClient';
 
 
@@ -82,6 +83,7 @@ app.use('/api/materialarrivalcheck', materialArrivalRoutes)
 app.use('/api/worktasks', workTaskRoutes)
 app.use('/api/installation', installationRoutes)
 app.use('/api/qualitycheck', qualityCheckRoutes)
+app.use('/api/cleaning', cleaningRoutes)
 
 
 // RESET STAGE

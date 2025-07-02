@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 import { validRooms } from "../installation controllers/installation.controller";
 import { RoleBasedRequest } from "../../../types/types";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
+import { syncCleaningSanitaionStage } from "../Cleaning controller/cleaning.controller";
 
 
 export const syncQualityCheck = async (projectId: string) => {
@@ -296,10 +297,9 @@ const qualityCheckCompletionStatus = async (req: Request, res: Response): Promis
         timerFunctionlity(form, "completedAt")
         await form.save();
 
-        // if (form.status === "completed") {
-        //   await autoCreateCostEstimationRooms(req, res, projectId)
-        // }
-
+        if (form.status === "completed") {
+          await syncCleaningSanitaionStage(projectId)
+        }
 
         return res.status(200).json({ ok: true, message: "Quality Checkup stage marked as completed", data: form });
     } catch (err) {
