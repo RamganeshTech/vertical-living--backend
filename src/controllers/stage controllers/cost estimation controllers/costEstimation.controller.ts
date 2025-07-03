@@ -66,6 +66,7 @@ const generateCostEstimationFromMaterialSelection = async (
     const costEstimation = new CostEstimationModel({
         projectId,
         materialEstimation,
+        assignedTo: null,
         labourEstimations: [],
         totalMaterialCost: 0,
         totalLabourCost: 0,
@@ -209,7 +210,7 @@ const updateMaterialEstimationItem = async (req: Request, res: Response): Promis
 
         costEstimation.materialEstimation[foundRoomIndex] = updatedRoom;
 
-           // ✅ Recalculate project-level total material cost
+        // ✅ Recalculate project-level total material cost
         costEstimation.totalMaterialCost = costEstimation.materialEstimation.reduce(
             (sum, room) => sum + (room.totalCost || 0),
             0
@@ -336,7 +337,7 @@ const editLabourEstimation = async (req: Request, res: Response): Promise<any> =
         const { projectId, labourId } = req.params;
         const { daysPlanned, perdaySalary, workType, noOfPeople } = req.body;
 
-        if (daysPlanned === null || perdaySalary === null || workType === null || noOfPeople===null) {
+        if (daysPlanned === null || perdaySalary === null || workType === null || noOfPeople === null) {
             return res.status(400).json({
                 ok: false,
                 message: "workType, daysPlanned, perdaySalary or noOfPeople should not be null",
@@ -380,7 +381,7 @@ const deleteLabourEstimation = async (req: Request, res: Response): Promise<any>
         const { projectId, labourId } = req.params;
 
 
-         if (!projectId || !labourId) {
+        if (!projectId || !labourId) {
             return res.status(400).json({
                 ok: false,
                 message: "Missing required projectId and labourId",
@@ -445,8 +446,8 @@ const costEstimationCompletionStatus = async (req: Request, res: Response): Prom
         await form.save();
 
         if (form.status === "completed") {
-          await syncInstallationWork(projectId)
-          await syncQualityCheck(projectId)
+            await syncInstallationWork(projectId)
+            await syncQualityCheck(projectId)
         }
 
         return res.status(200).json({ ok: true, message: "cost estimation stage markjjjjjjjjjjed as completed", data: form });

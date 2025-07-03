@@ -95,13 +95,14 @@ const createRoom = async (req: Request, res: Response): Promise<any> => {
     if (name === null || typeof name !== "string" || !name?.trim()) {
       return res.status(400).json({ ok: false, message: `Room name must be a provided` });
     }
-    if (length !== null || typeof length !== "number" || length < 0) {
+    console.log("lenght", length, "height", height, "bredth", breadth)
+    if (length === null || typeof length !== "number" || length < 0) {
       return res.status(400).json({ ok: false, message: `Room length must be a number or non-negative number.` });
     }
-    if (breadth !== null || typeof breadth !== "number" || breadth < 0) {
+    if (breadth === null || typeof breadth !== "number" || breadth < 0) {
       return res.status(400).json({ ok: false, message: `Room breadth must be a number or non-negative number.` });
     }
-    if (height !== null || typeof height !== "number" || height < 0) {
+    if (height === null || typeof height !== "number" || height < 0) {
       return res.status(400).json({ ok: false, message: `Room height must be a number or non-negative number.` });
     }
 
@@ -119,10 +120,7 @@ const createRoom = async (req: Request, res: Response): Promise<any> => {
     existingDoc.rooms.push(room);
     await existingDoc.save();
 
-    await redisClient.set(
-      `stage:SiteMeasurementModel:${projectId}:room:${name}`,
-      JSON.stringify(room),
-      { EX: 60 * 15 })
+    await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(existingDoc.toObject()), { EX: 60 * 15 });
 
     return res.status(201).json({ ok: true, message: "room has created successfully.", data: existingDoc });
 
@@ -141,6 +139,8 @@ const getTheSiteMeasurements = async (req: Request, res: Response): Promise<any>
     if (!projectId) {
       return res.status(400).json({ ok: false, message: "projectId is required" });
     }
+
+    // await redisClient.del(`stage:SiteMeasurementModel:${projectId}`)
 
     const cacheKey = `stage:SiteMeasurementModel:${projectId}`;
     const cachedForm = await redisClient.get(cacheKey);
@@ -267,8 +267,8 @@ const updateRoomSiteMeasurements = async (req: Request, res: Response): Promise<
     await siteDoc.save();
 
     await redisClient.set(
-      `stage:SiteMeasurementModel:${projectId}:room:${room.name}`,
-      JSON.stringify(existingRoom),
+      `stage:SiteMeasurementModel:${projectId}`,
+      JSON.stringify(siteDoc.toObject()),
       { EX: 60 * 15 })
 
     return res.status(200).json({ message: "Room updated successfully", data: room, ok: true });
@@ -278,38 +278,7 @@ const updateRoomSiteMeasurements = async (req: Request, res: Response): Promise<
   }
 };
 
-// 3. Complete the Site Measurement
-const siteMeasurementCompletionStatus = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { projectId } = req.params;
 
-    if (!projectId) return res.status(400).json({ ok: false, message: "Project ID is required" });
-
-    const siteDoc = await SiteMeasurementModel.findOne({ projectId });
-    if (!siteDoc) return res.status(404).json({ ok: false, message: "Site measurement not found" });
-
-    if (siteDoc.status === "completed") return res.status(400).json({ ok: false, message: "Already completed" });
-
-    siteDoc.status = "completed";
-    siteDoc.isEditable = false;
-
-    if (siteDoc.status === "completed") {
-      const siteRooms = siteDoc.rooms || [];
-      await syncSampleDesignModel(projectId, siteRooms)
-      // await syncRoomsToMaterialConfirmation(projectId, siteRooms)
-    }
-
-    await siteDoc.save();
-
-
-    await updateStageStatusInCache(SiteMeasurementModel, projectId, "completed");
-
-    return res.status(200).json({ ok: true, message: "Site measurement marked as completed", data: siteDoc });
-  } catch (err) {
-    console.error("Site Measurement Complete Error:", err);
-    return res.status(500).json({ message: "Internal server error", ok: false });
-  }
-};
 
 // 4. Delete a Room
 const DeleteRooms = async (req: Request, res: Response): Promise<any> => {
@@ -329,7 +298,7 @@ const DeleteRooms = async (req: Request, res: Response): Promise<any> => {
     siteDoc.rooms.splice(roomIndex, 1);
     await siteDoc.save();
 
-    await redisClient.set(`stage:SiteMeasurementModel:${projectId}:room:${cacheRoom.name}`, JSON.stringify(cacheRoom), { EX: 60 * 15 })
+    await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(siteDoc.toObject()), { EX: 60 * 15 })
 
     return res.status(200).json({ message: "Room deleted successfully", data: siteDoc.rooms, ok: true });
   } catch (err) {
@@ -351,7 +320,8 @@ const deleteSiteMeasurement = async (req: Request, res: Response): Promise<any> 
       timer: {
         startedAt: new Date(),
         deadLine: null,
-        completedAt: null
+        completedAt: null,
+        reminderSent: false
       },
       uploads: [],
       siteDetails: {
@@ -379,11 +349,44 @@ const deleteSiteMeasurement = async (req: Request, res: Response): Promise<any> 
 }
 
 
+// COMMON API
 export const setSiteMeasurementStageDeadline = (req: Request, res: Response): Promise<any> => {
-   return handleSetStageDeadline(req, res, {
+  return handleSetStageDeadline(req, res, {
     model: SiteMeasurementModel,
     stageName: "Site Measurement"
   });
+};
+
+
+const siteMeasurementCompletionStatus = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { projectId } = req.params;
+
+    if (!projectId) return res.status(400).json({ ok: false, message: "Project ID is required" });
+
+    const siteDoc = await SiteMeasurementModel.findOne({ projectId });
+    if (!siteDoc) return res.status(404).json({ ok: false, message: "Site measurement not found" });
+
+    if (siteDoc.status === "completed") return res.status(400).json({ ok: false, message: "Already completed" });
+
+    siteDoc.status = "completed";
+    siteDoc.isEditable = false;
+
+    if (siteDoc.status === "completed") {
+      const siteRooms = siteDoc.rooms || [];
+      await syncSampleDesignModel(projectId, siteRooms)
+      // await syncRoomsToMaterialConfirmation(projectId, siteRooms)
+    }
+
+    await siteDoc.save();
+
+    await updateStageStatusInCache(SiteMeasurementModel, projectId, "completed");
+
+    return res.status(200).json({ ok: true, message: "Site measurement marked as completed", data: siteDoc });
+  } catch (err) {
+    console.error("Site Measurement Complete Error:", err);
+    return res.status(500).json({ message: "Internal server error", ok: false });
+  }
 };
 
 

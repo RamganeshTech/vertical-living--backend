@@ -16,6 +16,8 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
                     files: []
                 }
             }),
+      assignedTo: null,
+
             status: "pending",
             isEditable: true,
             timer: {

@@ -9,6 +9,7 @@ import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasureme
 import { resetStages } from "../../../utils/common features/ressetStages";
 import { initializeSiteRequirement } from "../../../utils/Stage Utils/siteRequirementsInitialize";
 import { isObjectHasValue } from "../../../utils/isObjectHasValue";
+import redisClient from "../../../config/redisClient";
 
 export const syncRequirmentForm = async (projectId: Types.ObjectId) => {
 
@@ -18,6 +19,7 @@ export const syncRequirmentForm = async (projectId: Types.ObjectId) => {
     await RequirementFormModel.create({
       projectId,
       shareToken: null,
+      assignedTo: null,
       clientData: {
         clientName: "",
         email: "",
@@ -78,11 +80,11 @@ export const syncRequirmentForm = async (projectId: Types.ObjectId) => {
       uploads: [],
     });
   }
-  else{
+  else {
     form.timer.startedAt = new Date()
     form.timer.completedAt = null
     form.timer.deadLine = null
-    form.timer.reminderSent =false
+    form.timer.reminderSent = false
     await form.save()
   }
 
@@ -185,6 +187,9 @@ const submitRequirementForm = async (req: Request, res: Response,): Promise<void
 
     await form.save();
 
+    const redisKeyMain = `stage:requirementModel:${projectId}`
+    await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+
     res.status(201).json({ ok: true, message: "Requirement form submitted successfully.", data: form, });
   } catch (error: any) {
     res.status(500).json({ ok: false, message: "Server error, try again after some time", error: error.message, });
@@ -199,7 +204,7 @@ const delteRequirementForm = async (req: Request, res: Response,): Promise<void>
 
     if (!projectId) {
       res.status(400).json({ ok: false, message: "projectId is missing" });
-      return; 
+      return;
     }
 
     const form = await RequirementFormModel.findOneAndDelete({ projectId })
@@ -209,6 +214,8 @@ const delteRequirementForm = async (req: Request, res: Response,): Promise<void>
       return;
     }
 
+    await redisClient.del(`stage:requirementModel:${projectId}`)
+
     res.status(200).json({ ok: true, message: "Requirement form deleted successfully.", data: form });
   } catch (error: any) {
     res.status(500).json({ ok: false, message: "Server error, try again after some time", error: error.message, });
@@ -217,7 +224,7 @@ const delteRequirementForm = async (req: Request, res: Response,): Promise<void>
 };
 
 
-const getFormFilledDetails = async (req: Request, res: Response,): Promise<void> => {
+const getFormFilledDetails = async (req: Request, res: Response,): Promise<any> => {
   try {
     const { projectId } = req.params
 
@@ -226,13 +233,23 @@ const getFormFilledDetails = async (req: Request, res: Response,): Promise<void>
       return;
     }
 
-    const form = await RequirementFormModel.findOne({ projectId })
+    
+    const redisKeyMain = `stage:requirementModel:${projectId}`
+    // await redisClient.del(redisKeyMain)
+    const redisCache = await redisClient.get(redisKeyMain)
+
+    if (redisCache) {
+      return res.json({ ok: true, message: "form fetchd form cache", data: redisCache })
+    }
+
+    const form = await RequirementFormModel.findOne({ projectId }).populate("assignedTo", "_id staffName email");
 
     if (!form) {
       res.status(404).json({ ok: false, message: "Form not found or token invalid." });
       return;
     }
 
+    await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
     res.status(200).json({ ok: true, message: "Requirement from fetched succesfully.", data: form });
   } catch (error: any) {
@@ -318,6 +335,8 @@ const generateShareableFormLink = async (req: Request, res: Response): Promise<a
     }
 
     await form.save();
+    const redisKeyMain = `stage:requirementModel:${projectId}`
+    await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
 
     const link = `${process.env.FRONTEND_URL}/requirementform/${projectId}/${token}`;
@@ -332,13 +351,16 @@ const generateShareableFormLink = async (req: Request, res: Response): Promise<a
 // Lock form (make it non-editable)
 const lockRequirementForm = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { formId } = req.params;
+    const { formId, projectId } = req.params;
     const form = await RequirementFormModel.findById(formId);
 
     if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
     form.status = "locked";
     await form.save();
+
+    const redisKeyMain = `stage:requirementModel:${projectId}`
+    await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
     return res.status(200).json({ ok: true, message: "Form has been locked", data: form });
   } catch (err) {
@@ -350,7 +372,8 @@ const lockRequirementForm = async (req: Request, res: Response): Promise<any> =>
 // Mark form stage as completed (finalize the requirement gathering step)
 const markFormAsCompleted = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { formId } = req.params;
+    const { formId, projectId } = req.params;
+    console.log("formId", formId)
     const form = await RequirementFormModel.findById(formId);
 
     if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
@@ -362,10 +385,12 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
 
     if (form.status === "completed") {
       let siteMeasurement = await SiteMeasurementModel.findOne({ projectId: form.projectId });
+
       if (!siteMeasurement) {
         siteMeasurement = new SiteMeasurementModel({
           projectId: form.projectId,
           status: "pending",
+          assignedTo: null,
           isEditable: true,
           timer: {
             startedAt: new Date(),
@@ -390,9 +415,14 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
         siteMeasurement.isEditable = true;
         siteMeasurement.timer.startedAt = new Date();
         siteMeasurement.timer.reminderSent = false
+        siteMeasurement.timer.completedAt = null
+        siteMeasurement.timer.deadLine = null
       }
       await siteMeasurement.save()
     }
+
+    const redisKeyMain = `stage:requirementModel:${projectId}`
+    await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
     return res.status(200).json({ ok: true, message: "Requirement stage marked as completed", data: form });
   } catch (err) {

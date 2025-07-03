@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { CleaningAndSanitationModel } from "../../../models/Stage Models/Cleaning Model/cleaning.model";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import { PREDEFINED_ROOMS } from "../../../constants/phaseConstants";
+import { syncProjectDelivery } from "../Project Delivery Controllers/projectDelivery.controllers";
 
 
 
@@ -24,6 +25,7 @@ export const syncCleaningSanitaionStage = async (projectId: string) => {
       isEditable: true,
       status: "pending",
       timer,
+      assignedTo: null,
       rooms: PREDEFINED_ROOMS.map(roomName => {
         return {
           roomName,
@@ -283,9 +285,9 @@ export const syncCleaningSanitaionStage = async (projectId: string) => {
       timerFunctionlity(form, "completedAt")
       await form.save();
 
-      if (form.status === "completed") {
-
-      }
+      // if (form.status === "completed") {
+        await syncProjectDelivery(projectId)
+      // }
 
       return res.status(200).json({ ok: true, message: "cleaning and sanitation stage marked as completed", data: form });
     } catch (err) {

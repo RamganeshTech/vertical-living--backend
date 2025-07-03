@@ -12,6 +12,7 @@ export interface IClient extends Document {
     resetPasswordToken?: string,
     resetPasswordExpire?: number,
     projectId: Types.ObjectId
+    organizationId: Types.ObjectId[]
     ownerId: Types.ObjectId
 }
 
@@ -24,6 +25,7 @@ const ClientSchema: Schema<IClient> = new Schema({
     password: { type: String, required: true },
     projectId: {type: Schema.Types.ObjectId, required: true, ref:"ProjectModel"},
     ownerId: {type: Schema.Types.ObjectId, required: true, ref:"UserModel"},
+        organizationId: { type: [Schema.Types.ObjectId], ref: "OrganizationModel", required: true, default: [] },
     resetPasswordToken: { type: String },  // Token for password reset
     resetPasswordExpire: { type: Number },
 }, {

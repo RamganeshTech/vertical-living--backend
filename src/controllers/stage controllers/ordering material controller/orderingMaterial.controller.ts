@@ -29,6 +29,7 @@ export const syncOrderingMaterials = async (projectId: string) => {
       projectId: projectId,
       status: "pending",
       isEditable: true,
+      assignedTo: null,
       shopDetails: {
         shopName: null,
         address: null,
@@ -291,11 +292,11 @@ const orderMaterialCompletionStatus = async (req: Request, res: Response): Promi
     timerFunctionlity(form, "completedAt")
     await form.save();
 
-    // if (form.status === "completed") {
-    //   await autoCreateCostEstimationRooms(req, res, projectId)
-    // }
-
+    if (form.status === "completed") {
+      // await autoCreateCostEstimationRooms(req, res, projectId)
     await syncMaterialArrival(projectId)
+    }
+
 
     return res.status(200).json({ ok: true, message: "cost estimation stage marked as completed", data: form });
   } catch (err) {

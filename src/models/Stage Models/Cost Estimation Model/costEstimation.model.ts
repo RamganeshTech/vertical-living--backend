@@ -27,6 +27,7 @@ export interface ICostEstimation {
         materials: IMaterialCostItems[]
         uploads: ICostEstimaionUpload[]
     }[];
+          assignedTo: Types.ObjectId;
 
     labourEstimations: {
         workType: string;
@@ -118,6 +119,12 @@ const costEstimationSchema = new Schema<ICostEstimation>({
         completedAt: { type: Date, default: null },
         deadLine: { type: Date, default: null },
         reminderSent: { type: Boolean, default: false },
+    },
+
+      assignedTo:{
+      type: Schema.Types.ObjectId,
+      default: null,
+      ref:"StaffModel"
     },
 
     status: {

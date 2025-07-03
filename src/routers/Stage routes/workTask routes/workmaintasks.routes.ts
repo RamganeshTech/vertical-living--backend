@@ -96,7 +96,7 @@ workTaskRoutes.get("/:projectId/getworkers",
 
 
   
-  workTaskRoutes.put('/deadline/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setWorkScheduleStageDeadline)
+  workTaskRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setWorkScheduleStageDeadline)
   workTaskRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), workScheduleCompletionStatus)
   
 

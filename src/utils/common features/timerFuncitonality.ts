@@ -8,11 +8,8 @@ export const timerFunctionlity = (
   stageDoc.timer[field] = date;
 };
 
-
-
 import { Request, Response } from "express";
 import { isValidObjectId } from "mongoose";
-import { isDate } from "util/types";
 import { updateCachedeadline } from "../updateStageStatusInCache ";
 import { Model } from "mongoose";
 

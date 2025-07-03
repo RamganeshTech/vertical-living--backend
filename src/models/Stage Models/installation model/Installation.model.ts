@@ -18,6 +18,7 @@ interface IInstallationMain extends Document {
     projectId: Types.ObjectId;
 
     isEditable: boolean;
+          assignedTo: Types.ObjectId;
 
     LivingRoom: InstallationItem[]
     Bedroom: InstallationItem[]
@@ -92,7 +93,11 @@ const InstallationSchema = new Schema<IInstallationMain>({
         deadLine: { type: Date, default: null },
         reminderSent: { type: Boolean, default: false },
     },
-
+  assignedTo:{
+      type: Schema.Types.ObjectId,
+      default: null,
+      ref:"StaffModel"
+    },
     status: {
         type: String,
         enum: ["pending", "completed"],

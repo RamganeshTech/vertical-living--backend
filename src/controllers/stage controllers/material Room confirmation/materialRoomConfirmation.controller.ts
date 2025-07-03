@@ -36,6 +36,7 @@ export const initializeMaterialSelection = async (req: Request, res: Response): 
     const newMaterialForm = await MaterialRoomConfirmationModel.create({
       projectId,
       rooms,
+      assignedTo: null,
       customRooms: [],
       status: "pending",
       isEditable: true,

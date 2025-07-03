@@ -27,7 +27,7 @@ orderMaterialRoutes.get("/public/:projectId/:token", getOrderingMaterialPublicDe
 orderMaterialRoutes.post("/:projectId/uploads/:roomId", multiRoleAuthMiddleware("owner", "staff", "CTO",) , imageUploadToS3.array("files"), uploadOrderMaterialFiles);
 orderMaterialRoutes.patch("/:projectId/deleteuploadedfile/:roomId/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",) , deleteOrderMaterialFile);
 
-orderMaterialRoutes.put('/deadline/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setOrderMaterialFileStageDeadline)
+orderMaterialRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setOrderMaterialFileStageDeadline)
 orderMaterialRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), orderMaterialCompletionStatus)
 
 

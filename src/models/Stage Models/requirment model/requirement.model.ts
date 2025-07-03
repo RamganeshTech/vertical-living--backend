@@ -9,6 +9,7 @@ import { ILivingHallRequirement, LivingHallRequirementSchema } from "./livingroo
 
 interface IRequirementFormSchema extends Document {
   projectId: Types.ObjectId,
+  assignedTo: Types.ObjectId,
   clientData: {
     clientName: string,
     email: string,
@@ -81,6 +82,11 @@ const RequirementFormSchema = new Schema<IRequirementFormSchema>(
     status: {
       type: String,
       default: "pending"
+    },
+     assignedTo:{
+      type: Schema.Types.ObjectId,
+      default: null,
+      ref:"StaffModel"
     },
     shareToken: {
       type: String,

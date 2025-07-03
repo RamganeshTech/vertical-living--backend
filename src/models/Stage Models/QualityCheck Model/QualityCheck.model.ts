@@ -1,14 +1,14 @@
 export interface QualityCheckUpload {
-    type: "image" | "pdf";
-    url: string;
-    originalName?: string;
-    uploadedAt: Date
+  type: "image" | "pdf";
+  url: string;
+  originalName?: string;
+  uploadedAt: Date
 }
 
 export interface QualityCheckItem {
   workName: string;
   status: "pass" | "fail" | "pending";
-  inspectedBy: Types.ObjectId; 
+  inspectedBy: Types.ObjectId;
   inspectedUserModel: string;
   remarks: string;
   upload: QualityCheckUpload | null
@@ -37,6 +37,8 @@ export interface IQualityCheckup extends Document {
   StorageRoom: QualityCheckItem[];
   EntertainmentRoom: QualityCheckItem[];
   HomeGym: QualityCheckItem[];
+  assignedTo: Types.ObjectId;
+
 }
 
 
@@ -47,16 +49,16 @@ const UploadSchema = new Schema<QualityCheckUpload>({
   url: { type: String, required: true },
   originalName: { type: String, required: true },
   uploadedAt: { type: Date, default: Date.now },
-}, {_id:true});
+}, { _id: true });
 
 const QualityCheckItemSchema = new Schema<QualityCheckItem>({
   workName: { type: String, required: true },
   status: { type: String, enum: ["pass", "fail", "pending"], default: "pending" },
   inspectedBy: { type: Schema.Types.ObjectId, refPath: "inspectedUserModel" },
-  inspectedUserModel : { type: String },
+  inspectedUserModel: { type: String },
   remarks: { type: String },
   upload: { type: UploadSchema, required: false },
-}, {_id:true});
+}, { _id: true });
 
 const QualityCheckupSchema = new Schema<IQualityCheckup>({
   projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", required: true },
@@ -81,6 +83,11 @@ const QualityCheckupSchema = new Schema<IQualityCheckup>({
   StorageRoom: [QualityCheckItemSchema],
   EntertainmentRoom: [QualityCheckItemSchema],
   HomeGym: [QualityCheckItemSchema],
+  assignedTo: {
+    type: Schema.Types.ObjectId,
+    default: null,
+    ref: "StaffModel"
+  },
 }, {
   timestamps: true,
 });

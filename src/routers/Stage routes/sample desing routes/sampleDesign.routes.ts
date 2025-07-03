@@ -24,7 +24,7 @@ sampleDesignRoutes.delete("/:projectId/rooms/:roomName/delete/:fileIndex", delet
 sampleDesignRoutes.delete("/:projectId/:roomId/deleteroom", deleteRoom);
 
 
-sampleDesignRoutes.put('/deadline/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), setSampleDesignStageDeadline)
+sampleDesignRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), setSampleDesignStageDeadline)
 sampleDesignRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), sampleDesignCompletionStatus)
 
 

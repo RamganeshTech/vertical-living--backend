@@ -52,6 +52,8 @@ export interface IMaterialOrdering {
     upholsteryCurtains: IUpholsteryCurtainItem[];
     falseCeilingMaterials: IFalseCeilingItem[];
   };
+            assignedTo: Types.ObjectId;
+
   timer: IMaterialOrderingTimer;
   generatedLink: string | null;
 }
@@ -114,6 +116,11 @@ uploads: [UploadSchema],
     upholsteryCurtains: [UpholsteryCurtainOrderMaterialSchema],
     falseCeilingMaterials: [FalseCeilingOrderMaterialSchema],
   },
+    assignedTo:{
+      type: Schema.Types.ObjectId,
+      default: null,
+      ref:"StaffModel"
+    },
   timer: { type: TimerSchema, required: true },
   generatedLink: { type: String, default: null },
 }, { timestamps: true });

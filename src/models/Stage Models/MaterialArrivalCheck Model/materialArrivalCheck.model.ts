@@ -31,6 +31,8 @@ export interface MaterialArrivalSiteDetail {
 export interface IMaterialArrival {
   projectId: Types.ObjectId;
   status: "pending" | "completed";
+            assignedTo: Types.ObjectId;
+
   isEditable: boolean;
   shopDetails: MaterialArrivalShopDetails,
   deliveryLocationDetails: MaterialArrivalSiteDetail,
@@ -96,6 +98,11 @@ const MaterialArrivalSchema = new Schema<IMaterialArrival>({
     upholsteryCurtains: [UpholsteryCurtainMaterialArrivalSchema],
     falseCeilingMaterials: [FalseCeilingMaterialArrivalSchema],
   },
+    assignedTo:{
+      type: Schema.Types.ObjectId,
+      default: null,
+      ref:"StaffModel"
+    },
   timer: { type: TimerSchema, required: true },
   generatedLink: { type: String, default: null },
 }, { timestamps: true });

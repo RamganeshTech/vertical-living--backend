@@ -55,7 +55,7 @@ cleaningRoutes.put(
   updateCleaningStageRoomNotes
 );
 
-cleaningRoutes.put('/deadline//:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setCleaningStageDeadline)
+cleaningRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setCleaningStageDeadline)
 cleaningRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), cleaningStageCompletionStatus)
 
 

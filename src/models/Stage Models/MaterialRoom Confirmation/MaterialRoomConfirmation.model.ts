@@ -47,6 +47,8 @@ export interface IMaterialRoomConfirmation extends Document {
     deadLine: Date | null;
     reminderSent: boolean;
   };
+  assignedTo: Types.ObjectId;
+
 }
 
 
@@ -105,6 +107,11 @@ const materialRoomConfirmationSchema = new Schema<IMaterialRoomConfirmation>(
     customRooms: [customRoomSchema],
     status: { type: String, enum: ["pending", "completed"], default: "pending" },
     isEditable: { type: Boolean, default: true },
+    assignedTo: {
+      type: Schema.Types.ObjectId,
+      default: null,
+      ref: "StaffModel"
+    },
     timer: timerSchema,
   },
   { timestamps: true }

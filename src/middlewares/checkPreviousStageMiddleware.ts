@@ -16,7 +16,6 @@ export const checkPreviousStageCompleted = (previousStageModel: any): any => {
             return res.status(400).json({ message: "Project ID is required.", ok: false, });
         }
 
-
         const redisKey = `stage:${previousStageModel.modelName}:${projectId}:status`
 
         // Try Redis first
@@ -25,8 +24,6 @@ export const checkPreviousStageCompleted = (previousStageModel: any): any => {
         if (cachedstatus === "completed") {
             return next()
         }
-
-
 
 
         // If not cached, check DB

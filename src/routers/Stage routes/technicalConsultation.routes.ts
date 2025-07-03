@@ -22,7 +22,7 @@ technicalConsultRoutes.put("/editmessage/:projectId/:messageId", editConsultatio
 
 
 technicalConsultRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), tehnicalConsultantCompletionStatus)
-technicalConsultRoutes.put('/deadline/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), setTechnicalConsultantStageDeadline)
+technicalConsultRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), setTechnicalConsultantStageDeadline)
 
 
 // technicalConsultRoutes.post( "/upload/multiple/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), imageUploadToS3.array("file"), uploadGenericController(TechnicalConsultationModel))

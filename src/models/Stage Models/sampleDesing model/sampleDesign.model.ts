@@ -97,6 +97,7 @@ export interface ISampleDesign {
     reminderSent: boolean
   };
   status: "pending" | "completed";
+  assignedTo: Types.ObjectId;
   additionalNotes?: string | null;
   isEditable: boolean;
 }
@@ -123,6 +124,12 @@ const sampleDesignSchema = new Schema<ISampleDesign>({
     deadLine: { type: Date, default: null },
     reminderSent: { type: Boolean, default: false },
   },
+   assignedTo:{
+      type: Schema.Types.ObjectId,
+      default: null,
+      ref:"StaffModel"
+    },
+
   status: { type: String, enum: ["pending", "completed"], default: "pending" },
   additionalNotes: { type: String, default: null },
   isEditable: { type: Boolean, default: true }

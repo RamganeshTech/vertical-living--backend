@@ -28,6 +28,8 @@ export interface ICleaningAndSanitation extends Document {
         deadline: Date | null;
         reminderSent: boolean
     };
+          assignedTo: Types.ObjectId;
+
 }
 
 
@@ -66,6 +68,12 @@ const CleaningAndSanitationSchema = new Schema<ICleaningAndSanitation>(
             deadLine: { type: Date, default: null },
             reminderSent: { type: Boolean, default: false },
         },
+  assignedTo:{
+      type: Schema.Types.ObjectId,
+      default: null,
+      ref:"StaffModel"
+    },
+
 
     },
     { timestamps: true }

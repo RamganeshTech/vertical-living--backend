@@ -21,6 +21,7 @@ export const syncInstallationWork = async (projectId: string) => {
             isEditable: true,
             status: "pending",
             timer,
+      assignedTo: null,
 
             LivingRoom: [],
             Bedroom: [],
@@ -254,11 +255,6 @@ const installationCompletionStatus = async (req: Request, res: Response): Promis
         form.isEditable = false
         timerFunctionlity(form, "completedAt")
         await form.save();
-
-        // if (form.status === "completed") {
-        //   await autoCreateCostEstimationRooms(req, res, projectId)
-        // }
-
 
         return res.status(200).json({ ok: true, message: "installation check stage marked as completed", data: form });
     } catch (err) {

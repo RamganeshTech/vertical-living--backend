@@ -18,7 +18,7 @@ installationRoutes.get("/:projectId/getalldetail",multiRoleAuthMiddleware("CTO",
 installationRoutes.get("/:projectId/getroomdetail/:roomName", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"),getInstallationRoomDetails);
 
 
-installationRoutes.put('/deadline/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setInstallationStageDeadline)
+installationRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setInstallationStageDeadline)
 installationRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), installationCompletionStatus)
 
 export default installationRoutes;

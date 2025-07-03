@@ -28,6 +28,8 @@ export interface IWorkMainStageSchedule {
     timer: IWorkScheduleTimer;
     status: "pending" | "completed";
     isEditable: boolean;
+      assignedTo: Types.ObjectId;
+
 }
 
 // interfaces/DailySchedule.ts
@@ -101,6 +103,11 @@ const WorkMainStageScheduleSchema = new Schema<WorkMainStageScheduleDocument>({
         type: String,
         enum: ["pending", "completed"],
         default: "pending"
+    },
+      assignedTo:{
+      type: Schema.Types.ObjectId,
+      default: null,
+      ref:"StaffModel"
     },
     isEditable: { type: Boolean, default: true }
 }, { timestamps: true });

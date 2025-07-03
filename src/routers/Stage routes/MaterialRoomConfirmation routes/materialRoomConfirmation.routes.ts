@@ -31,7 +31,7 @@ materialConfirmationRoutes.delete("/:projectId/customroom/:roomId/field/:fieldKe
 materialConfirmationRoutes.post("/:projectId/uploads/:roomId", imageUploadToS3.array("files"), multiRoleAuthMiddleware("owner", "staff", "CTO",) , uploadMaterialRoomFiles);
 materialConfirmationRoutes.patch("/:projectId/deleteuploadedfile/:roomId/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",) , deleteMaterialRoomFile);
 
-materialConfirmationRoutes.put('/deadline/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setMaterialConfirmationStageDeadline)
+materialConfirmationRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setMaterialConfirmationStageDeadline)
 materialConfirmationRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), materialSelectionCompletionStatus)
 
 

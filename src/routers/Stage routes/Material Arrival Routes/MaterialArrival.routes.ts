@@ -16,7 +16,7 @@ materialArrivalRoutes.post("/:projectId/generate-link", multiRoleAuthMiddleware(
 materialArrivalRoutes.get("/public/:projectId/:token", getMaterialArrivalPublicDetails);
 
 
-materialArrivalRoutes.put('/deadline/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setMaterialArrivalStageDeadline)
+materialArrivalRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setMaterialArrivalStageDeadline)
 materialArrivalRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), materialArrivalCompletionStatus)
 
 export default materialArrivalRoutes;

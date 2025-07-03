@@ -10,11 +10,13 @@ import OrderingMaterialModel from "../../models/Stage Models/Ordering Material M
 import MaterialArrivalModel from "../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheck.model";
 import WorkMainStageScheduleModel from "../../models/Stage Models/WorkTask Model/WorkTask.model";
 import InstallationModel from "../../models/Stage Models/installation model/Installation.model";
+import { QualityCheckupModel } from "../../models/Stage Models/QualityCheck Model/QualityCheck.model";
+import { CleaningAndSanitationModel } from "../../models/Stage Models/Cleaning Model/cleaning.model";
+import { ProjectDeliveryModel } from "../../models/Stage Models/ProjectDelivery Model/ProjectDelivery.model";
 
-export const resetStages = async (projectId: string, upToStageNumber: number) => {
-    // const now = new Date();
 
-    const stageModels: Model<any>[] = [
+
+ export const stageModels: Model<any>[] = [
         RequirementFormModel,               // Stage 1
         SiteMeasurementModel,   // Stage 2
         SampleDesignModel, // Stage 3
@@ -26,12 +28,16 @@ export const resetStages = async (projectId: string, upToStageNumber: number) =>
         MaterialArrivalModel, // //Stage 9
         WorkMainStageScheduleModel,  //Stage 10
         InstallationModel , //Stage 11
-        // QualityCheck,
-        // CleaningSanitizing,
-        // ProjectDelivery,
-        // ...up to Stage 14
+        QualityCheckupModel, //Stage 12
+        CleaningAndSanitationModel, //Stage 13
+        ProjectDeliveryModel,//Stage 14
     ];
 
+
+export const resetStages = async (projectId: string, upToStageNumber: number) => {
+    // const now = new Date();
+
+   
     // Reset only up to the requested stage
     for (let i = 0; i < upToStageNumber; i++) {
         const model = stageModels[i];

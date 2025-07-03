@@ -18,14 +18,14 @@ siteMeasurementRoutes.get('/getmeasurement/:projectId', multiRoleAuthMiddleware(
 
 siteMeasurementRoutes.put('/updatecommonmeasurement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), checkPreviousStageCompleted(RequirementFormModel), updateCommonSiteMeasurements)
 siteMeasurementRoutes.put('/updateroommeasurement/:projectId/:roomId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), checkPreviousStageCompleted(RequirementFormModel), updateRoomSiteMeasurements)
-siteMeasurementRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"),checkPreviousStageCompleted(RequirementFormModel), siteMeasurementCompletionStatus)
 siteMeasurementRoutes.patch('/deleteroom/:projectId/:roomId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), checkPreviousStageCompleted(RequirementFormModel),DeleteRooms)
 siteMeasurementRoutes.put('/deletesitemeasurement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"),checkPreviousStageCompleted(RequirementFormModel), deleteSiteMeasurement)
 
 siteMeasurementRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), checkPreviousStageCompleted(RequirementFormModel),setSiteMeasurementStageDeadline)
+siteMeasurementRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"),checkPreviousStageCompleted(RequirementFormModel), siteMeasurementCompletionStatus)
 
 
-siteMeasurementRoutes.post( "/upload/multiple/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(RequirementFormModel), imageUploadToS3.array("file"), uploadGenericController(SiteMeasurementModel))
+siteMeasurementRoutes.post( "/upload/multiple/:projectId/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(RequirementFormModel), imageUploadToS3.array("file"), uploadGenericController(SiteMeasurementModel))
 
 export default siteMeasurementRoutes
 

@@ -20,7 +20,7 @@ costEstimationRoutes.delete("/:projectId/labour/:labourId", multiRoleAuthMiddlew
 costEstimationRoutes.post("/:projectId/uploads/:roomId", imageUploadToS3.array("files"), multiRoleAuthMiddleware("owner", "staff", "CTO",) , uploadCostEstimationFiles);
 costEstimationRoutes.patch("/:projectId/deleteuploadedfile/:roomId/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",) , deleteCostEstimationFile);
 
-costEstimationRoutes.put('/deadline/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setCostEstimationStageDeadline)
+costEstimationRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setCostEstimationStageDeadline)
 costEstimationRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), costEstimationCompletionStatus)
 
 

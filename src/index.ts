@@ -34,6 +34,9 @@ import workTaskRoutes from './routers/Stage routes/workTask routes/workmaintasks
 import installationRoutes from './routers/Stage routes/installation routes/installation.routes';
 import qualityCheckRoutes from './routers/Stage routes/QualityCheck routes/QualityCheck.routes';
 import cleaningRoutes from './routers/Stage routes/Cleaning Routes/cleaning.routes';
+import getUsersRoutes from './routers/Stage routes/Get Users Routes/getUsers.routes';
+import assignRoutes from './routers/Stage routes/Assign routes/assignStaffs.routes';
+import projectDeliveryRoutes from './routers/Stage routes/ProjectDelivery Routes/ProjectDelivery.routes';
 // import checkRedisConnection from './config/redisClient';
 
 
@@ -71,6 +74,8 @@ app.use('/api/staff', staffRoutes)
 app.use('/api/worker', workerRoutes)
 app.use('/api/CTO', CTORoutes)
 
+app.use('/api/getusers', getUsersRoutes)
+
 // STAGE APIS
 app.use('/api/requirementform', requirementRoutes)
 app.use('/api/sitemeasurement', siteMeasurementRoutes)
@@ -84,10 +89,15 @@ app.use('/api/worktasks', workTaskRoutes)
 app.use('/api/installation', installationRoutes)
 app.use('/api/qualitycheck', qualityCheckRoutes)
 app.use('/api/cleaning', cleaningRoutes)
+app.use('/api/projectdelivery', projectDeliveryRoutes)
 
 
 // RESET STAGE
 app.use('/api', resetRouter)
+
+
+// ASSIGN STAFF 
+app.use('/api/assignstafftostage', assignRoutes)
 
 
 const PORT = process.env.PORT

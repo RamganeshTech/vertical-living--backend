@@ -25,6 +25,7 @@ export const syncQualityCheck = async (projectId: string) => {
             isEditable: true,
             status: "pending",
             timer,
+            assignedTo: null,
 
             LivingRoom: [],
             Bedroom: [],
@@ -44,6 +45,7 @@ export const syncQualityCheck = async (projectId: string) => {
     else {
         existing.timer.startedAt = new Date()
         existing.timer.deadLine = null,
+        existing.timer.completedAt = null,
             existing.timer.reminderSent = false,
 
             await existing.save()
@@ -298,7 +300,7 @@ const qualityCheckCompletionStatus = async (req: Request, res: Response): Promis
         await form.save();
 
         if (form.status === "completed") {
-          await syncCleaningSanitaionStage(projectId)
+            await syncCleaningSanitaionStage(projectId)
         }
 
         return res.status(200).json({ ok: true, message: "Quality Checkup stage marked as completed", data: form });

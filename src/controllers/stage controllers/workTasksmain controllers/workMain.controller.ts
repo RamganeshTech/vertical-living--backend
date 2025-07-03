@@ -19,6 +19,7 @@ export const syncWorkSchedule = async (projectId: string) => {
       status: "pending",
       dailyScheduleId: null,
       workScheduleId: null,
+      assignedTo:null,
       mdApproval: {
         status: "pending",
         remarks: ""
@@ -236,11 +237,6 @@ const workScheduleCompletionStatus = async (req: Request, res: Response): Promis
         form.isEditable = false
         timerFunctionlity(form, "completedAt")
         await form.save();
-
-        // if (form.status === "completed") {
-        //   await autoCreateCostEstimationRooms(req, res, projectId)
-        // }
-
 
         return res.status(200).json({ ok: true, message: "cost estimation stage marked as completed", data: form });
     } catch (err) {

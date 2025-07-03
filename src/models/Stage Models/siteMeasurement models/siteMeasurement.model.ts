@@ -11,6 +11,7 @@ export interface ISiteMeasurement extends Document {
       reminderSent: boolean
 
     };
+  assignedTo: Types.ObjectId;
 
     uploads: {
         type: "image" | "pdf";
@@ -69,6 +70,11 @@ const SiteMeasurementSchema = new Schema<ISiteMeasurement>({
         hasSlope: { type: Boolean, default: null },
         boundaryWallExists: { type: Boolean, default: null },
         additionalNotes: { type: String, default: null }
+    },
+     assignedTo:{
+      type: Schema.Types.ObjectId,
+      default: null,
+      ref:"StaffModel"
     },
 
     rooms: [

@@ -58,7 +58,7 @@ qualityCheckRoutes.get(
 
 
 
-qualityCheckRoutes.put('/deadline/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setQualityCheckStageDeadline)
+qualityCheckRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), setQualityCheckStageDeadline)
 qualityCheckRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), qualityCheckCompletionStatus)
 
 export default qualityCheckRoutes;

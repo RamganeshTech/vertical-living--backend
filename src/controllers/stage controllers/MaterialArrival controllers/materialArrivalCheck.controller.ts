@@ -28,6 +28,7 @@ export const syncMaterialArrival = async (projectId: string) => {
             status: "pending",
             isEditable: true,
             generatedLink: null,
+      assignedTo: null,
             shopDetails: {
                 shopName: null,
                 address: null,
@@ -306,7 +307,7 @@ const materialArrivalCompletionStatus = async (req: Request, res: Response): Pro
         // if (form.status === "completed") {
         // }
 
-        // await syncMaterialArrival(projectId)
+        await syncMaterialArrival(projectId)
 
         return res.status(200).json({ ok: true, message: "cost estimation stage marked as completed", data: form });
     } catch (err) {

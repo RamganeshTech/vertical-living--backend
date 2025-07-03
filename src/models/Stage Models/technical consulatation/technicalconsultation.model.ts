@@ -34,6 +34,7 @@ export interface ITechnicalConsultation {
     timer: IConsultationTimer;
     status: "pending" | "completed";
     isEditable: boolean;
+      assignedTo: Types.ObjectId;
 }
 
 
@@ -72,6 +73,11 @@ const technicalConsultationSchema = new Schema<ITechnicalConsultation>({
         enum: ["pending", "completed"],
         default: "pending"
     },
+      assignedTo:{
+          type: Schema.Types.ObjectId,
+          default: null,
+          ref:"StaffModel"
+        },
     isEditable: { type: Boolean, default: true }
 }, { timestamps: true });
 
