@@ -92,4 +92,7 @@ const QualityCheckupSchema = new Schema<IQualityCheckup>({
   timestamps: true,
 });
 
+QualityCheckupSchema.index({projectId:1})
+
+
 export const QualityCheckupModel = model("QualityCheckupModel", QualityCheckupSchema);

@@ -52,7 +52,7 @@ export interface IMaterialOrdering {
     upholsteryCurtains: IUpholsteryCurtainItem[];
     falseCeilingMaterials: IFalseCeilingItem[];
   };
-            assignedTo: Types.ObjectId;
+  assignedTo: Types.ObjectId;
 
   timer: IMaterialOrderingTimer;
   generatedLink: string | null;
@@ -99,7 +99,7 @@ const OrderingMaterialSchema = new Schema<IMaterialOrdering>({
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: "ProjectModel", required: true, unique: true },
   status: { type: String, enum: ["pending", "completed"], default: "pending" },
   isEditable: { type: Boolean, default: true },
-uploads: [UploadSchema],
+  uploads: [UploadSchema],
 
   shopDetails: ShopDetailsSchema,
   deliveryLocationDetails: DeliveryLocationDetailsSchema,
@@ -116,14 +116,16 @@ uploads: [UploadSchema],
     upholsteryCurtains: [UpholsteryCurtainOrderMaterialSchema],
     falseCeilingMaterials: [FalseCeilingOrderMaterialSchema],
   },
-    assignedTo:{
-      type: Schema.Types.ObjectId,
-      default: null,
-      ref:"StaffModel"
-    },
+  assignedTo: {
+    type: Schema.Types.ObjectId,
+    default: null,
+    ref: "StaffModel"
+  },
   timer: { type: TimerSchema, required: true },
   generatedLink: { type: String, default: null },
 }, { timestamps: true });
+
+OrderingMaterialSchema.index({projectId:1})
 
 
 const OrderingMaterialModel = model("OrderingMaterialModel", OrderingMaterialSchema)

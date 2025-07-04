@@ -80,16 +80,21 @@ export const syncRequirmentForm = async (projectId: Types.ObjectId) => {
       uploads: [],
     });
   }
-  else {
-    form.timer.startedAt = new Date()
-    form.timer.completedAt = null
-    form.timer.deadLine = null
-    form.timer.reminderSent = false
-    await form.save()
-  }
+  // else {
+  //   form.timer.startedAt = new Date()
+  //   form.timer.completedAt = null
+  //   form.timer.deadLine = null
+  //   form.timer.reminderSent = false
+  //   await form.save()
+  // }
 
 }
 
+
+
+
+
+// SUBMIT REQUIREMENT PUBLIC FORM FOR ONLY CLIENT 
 const submitRequirementForm = async (req: Request, res: Response,): Promise<void> => {
   try {
     const { projectId } = req.params
@@ -103,7 +108,7 @@ const submitRequirementForm = async (req: Request, res: Response,): Promise<void
     }
 
     // Validate required client info
-    if (!clientData.clientName || !clientData.email || !clientData.whatsapp) {
+    if (!clientData?.clientName || !clientData?.email || !clientData?.whatsapp) {
       res.status(400).json({
         success: false,
         message: "Missing required client information.",
@@ -127,10 +132,6 @@ const submitRequirementForm = async (req: Request, res: Response,): Promise<void
     //   res.status(400).json({ message: "This form has already been submitted by another client.", ok: false });
     //   return
     // }
-
-
-
-
 
     let executeValidationForKitchen = isObjectHasValue(kitchen)
     let executeValidationForBedroom = isObjectHasValue(bedroom)
@@ -187,7 +188,7 @@ const submitRequirementForm = async (req: Request, res: Response,): Promise<void
 
     await form.save();
 
-    const redisKeyMain = `stage:requirementModel:${projectId}`
+    const redisKeyMain = `stage:RequirementFormModel:${projectId}`
     await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
     res.status(201).json({ ok: true, message: "Requirement form submitted successfully.", data: form, });
@@ -214,7 +215,7 @@ const delteRequirementForm = async (req: Request, res: Response,): Promise<void>
       return;
     }
 
-    await redisClient.del(`stage:requirementModel:${projectId}`)
+    await redisClient.del(`stage:RequirementFormModel:${projectId}`)
 
     res.status(200).json({ ok: true, message: "Requirement form deleted successfully.", data: form });
   } catch (error: any) {
@@ -234,12 +235,12 @@ const getFormFilledDetails = async (req: Request, res: Response,): Promise<any> 
     }
 
     
-    const redisKeyMain = `stage:requirementModel:${projectId}`
-    // await redisClient.del(redisKeyMain)
+    const redisKeyMain = `stage:RequirementFormModel:${projectId}`
+    await redisClient.del(redisKeyMain)
     const redisCache = await redisClient.get(redisKeyMain)
 
     if (redisCache) {
-      return res.json({ ok: true, message: "form fetchd form cache", data: redisCache })
+      return res.json({ ok: true, message: "form fetchd form cache", data: JSON.parse(redisCache) })
     }
 
     const form = await RequirementFormModel.findOne({ projectId }).populate("assignedTo", "_id staffName email");
@@ -335,7 +336,7 @@ const generateShareableFormLink = async (req: Request, res: Response): Promise<a
     }
 
     await form.save();
-    const redisKeyMain = `stage:requirementModel:${projectId}`
+    const redisKeyMain = `stage:RequirementFormModel:${projectId}`
     await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
 
@@ -359,7 +360,7 @@ const lockRequirementForm = async (req: Request, res: Response): Promise<any> =>
     form.status = "locked";
     await form.save();
 
-    const redisKeyMain = `stage:requirementModel:${projectId}`
+    const redisKeyMain = `stage:RequirementFormModel:${projectId}`
     await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
     return res.status(200).json({ ok: true, message: "Form has been locked", data: form });
@@ -421,7 +422,7 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
       await siteMeasurement.save()
     }
 
-    const redisKeyMain = `stage:requirementModel:${projectId}`
+    const redisKeyMain = `stage:RequirementFormModel:${projectId}`
     await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
     return res.status(200).json({ ok: true, message: "Requirement stage marked as completed", data: form });

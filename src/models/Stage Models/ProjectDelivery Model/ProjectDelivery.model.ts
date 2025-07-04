@@ -97,6 +97,9 @@ const ProjectDeleiverySchema = new Schema<IProjectDelivery>(
 
 )
 
+ProjectDeleiverySchema.index({projectId:1})
+
+
 export const ProjectDeliveryModel = mongoose.model(
     "ProjectDeliveryModel",
     ProjectDeleiverySchema

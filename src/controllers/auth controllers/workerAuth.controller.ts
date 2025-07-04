@@ -37,7 +37,7 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
     }
 
     const decoded = JSON.parse(Buffer.from(invite, "base64").toString("utf-8"));
-    const { projectId, role, specificRole, expiresAt, invitedBy, invitedByModel } = decoded;
+    const { projectId, role, specificRole, expiresAt, invitedBy, invitedByModel, organizationId } = decoded;
 
     if (!projectId || !role || !specificRole || !expiresAt) {
       res.status(400).json({ message: "Invite token is missing required fields." });
@@ -49,7 +49,13 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const exists = await WorkerModel.findOne({ email, projectId });
+    const exists = await WorkerModel.findOne({
+      projectId,
+      $or: [
+        { email },
+        { phoneNo },
+      ]
+    });
     if (exists) {
       res.status(409).json({ message: "Worker already registered for this project." });
       return;
@@ -63,6 +69,7 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
       role,
       specificRole,
       projectId: [projectId],
+      organizationId: [organizationId],
       invitedBy,
       invitedByModel,
       isRegistered: true,
@@ -252,15 +259,16 @@ const workerIsAuthenticated = async (req: AuthenticatedWorkerRequest, res: Respo
     }
 
     res.status(200).json({
-        data: {
-                workerId: isExist._id,
-                role: isExist.role,
-                email: isExist.email,
-                phoneNo: isExist.phoneNo,
-                workerName: isExist.workerName,
-                isauthenticated: true,
-            },
-     message: "worker is authenticated", ok: true })
+      data: {
+        workerId: isExist._id,
+        role: isExist.role,
+        email: isExist.email,
+        phoneNo: isExist.phoneNo,
+        workerName: isExist.workerName,
+        isauthenticated: true,
+      },
+      message: "worker is authenticated", ok: true
+    })
   }
   catch (error) {
     if (error instanceof Error) {

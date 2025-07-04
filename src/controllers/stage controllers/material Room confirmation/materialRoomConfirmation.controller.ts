@@ -7,6 +7,8 @@ import { predefinedRooms } from "../../../utils/Stage Utils/initalizeMaterialSel
 import { generateCostEstimationFromMaterialSelection } from "../cost estimation controllers/costEstimation.controller";
 import { syncOrderingMaterials } from "../ordering material controller/orderingMaterial.controller";
 import { syncWorkSchedule } from "../workTasksmain controllers/workMain.controller";
+import redisClient from "../../../config/redisClient";
+import { json } from "stream/consumers";
 
 
 export const initializeMaterialSelection = async (req: Request, res: Response): Promise<any> => {
@@ -63,12 +65,24 @@ export const initializeMaterialSelection = async (req: Request, res: Response): 
 const getMaterialRoomConfirmationByProject = async (req: Request, res: Response): Promise<any> => {
   try {
     const { projectId } = req.params;
+    const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+
+    //  await redisClient.del(redisMainKey)
+    const redisCachedData = await redisClient.get(redisMainKey)
+
+
+    if (redisCachedData) {
+      return res.json({ message: "data fetched from the cache", data: JSON.parse(redisCachedData), ok: true })
+    }
+
 
     const data = await MaterialRoomConfirmationModel.findOne({ projectId });
 
     if (!data) {
       return res.status(404).json({ ok: false, message: "Material Room Confirmation not found." });
     }
+
+    await redisClient.set(redisMainKey, JSON.stringify(data.toObject()), { EX: 60 * 10 })
 
     return res.status(200).json({ message: "fetched all matieral confirmations successfully", ok: true, data });
   } catch (error) {
@@ -85,6 +99,15 @@ const getSinglePredefinedRoom = async (req: Request, res: Response): Promise<any
       return res.status(400).json({ ok: false, message: "Invalid room ID." });
     }
 
+
+    const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
+
+    const redisCachedData = await redisClient.get(redisRoomKey)
+
+    if (redisCachedData) {
+      return res.json({ message: "data fetched from the cache", data: JSON.parse(redisCachedData), ok: true })
+    }
+
     const data = await MaterialRoomConfirmationModel.findOne({ projectId });
 
     if (!data) {
@@ -93,7 +116,9 @@ const getSinglePredefinedRoom = async (req: Request, res: Response): Promise<any
 
     // Check in predefined rooms
     const predefinedRoom = data.rooms.find(r => (r as any)._id?.toString() === roomId);
+
     if (predefinedRoom) {
+      await redisClient.set(redisRoomKey, JSON.stringify(predefinedRoom), { EX: 60 * 10 })
       return res.status(200).json({
         ok: true,
         message: "fetched room",
@@ -103,7 +128,10 @@ const getSinglePredefinedRoom = async (req: Request, res: Response): Promise<any
 
     // Check in custom rooms
     const customRoom = data.customRooms.find(r => (r as any)._id?.toString() === roomId);
+
+
     if (customRoom) {
+      await redisClient.set(redisRoomKey, JSON.stringify(customRoom), { EX: 60 * 10 })
       return res.status(200).json({
         ok: true,
         message: "fetched room",
@@ -135,6 +163,8 @@ const updatePredefinedRoomField = async (req: Request, res: Response): Promise<a
       return res.status(404).json({ ok: false, message: "Material selection not found." });
     }
 
+    let updatedRoom = null;
+
     // 1. Check Predefined Rooms
     const predefinedRoom = doc.rooms.find((r: any) => r._id?.toString() === roomId);
     if (predefinedRoom) {
@@ -143,7 +173,7 @@ const updatePredefinedRoomField = async (req: Request, res: Response): Promise<a
         return res.status(404).json({ ok: false, message: `Field '${fieldKey}' not found in predefined room.` });
       }
 
-      console.log("quantity", field.quantity)
+      // console.log("quantity", field.quantity)
       field.quantity = quantity ?? field.quantity;
       field.unit = unit ?? field.unit;
       field.remarks = remarks ?? field.remarks;
@@ -153,6 +183,13 @@ const updatePredefinedRoomField = async (req: Request, res: Response): Promise<a
       doc.markModified("rooms");
 
       await doc.save();
+
+
+      const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
+      const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+      updatedRoom = predefinedRoom;
+      await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+      await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
 
       return res.status(200).json({
         ok: true,
@@ -177,6 +214,12 @@ const updatePredefinedRoomField = async (req: Request, res: Response): Promise<a
 
 
       await doc.save();
+
+      const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
+      const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+      updatedRoom = predefinedRoom;
+      await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+      await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
 
       return res.status(200).json({
         ok: true,
@@ -232,6 +275,9 @@ const createCustomRoom = async (req: Request, res: Response): Promise<any> => {
     materialSelection.customRooms.push(newRoom);
     await materialSelection.save();
 
+    const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+    await redisClient.set(redisMainKey, JSON.stringify(materialSelection.toObject()), { EX: 60 * 10 })
+
     return res.status(201).json({
       ok: true,
       message: "Custom room created successfully.",
@@ -258,6 +304,8 @@ const addItemToCustomRoom = async (req: Request, res: Response): Promise<any> =>
     if (!mongoose.Types.ObjectId.isValid(projectId) || !mongoose.Types.ObjectId.isValid(roomId)) {
       return res.status(400).json({ ok: false, message: "Invalid projectId or roomId." });
     }
+
+
 
     const doc = await MaterialRoomConfirmationModel.findOne({ projectId });
 
@@ -286,6 +334,14 @@ const addItemToCustomRoom = async (req: Request, res: Response): Promise<any> =>
 
     await doc.save();
 
+    const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
+    const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+
+    // ✅ Correct: updatedRoom is the room you just updated
+    const updatedRoom = room;
+    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
+
     return res.status(201).json({
       ok: true,
       message: "Item added to custom room successfully.",
@@ -308,6 +364,8 @@ const deleteCustomRoomField = async (req: Request, res: Response): Promise<any> 
       return res.status(400).json({ ok: false, message: "Invalid room ID." });
     }
 
+
+
     const doc = await MaterialRoomConfirmationModel.findOne({ projectId });
 
     if (!doc) {
@@ -329,6 +387,15 @@ const deleteCustomRoomField = async (req: Request, res: Response): Promise<any> 
 
     await doc.save();
 
+    const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
+    const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+
+    // ✅ Correct: updatedRoom is the room you just updated
+    const updatedRoom = customRoom;
+    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
+
+
     return res.status(200).json({
       ok: true,
       message: `Field '${fieldKey}' deleted successfully from custom room.`,
@@ -345,7 +412,7 @@ const deleteCustomRoomField = async (req: Request, res: Response): Promise<any> 
 const materialSelectionCompletionStatus = async (req: Request, res: Response): Promise<any> => {
   try {
     const { projectId } = req.params;
-    const form = await MaterialRoomConfirmationModel.findOne({projectId});
+    const form = await MaterialRoomConfirmationModel.findOne({ projectId });
 
     if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
@@ -355,10 +422,12 @@ const materialSelectionCompletionStatus = async (req: Request, res: Response): P
     await form.save();
 
     // if (form.status === "completed") {
-      await generateCostEstimationFromMaterialSelection(form, projectId )
-      await syncOrderingMaterials(projectId)
-      await syncWorkSchedule(projectId)
+    await generateCostEstimationFromMaterialSelection(form, projectId)
+    await syncOrderingMaterials(projectId)
     // }
+
+    const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+    await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
 
     return res.status(200).json({ ok: true, message: "Material Selection stage marked as completed", data: form });
@@ -416,6 +485,16 @@ const uploadMaterialRoomFiles = async (req: Request, res: Response): Promise<any
 
     await materialDoc.save();
 
+
+    const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
+    const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+
+    // ✅ Correct: updatedRoom is the room you just updated
+    const updatedRoom = room;
+    await redisClient.set(redisMainKey, JSON.stringify(materialDoc.toObject()), { EX: 60 * 10 })
+    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
+
+
     return res.status(200).json({
       ok: true,
       message: "Files uploaded successfully",
@@ -459,6 +538,15 @@ const deleteMaterialRoomFile = async (req: Request, res: Response): Promise<any>
 
     await materialDoc.save();
 
+
+    const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
+    const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+
+    // ✅ Correct: updatedRoom is the room you just updated
+    const updatedRoom = room;
+    await redisClient.set(redisMainKey, JSON.stringify(materialDoc.toObject()), { EX: 60 * 10 })
+    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
+
     return res.status(200).json({
       ok: true,
       message: "File deleted successfully.",
@@ -472,8 +560,6 @@ const deleteMaterialRoomFile = async (req: Request, res: Response): Promise<any>
 
 
 export {
-  
-
   getMaterialRoomConfirmationByProject,
   getSinglePredefinedRoom,
   updatePredefinedRoomField,

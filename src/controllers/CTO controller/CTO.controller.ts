@@ -19,6 +19,7 @@ const inviteWorkerByCTO = async (req: AuthenticatedCTORequest, res: Response) =>
             organizationId,
             role,
             specificRole,
+            expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
             invitedBy: CTO._id,
             invitedByModel: "CTOModel"
         });

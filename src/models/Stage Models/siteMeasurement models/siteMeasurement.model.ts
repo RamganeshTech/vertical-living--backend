@@ -92,5 +92,9 @@ const SiteMeasurementSchema = new Schema<ISiteMeasurement>({
     timestamps: true
 });
 
+
+SiteMeasurementSchema.index({projectId:1})
+
+
 export const SiteMeasurementModel = model<ISiteMeasurement>("SiteMeasurementModel", SiteMeasurementSchema)
 

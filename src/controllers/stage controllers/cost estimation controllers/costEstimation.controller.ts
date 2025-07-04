@@ -7,6 +7,7 @@ import { PREDEFINED_ROOMS } from '../../../constants/phaseConstants';
 import { handleSetStageDeadline, timerFunctionlity } from '../../../utils/common features/timerFuncitonality';
 import { syncInstallationWork } from '../installation controllers/installation.controller';
 import { syncQualityCheck } from '../QualityCheck controllers/QualityCheck.controller';
+import { syncPaymentConfirationModel } from '../PaymentConfirmation controllers/PaymentConsent contrlollers/paymentConsent.controller';
 
 
 const generateCostEstimationFromMaterialSelection = async (
@@ -446,11 +447,12 @@ const costEstimationCompletionStatus = async (req: Request, res: Response): Prom
         await form.save();
 
         if (form.status === "completed") {
+            await syncPaymentConfirationModel(projectId, form.totalEstimation)
             await syncInstallationWork(projectId)
             await syncQualityCheck(projectId)
         }
 
-        return res.status(200).json({ ok: true, message: "cost estimation stage markjjjjjjjjjjed as completed", data: form });
+        return res.status(200).json({ ok: true, message: "cost estimation stage marked as completed", data: form });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

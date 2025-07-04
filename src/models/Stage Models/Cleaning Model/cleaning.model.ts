@@ -79,6 +79,10 @@ const CleaningAndSanitationSchema = new Schema<ICleaningAndSanitation>(
     { timestamps: true }
 );
 
+
+CleaningAndSanitationSchema.index({projectId:1})
+
+
 export const CleaningAndSanitationModel = mongoose.model<ICleaningAndSanitation>(
     "CleaningAndSanitationModel",
     CleaningAndSanitationSchema

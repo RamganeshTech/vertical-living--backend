@@ -84,7 +84,6 @@ const roomSchema = new Schema({
 }, { _id: true });
 
 
-
 const labourEstimationSchema = new Schema({
     workType: { type: String, required: true }, //carpentror
     // workerId: { type: mongoose.Schema.Types.ObjectId, ref: "WorkerModel", default: null },
@@ -101,7 +100,6 @@ const costEstimationSchema = new Schema<ICostEstimation>({
         type: mongoose.Schema.Types.ObjectId,
         ref: "ProjectModel",
         required: true,
-        index: true,
     },
 
     materialEstimation: [roomSchema],
@@ -133,5 +131,8 @@ const costEstimationSchema = new Schema<ICostEstimation>({
         default: "pending",
     },
 }, { timestamps: true });
+
+costEstimationSchema.index({projectId:1})
+
 
 export const CostEstimationModel = model<ICostEstimation>("CostEstimation", costEstimationSchema);

@@ -1,13 +1,13 @@
 import { Response } from "express";
-import { AuthenticatedStaffRequest } from './../../types/types';
+import { AuthenticatedStaffRequest, RoleBasedRequest } from './../../types/types';
 import { generateWorkerInviteLink } from "../../utils/generateInvitationworker";
 import { getWorkerUtils, removeWorkerUtils } from "../../utils/workerUtils";
 
-const inviteWorkerByStaff = async (req: AuthenticatedStaffRequest, res: Response): Promise<void> => {
+const inviteWorkerByStaff = async (req: RoleBasedRequest, res: Response): Promise<void> => {
 
     try {
         const { projectId, specificRole, role, organizationId } = req.body;
-        const staff = req.staff
+        const staff: any = req.user
 
         if (!projectId || !specificRole) {
             res.status(400).json({
@@ -20,11 +20,12 @@ const inviteWorkerByStaff = async (req: AuthenticatedStaffRequest, res: Response
 
         const inviteLink = generateWorkerInviteLink({
             projectId,
-            organizationId: "",
+            organizationId: organizationId,
             role,
             specificRole,
-            invitedBy: staff._id,
-            invitedByModel: "StaffModel"
+            expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
+            invitedBy: staff?._id as string,
+            invitedByModel: staff.role === "staff" ? "StaffModel" : (staff.role === "CTO" ? "CTOModel" : "UserModel")
         });
 
         res.status(200).json({
@@ -45,16 +46,16 @@ const inviteWorkerByStaff = async (req: AuthenticatedStaffRequest, res: Response
 
 
 // PUT /api/worker/remove/:workerId/:projectId
-const removeWorkerFromProject = async (req: AuthenticatedStaffRequest, res: Response): Promise<void> => {
+const removeWorkerFromProject = async (req: RoleBasedRequest, res: Response): Promise<void> => {
     try {
-        const { workerId, projectId  } = req.params;
+        const { workerId, projectId } = req.params;
 
         if (!workerId) {
             res.status(400).json({ message: "workerId is required", ok: false });
             return;
         }
 
-        const deletedWorker = await removeWorkerUtils({workerId, projectId})
+        const deletedWorker = await removeWorkerUtils({ workerId, projectId })
 
         if (!deletedWorker) {
             res.status(404).json({ message: "Worker not found", ok: false });
@@ -63,7 +64,7 @@ const removeWorkerFromProject = async (req: AuthenticatedStaffRequest, res: Resp
 
         res.status(200).json({
             message: "Worker removed from the project successfully",
-            data:deletedWorker,
+            data: deletedWorker,
             ok: true,
         });
     } catch (error) {
@@ -77,7 +78,7 @@ const removeWorkerFromProject = async (req: AuthenticatedStaffRequest, res: Resp
 };
 
 
-const getWorkersByProject = async (req: AuthenticatedStaffRequest, res: Response): Promise<void> => {
+const getWorkersByProject = async (req: RoleBasedRequest, res: Response): Promise<void> => {
     try {
         const { projectId } = req.params;
 
@@ -86,8 +87,9 @@ const getWorkersByProject = async (req: AuthenticatedStaffRequest, res: Response
             return;
         }
 
-        const workers = await getWorkerUtils({projectId})
+        const workers = await getWorkerUtils({ projectId })
 
+        console.log("workers", workers)
         res.status(200).json({
             message: "Workers fetched successfully",
             data: workers,

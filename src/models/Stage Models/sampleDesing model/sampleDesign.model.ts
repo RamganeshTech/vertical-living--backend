@@ -135,4 +135,8 @@ const sampleDesignSchema = new Schema<ISampleDesign>({
   isEditable: { type: Boolean, default: true }
 }, { timestamps: true });
 
+
+sampleDesignSchema.index({projectId:1})
+
+
 export const SampleDesignModel = mongoose.model("SampleDesignModel", sampleDesignSchema);

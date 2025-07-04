@@ -12,6 +12,7 @@ import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common
 import { generateOrderingToken } from "../../../utils/generateToken";
 import { s3 } from "../../../config/awssdk";
 import { syncMaterialArrival } from "../MaterialArrival controllers/materialArrivalCheck.controller";
+import redisClient from "../../../config/redisClient";
 
 export const syncOrderingMaterials = async (projectId: string) => {
 
@@ -64,9 +65,20 @@ const getAllOrderingMaterialDetails = async (req: Request, res: Response): Promi
   try {
     const { projectId } = req.params;
 
+    const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
+
+    const cachedData = await redisClient.get(redisMainKey)
+
+    if (cachedData) {
+      return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+    }
+
+
     const doc = await OrderingMaterialModel.findOne({ projectId });
 
     if (!doc) return res.status(404).json({ ok: false, message: "Data not found" });
+
+    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
 
     return res.status(200).json({ ok: true, data: doc });
   } catch (err: any) {
@@ -78,14 +90,25 @@ const getRoomDetailsOrderMaterials = async (req: Request, res: Response): Promis
   try {
     const { projectId, roomKey } = req.params;
 
+    const redisRoomKey = `stage:OrderingMaterialModel:${projectId}:${roomKey}`
+
+    const cachedData = await redisClient.get(redisRoomKey)
+
+    if (cachedData) {
+      return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+    }
+
     const doc = await OrderingMaterialModel.findOne({ projectId });
 
     if (!doc) return res.status(404).json({ ok: false, message: "Data not found" });
 
     const roomData: any = (doc.materialOrderingList as any)[roomKey];
 
-    if (!roomData)
+    if (!roomData) {
       return res.status(400).json({ ok: false, message: `Room '${roomKey}' not found` });
+    }
+
+    await redisClient.set(redisRoomKey, JSON.stringify(roomData), { EX: 60 * 10 })
 
     return res.status(200).json({ ok: true, data: roomData });
   } catch (err: any) {
@@ -95,99 +118,150 @@ const getRoomDetailsOrderMaterials = async (req: Request, res: Response): Promis
 
 
 const updateShopDetails = async (req: Request, res: Response): Promise<any> => {
-  const { projectId } = req.params;
-  const { shopName, address, contactPerson, phoneNumber } = req.body;
+  try {
+    const { projectId } = req.params;
+    const { shopName, address, contactPerson, phoneNumber } = req.body;
 
-  if (!shopName || !address || !contactPerson || !phoneNumber) {
-    return res.status(400).json({ ok: false, message: "All shop details are required." });
-  }
 
-  const orderingDoc = await OrderingMaterialModel.findOneAndUpdate(
-    { projectId },
-    {
-      $set: {
-        shopDetails: { shopName, address, contactPerson, phoneNumber },
+
+    if (!shopName || !address || !contactPerson || !phoneNumber) {
+      return res.status(400).json({ ok: false, message: "All shop details are required." });
+    }
+
+    const orderingDoc = await OrderingMaterialModel.findOneAndUpdate(
+      { projectId },
+      {
+        $set: {
+          shopDetails: { shopName, address, contactPerson, phoneNumber },
+        },
       },
-    },
-    { new: true, upsert: true }
-  );
+      { new: true, upsert: true }
+    );
 
-  res.status(200).json({ ok: true, message: "Shop details updated", data: orderingDoc.shopDetails });
+    if (!orderingDoc) {
+      return res.status(400).json({ ok: false, message: "Failed to update shop details." });
+    }
+
+    const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
+    await redisClient.set(redisMainKey, JSON.stringify(orderingDoc.toObject()), { EX: 60 * 10 })
+
+
+    res.status(200).json({ ok: true, message: "Shop details updated", data: orderingDoc.shopDetails });
+  }
+  catch (error: any) {
+    console.error("Error updatinthe shop details form ordering room", error);
+    return res.status(500).json({ message: "Server error", ok: false });
+  }
 };
 
 
 
 const updateDeliveryLocationDetails = async (req: Request, res: Response): Promise<any> => {
-  const { projectId } = req.params;
-  const { siteName, address, siteSupervisor, phoneNumber } = req.body;
+  try {
+    const { projectId } = req.params;
+    const { siteName, address, siteSupervisor, phoneNumber } = req.body;
 
-  if (!siteName || !address || !siteSupervisor || !phoneNumber) {
-    return res.status(400).json({ ok: false, message: "All delivery location details are required." });
-  }
+    if (!siteName || !address || !siteSupervisor || !phoneNumber) {
+      return res.status(400).json({ ok: false, message: "All delivery location details are required." });
+    }
 
-  const orderingDoc = await OrderingMaterialModel.findOneAndUpdate(
-    { projectId },
-    {
-      $set: {
-        deliveryLocationDetails: { siteName, address, siteSupervisor, phoneNumber },
+    const orderingDoc = await OrderingMaterialModel.findOneAndUpdate(
+      { projectId },
+      {
+        $set: {
+          deliveryLocationDetails: { siteName, address, siteSupervisor, phoneNumber },
+        },
       },
-    },
-    { new: true, upsert: true }
-  );
+      { new: true, upsert: true }
+    );
 
-  res.status(200).json({ ok: true, message: "Delivery location updated", data: orderingDoc.deliveryLocationDetails });
+    if (!orderingDoc) {
+      return res.status(400).json({ ok: false, message: "Failed to update delivery details." });
+    }
+
+    const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
+    await redisClient.set(redisMainKey, JSON.stringify(orderingDoc.toObject()), { EX: 60 * 10 })
+
+    res.status(200).json({ ok: true, message: "Delivery location updated", data: orderingDoc.deliveryLocationDetails });
+  }
+  catch (error: any) {
+    console.error("Error updatinthe delivery details form ordering room", error);
+    return res.status(500).json({ message: "Server error", ok: false });
+  }
 };
 
 // PATCH /api/ordering-materials/:projectId/room/:roomKey
 const updateRoomMaterials = async (req: Request, res: Response): Promise<any> => {
-  const { projectId, roomKey } = req.params;
-  const { items } = req.body;
+  try {
+    const { projectId, roomKey } = req.params;
+    const { items } = req.body;
 
-  if (!Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ ok: false, message: "Items array is required and cannot be empty." });
-  }
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ ok: false, message: "Items array is required and cannot be empty." });
+    }
 
-  // Validate based on room type
-  const requiredFieldsByRoom = {
-    carpentry: ["material", "brandName", "specification", "quantity", "unit", "remarks"],
-    hardware: ["item", "size", "material", "brandName", "quantity", "unit", "remarks"],
-    electricalFittings: ["item", "specification", "quantity", "unit", "remarks"],
-    tiles: ["type", "brandName", "size", "quantity", "unit", "remarks"],
-    ceramicSanitaryware: ["item", "specification", "quantity", "unit", "remarks"],
-    paintsCoatings: ["type", "brandName", "color", "quantity", "unit", "remarks"],
-    lightsFixtures: ["type", "brandName", "specification", "quantity", "unit", "remarks"],
-    glassMirrors: ["type", "brandName", "size", "thickness", "quantity", "remarks"],
-    upholsteryCurtains: ["item", "fabric", "color", "quantity", "unit", "remarks"],
-    falseCeilingMaterials: ["item", "specification", "quantity", "unit", "remarks"]
-  };
+    // Validate based on room type
+    const requiredFieldsByRoom = {
+      carpentry: ["material", "brandName", "specification", "quantity", "unit", "remarks"],
+      hardware: ["item", "size", "material", "brandName", "quantity", "unit", "remarks"],
+      electricalFittings: ["item", "specification", "quantity", "unit", "remarks"],
+      tiles: ["type", "brandName", "size", "quantity", "unit", "remarks"],
+      ceramicSanitaryware: ["item", "specification", "quantity", "unit", "remarks"],
+      paintsCoatings: ["type", "brandName", "color", "quantity", "unit", "remarks"],
+      lightsFixtures: ["type", "brandName", "specification", "quantity", "unit", "remarks"],
+      glassMirrors: ["type", "brandName", "size", "thickness", "quantity", "remarks"],
+      upholsteryCurtains: ["item", "fabric", "color", "quantity", "unit", "remarks"],
+      falseCeilingMaterials: ["item", "specification", "quantity", "unit", "remarks"]
+    };
 
-  const requiredFields = requiredFieldsByRoom[roomKey as keyof typeof requiredFieldsByRoom];
-  if (!requiredFields) {
-    return res.status(400).json({ ok: false, message: `Invalid room key: ${roomKey}` });
-  }
+    const requiredFields = requiredFieldsByRoom[roomKey as keyof typeof requiredFieldsByRoom];
+    if (!requiredFields) {
+      return res.status(400).json({ ok: false, message: `Invalid room key: ${roomKey}` });
+    }
 
-  for (const [i, item] of items.entries()) {
-    for (const field of requiredFields) {
-      if (!item[field]) {
-        return res.status(400).json({
-          ok: false,
-          message: `Missing field "${field}" in item at index ${i}`,
-        });
+    for (const [i, item] of items.entries()) {
+      for (const field of requiredFields) {
+        if (!item[field]) {
+          return res.status(400).json({
+            ok: false,
+            message: `Missing field "${field}" in item at index ${i}`,
+          });
+        }
       }
     }
+
+    const orderingDoc = await OrderingMaterialModel.findOneAndUpdate(
+      { projectId },
+      {
+        $set: {
+          [`materialOrderingList.${roomKey}`]: items,
+        },
+      },
+      { new: true, upsert: true }
+    );
+
+
+    if (!orderingDoc) {
+      return res.status(400).json({ ok: false, message: "Failed to update delivery details." });
+    }
+
+
+    const updatedRoom = (orderingDoc.materialOrderingList as any)[roomKey];
+
+
+    const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
+    const redisRoomKey = `stage:OrderingMaterialModel:${projectId}:room:${roomKey}`
+    await redisClient.set(redisMainKey, JSON.stringify(orderingDoc.toObject()), { EX: 60 * 10 })
+    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+
+    res.status(200).json({ ok: true, message: `Room '${roomKey}' materials updated.`, data: (orderingDoc.materialOrderingList as any)[roomKey] });
+
+  }
+  catch (error) {
+    return res.status(500).json({ message: "Server error", ok: false });
   }
 
-  const orderingDoc = await OrderingMaterialModel.findOneAndUpdate(
-    { projectId },
-    {
-      $set: {
-        [`materialOrderingList.${roomKey}`]: items,
-      },
-    },
-    { new: true, upsert: true }
-  );
 
-  res.status(200).json({ ok: true, message: `Room '${roomKey}' materials updated.`, data: (orderingDoc.materialOrderingList as any)[roomKey] });
 };
 
 
@@ -210,6 +284,13 @@ const deleteRoomMaterialItem = async (req: Request, res: Response): Promise<any>
 
     await doc.save();
 
+    const updatedRoom = (doc.materialOrderingList as any)[roomKey]
+
+    const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
+    const redisRoomKey = `stage:OrderingMaterialModel:${projectId}:room:${roomKey}`
+    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+
     return res.status(200).json({ ok: true, message: "Item deleted successfully" });
   } catch (err: any) {
     return res.status(500).json({ ok: false, message: err.message });
@@ -220,50 +301,59 @@ const deleteRoomMaterialItem = async (req: Request, res: Response): Promise<any>
 
 // WHATSAPP LINK API
 
-const generateOrderingMaterialLink = async (req: Request, res: Response): Promise<any>  => {
-  const { projectId } = req.params;
+const generateOrderingMaterialLink = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { projectId } = req.params;
 
-  const form = await OrderingMaterialModel.findOne({ projectId });
-  if (!form) return res.status(404).json({ ok: false, message: "Ordering Material Form not found" });
+    const form = await OrderingMaterialModel.findOne({ projectId });
+    if (!form) return res.status(404).json({ ok: false, message: "Ordering Material Form not found" });
 
-  if (form.generatedLink) {
-    return res.status(400).json({ ok: false, message: "Link already generated" });
+    if (form.generatedLink) {
+      return res.status(400).json({ ok: false, message: "Link already generated" });
+    }
+
+    const token = generateOrderingToken();
+    form.generatedLink = token;
+    await form.save();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Link generated successfully",
+      data: {
+        token,
+        shareableUrl: `${process.env.BASE_URL}/orderingmaterial/public/${projectId}/${token}`,
+      },
+    });
   }
-
-  const token = generateOrderingToken();
-  form.generatedLink = token;
-  await form.save();
-
-  return res.status(200).json({
-    ok: true,
-    message: "Link generated successfully",
-    data: {
-      token,
-      shareableUrl: `${process.env.BASE_URL}/orderingmaterial/public/${projectId}/${token}`,
-    },
-  });
+  catch (error) {
+    return res.status(500).json({ ok: false, message: "server error" });
+  }
 };
 
 
-const getOrderingMaterialPublicDetails = async (req: Request, res: Response): Promise<any>  => {
-  const { projectId, token } = req.params;
+const getOrderingMaterialPublicDetails = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { projectId, token } = req.params;
 
-  const form = await OrderingMaterialModel.findOne({ projectId });
-  if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
+    const form = await OrderingMaterialModel.findOne({ projectId });
+    if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
-  if (form.generatedLink !== token) {
-    return res.status(403).json({ ok: false, message: "Invalid or unauthorized token" });
+    if (form.generatedLink !== token) {
+      return res.status(403).json({ ok: false, message: "Invalid or unauthorized token" });
+    }
+    return res.status(200).json({
+      ok: true,
+      data: {
+        shopDetails: form.shopDetails,
+        deliveryLocationDetails: form.deliveryLocationDetails,
+        materialOrderingList: form.materialOrderingList,
+        uploads: form.uploads,
+      },
+    });
   }
-console.log("form at the link", form)
-  return res.status(200).json({
-    ok: true,
-    data: {
-      shopDetails: form.shopDetails,
-      deliveryLocationDetails: form.deliveryLocationDetails,
-      materialOrderingList: form.materialOrderingList,
-      uploads: form.uploads,
-    },
-  });
+  catch (error) {
+    return res.status(500).json({ ok: false, message: "server error" });
+  }
 };
 
 
@@ -294,11 +384,15 @@ const orderMaterialCompletionStatus = async (req: Request, res: Response): Promi
 
     if (form.status === "completed") {
       // await autoCreateCostEstimationRooms(req, res, projectId)
-    await syncMaterialArrival(projectId)
+      await syncMaterialArrival(projectId)
+      
     }
 
+    const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
 
-    return res.status(200).json({ ok: true, message: "cost estimation stage marked as completed", data: form });
+    await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+
+    return res.status(200).json({ ok: true, message: "order material stage marked as completed", data: form });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
@@ -335,6 +429,12 @@ const uploadOrderMaterialFiles = async (req: Request, res: Response): Promise<an
     doc.uploads.push(...uploadedFiles);
 
     await doc.save();
+
+
+    const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
+
+    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+
 
     return res.status(200).json({ ok: true, message: "Files uploaded successfully", data: uploadedFiles });
   } catch (err) {
@@ -373,6 +473,12 @@ const deleteOrderMaterialFile = async (req: Request, res: Response): Promise<any
 
 
     await doc.save();
+
+
+    const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
+
+    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+
 
     return res.status(200).json({ ok: true, message: "File deleted successfully" });
   } catch (err) {

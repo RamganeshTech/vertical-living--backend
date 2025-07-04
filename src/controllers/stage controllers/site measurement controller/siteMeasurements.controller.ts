@@ -6,7 +6,6 @@ import { syncRoomsToMaterialConfirmation } from "../../../utils/syncings/syncRoo
 import { syncSampleDesignModel } from "../../../utils/syncings/syncSampleDesign";
 
 import redisClient from './../../../config/redisClient';
-import { updateStageStatusInCache } from "../../../utils/updateStageStatusInCache ";
 import { Model } from "mongoose";
 
 
@@ -380,7 +379,8 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
 
     await siteDoc.save();
 
-    await updateStageStatusInCache(SiteMeasurementModel, projectId, "completed");
+    // await updateStageStatusInCache(SiteMeasurementModel, projectId, "completed");
+    await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(siteDoc.toObject()), { EX: 60 * 10 }); // 15min
 
     return res.status(200).json({ ok: true, message: "Site measurement marked as completed", data: siteDoc });
   } catch (err) {

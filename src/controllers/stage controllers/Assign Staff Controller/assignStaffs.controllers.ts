@@ -19,7 +19,7 @@ import { ProjectDeliveryModel } from "../../../models/Stage Models/ProjectDelive
 import { stageModels } from "../../../utils/common features/ressetStages";
 
 
-const stageModelMap = new Map<string, Model<Document>>([
+export const stageModelMap = new Map<string, Model<Document>>([
   ["RequirementFormModel", RequirementFormModel as unknown as Model<Document>],
   ["SiteMeasurementModel", SiteMeasurementModel as unknown as Model<Document>],
   ["SampleDesignModel", SampleDesignModel as unknown as Model<Document>],

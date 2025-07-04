@@ -11,12 +11,12 @@ export const timerFunctionlity = (
 import { Request, Response } from "express";
 import { isValidObjectId } from "mongoose";
 import { updateCachedeadline } from "../updateStageStatusInCache ";
-import { Model } from "mongoose";
+import { PopulateOptions, Model } from "mongoose";
 
-export const handleSetStageDeadline = async (req: Request, res: Response, { model, stageName }: { model: Model<any>; stageName: string; }): Promise<Response> => {
+export const handleSetStageDeadline = async (req: Request, res: Response, { model, stageName, populate }: { model: Model<any>; stageName: string; populate?: string | PopulateOptions | (string | PopulateOptions)[]; }): Promise<Response> => {
   try {
     const { formId, projectId } = req.params;
-    const { deadLine } = req.body;
+    let { deadLine } = req.body;
 
     // console.log("deadline", deadLine)
 
@@ -24,16 +24,16 @@ export const handleSetStageDeadline = async (req: Request, res: Response, { mode
       return res.status(400).json({ ok: false, message: "Form Id required" });
     }
 
-    const deadlineDate = new Date(deadLine);
-
-    if (!(deadlineDate instanceof Date) || isNaN(deadlineDate.getTime())) {
-      return res.status(400).json({ ok: false, message: "Deadline should be a valid date" });
+     // If the input has no time, add "T00:00:00"
+    if (deadLine && deadLine.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(deadLine)) {
+      deadLine = `${deadLine}T00:00:00`;
     }
 
-    //  if (!isDate(deadLine)) {
-    //       return res.status(400).json({ ok: false, message: "Deadline shoudl be a date" });
-    //     }
+    const deadlineDate = new Date(deadLine);
 
+    if (isNaN(deadlineDate.getTime())) {
+      return res.status(400).json({ ok: false, message: "Deadline should be a valid date-time" });
+    }
 
     const doc = await model.findById(formId);
     if (!doc) {
@@ -41,9 +41,10 @@ export const handleSetStageDeadline = async (req: Request, res: Response, { mode
     }
 
     if (doc.timer?.startedAt && deadlineDate < doc.timer.startedAt) {
-      return res
-        .status(400)
-        .json({ ok: false, message: "Deadline must be after start time" });
+      return res.status(400).json({
+        ok: false,
+        message: "Deadline must be after start time",
+      });
     }
 
     if (!doc.timer) doc.timer = {};
@@ -51,8 +52,15 @@ export const handleSetStageDeadline = async (req: Request, res: Response, { mode
 
     await doc.save();
 
-    if (model.modelName !== "CostEstimation"){
-      await updateCachedeadline(model, projectId, doc)
+
+
+    let docToCache = doc;
+    if (populate) {
+      docToCache = await doc.populate(populate);
+    }
+
+    if (model.modelName !== "CostEstimation") {
+      await updateCachedeadline(model, projectId, docToCache)
     }
 
     return res.status(200).json({

@@ -112,6 +112,8 @@ const WorkMainStageScheduleSchema = new Schema<WorkMainStageScheduleDocument>({
     isEditable: { type: Boolean, default: true }
 }, { timestamps: true });
 
+WorkMainStageScheduleSchema.index({projectId:1})
+
 const WorkMainStageScheduleModel = mongoose.model<WorkMainStageScheduleDocument>("WorkMainStageScheduleModel", WorkMainStageScheduleSchema);
 
 export default WorkMainStageScheduleModel

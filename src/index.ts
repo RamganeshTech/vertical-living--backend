@@ -37,6 +37,8 @@ import cleaningRoutes from './routers/Stage routes/Cleaning Routes/cleaning.rout
 import getUsersRoutes from './routers/Stage routes/Get Users Routes/getUsers.routes';
 import assignRoutes from './routers/Stage routes/Assign routes/assignStaffs.routes';
 import projectDeliveryRoutes from './routers/Stage routes/ProjectDelivery Routes/ProjectDelivery.routes';
+import stageTimerRoutes from './routers/Stage routes/Timer routes/timer.routes';
+import paymentConsentRoutes from './routers/Stage routes/PaymentConfirmation Routes/PaymentConfirmation.routes';
 // import checkRedisConnection from './config/redisClient';
 
 
@@ -74,7 +76,13 @@ app.use('/api/staff', staffRoutes)
 app.use('/api/worker', workerRoutes)
 app.use('/api/CTO', CTORoutes)
 
+
+// for getting all the users in hte organization
 app.use('/api/getusers', getUsersRoutes)
+
+
+// Timer routes for starting for all stages
+app.use('/api/starttimer', stageTimerRoutes)
 
 // STAGE APIS
 app.use('/api/requirementform', requirementRoutes)
@@ -83,6 +91,7 @@ app.use('/api/sampledesign', sampleDesignRoutes)
 app.use('/api/technicalconsultation', technicalConsultRoutes)
 app.use('/api/materialconfirmation', materialConfirmationRoutes)
 app.use('/api/costestimation', costEstimationRoutes)
+app.use('/api/paymentconfirmation', paymentConsentRoutes)
 app.use('/api/orderingmaterial', orderMaterialRoutes)
 app.use('/api/materialarrivalcheck', materialArrivalRoutes)
 app.use('/api/worktasks', workTaskRoutes)
@@ -98,6 +107,7 @@ app.use('/api', resetRouter)
 
 // ASSIGN STAFF 
 app.use('/api/assignstafftostage', assignRoutes)
+
 
 
 const PORT = process.env.PORT

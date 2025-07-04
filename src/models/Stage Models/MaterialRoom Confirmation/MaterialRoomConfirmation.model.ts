@@ -101,7 +101,6 @@ const materialRoomConfirmationSchema = new Schema<IMaterialRoomConfirmation>(
       type: mongoose.Schema.Types.ObjectId,
       ref: "ProjectModel",
       required: true,
-      index: true,
     },
     rooms: [roomSchema],
     customRooms: [customRoomSchema],
@@ -116,6 +115,9 @@ const materialRoomConfirmationSchema = new Schema<IMaterialRoomConfirmation>(
   },
   { timestamps: true }
 );
+
+materialRoomConfirmationSchema.index({projectId:1})
+
 
 const MaterialRoomConfirmationModel = model<IMaterialRoomConfirmation>(
   "MaterialRoomConfirmationModel",

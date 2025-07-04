@@ -99,7 +99,7 @@ const getFilesFromRoom = async (req: Request, res: Response): Promise<any> => {
     const redisCachedData = await redisClient.get(redisMainKey)
 
     if (redisCachedData) {
-      return res.json({ message: "data fetched from the cache", data: redisCachedData, ok: true })
+      return res.json({ message: "data fetched from the cache", data: JSON.parse(redisCachedData), ok: true })
     }
 
     const design = await SampleDesignModel.findOne({ projectId });
@@ -148,7 +148,6 @@ const deleteFileFromRoom = async (req: Request, res: Response): Promise<any> => 
     const redisMainKey = `stage:SampleDesignModel:${projectId}`
     await redisClient.set(redisMainKey, JSON.stringify(design.toObject()), { EX: 60 * 10 })
 
-
     return res.status(200).json({ message: "File deleted", data: room });
   } catch (error) {
     return res.status(500).json({ message: "Server error" });
@@ -172,7 +171,6 @@ const deleteRoom = async (req: Request, res: Response): Promise<any> => {
 
     const redisMainKey = `stage:SampleDesignModel:${projectId}`
     await redisClient.set(redisMainKey, JSON.stringify(design.toObject()), { EX: 60 * 10 })
-
 
     return res.status(200).json({ message: "Room deleted", data: design, ok: true });
   } catch (error) {
@@ -225,8 +223,8 @@ const sampleDesignCompletionStatus = async (req: Request, res: Response): Promis
 
     await design.save();
 
-    const redisKey = `stage:SampleDesignModel:${projectId}:status`
-    await redisClient.set(redisKey, design.status, { EX: 60 * 10 });
+    const redisKey = `stage:SampleDesignModel:${projectId}`
+    await redisClient.set(redisKey, JSON.stringify(design.toObject()), { EX: 60 * 10 });
 
     return res.status(200).json({ ok: true, message: "Sample design marked as completed", data: design });
   } catch (err) {

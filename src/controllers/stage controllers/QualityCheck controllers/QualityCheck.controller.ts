@@ -5,6 +5,7 @@ import { validRooms } from "../installation controllers/installation.controller"
 import { RoleBasedRequest } from "../../../types/types";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import { syncCleaningSanitaionStage } from "../Cleaning controller/cleaning.controller";
+import redisClient from "../../../config/redisClient";
 
 
 export const syncQualityCheck = async (projectId: string) => {
@@ -45,7 +46,7 @@ export const syncQualityCheck = async (projectId: string) => {
     else {
         existing.timer.startedAt = new Date()
         existing.timer.deadLine = null,
-        existing.timer.completedAt = null,
+            existing.timer.completedAt = null,
             existing.timer.reminderSent = false,
 
             await existing.save()
@@ -126,6 +127,13 @@ const createQualityCheckItem = async (req: RoleBasedRequest, res: Response): Pro
 
         if (!doc) return res.status(404).json({ ok: false, message: "Quality Checkup record not found." });
 
+        const redisMainKey = `stage:QualityCheckupModel:${projectId}`
+        const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${roomName}`
+
+        const updatedRoom = (doc as any)[roomName]
+        await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+
         return res.json({ ok: true, data: doc[roomName] });
     } catch (err: any) {
         console.error("Create QualityCheckItem:", err);
@@ -197,6 +205,15 @@ const editQualityCheckItem = async (req: RoleBasedRequest, res: Response): Promi
         }
 
         await doc.save();
+
+
+        const redisMainKey = `stage:QualityCheckupModel:${projectId}`
+        const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${roomName}`
+
+        const updatedRoom = (doc as any)[roomName]
+        await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+
         return res.json({ ok: true, data: item });
     } catch (err: any) {
         console.error("Edit QualityCheckItem:", err);
@@ -227,6 +244,14 @@ const deleteQualityCheckItem = async (req: Request, res: Response): Promise<any>
             return res.status(404).json({ ok: false, message: "Quality Checkup record not found." });
         }
 
+
+        const redisMainKey = `stage:QualityCheckupModel:${projectId}`
+        const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${roomName}`
+
+        const updatedRoom = (doc as any)[roomName]
+        await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+
         return res.json({ ok: true, message: "Item deleted successfully." });
     } catch (err: any) {
         console.error("Delete QualityCheckItem:", err);
@@ -241,9 +266,19 @@ const getQualityCheckup = async (req: Request, res: Response): Promise<any> => {
 
         if (!projectId) return res.status(400).json({ ok: false, message: "Project ID is required." });
 
+        const redisMainKey = `stage:QualityCheckupModel:${projectId}`
+
+        const cachedData = await redisClient.get(redisMainKey)
+
+        if (cachedData) {
+            return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+        }
+
+
         const doc = await QualityCheckupModel.findOne({ projectId });
         if (!doc) return res.status(404).json({ ok: false, message: "Quality Checkup not found." });
 
+        await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
         return res.json({ ok: true, data: doc });
     } catch (err: any) {
         console.error("Get QualityCheckup:", err);
@@ -264,8 +299,21 @@ const getQualityCheckRoomItems = async (req: Request, res: Response): Promise<an
             return res.status(400).json({ ok: false, message: "Invalid room name." });
         }
 
+        const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${roomName}`
+
+         const cachedData = await redisClient.get(redisRoomKey)
+
+        if (cachedData) {
+            return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+        }
+
+
+        
         const doc: any = await QualityCheckupModel.findOne({ projectId });
         if (!doc) return res.status(404).json({ ok: false, message: "Quality Checkup not found." });
+        
+        const updatedRoom = (doc as any)[roomName]
+        await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
         return res.json({ ok: true, data: doc[roomName] || [] });
     } catch (err: any) {
@@ -276,8 +324,6 @@ const getQualityCheckRoomItems = async (req: Request, res: Response): Promise<an
 
 
 // COMMON CONTOROLLER
-
-
 const setQualityCheckStageDeadline = (req: Request, res: Response): Promise<any> => {
     return handleSetStageDeadline(req, res, {
         model: QualityCheckupModel,
@@ -302,6 +348,9 @@ const qualityCheckCompletionStatus = async (req: Request, res: Response): Promis
         if (form.status === "completed") {
             await syncCleaningSanitaionStage(projectId)
         }
+
+        const redisMainKey = `stage:QualityCheckupModel:${projectId}`
+        await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
         return res.status(200).json({ ok: true, message: "Quality Checkup stage marked as completed", data: form });
     } catch (err) {

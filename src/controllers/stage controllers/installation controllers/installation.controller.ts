@@ -1,50 +1,52 @@
 import { Request, Response } from "express";
 import InstallationModel from "../../../models/Stage Models/installation model/Installation.model";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
+import redisClient from "../../../config/redisClient";
 
 
 export const syncInstallationWork = async (projectId: string) => {
 
-    const existing = await InstallationModel.findOne({ projectId });
+  const existing = await InstallationModel.findOne({ projectId });
 
-    if (!existing) {
-        const timer = {
-            startedAt: new Date(),
-            completedAt: null,
-            deadLine: null,
-            reminderSent: false,
-        };
+  if (!existing) {
+    const timer = {
+      startedAt: new Date(),
+      completedAt: null,
+      deadLine: null,
+      reminderSent: false,
+    };
 
 
-        await InstallationModel.create({
-            projectId,
-            isEditable: true,
-            status: "pending",
-            timer,
+    await InstallationModel.create({
+      projectId,
+      isEditable: true,
+      status: "pending",
+      timer,
       assignedTo: null,
 
-            LivingRoom: [],
-            Bedroom: [],
-            Kitchen: [],
-            DiningRoom: [],
-            Balcony: [],
-            FoyerArea: [],
-            Terrace: [],
-            StudyRoom: [],
-            CarParking: [],
-            Garden: [],
-            StorageRoom: [],
-            EntertainmentRoom: [],
-            HomeGym: [],
-        })
-    }
-    else {
-        existing.timer.startedAt = new Date()
-        existing.timer.deadLine = null,
-        existing.timer.reminderSent = false,
+      LivingRoom: [],
+      Bedroom: [],
+      Kitchen: [],
+      DiningRoom: [],
+      Balcony: [],
+      FoyerArea: [],
+      Terrace: [],
+      StudyRoom: [],
+      CarParking: [],
+      Garden: [],
+      StorageRoom: [],
+      EntertainmentRoom: [],
+      HomeGym: [],
+    })
+  }
+  else {
+    existing.timer.startedAt = new Date()
+    existing.timer.deadLine = null,
+      existing.timer.completedAt = null,
+      existing.timer.reminderSent = false,
 
-        await existing.save()
-    }
+      await existing.save()
+  }
 
 }
 
@@ -64,12 +66,11 @@ export const validRooms = [
   "HomeGym",
 ];
 
+
 const createInstallationItem = async (req: Request, res: Response): Promise<any> => {
   try {
 
-    const {projectId, roomName} = req.params
-
-    console.log("carrying the body data",req.body)
+    const { projectId, roomName } = req.params
 
     const { workName, descritpion, completedDate } = req.body;
 
@@ -110,6 +111,13 @@ const createInstallationItem = async (req: Request, res: Response): Promise<any>
 
     if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
 
+    const redisMainKey = `stage:InstallationModel:${projectId}`
+    const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
+
+    const updatedRoom = doc[roomName]
+    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+
     return res.json({ ok: true, data: doc[roomName] });
   } catch (err: any) {
     console.error(err);
@@ -122,10 +130,10 @@ const editInstallationItem = async (req: Request, res: Response): Promise<any> =
   try {
 
 
-     const {projectId, roomName} = req.params
+    const { projectId, roomName } = req.params
 
 
-    const { itemId, workName, descritpion, completedDate,  } = req.body;
+    const { itemId, workName, descritpion, completedDate, } = req.body;
 
     if (!projectId || !roomName || !itemId) {
       return res.status(400).json({ ok: false, message: "projectId, roomName, and itemId are required." });
@@ -135,7 +143,7 @@ const editInstallationItem = async (req: Request, res: Response): Promise<any> =
       return res.status(400).json({ ok: false, message: "Invalid room name." });
     }
 
-    const doc:any = await InstallationModel.findOne({ projectId });
+    const doc: any = await InstallationModel.findOne({ projectId });
     if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
 
     const item = doc[roomName].id(itemId);
@@ -145,7 +153,7 @@ const editInstallationItem = async (req: Request, res: Response): Promise<any> =
     if (descritpion !== undefined) item.descritpion = descritpion;
     if (completedDate) item.completedDate = new Date(completedDate);
 
-     if (req.file) {
+    if (req.file) {
       const { mimetype, location, originalname } = req.file as any;
 
       if (!mimetype.startsWith("image/")) {
@@ -162,7 +170,15 @@ const editInstallationItem = async (req: Request, res: Response): Promise<any> =
 
     await doc.save();
 
-    return res.json({ ok: true, data: item , message:"updated successull"});
+
+    const redisMainKey = `stage:InstallationModel:${projectId}`
+    const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
+
+    const updatedRoom = doc[roomName]
+    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+
+    return res.json({ ok: true, data: item, message: "updated successull" });
   } catch (error) {
     console.error("Error editing installation item:", error);
     return res.status(500).json({ ok: false, message: "Server error." });
@@ -181,7 +197,7 @@ const deleteInstallationItem = async (req: Request, res: Response): Promise<any>
       return res.status(400).json({ ok: false, message: "Invalid room name." });
     }
 
-   const doc = await InstallationModel.findOneAndUpdate(
+    const doc = await InstallationModel.findOneAndUpdate(
       { projectId },
       { $pull: { [roomName]: { _id: itemId } } },
       { new: true }
@@ -190,6 +206,13 @@ const deleteInstallationItem = async (req: Request, res: Response): Promise<any>
     if (!doc) {
       return res.status(404).json({ ok: false, message: "Installation record not found." });
     }
+
+    const redisMainKey = `stage:InstallationModel:${projectId}`
+    const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
+
+    const updatedRoom = (doc as any)[roomName]
+    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
     return res.json({ ok: true, success: true, message: "Item deleted successfully." });
   } catch (error) {
@@ -202,10 +225,19 @@ const getInstallationDetails = async (req: Request, res: Response): Promise<any>
   try {
     const { projectId } = req.params;
 
+    const redisMainKey = `stage:InstallationModel:${projectId}`
+
+    const cachedData = await redisClient.get(redisMainKey)
+
+    if (cachedData) {
+      return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+    }
+
     const doc = await InstallationModel.findOne({ projectId });
     if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
 
-    return res.status(200).json({ ok: true, data: doc, message:"fetched properly" });
+    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    return res.status(200).json({ ok: true, data: doc, message: "fetched properly" });
   } catch (error) {
     console.error("Error fetching installation details:", error);
     return res.status(500).json({ ok: false, message: "Server error." });
@@ -220,8 +252,20 @@ const getInstallationRoomDetails = async (req: Request, res: Response): Promise<
       return res.status(400).json({ ok: false, message: "Invalid room name." });
     }
 
-    const doc:any = await InstallationModel.findOne({ projectId });
+    const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
+
+    const cachedData = await redisClient.get(redisRoomKey)
+
+    if (cachedData) {
+      return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+    }
+
+
+    const doc: any = await InstallationModel.findOne({ projectId });
     if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
+
+    await redisClient.set(redisRoomKey, JSON.stringify(doc[roomName]), { EX: 60 * 10 })
+
 
     return res.json({ ok: true, success: true, data: doc[roomName] });
   } catch (error) {
@@ -236,31 +280,34 @@ const getInstallationRoomDetails = async (req: Request, res: Response): Promise<
 
 
 const setInstallationStageDeadline = (req: Request, res: Response): Promise<any> => {
-    return handleSetStageDeadline(req, res, {
-        model: InstallationModel,
-        stageName: "Installation and Checking"
-    });
+  return handleSetStageDeadline(req, res, {
+    model: InstallationModel,
+    stageName: "Installation and Checking"
+  });
 };
 
 
 
 const installationCompletionStatus = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { projectId } = req.params;
-        const form = await InstallationModel.findOne({ projectId });
+  try {
+    const { projectId } = req.params;
+    const form = await InstallationModel.findOne({ projectId });
 
-        if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
+    if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
-        form.status = "completed";
-        form.isEditable = false
-        timerFunctionlity(form, "completedAt")
-        await form.save();
+    form.status = "completed";
+    form.isEditable = false
+    timerFunctionlity(form, "completedAt")
+    await form.save();
 
-        return res.status(200).json({ ok: true, message: "installation check stage marked as completed", data: form });
-    } catch (err) {
-        console.error(err);
-        return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
-    }
+    const redisMainKey = `stage:InstallationModel:${projectId}`
+    await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+
+    return res.status(200).json({ ok: true, message: "installation check stage marked as completed", data: form });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
+  }
 };
 
 export {

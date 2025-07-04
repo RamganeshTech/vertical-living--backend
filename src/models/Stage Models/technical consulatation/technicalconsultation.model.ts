@@ -81,4 +81,8 @@ const technicalConsultationSchema = new Schema<ITechnicalConsultation>({
     isEditable: { type: Boolean, default: true }
 }, { timestamps: true });
 
+
+technicalConsultationSchema.index({projectId:1})
+
+
 export const TechnicalConsultationModel = mongoose.model("TechnicalConsultationModel", technicalConsultationSchema);

@@ -5,6 +5,7 @@ import { Types } from "mongoose";
 import WorkMainStageScheduleModel from './../../../models/Stage Models/WorkTask Model/WorkTask.model';
 import { WorkerModel } from "../../../models/worker model/worker.model";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
+import redisClient from "../../../config/redisClient";
 
 
 
@@ -19,7 +20,7 @@ export const syncWorkSchedule = async (projectId: string) => {
       status: "pending",
       dailyScheduleId: null,
       workScheduleId: null,
-      assignedTo:null,
+      assignedTo: null,
       mdApproval: {
         status: "pending",
         remarks: ""
@@ -35,7 +36,7 @@ export const syncWorkSchedule = async (projectId: string) => {
 
     await workModel.save()
 
-   let dailySchedule =  new DailyScheduleModel({
+    let dailySchedule = new DailyScheduleModel({
       projectId,
       stageId: workModel._id,
       tasks: [],
@@ -53,20 +54,23 @@ export const syncWorkSchedule = async (projectId: string) => {
 
     await dailySchedule.save()
     await workSchedule.save()
-    
+
     workModel.dailyScheduleId = dailySchedule._id as Types.ObjectId
     workModel.workScheduleId = workSchedule._id as Types.ObjectId
 
     await workModel.save()
   }
-  else{
+  else {
     console.log("im gettin involde the else part")
     docs.timer.startedAt = new Date()
     docs.timer.completedAt = null
     docs.timer.deadLine = null
     docs.timer.reminderSent = false
-  }
 
+
+    docs.save()
+  }
+  await redisClient.del(`stage:WorkMainStageScheduleModel:${projectId}`)
 }
 
 const getAllWorkMainStageDetails = async (req: Request, res: Response): Promise<any> => {
@@ -79,11 +83,24 @@ const getAllWorkMainStageDetails = async (req: Request, res: Response): Promise<
       return res.status(400).json({ ok: false, message: "Invalid Project ID" });
     }
 
+
+    const redisMainKey = `stage:WorkMainStageScheduleModel:${projectId}`
+
+    const cachedData = await redisClient.get(redisMainKey)
+
+    if (cachedData) {
+      return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+    }
+
+
     const docs = await WorkMainStageScheduleModel.findOne({ projectId });
 
     if (!docs) {
       return res.status(404).json({ ok: false, message: "work Main stage not found" });
     }
+
+    await redisClient.set(redisMainKey, JSON.stringify(docs.toObject()), { EX: 60 * 10 })
+
 
     res.status(200).json({ ok: true, data: docs });
   } catch (err: any) {
@@ -101,12 +118,26 @@ const getAllWorkSchedules = async (req: Request, res: Response): Promise<any> =>
       return res.status(400).json({ ok: false, message: "Invalid Project ID" });
     }
 
-    const docs = await WorkScheduleModel.findOne({ projectId });
+    const redisWorkScheduleKey = `stage:WorkScheduleModel:${projectId}`
+    await redisClient.del(redisWorkScheduleKey)
+
+    const cachedData = await redisClient.get(redisWorkScheduleKey)
+
+    if (cachedData) {
+      return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+    }
+
+    const docs = await WorkScheduleModel.findOne({ projectId })
+    .populate({ path: "plans.assignedTo",
+                select: "_id email workerName"});;
 
     if (!docs) {
       return res.status(404).json({ ok: false, message: "work Schedule stage not found" });
     }
 
+    await redisClient.set(redisWorkScheduleKey, JSON.stringify(docs.toObject()), { EX: 60 * 10 })
+
+console.log("dovch", docs)
     res.status(200).json({ ok: true, data: docs });
   } catch (err: any) {
     res.status(500).json({ ok: false, message: err.message });
@@ -124,11 +155,26 @@ const getAllDailySchedules = async (req: Request, res: Response): Promise<any> =
       return res.status(400).json({ ok: false, message: "Invalid Project ID" });
     }
 
-    const docs = await DailyScheduleModel.findOne({ projectId });
+    const redisDailyScheduleKey = `stage:DailyScheduleModel:${projectId}`
+    await redisClient.del(redisDailyScheduleKey)
+
+    const cachedData = await redisClient.get(redisDailyScheduleKey)
+
+    if (cachedData) {
+      return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+    }
+
+    const docs = await DailyScheduleModel.findOne({ projectId })
+    .populate({ path: "tasks.assignedTo",
+                select: "_id email workerName"});
 
     if (!docs) {
       return res.status(404).json({ ok: false, message: "work Schedule stage not found" });
     }
+
+
+    await redisClient.set(redisDailyScheduleKey, JSON.stringify(docs.toObject()), { EX: 60 * 10 })
+
 
     res.status(200).json({ ok: true, data: docs });
   } catch (err: any) {
@@ -183,9 +229,19 @@ const mdApprovalAction = async (req: Request, res: Response): Promise<any> => {
 
       await daily.save();
       await work.save();
+
     }
 
     await mainStage.save();
+
+    const redisMainKey = `stage:WorkMainStageScheduleModel:${mainStage.projectId}`
+    await redisClient.set(redisMainKey, JSON.stringify(mainStage.toObject()), { EX: 60 * 10 })
+
+    const redisWorkScheduleKey = `stage:WorkScheduleModel:${mainStage.projectId}`
+    const redisDailyScheduleKey = `stage:DailyScheduleModel:${mainStage.projectId}`
+
+    await redisClient.set(redisDailyScheduleKey, JSON.stringify(daily.toObject()), { EX: 60 * 10 })
+    await redisClient.set(redisWorkScheduleKey, JSON.stringify(work.toObject()), { EX: 60 * 10 })
 
     res.status(200).json({ ok: true, message: `MD has ${action} the stage.`, data: mainStage });
   } catch (err: any) {
@@ -202,11 +258,12 @@ const getProjectWorkers = async (req: Request, res: Response): Promise<any> => {
       return res.status(400).json({ ok: false, message: "Valid Project ID is required" });
     }
 
-    const workers = await WorkerModel.find({ projectId: projectId }).select("_id");
+    const redisGetWorker = `stage:WorkMainStageScheduleModel:${projectId}:getworkers`
 
-    if (!workers || workers.length === 0) {
-      return res.status(404).json({ ok: false, message: "No workers found for this project" });
-    }
+
+    const workers = await WorkerModel.find({ projectId: projectId }).select("_id workerName email");
+
+    await redisClient.set(redisGetWorker, JSON.stringify(workers), { EX: 60 * 10 })
 
     res.status(200).json({ ok: true, data: workers });
   } catch (err: any) {
@@ -218,31 +275,34 @@ const getProjectWorkers = async (req: Request, res: Response): Promise<any> => {
 // COMMON STAGE CONTROLLERS
 
 const setWorkScheduleStageDeadline = (req: Request, res: Response): Promise<any> => {
-    return handleSetStageDeadline(req, res, {
-        model: WorkMainStageScheduleModel,
-        stageName: "Work Schedule"
-    });
+  return handleSetStageDeadline(req, res, {
+    model: WorkMainStageScheduleModel,
+    stageName: "Work Schedule"
+  });
 };
 
 
 
 const workScheduleCompletionStatus = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { projectId } = req.params;
-        const form = await WorkMainStageScheduleModel.findOne({ projectId });
+  try {
+    const { projectId } = req.params;
+    const form = await WorkMainStageScheduleModel.findOne({ projectId });
 
-        if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
+    if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
-        form.status = "completed";
-        form.isEditable = false
-        timerFunctionlity(form, "completedAt")
-        await form.save();
+    form.status = "completed";
+    form.isEditable = false
+    timerFunctionlity(form, "completedAt")
+    await form.save();
 
-        return res.status(200).json({ ok: true, message: "cost estimation stage marked as completed", data: form });
-    } catch (err) {
-        console.error(err);
-        return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
-    }
+    const redisMainKey = `stage:WorkMainStageScheduleModel:${projectId}`
+    await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+
+    return res.status(200).json({ ok: true, message: "work stage marked as completed", data: form });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
+  }
 };
 
 export {

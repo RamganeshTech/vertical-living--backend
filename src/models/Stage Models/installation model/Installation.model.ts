@@ -18,7 +18,7 @@ interface IInstallationMain extends Document {
     projectId: Types.ObjectId;
 
     isEditable: boolean;
-          assignedTo: Types.ObjectId;
+    assignedTo: Types.ObjectId;
 
     LivingRoom: InstallationItem[]
     Bedroom: InstallationItem[]
@@ -68,7 +68,6 @@ const InstallationSchema = new Schema<IInstallationMain>({
         type: mongoose.Schema.Types.ObjectId,
         ref: "ProjectModel",
         required: true,
-        index: true,
     },
 
     LivingRoom: { type: [installationWorkSchema], default: [] },
@@ -93,10 +92,10 @@ const InstallationSchema = new Schema<IInstallationMain>({
         deadLine: { type: Date, default: null },
         reminderSent: { type: Boolean, default: false },
     },
-  assignedTo:{
-      type: Schema.Types.ObjectId,
-      default: null,
-      ref:"StaffModel"
+    assignedTo: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        ref: "StaffModel"
     },
     status: {
         type: String,
@@ -105,6 +104,7 @@ const InstallationSchema = new Schema<IInstallationMain>({
     },
 }, { timestamps: true })
 
+InstallationSchema.index({projectId:1})
 
 
 const InstallationModel = model("InstallationModel", InstallationSchema)

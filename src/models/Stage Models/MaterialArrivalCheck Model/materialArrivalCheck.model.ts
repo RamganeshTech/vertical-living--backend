@@ -107,6 +107,8 @@ const MaterialArrivalSchema = new Schema<IMaterialArrival>({
   generatedLink: { type: String, default: null },
 }, { timestamps: true });
 
+MaterialArrivalSchema.index({projectId:1})
+
 
 const MaterialArrivalModel = model("MaterialArrivalModel", MaterialArrivalSchema)
 

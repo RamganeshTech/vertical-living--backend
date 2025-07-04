@@ -3,77 +3,87 @@ import { TechnicalConsultationModel } from "../../../models/Stage Models/technic
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
 import { initializeMaterialSelection } from "../material Room confirmation/materialRoomConfirmation.controller";
+import redisClient from "../../../config/redisClient";
 
 const addConsultationMessage = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { projectId } = req.params;
-        let { sender, senderModel, senderRole, message, section } = req.body;
-        const files = req.files as Express.Multer.File[];
+  try {
+    const { projectId } = req.params;
+    let { sender, senderModel, senderRole, message, section } = req.body;
+    const files = req.files as Express.Multer.File[];
 
-        // ✅ Check if at least one of message or attachments is provided
-        const hasMessage = typeof message === "string" && message.trim().length > 0;
-        const hasAttachments = files && files.length > 0;
+    // ✅ Check if at least one of message or attachments is provided
+    const hasMessage = typeof message === "string" && message.trim().length > 0;
+    const hasAttachments = files && files.length > 0;
 
-        if (!hasMessage && !hasAttachments) {
-            return res.status(400).json({ message: "Either a message or an attachment must be provided.", ok: false });
-        }
-
-        // ✅ Build attachment objects if files exist
-        const attachments = (files || []).map((file) => ({
-            type: file.mimetype.startsWith("image") ? "image" as const : "pdf" as const,
-            url: (file as any).location,
-            originalName: file.originalname,
-        }));
-
-        if(senderRole === "owner"){
-            senderModel = "UserModel"
-        }
-        else if(senderRole === "CTO"){
-            senderModel = "CTOModel"
-        }
-          else if(senderRole === "staff"){
-            senderModel = "StaffModel"
-        }
-          else if(senderRole === "worker"){
-            senderModel = "WorkerModel"
-        }
-
-
-        // ✅ Construct new message
-        const newMessage = {
-            sender,
-            senderModel,
-            senderRole,
-            message: hasMessage ? message.trim() : "",
-            section,
-            attachments,
-            createdAt: new Date(),
-        };
-
-        // ✅ Add to existing or create new doc
-        let doc = await TechnicalConsultationModel.findOne({ projectId });
-
-        if (!doc) {
-            doc = new TechnicalConsultationModel({
-                projectId,
-                messages: [newMessage],
-                timer: { startedAt: new Date() },
-            });
-        } else {
-            doc.messages.push(newMessage);
-            // Start timer if it's the first message
-            // if (!doc.timer.startedAt) {
-            //     doc.timer.startedAt = new Date();
-            // }
-        }
-
-        await doc.save();
-        return res.status(200).json({ message: "Message added", data: doc.messages, ok: true });
-
-    } catch (err) {
-        console.error(err);
-        return res.status(500).json({ message: "Server error" , ok:false});
+    if (!hasMessage && !hasAttachments) {
+      return res.status(400).json({ message: "Either a message or an attachment must be provided.", ok: false });
     }
+
+    // ✅ Build attachment objects if files exist
+    const attachments = (files || []).map((file) => ({
+      type: file.mimetype.startsWith("image") ? "image" as const : "pdf" as const,
+      url: (file as any).location,
+      originalName: file.originalname,
+    }));
+
+    if (senderRole === "owner") {
+      senderModel = "UserModel"
+    }
+    else if (senderRole === "CTO") {
+      senderModel = "CTOModel"
+    }
+    else if (senderRole === "staff") {
+      senderModel = "StaffModel"
+    }
+    else if (senderRole === "worker") {
+      senderModel = "WorkerModel"
+    }
+
+
+    // ✅ Construct new message
+    const newMessage = {
+      sender,
+      senderModel,
+      senderRole,
+      message: hasMessage ? message.trim() : "",
+      section,
+      attachments,
+      createdAt: new Date(),
+    };
+
+    // ✅ Add to existing or create new doc
+    let doc = await TechnicalConsultationModel.findOne({ projectId });
+
+    if (!doc) {
+      doc = new TechnicalConsultationModel({
+        projectId,
+        messages: [newMessage],
+        timer: { startedAt: new Date() },
+      });
+    } else {
+      doc.messages.push(newMessage);
+      // Start timer if it's the first message
+      // if (!doc.timer.startedAt) {
+      //     doc.timer.startedAt = new Date();
+      // }
+    }
+
+  
+
+    await doc.save();
+
+       const populatedDoc = await doc.populate("messages.sender");
+
+      const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
+    await redisClient.set(redisMainKey, JSON.stringify(populatedDoc.toObject()), { EX: 60 * 10 })
+
+
+    return res.status(200).json({ message: "Message added", data: doc.messages, ok: true });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error", ok: false });
+  }
 };
 
 
@@ -82,12 +92,23 @@ const getConsultationMessages = async (req: Request, res: Response): Promise<any
   try {
     const { projectId } = req.params;
 
+    const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
+    const redisCachedData = await redisClient.get(redisMainKey)
+
+
+    if (redisCachedData) {
+      return res.json({ message: "data fetched from the cache", data: JSON.parse(redisCachedData), ok: true })
+    }
+
+
     const doc = await TechnicalConsultationModel.findOne({ projectId })
       .populate("messages.sender"); // if you're using refPath
 
     if (!doc) {
       return res.status(404).json({ ok: false, message: "No confirmation found on last stage" });
     }
+
+    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
 
     return res.status(200).json({ ok: true, data: doc });
   } catch (err) {
@@ -131,6 +152,12 @@ const deleteConsultationMessage = async (req: Request, res: Response): Promise<a
     consultation.messages.splice(msgIndex, 1);
     await consultation.save();
 
+    const populatedData = await consultation.populate("messages.sender")
+
+
+    const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
+    await redisClient.set(redisMainKey, JSON.stringify(populatedData.toObject()), { EX: 60 * 10 })
+
     return res.status(200).json({ ok: true, message: "Message deleted." });
   } catch (err) {
     console.error(err);
@@ -157,7 +184,7 @@ const editConsultationMessage = async (req: Request, res: Response): Promise<any
     }
 
     const msg = consultation.messages.find(
-      (m:any) => m._id.toString() === messageId
+      (m: any) => m._id.toString() === messageId
     );
 
     if (!msg) {
@@ -174,6 +201,12 @@ const editConsultationMessage = async (req: Request, res: Response): Promise<any
     msg.message = message.trim();
     await consultation.save();
 
+    const populatedData = await consultation.populate("messages.sender")
+
+
+    const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
+    await redisClient.set(redisMainKey, JSON.stringify(populatedData.toObject()), { EX: 60 * 10 })
+
     return res.status(200).json({ ok: true, message: "Message updated successfully.", data: msg });
   } catch (error) {
     console.error(error);
@@ -184,70 +217,77 @@ const editConsultationMessage = async (req: Request, res: Response): Promise<any
 
 
 const tehnicalConsultantCompletionStatus = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { projectId } = req.params;
+  try {
+    const { projectId } = req.params;
 
-        if (!projectId) return res.status(400).json({ ok: false, message: "Project ID is required" });
+    if (!projectId) return res.status(400).json({ ok: false, message: "Project ID is required" });
 
-        const techDoc = await TechnicalConsultationModel.findOne({ projectId });
-        if (!techDoc) return res.status(404).json({ ok: false, message: "Technical consultant not found" });
+    const techDoc = await TechnicalConsultationModel.findOne({ projectId });
+    if (!techDoc) return res.status(404).json({ ok: false, message: "Technical consultant not found" });
 
-        if (techDoc.status === "completed") return res.status(400).json({ ok: false, message: "Already completed" });
+    if (techDoc.status === "completed") return res.status(400).json({ ok: false, message: "Already completed" });
 
-        techDoc.status = "completed";
-        timerFunctionlity(techDoc, "completedAt")
-        techDoc.isEditable = false;
+    techDoc.status = "completed";
+    timerFunctionlity(techDoc, "completedAt")
+    techDoc.isEditable = false;
 
-        if (techDoc.status === "completed") {
-          let material = await MaterialRoomConfirmationModel.findOne({ projectId });
+    if (techDoc.status === "completed") {
+      let material = await MaterialRoomConfirmationModel.findOne({ projectId });
 
 
-          if (!material) {
-            // material = new MaterialRoomConfirmationModel({
-            //   projectId,
-            //   status: "pending",
-            //   isEditable: true,
-            //   timer: {
-            //     startedAt: new Date(),
-            //     completedAt: null,
-            //     deadLine: null
-            //   },
-            //   rooms:[]
-            // })
-            material = await initializeMaterialSelection(req, res)
-           } else {
-            material.status = "pending";
-            material.isEditable = true;
-            material.timer.startedAt = new Date();
+      if (!material) {
+        // material = new MaterialRoomConfirmationModel({
+        //   projectId,
+        //   status: "pending",
+        //   isEditable: true,
+        //   timer: {
+        //     startedAt: new Date(),
+        //     completedAt: null,
+        //     deadLine: null
+        //   },
+        //   rooms:[]
+        // })
+        material = await initializeMaterialSelection(req, res)
+      } else {
+        material.status = "pending";
+        material.isEditable = true;
+        material.timer.startedAt = new Date();
 
-            await material.save()
-          }
+        await material.save()
+      }
 
-        }
-
-        await techDoc.save();
-        return res.status(200).json({ ok: true, message: "Technical consultant marked as completed", data: techDoc });
-    } catch (err) {
-        console.error("Technical consultant Complete Error:", err);
-        return res.status(500).json({ message: "Internal server error", ok: false });
     }
+
+    await techDoc.save();
+    const populatedData = await techDoc.populate("messages.sender")
+
+
+    const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
+    await redisClient.set(redisMainKey, JSON.stringify(populatedData.toObject()), { EX: 60 * 10 })
+
+    return res.status(200).json({ ok: true, message: "Technical consultant marked as completed", data: techDoc });
+  } catch (err) {
+    console.error("Technical consultant Complete Error:", err);
+    return res.status(500).json({ message: "Internal server error", ok: false });
+  }
 };
 
 
 
 const setTechnicalConsultantStageDeadline = (req: Request, res: Response): Promise<any> => {
-    return handleSetStageDeadline(req, res, {
-        model: TechnicalConsultationModel,
-        stageName: "Technical Consultant"
-    });
+  return handleSetStageDeadline(req, res, {
+    model: TechnicalConsultationModel,
+    stageName: "Technical Consultant",
+    populate: "messages.sender"
+  });
 };
 
 export {
-    addConsultationMessage,
-    getConsultationMessages,
-deleteConsultationMessage,
-editConsultationMessage,
+  addConsultationMessage,
+  getConsultationMessages,
+  deleteConsultationMessage,
+  editConsultationMessage,
 
-    tehnicalConsultantCompletionStatus,
-    setTechnicalConsultantStageDeadline
+  tehnicalConsultantCompletionStatus,
+  setTechnicalConsultantStageDeadline
 }

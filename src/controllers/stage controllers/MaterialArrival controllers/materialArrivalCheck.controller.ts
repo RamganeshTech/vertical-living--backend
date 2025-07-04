@@ -3,13 +3,13 @@ import MaterialArrivalModel, { IMaterialArrival, IMaterialArrivalTimer } from ".
 import { validateMaterialFieldsByRoom } from "../../../utils/validateMaterialArrivalStep";
 import { generateOrderingToken } from "../../../utils/generateToken";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
+import redisClient from "../../../config/redisClient";
+import { syncWorkSchedule } from "../workTasksmain controllers/workMain.controller";
 
 const allowedRooms = [
     "carpentry", "hardware", "electricalFittings", "tiles", "ceramicSanitaryware",
     "paintsCoatings", "lightsFixtures", "glassMirrors", "upholsteryCurtains", "falseCeilingMaterials"
 ];
-
-
 
 export const syncMaterialArrival = async (projectId: string) => {
 
@@ -28,7 +28,7 @@ export const syncMaterialArrival = async (projectId: string) => {
             status: "pending",
             isEditable: true,
             generatedLink: null,
-      assignedTo: null,
+            assignedTo: null,
             shopDetails: {
                 shopName: null,
                 address: null,
@@ -73,6 +73,13 @@ const updateMaterialArrivalShopDetails = async (req: Request, res: Response): Pr
             { new: true, upsert: true }
         );
 
+        if (!updated) {
+            return res.status(400).json({ message: "failed to updated the details", ok: false })
+        }
+
+        const redisMainKey = `stage:MaterialArrivalModel:${projectId}`
+        await redisClient.set(redisMainKey, JSON.stringify(updated.toObject()), { EX: 60 * 10 })
+
         res.json({ ok: true, data: updated?.shopDetails });
     } catch (err: any) {
         res.status(500).json({ ok: false, message: err.message });
@@ -94,6 +101,14 @@ const updateMaterialArrivalDeliveryLocation = async (req: Request, res: Response
             { new: true, upsert: true }
         );
 
+        if (!updated) {
+            return res.status(400).json({ message: "failed to updated the details", ok: false })
+        }
+
+
+        const redisMainKey = `stage:MaterialArrivalModel:${projectId}`
+        await redisClient.set(redisMainKey, JSON.stringify(updated.toObject()), { EX: 60 * 10 })
+
         res.json({ ok: true, data: updated?.deliveryLocationDetails });
     } catch (err: any) {
         res.status(500).json({ ok: false, message: err.message });
@@ -106,9 +121,6 @@ const updateMaterialArrivalRoomItem = async (req: Request, res: Response): Promi
         const file = req.file as Express.Multer.File & { location: string };
         const itemDataRaw = req.body.itemData;  // in FE {itemData}
 
-
-        console.log("gteng caled isndeiht sman caled isndeiht sman caled isndeiht sman")
-
         if (!itemDataRaw) {
             return res.status(400).json({ ok: false, message: "Item data is required" });
         }
@@ -120,9 +132,7 @@ const updateMaterialArrivalRoomItem = async (req: Request, res: Response): Promi
             return res.status(400).json({ ok: false, message: "Invalid item data format" });
         }
 
-        console.log("gteng caled is2222222222")
 
-        console.log("file", file)
         // ⬇️ Only add upload info if file is present
         if (file) {
             console.log("file", file)
@@ -134,7 +144,6 @@ const updateMaterialArrivalRoomItem = async (req: Request, res: Response): Promi
             };
         }
 
-        console.log("itemData.upload", itemData.upload)
 
         // ⬇️ Validate only if file was uploaded or 'upload' field already present
         if (file || itemData.upload) {
@@ -147,27 +156,35 @@ const updateMaterialArrivalRoomItem = async (req: Request, res: Response): Promi
 
 
         // ⬇️ If _id is present, perform update
-    if (itemData._id) {
-      const updatePath = `materialArrivalList.${roomKey}`;
-      const result = await MaterialArrivalModel.findOneAndUpdate(
-        {
-          projectId,
-          [`${updatePath}._id`]: itemData._id,
-        },
-        {
-          $set: {
-            [`${updatePath}.$`]: itemData,
-          },
-        },
-        { new: true }
-      );
+        if (itemData?._id) {
+            const updatePath = `materialArrivalList.${roomKey}`;
+            const result = await MaterialArrivalModel.findOneAndUpdate(
+                {
+                    projectId,
+                    [`${updatePath}._id`]: itemData._id,
+                },
+                {
+                    $set: {
+                        [`${updatePath}.$`]: itemData,
+                    },
+                },
+                { new: true }
+            );
 
-      if (!result) {
-        return res.status(404).json({ ok: false, message: "Item not found for update" });
-      }
+            if (!result) {
+                return res.status(404).json({ ok: false, message: "Item not found for update" });
+            }
 
-      return res.status(200).json({ ok: true, message: "Item updated", data: result });
-    }
+
+            const updatedRoom = (result.materialArrivalList as any)[roomKey]
+
+            const redisMainKey = `stage:MaterialArrivalModel:${projectId}`
+            const redisRoomKey = `stage:MaterialArrivalModel:${projectId}:room:${roomKey}`
+            await redisClient.set(redisMainKey, JSON.stringify(result.toObject()), { EX: 60 * 10 })
+            await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+
+            return res.status(200).json({ ok: true, message: "Item updated", data: result });
+        }
 
         // ⬇️ add the materiallist for this room
         const result = await MaterialArrivalModel.findOneAndUpdate(
@@ -176,10 +193,16 @@ const updateMaterialArrivalRoomItem = async (req: Request, res: Response): Promi
             { new: true }
         );
 
-        if(!result){
+        if (!result) {
             console.log("is it getting  send")
             return res.status(404).json({ ok: false, message: "section not available" })
-        } 
+        }
+
+        const updatedRoom = (result.materialArrivalList as any)[roomKey]
+        const redisMainKey = `stage:MaterialArrivalModel:${projectId}`
+        const redisRoomKey = `stage:MaterialArrivalModel:${projectId}:room:${roomKey}`
+        await redisClient.set(redisMainKey, JSON.stringify(result.toObject()), { EX: 60 * 10 })
+        await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
         return res.status(200).json({ ok: true, message: "Item added", data: result });
 
@@ -199,6 +222,18 @@ const deleteMaterialArrivalRoomItem = async (req: Request, res: Response): Promi
             { new: true }
         );
 
+        if (!update) {
+            return res.status(400).json({ ok: false, message: "mateial arrival stage not available" });
+        }
+
+        const updatedRoom = (update.materialArrivalList as any)[roomKey] || []
+
+        const redisRoomKey = `stage:MaterialArrivalModel:${projectId}:room:${roomKey}`
+        const redisMainKey = `stage:MaterialArrivalModel:${projectId}`
+
+        await redisClient.set(redisMainKey, JSON.stringify(update.toObject()), { EX: 60 * 10 })
+        await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+
         res.json({ ok: true, data: update });
     } catch (err: any) {
         res.status(500).json({ ok: false, message: err.message });
@@ -208,12 +243,27 @@ const deleteMaterialArrivalRoomItem = async (req: Request, res: Response): Promi
 const getAllMaterialArrivalDetails = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
-        if(!projectId){
-                   res.status(400).json({ ok: false, message: "project is requried" });
+
+        const redisMainKey = `stage:MaterialArrivalModel:${projectId}`
+
+        const cachedData = await redisClient.get(redisMainKey)
+
+        if (cachedData) {
+            return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+        }
+
+        if (!projectId) {
+            res.status(400).json({ ok: false, message: "project is requried" });
 
         }
         const doc = await MaterialArrivalModel.findOne({ projectId });
-console.log("docuemtn of matiera arival", doc)
+
+        if (!doc) {
+            return res.status(400).json({ ok: false, message: "mateial arrival stage not available" });
+        }
+
+        await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+
         res.json({ ok: true, data: doc });
     } catch (err: any) {
         res.status(500).json({ ok: false, message: err.message });
@@ -223,6 +273,15 @@ console.log("docuemtn of matiera arival", doc)
 const getSingleRoomMaterialArrival = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId, roomKey } = req.params;
+
+        const redisRoomKey = `stage:MaterialArrivalModel:${projectId}:room:${roomKey}`
+
+        const cachedData = await redisClient.get(redisRoomKey)
+
+        if (cachedData) {
+            return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+        }
+
         const doc = await MaterialArrivalModel.findOne({ projectId });
 
         if (!doc) return res.status(404).json({ ok: false, message: "Not found" });
@@ -230,7 +289,9 @@ const getSingleRoomMaterialArrival = async (req: Request, res: Response): Promis
         const roomItems = (doc.materialArrivalList as any)[roomKey];
         if (!roomItems) return res.status(404).json({ ok: false, message: "Invalid room key" });
 
-        res.status(200).json({ ok: true, data: roomItems  });
+        await redisClient.set(redisRoomKey, JSON.stringify(roomItems), { EX: 60 * 10 })
+
+        res.status(200).json({ ok: true, data: roomItems });
     } catch (err: any) {
         res.status(500).json({ ok: false, message: err.message });
     }
@@ -305,11 +366,13 @@ const materialArrivalCompletionStatus = async (req: Request, res: Response): Pro
         await form.save();
 
         // if (form.status === "completed") {
+        await syncWorkSchedule(projectId)
+
         // }
+        const redisMainKey = `stage:MaterialArrivalModel:${projectId}}`
+        await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
-        await syncMaterialArrival(projectId)
-
-        return res.status(200).json({ ok: true, message: "cost estimation stage marked as completed", data: form });
+        return res.status(200).json({ ok: true, message: "mateiral arrival stage marked as completed", data: form.status });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

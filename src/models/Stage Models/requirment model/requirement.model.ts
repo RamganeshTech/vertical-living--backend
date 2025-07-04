@@ -119,4 +119,7 @@ const RequirementFormSchema = new Schema<IRequirementFormSchema>(
   { timestamps: true }
 )
 
+
+RequirementFormSchema.index({projectId: 1})
+
 export const RequirementFormModel = mongoose.model<IRequirementFormSchema>("RequirementFormModel", RequirementFormSchema)

@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { RedisClientType, RedisFunctions, RedisModules, RedisScripts } from "redis";
 import redisClient from "../config/redisClient";
-import { updateStageStatusInCache } from "../utils/updateStageStatusInCache ";
 
 /**
  * Generic middleware to check if the previous stage is completed.
@@ -16,15 +15,23 @@ export const checkPreviousStageCompleted = (previousStageModel: any): any => {
             return res.status(400).json({ message: "Project ID is required.", ok: false, });
         }
 
-        const redisKey = `stage:${previousStageModel.modelName}:${projectId}:status`
+        // console.log(previousStageModel.modelName)
+        const redisKey = `stage:${previousStageModel.modelName}:${projectId}`
 
-        // Try Redis first
-        let cachedstatus = await redisClient.get(redisKey);
+        if (previousStageModel.modelName !== "CostEstimation") {
+            // Try Redis first
+            // console.log("gettin d")
+            let cachedData = await redisClient.get(redisKey);
 
-        if (cachedstatus === "completed") {
-            return next()
+            // console.log("gettin d", cachedData)
+
+            if (cachedData) {
+                // console.log(JSON.parse(cachedData))
+                if (JSON.parse(cachedData)?.status === "completed") {
+                    return next()
+                }
+            }
         }
-
 
         // If not cached, check DB
         const doc = await previousStageModel.findOne({ projectId });
@@ -39,7 +46,9 @@ export const checkPreviousStageCompleted = (previousStageModel: any): any => {
 
 
         // Store in Redis for next time (e.g. 15 min TTL)
-        await redisClient.set(redisKey, doc.status, { EX: 60 * 15 });
+       if(previousStageModel.modelName !== "CostEstimation"){
+         await redisClient.set(redisKey, JSON.stringify(doc.toObject()), { EX: 60 * 15 });
+       }
         next();
     };
 };

@@ -16,13 +16,13 @@ siteMeasurementRoutes.post('/createmeasurement/:projectId', multiRoleAuthMiddlew
 siteMeasurementRoutes.post('/createroom/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), createRoom )
 siteMeasurementRoutes.get('/getmeasurement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), getTheSiteMeasurements)
 
-siteMeasurementRoutes.put('/updatecommonmeasurement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), checkPreviousStageCompleted(RequirementFormModel), updateCommonSiteMeasurements)
-siteMeasurementRoutes.put('/updateroommeasurement/:projectId/:roomId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), checkPreviousStageCompleted(RequirementFormModel), updateRoomSiteMeasurements)
-siteMeasurementRoutes.patch('/deleteroom/:projectId/:roomId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), checkPreviousStageCompleted(RequirementFormModel),DeleteRooms)
-siteMeasurementRoutes.put('/deletesitemeasurement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"),checkPreviousStageCompleted(RequirementFormModel), deleteSiteMeasurement)
+siteMeasurementRoutes.put('/updatecommonmeasurement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), updateCommonSiteMeasurements)
+siteMeasurementRoutes.put('/updateroommeasurement/:projectId/:roomId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), updateRoomSiteMeasurements)
+siteMeasurementRoutes.patch('/deleteroom/:projectId/:roomId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel),DeleteRooms)
+siteMeasurementRoutes.put('/deletesitemeasurement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(RequirementFormModel), deleteSiteMeasurement)
 
-siteMeasurementRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), checkPreviousStageCompleted(RequirementFormModel),setSiteMeasurementStageDeadline)
-siteMeasurementRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"),checkPreviousStageCompleted(RequirementFormModel), siteMeasurementCompletionStatus)
+siteMeasurementRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel),setSiteMeasurementStageDeadline)
+siteMeasurementRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(RequirementFormModel), siteMeasurementCompletionStatus)
 
 
 siteMeasurementRoutes.post( "/upload/multiple/:projectId/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(RequirementFormModel), imageUploadToS3.array("file"), uploadGenericController(SiteMeasurementModel))
