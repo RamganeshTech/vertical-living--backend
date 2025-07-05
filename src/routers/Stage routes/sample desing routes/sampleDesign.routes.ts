@@ -1,9 +1,10 @@
 import express from "express";
-import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader";
+// import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader";
 import { addRoom, deleteFileFromRoom, deleteRoom, getFilesFromRoom, sampleDesignCompletionStatus, setSampleDesignStageDeadline, uploadFilesToRoom } from "../../../controllers/stage controllers/sampledesign contorllers/sampledesign.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
+import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
 // import { deleteKitchenFile, deleteLivingHallFile, deleteWardrobeFile, getKitchenDesign, getLivingHallFiles, getWardrobeDesign, uploadKitchenFiles, uploadLivingHallFiles, uploadWardrobeFiles } from "../../../controllers/stage controllers/sampledesign contorllers/sampledesign.controller";
 
 

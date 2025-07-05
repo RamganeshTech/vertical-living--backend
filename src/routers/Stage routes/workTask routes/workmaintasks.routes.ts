@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader"; // your S3 uploader
+// import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader"; // your S3 uploader
 import { addDailyTask, deleteDailyTask, updateDailyScheduleStatus, updateDailyTask } from "../../../controllers/stage controllers/workTasksmain controllers/dailyschedule.controller";
 import { addWorkPlan, deleteWorkPlan, updateWorkPlan, updateWorkScheduleStatus } from "../../../controllers/stage controllers/workTasksmain controllers/workSchedule.contorller";
 import { multiRoleAuthMiddleware } from './../../../middlewares/multiRoleAuthMiddleware';
 import { getAllDailySchedules, getAllWorkMainStageDetails, getAllWorkSchedules, getProjectWorkers, mdApprovalAction, setWorkScheduleStageDeadline, workScheduleCompletionStatus } from "../../../controllers/stage controllers/workTasksmain controllers/workMain.controller";
 import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheck.model";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
+import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
 
 const workTaskRoutes = Router();
 

@@ -70,8 +70,8 @@ export const syncPaymentConfirationModel = async (projectId:string, totalAmount:
         content: defaultConsentContent,
         agreedByClientId: null,
         agreedAt: null,
-        agreedByName: null,
-        agreedByEmail: null,
+        // agreedByName: null,
+        // agreedByEmail: null,
         agreementToken: null,
         agreedByClient: false,
       },
@@ -144,22 +144,22 @@ const generateConsentLink = async (req: Request, res: Response): Promise<any> =>
       return res.status(400).json({ ok: false, message: "Consent is not required for this project.", data: null });
     }
 
-    if (paymentDoc.paymentClientConsent?.agreedByClientId) {
+    if (paymentDoc.paymentClientConsent?.isAgreed) {
       return res.status(400).json({ ok: false, message: "Consent already given.", data: null });
     }
 
     const token = crypto.randomBytes(32).toString("hex");
     paymentDoc.paymentClientConsent.agreementToken = token;
-    await paymentDoc.save();
-
+    
     let link:string
     if(process.env.NODE_ENV === "development"){
-        link = `http://localhost:5173.com/clientconsent/${projectId}/${token}`;
-    }
+        link = `http://localhost:5173/clientconsent/public/${projectId}/${token}`;
+      }
     else{
-        link = `${process.env.FRONTEND_URL}/clientconsent/${projectId}/${token}`;
+      link = `${process.env.FRONTEND_URL}/clientconsent/public/${projectId}/${token}`;
     }
-
+    paymentDoc.paymentClientConsent.link = link
+    await paymentDoc.save();
     return res.status(200).json({
       ok: true,
       message: "Consent link generated successfully.",
@@ -177,11 +177,11 @@ const generateConsentLink = async (req: Request, res: Response): Promise<any> =>
 const acceptClientConsent = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { projectId, token } = req.params;
-    const { clientId, name, email } = req.body;
+    // const { clientId } = req.body;
 
-    if (!clientId) {
-      return res.status(400).json({ ok: false, message: "Client ID is required.", data: null });
-    }
+    // if (!clientId) {
+    //   return res.status(400).json({ ok: false, message: "Client ID is required.", data: null });
+    // }
 
     const paymentDoc = await PaymentConfirmationModel.findOne({ projectId });
 
@@ -193,19 +193,24 @@ const acceptClientConsent = async (req: RoleBasedRequest, res: Response): Promis
       return res.status(400).json({ ok: false, message: "Consent is not required for this project.", data: null });
     }
 
-    if (paymentDoc.paymentClientConsent.agreedByClientId) {
+    // if (paymentDoc.paymentClientConsent.agreedByClientId) {
+    //   return res.status(400).json({ ok: false, message: "Consent already given.", data: null });
+    // }
+
+      if (paymentDoc.paymentClientConsent.isAgreed) {
       return res.status(400).json({ ok: false, message: "Consent already given.", data: null });
     }
 
     if (paymentDoc.paymentClientConsent.agreementToken !== token) {
-      return res.status(400).json({ ok: false, message: "Invalid or expired consent token.", data: null });
+      return res.status(400).json({ ok: false, message: "Consent Form token Expired or Invalid.", data: null });
     }
 
     // ✅ Save the client ID securely
-    paymentDoc.paymentClientConsent.agreedByClientId = clientId;
+    // paymentDoc.paymentClientConsent.agreedByClientId = clientId;
+paymentDoc.paymentClientConsent.isAgreed = true
     paymentDoc.paymentClientConsent.agreedAt = new Date();
-    paymentDoc.paymentClientConsent.agreedByName = name || null;
-    paymentDoc.paymentClientConsent.agreedByEmail = email || null;
+    // paymentDoc.paymentClientConsent.agreedByName = name || null;
+    // paymentDoc.paymentClientConsent.agreedByEmail = email || null;
 
     // ✅ Invalidate token permanently
     paymentDoc.paymentClientConsent.agreementToken = null;

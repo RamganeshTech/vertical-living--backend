@@ -103,15 +103,15 @@ export interface ISampleDesign {
 }
 
 const fileSchema = new Schema<IFileItem>({
-  type: { type: String, enum: ["image", "pdf"], required: true },
-  url: { type: String, required: true },
+  type: { type: String, enum: ["image", "pdf"] },
+  url: { type: String,  },
   originalName: String,
   uploadedAt: { type: Date, default: new Date() }
-});
+}, {_id: true});
 
 const dynamicRoomSchema = new Schema<IRoom>({
   _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
-  roomName: { type: String, required: true }, // e.g., "Master Bedroom", "Office Room"
+  roomName: { type: String, }, // e.g., "Master Bedroom", "Office Room"
   files: [fileSchema]
 });
 

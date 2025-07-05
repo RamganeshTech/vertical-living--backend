@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader"; 
+// import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader"; 
 import { multiRoleAuthMiddleware } from './../../../middlewares/multiRoleAuthMiddleware';
 import { uploadCleaningStageFiles, deleteCleaningStageFile,
   updateRoomCleaningStatus,
@@ -10,6 +10,7 @@ import { uploadCleaningStageFiles, deleteCleaningStageFile,
   updateCleaningStageRoomNotes, } from "../../../controllers/stage controllers/Cleaning controller/cleaning.controller";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
 import { QualityCheckupModel } from "../../../models/Stage Models/QualityCheck Model/QualityCheck.model";
+import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
 
 
 

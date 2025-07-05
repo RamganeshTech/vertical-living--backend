@@ -5,11 +5,13 @@ import ClientAuthMiddleware from '../../../middlewares/clientAuthMiddleware';
 import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware';
 import { uploadGenericController } from '../../../utils/common features/uploadFiles';
 import { RequirementFormModel } from '../../../models/Stage Models/requirment model/requirement.model';
-import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader';
+// import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader';
 import { updateBedroomSection, updateKitchenSection, updateLivingHallSection, updateWardrobeSection } from '../../../controllers/stage controllers/requirement controllers/subRoom.controller';
+import {imageUploadToS3, processUploadFiles}  from '../../../utils/s3Uploads/s3upload';
 
 
 const requirementRoutes = express.Router()
+console.log("👉 imageUploadToS3:", imageUploadToS3);
 
 // 1 requirement routes
 
@@ -24,7 +26,7 @@ requirementRoutes.patch('/formcompleted/:projectId/:formId', multiRoleAuthMiddle
 
 requirementRoutes.delete('/deleteform/:projectId',multiRoleAuthMiddleware("owner", "staff", "CTO"), delteRequirementForm)
 
-requirementRoutes.post( "/upload/multiple/:projectId/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), imageUploadToS3.array("file"), uploadGenericController(RequirementFormModel))
+requirementRoutes.post( "/upload/multiple/:projectId/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), imageUploadToS3.array("file"), processUploadFiles, uploadGenericController(RequirementFormModel))
 
 // uncommenrt this if the form shoule be updated only by the client 
 // requirementRoutes.put("/:projectId/updatekitchen", ClientAuthMiddleware, updateKitchenSection);

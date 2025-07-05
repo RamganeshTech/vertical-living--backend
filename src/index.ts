@@ -39,13 +39,42 @@ import assignRoutes from './routers/Stage routes/Assign routes/assignStaffs.rout
 import projectDeliveryRoutes from './routers/Stage routes/ProjectDelivery Routes/ProjectDelivery.routes';
 import stageTimerRoutes from './routers/Stage routes/Timer routes/timer.routes';
 import paymentConsentRoutes from './routers/Stage routes/PaymentConfirmation Routes/PaymentConfirmation.routes';
+import path from 'path';
+import { s3 } from './config/awssdk';
 // import checkRedisConnection from './config/redisClient';
+import fs from 'fs';
 
 
-dotenv.config()
-// console.log("S3_BUCKET", process.env.AWS_S3_BUCKET); // 👈 Add this
+dotenv.config();
+
+// (async () => {
+//   try {
+//     const fileName = "Screenshot (11).png";
+
+//     // Absolute or relative path to your image
+//     const filePath = path.join(__dirname, fileName);
+
+//     console.log("Uploading:", filePath);
+
+//     const result = await s3.upload({
+//       Bucket: process.env.AWS_S3_BUCKET!,
+//       Key: `test-upload/${Date.now()}-${fileName}`,
+//       Body: fs.createReadStream(filePath),
+//       // ACL: "public-read",
+//       ContentType: "image/png",
+//     }).promise();
+
+//     console.log("✅ Upload success!");
+//     console.log("S3 URL:", result.Location);
+//   } catch (err) {
+//     console.error("❌ Upload failed:", err);
+//   }
+// })();
 
 const app = express()
+
+
+
 // console.log("env file", process.env.FRONTEND_URL)
 app.use(cors({
   origin: process.env.FRONTEND_URL,
@@ -56,6 +85,9 @@ app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 
 // checkRedisConnection() //for redis
+
+
+
 
 app.use('/api/auth', authRoutes)
 app.use('/api/auth/client', clientRoutes)

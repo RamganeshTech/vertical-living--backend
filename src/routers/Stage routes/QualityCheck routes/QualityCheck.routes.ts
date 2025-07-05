@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
-import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader";
+// import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader";
 import { createQualityCheckItem, editQualityCheckItem,
 deleteQualityCheckItem,
 getQualityCheckup,
@@ -10,6 +10,7 @@ setQualityCheckStageDeadline,
 qualityCheckCompletionStatus, } from "../../../controllers/stage controllers/QualityCheck controllers/QualityCheck.controller";
 import InstallationModel from "../../../models/Stage Models/installation model/Installation.model";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
+import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
 
 
 const qualityCheckRoutes = Router();

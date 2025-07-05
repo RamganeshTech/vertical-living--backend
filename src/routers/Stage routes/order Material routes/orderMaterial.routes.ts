@@ -1,9 +1,10 @@
 import  express  from 'express';
 import { deleteOrderMaterialFile, deleteRoomMaterialItem, generateOrderingMaterialLink, getAllOrderingMaterialDetails, getOrderingMaterialPublicDetails,  getRoomDetailsOrderMaterials, orderMaterialCompletionStatus, setOrderMaterialFileStageDeadline, updateDeliveryLocationDetails, updateRoomMaterials, updateShopDetails, uploadOrderMaterialFiles } from '../../../controllers/stage controllers/ordering material controller/orderingMaterial.controller';
 import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware';
-import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader';
+// import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader';
 import { checkPreviousStageCompleted } from '../../../middlewares/checkPreviousStageMiddleware';
 import PaymentConfirmationModel from '../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model';
+import { imageUploadToS3 } from '../../../utils/s3Uploads/s3upload';
 
 
 const orderMaterialRoutes = express.Router()

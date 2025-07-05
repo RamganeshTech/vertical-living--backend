@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { handleSetStageDeadline, timerFunctionlity } from "../../../../utils/common features/timerFuncitonality";
-import PaymentConfirmationModel from "../../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
+import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
+import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
 
 
 

@@ -2,9 +2,10 @@ import express from "express";
 
 import { deleteMaterialArrivalRoomItem, generateMaterialArrivalLink, getAllMaterialArrivalDetails, getMaterialArrivalPublicDetails, getSingleRoomMaterialArrival, materialArrivalCompletionStatus, setMaterialArrivalStageDeadline, updateMaterialArrivalDeliveryLocation, updateMaterialArrivalRoomItem, updateMaterialArrivalShopDetails } from "../../../controllers/stage controllers/MaterialArrival controllers/materialArrivalCheck.controller";
 import { multiRoleAuthMiddleware } from './../../../middlewares/multiRoleAuthMiddleware';
-import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader";
+// import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader";
 import OrderingMaterialModel from "../../../models/Stage Models/Ordering Material Model/orderingMaterial.model";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
+import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
 
 const materialArrivalRoutes = express.Router();
 

@@ -2,11 +2,12 @@ import express from 'express';
 import ClientAuthMiddleware from '../../../middlewares/clientAuthMiddleware'; 
 import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware'; 
 import { uploadGenericController } from '../../../utils/common features/uploadFiles'; 
-import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader'; 
+// import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader'; 
 import { createRoom, createSiteMeasurement, DeleteRooms, deleteSiteMeasurement, getTheSiteMeasurements, setSiteMeasurementStageDeadline, siteMeasurementCompletionStatus, updateCommonSiteMeasurements, updateRoomSiteMeasurements } from '../../../controllers/stage controllers/site measurement controller/siteMeasurements.controller';
 import { SiteMeasurementModel } from '../../../models/Stage Models/siteMeasurement models/siteMeasurement.model';
 import { RequirementFormModel } from '../../../models/Stage Models/requirment model/requirement.model';
 import { checkPreviousStageCompleted } from '../../../middlewares/checkPreviousStageMiddleware';
+import { imageUploadToS3, processUploadFiles } from '../../../utils/s3Uploads/s3upload';
 
 const siteMeasurementRoutes = express.Router()
 
@@ -25,7 +26,7 @@ siteMeasurementRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddlewar
 siteMeasurementRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(RequirementFormModel), siteMeasurementCompletionStatus)
 
 
-siteMeasurementRoutes.post( "/upload/multiple/:projectId/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(RequirementFormModel), imageUploadToS3.array("file"), uploadGenericController(SiteMeasurementModel))
+siteMeasurementRoutes.post( "/upload/multiple/:projectId/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(RequirementFormModel), imageUploadToS3.array("file"), processUploadFiles, uploadGenericController(SiteMeasurementModel))
 
 export default siteMeasurementRoutes
 

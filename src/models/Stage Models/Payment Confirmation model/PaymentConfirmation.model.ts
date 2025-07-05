@@ -15,8 +15,10 @@ export interface IPaymentClientConsent {
     content: string; // Stored in backend, editable per project if needed.
     agreedByClientId: Types.ObjectId;
     agreedAt: Date;
-    agreedByName: string | null;
-    agreedByEmail: string | null;
+    isAgreed: boolean;
+    link: string | null;
+    // agreedByName: string | null;
+    // agreedByEmail: string | null;
     agreementToken: string | null;
 }
 
@@ -76,10 +78,12 @@ const TimerSchema = new Schema<IPaymentTimer>({
 // STEP 1
 const PaymentClientConsentSchema = new Schema<IPaymentClientConsent>({
     content: { type: String, required: true }, // the terms, payment schedules, conditions
-    agreedByClientId: { type: Schema.Types.ObjectId, default:null },
+    // agreedByClientId: { type: Schema.Types.ObjectId, default:null },
+    isAgreed: {type:Boolean, default:null},
     agreedAt: { type: Date, default: null },
-    agreedByName: { type: String, default: null },
-    agreedByEmail: { type: String, default: null },
+    link: {type:String, default:null},
+    // agreedByName: { type: String, default: null },
+    // agreedByEmail: { type: String, default: null },
     agreementToken: { type: String, default: null },
 }, { _id: false });
 
@@ -87,9 +91,7 @@ const PaymentClientConsentSchema = new Schema<IPaymentClientConsent>({
 
 // STEP 2
 const PaymentScheduleItemSchema = new Schema<IPaymentScheduleItem>({
-    // milestone: { type: String, required: true },
-    // amount: { type: Number, required: true },
-    // dueDate: { type: Date, required: true },
+    dueDate: { type: Date, required: true },
 
     clientApprovalStatus: {
         type: String,
@@ -136,6 +138,7 @@ const PaymentConfirmationSchema = new Schema<IPaymentConfirmation>({
     assignedTo: { type: Schema.Types.ObjectId, ref: "StaffModel", default: null },
     isConsentRequired: { type: Boolean, default: true },
     timer: { type: TimerSchema, required: true },
+    totalAmount :{type:Number, default: 0},
     // step1
     paymentClientConsent: { type: PaymentClientConsentSchema, required: true },
     // step2

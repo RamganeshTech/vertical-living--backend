@@ -55,8 +55,8 @@ const SiteMeasurementSchema = new Schema<ISiteMeasurement>({
 
     uploads: [
         {
-            type: { type: String, enum: ["image", "pdf"], required: true },
-            url: { type: String, required: true },
+            type: { type: String, enum: ["image", "pdf"],},
+            url: { type: String,  },
             originalName: String,
             uploadedAt: { type: Date, default: new Date() }
         }

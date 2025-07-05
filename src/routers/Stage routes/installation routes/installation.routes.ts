@@ -7,13 +7,15 @@ import { createInstallationItem , editInstallationItem,
   installationCompletionStatus,
 } from "../../../controllers/stage controllers/installation controllers/installation.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
-import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader";
+// import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader";
 import WorkMainStageScheduleModel from "../../../models/Stage Models/WorkTask Model/WorkTask.model";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
+import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
 
 const installationRoutes = Router();
 
 installationRoutes.post("/:projectId/:roomName/item/create", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"),   checkPreviousStageCompleted(WorkMainStageScheduleModel), imageUploadToS3.single("file"), createInstallationItem);
+
 installationRoutes.put("/:projectId/:roomName/item/edit",multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"), checkPreviousStageCompleted(WorkMainStageScheduleModel) ,imageUploadToS3.single("file"), editInstallationItem);
 installationRoutes.delete("/item/delete", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"), checkPreviousStageCompleted(WorkMainStageScheduleModel),deleteInstallationItem);
 installationRoutes.get("/:projectId/getalldetail",multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"), checkPreviousStageCompleted(WorkMainStageScheduleModel) ,getInstallationDetails);

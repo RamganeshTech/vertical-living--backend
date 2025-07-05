@@ -2,9 +2,10 @@
 import express from 'express';
 import { addLabourEstimation, costEstimationCompletionStatus, deleteCostEstimationFile, deleteLabourEstimation, editLabourEstimation, getCostEstimationByProject, getLabourEstimations, getSingleRoomEstimation, setCostEstimationStageDeadline, updateMaterialEstimationItem, uploadCostEstimationFiles } from '../../../controllers/stage controllers/cost estimation controllers/costEstimation.controller';
 import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware';
-import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader';
+// import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader';
 import MaterialRoomConfirmationModel from '../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model';
 import { checkPreviousStageCompleted } from '../../../middlewares/checkPreviousStageMiddleware';
+import { imageUploadToS3 } from '../../../utils/s3Uploads/s3upload';
 
 const costEstimationRoutes = express.Router();
 

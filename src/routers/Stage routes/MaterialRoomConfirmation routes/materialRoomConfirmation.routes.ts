@@ -1,10 +1,11 @@
 import express from "express";
-import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader";
+// import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader";
 import { sampleDesignCompletionStatus, setSampleDesignStageDeadline, uploadFilesToRoom } from "../../../controllers/stage controllers/sampledesign contorllers/sampledesign.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { addItemToCustomRoom, createCustomRoom, deleteCustomRoomField, deleteMaterialRoomFile, getMaterialRoomConfirmationByProject, getSinglePredefinedRoom, materialSelectionCompletionStatus, setMaterialConfirmationStageDeadline, updatePredefinedRoomField, uploadMaterialRoomFiles } from "../../../controllers/stage controllers/material Room confirmation/materialRoomConfirmation.controller";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
 import { TechnicalConsultationModel } from "../../../models/Stage Models/technical consulatation/technicalconsultation.model";
+import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
 // import { addMaterialRoom, createModularWork, deleteMaterialRoom, deleteMaterialRoomFile, deleteModularWork, editModularWork, getAllMaterialRooms, getRoomById, materialSelectionCompletionStatus, setMaterialConfirmationStageDeadline, uploadMaterialRoomFiles } from "../../../controllers/stage controllers/material Room confirmation/materialRoomConfirmation.controller";
 
 

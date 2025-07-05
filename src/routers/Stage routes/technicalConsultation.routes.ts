@@ -1,10 +1,11 @@
 import express from 'express';
 import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware'; 
-import { imageUploadToS3 } from '../../utils/s3Uploads/s3ImageUploader'; 
+// import { imageUploadToS3 } from '../../utils/s3Uploads/s3ImageUploader'; 
 import { addConsultationMessage, deleteConsultationMessage, editConsultationMessage, getConsultationMessages, setTechnicalConsultantStageDeadline, tehnicalConsultantCompletionStatus } from '../../controllers/stage controllers/technicalConsultant controllers/technicalConsultant.controller';
 import { TechnicalConsultationModel } from '../../models/Stage Models/technical consulatation/technicalconsultation.model';
 import { SampleDesignModel } from '../../models/Stage Models/sampleDesing model/sampleDesign.model';
 import { checkPreviousStageCompleted } from '../../middlewares/checkPreviousStageMiddleware';
+import { imageUploadToS3 } from '../../utils/s3Uploads/s3upload';
 
 
 const technicalConsultRoutes = express.Router()
