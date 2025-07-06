@@ -6,7 +6,6 @@ import OrganizationModel from "../../models/organization models/organization.mod
 import StaffModel from "../../models/staff model/staff.model";
 import CTOModel from "../../models/CTO model/CTO.model";
 
-import jwt  from 'jsonwebtoken';
 
 
 const createOrganziation = async (req: AuthenticatedUserRequest, res: Response) => {
@@ -20,6 +19,16 @@ const createOrganziation = async (req: AuthenticatedUserRequest, res: Response) 
             res.status(400).json({ message: "Organization name is required", ok: false });
             return
         }
+
+        // ✅ Check directly in OrganizationModel
+        const existingOrg = await OrganizationModel.findOne({ userId: user._id });
+        if (existingOrg) {
+            return res.status(400).json({
+                message: "Owner already has an organization",
+                ok: false,
+            });
+        }
+
 
         // 2. Create Organization
         const organization = await OrganizationModel.create({
@@ -68,10 +77,10 @@ const getMyOrganizations = async (req: AuthenticatedUserRequest, res: Response) 
             return
         }
 
-        const organization = await OrganizationModel.find({ userId: user._id });
+        const organization = await OrganizationModel.findOne({ userId: user._id });
 
         if (!organization) {
-            res.status(200).json({ message: "No organizations  found", ok: false, data: [] });
+            res.status(200).json({ message: "No organizations  found", ok: false, data: null });
             return
         }
 

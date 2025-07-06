@@ -43,6 +43,7 @@ import path from 'path';
 import { s3 } from './config/awssdk';
 // import checkRedisConnection from './config/redisClient';
 import fs from 'fs';
+import subscriptionRoutes from './routers/SubscriptionPayment Routes/subscriptionPayment.routes';
 
 
 dotenv.config();
@@ -140,7 +141,7 @@ app.use('/api', resetRouter)
 // ASSIGN STAFF 
 app.use('/api/assignstafftostage', assignRoutes)
 
-
+app.use("/api/subscriptionpayment", subscriptionRoutes);
 
 const PORT = process.env.PORT
 connectDB().then(() => {

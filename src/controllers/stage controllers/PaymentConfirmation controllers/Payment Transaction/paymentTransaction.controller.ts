@@ -26,13 +26,13 @@ const createPaymentConfirmationOrder = async (req: RoleBasedRequest, res: Respon
         const order = await razorpayInstance.orders.create({
             amount: amountInPaise,
             currency: "INR",
-            receipt: `receipt_${projectId}_${Date.now()}`,
+            receipt: `receipt_${Date.now()}`,
         });
 
         // Save gatewayOrderId and status
         paymentDoc.paymentTransaction = {
             ...paymentDoc.paymentTransaction,
-            clientId: clientId, // make sure you pass it
+            clientId: clientId || "6852b99174f27430cffafd31", // make sure you pass it
             paymentGateway: "razorpay",
             gatewayOrderId: order.id,
             gatewayPaymentId: null,
@@ -77,6 +77,10 @@ const verifyPaymentConfirmation = async (req: Request, res: Response): Promise<a
             .update(razorpay_order_id + "|" + razorpay_payment_id)
             .digest("hex");
 
+            console.log("generatedSigneatrue", generated_signature)
+            console.log("razorpay signature", razorpay_signature)
+
+            
         if (generated_signature !== razorpay_signature) {
             return res.status(400).json({ ok: false, message: "Payment verification failed." });
         }
@@ -84,7 +88,7 @@ const verifyPaymentConfirmation = async (req: Request, res: Response): Promise<a
         paymentDoc.paymentTransaction.status = "successful";
         paymentDoc.paymentTransaction.gatewayPaymentId = razorpay_payment_id;
         paymentDoc.paymentTransaction.paidAt = new Date();
-        paymentDoc.status = "completed";
+        // paymentDoc.status = "completed";
 
         await paymentDoc.save();
 

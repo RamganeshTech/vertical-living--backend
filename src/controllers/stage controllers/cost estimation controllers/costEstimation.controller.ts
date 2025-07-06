@@ -7,7 +7,7 @@ import { PREDEFINED_ROOMS } from '../../../constants/phaseConstants';
 import { handleSetStageDeadline, timerFunctionlity } from '../../../utils/common features/timerFuncitonality';
 import { syncInstallationWork } from '../installation controllers/installation.controller';
 import { syncQualityCheck } from '../QualityCheck controllers/QualityCheck.controller';
-import { syncPaymentConfirationModel } from '../PaymentConfirmation controllers/PaymentConsent contrlollers/paymentConsent.controller';
+import { syncPaymentConfirationModel } from '../PaymentConfirmation controllers/PaymentMain.controllers';
 
 
 const generateCostEstimationFromMaterialSelection = async (

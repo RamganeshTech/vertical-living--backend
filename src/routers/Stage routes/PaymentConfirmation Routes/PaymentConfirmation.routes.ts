@@ -7,6 +7,7 @@ import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousS
 import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
 import { getPaymentConfirmation, paymentConfirmationCompletionStatus, setPayementConfirmationStageDeadline } from "../../../controllers/stage controllers/PaymentConfirmation controllers/PaymentMain.controllers";
 import { getPaymentSchedule, updateClientApprovalStatus, updateClientNotes, updateDueDate, updateMdApprovalStatus, updateMdNotes } from "../../../controllers/stage controllers/PaymentConfirmation controllers/PaymentSchedule controllers/paymentSchedule.controllers";
+import { createPaymentConfirmationOrder, getPaymentTransaction, verifyPaymentConfirmation } from "../../../controllers/stage controllers/PaymentConfirmation controllers/Payment Transaction/paymentTransaction.controller";
 
 // import { createPaymentConfirmationOrder, getPaymentTransaction, verifyPaymentConfirmation } from "../../../controllers/stage controllers/PaymentConfirmation controllers/Payment Transaction/paymentTransaction.controller";
 
@@ -39,9 +40,9 @@ paymentConsentRoutes.put("/mdnotes/:projectId",multiRoleAuthMiddleware("CTO", "o
 
 //  STEP 3
 
-// paymentConsentRoutes.post("/createorder/:projectId", multiRoleAuthMiddleware("client"), checkPreviousStageCompleted(CostEstimationModel), createPaymentConfirmationOrder);
-// paymentConsentRoutes.post("/verifypayment/:projectId", multiRoleAuthMiddleware("client"), checkPreviousStageCompleted(CostEstimationModel), verifyPaymentConfirmation);
-// paymentConsentRoutes.get("/gettransaction/:projectId", multiRoleAuthMiddleware("CTO", "owner", "staff", "client"), getPaymentTransaction);
+paymentConsentRoutes.post("/createorder/:projectId", multiRoleAuthMiddleware("client","owner"), checkPreviousStageCompleted(CostEstimationModel), createPaymentConfirmationOrder);
+paymentConsentRoutes.post("/verifypayment/:projectId", multiRoleAuthMiddleware("client", "owner"), checkPreviousStageCompleted(CostEstimationModel), verifyPaymentConfirmation);
+paymentConsentRoutes.get("/gettransaction/:projectId", multiRoleAuthMiddleware("CTO", "owner", "staff", "client"), getPaymentTransaction);
 
 
 

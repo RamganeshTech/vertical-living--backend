@@ -77,7 +77,7 @@ const TimerSchema = new Schema<IPaymentTimer>({
 
 // STEP 1
 const PaymentClientConsentSchema = new Schema<IPaymentClientConsent>({
-    content: { type: String, required: true }, // the terms, payment schedules, conditions
+    content: { type: String,  }, // the terms, payment schedules, conditions
     // agreedByClientId: { type: Schema.Types.ObjectId, default:null },
     isAgreed: {type:Boolean, default:null},
     agreedAt: { type: Date, default: null },
@@ -91,7 +91,7 @@ const PaymentClientConsentSchema = new Schema<IPaymentClientConsent>({
 
 // STEP 2
 const PaymentScheduleItemSchema = new Schema<IPaymentScheduleItem>({
-    dueDate: { type: Date, required: true },
+    dueDate: { type: Date, default:null },
 
     clientApprovalStatus: {
         type: String,
@@ -113,17 +113,17 @@ const PaymentScheduleItemSchema = new Schema<IPaymentScheduleItem>({
 
 const PaymentTransactionSchema = new Schema<IPaymentTransaction>(
   {
-    clientId: { type: Schema.Types.ObjectId, ref: "ClientModel", required: true },
-    paymentGateway: { type: String, required: true },
-    gatewayOrderId: { type: String, required: true },
+    clientId: { type: Schema.Types.ObjectId, ref: "ClientModel", default:null },
+    paymentGateway: { type: String,  },
+    gatewayOrderId: { type: String, },
     gatewayPaymentId: { type: String, default: null },
     
     status: {
       type: String,
       enum: ["created", "attempted", "successful", "failed"],
-      default: "created",
+      default: null,
     },
-    amount: { type: Number, required: true },
+    amount: { type: Number },
     currency: { type: String, default: "INR" },
     paidAt: { type: Date, default: null },
   },
@@ -137,10 +137,10 @@ const PaymentConfirmationSchema = new Schema<IPaymentConfirmation>({
     isEditable: { type: Boolean, default: true },
     assignedTo: { type: Schema.Types.ObjectId, ref: "StaffModel", default: null },
     isConsentRequired: { type: Boolean, default: true },
-    timer: { type: TimerSchema, required: true },
+    timer: { type: TimerSchema, },
     totalAmount :{type:Number, default: 0},
     // step1
-    paymentClientConsent: { type: PaymentClientConsentSchema, required: true },
+    paymentClientConsent: { type: PaymentClientConsentSchema,},
     // step2
     paymentSchedule: { type: PaymentScheduleItemSchema },
     // step3
