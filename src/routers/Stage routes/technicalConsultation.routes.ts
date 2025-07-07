@@ -5,14 +5,14 @@ import { addConsultationMessage, deleteConsultationMessage, editConsultationMess
 import { TechnicalConsultationModel } from '../../models/Stage Models/technical consulatation/technicalconsultation.model';
 import { SampleDesignModel } from '../../models/Stage Models/sampleDesing model/sampleDesign.model';
 import { checkPreviousStageCompleted } from '../../middlewares/checkPreviousStageMiddleware';
-import { imageUploadToS3 } from '../../utils/s3Uploads/s3upload';
+import { imageUploadToS3, processUploadFiles } from '../../utils/s3Uploads/s3upload';
 
 
 const technicalConsultRoutes = express.Router()
 
 // 4. TECHNICAL CONSULTATION routes
 
-technicalConsultRoutes.post("/createmessage/:projectId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(SampleDesignModel),imageUploadToS3.array("attachments"), addConsultationMessage); // field name used in FormData
+technicalConsultRoutes.post("/createmessage/:projectId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(SampleDesignModel),imageUploadToS3.array("attachments"), processUploadFiles, addConsultationMessage); // field name used in FormData
 
 // ✅ GET all messages for a project
 technicalConsultRoutes.get("/getmessages/:projectId" ,multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(SampleDesignModel), getConsultationMessages);

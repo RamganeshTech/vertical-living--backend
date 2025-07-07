@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import InstallationModel from "../../../models/Stage Models/installation model/Installation.model";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import redisClient from "../../../config/redisClient";
+import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 
 
 export const syncInstallationWork = async (projectId: string) => {
@@ -111,11 +112,13 @@ const createInstallationItem = async (req: Request, res: Response): Promise<any>
 
     if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
 
-    const redisMainKey = `stage:InstallationModel:${projectId}`
+    // const redisMainKey = `stage:InstallationModel:${projectId}`
     const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
 
     const updatedRoom = doc[roomName]
-    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
+
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
     return res.json({ ok: true, data: doc[roomName] });
@@ -171,11 +174,13 @@ const editInstallationItem = async (req: Request, res: Response): Promise<any> =
     await doc.save();
 
 
-    const redisMainKey = `stage:InstallationModel:${projectId}`
+    // const redisMainKey = `stage:InstallationModel:${projectId}`
     const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
 
     const updatedRoom = doc[roomName]
-    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
+
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
     return res.json({ ok: true, data: item, message: "updated successull" });
@@ -187,8 +192,8 @@ const editInstallationItem = async (req: Request, res: Response): Promise<any> =
 
 const deleteInstallationItem = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { projectId, roomName, itemId } = req.body;
-
+    const {  roomName, itemId } = req.body;
+    const {projectId} = req.params
     if (!projectId || !roomName || !itemId) {
       return res.status(400).json({ ok: false, message: "projectId, roomName, and itemId are required." });
     }
@@ -207,11 +212,13 @@ const deleteInstallationItem = async (req: Request, res: Response): Promise<any>
       return res.status(404).json({ ok: false, message: "Installation record not found." });
     }
 
-    const redisMainKey = `stage:InstallationModel:${projectId}`
+    // const redisMainKey = `stage:InstallationModel:${projectId}`
     const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
 
     const updatedRoom = (doc as any)[roomName]
-    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
+
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
     return res.json({ ok: true, success: true, message: "Item deleted successfully." });
@@ -236,7 +243,9 @@ const getInstallationDetails = async (req: Request, res: Response): Promise<any>
     const doc = await InstallationModel.findOne({ projectId });
     if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
 
-    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
+
     return res.status(200).json({ ok: true, data: doc, message: "fetched properly" });
   } catch (error) {
     console.error("Error fetching installation details:", error);
@@ -300,8 +309,9 @@ const installationCompletionStatus = async (req: Request, res: Response): Promis
     timerFunctionlity(form, "completedAt")
     await form.save();
 
-    const redisMainKey = `stage:InstallationModel:${projectId}`
-    await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+    // const redisMainKey = `stage:InstallationModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+        await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: form })
 
     return res.status(200).json({ ok: true, message: "installation check stage marked as completed", data: form });
   } catch (err) {

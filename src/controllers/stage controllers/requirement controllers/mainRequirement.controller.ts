@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { RequirementFormModel } from "../../../models/Stage Models/requirment model/requirement.model";
 import { validateBedroomInput, validateKitchenInput, validateLivingHallInput, validateWardrobeInput } from "../../../validations/requirement validation/kitchenValidation";
-import { Types } from "mongoose";
+import { Model, Types } from "mongoose";
 import crypto from 'crypto';
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import { isDate } from "util/types";
@@ -10,6 +10,11 @@ import { resetStages } from "../../../utils/common features/ressetStages";
 import { initializeSiteRequirement } from "../../../utils/Stage Utils/siteRequirementsInitialize";
 import { isObjectHasValue } from "../../../utils/isObjectHasValue";
 import redisClient from "../../../config/redisClient";
+import { assignedTo, selectedFields } from "../../../constants/BEconstants";
+import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+
+
+
 
 export const syncRequirmentForm = async (projectId: Types.ObjectId) => {
 
@@ -188,8 +193,7 @@ const submitRequirementForm = async (req: Request, res: Response,): Promise<void
 
     await form.save();
 
-    const redisKeyMain = `stage:RequirementFormModel:${projectId}`
-    await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+    await populateWithAssignedToField({ stageModel: RequirementFormModel, projectId, dataToCache: form })
 
     res.status(201).json({ ok: true, message: "Requirement form submitted successfully.", data: form, });
   } catch (error: any) {
@@ -234,9 +238,9 @@ const getFormFilledDetails = async (req: Request, res: Response,): Promise<any> 
       return;
     }
 
-    
+
     const redisKeyMain = `stage:RequirementFormModel:${projectId}`
-    await redisClient.del(redisKeyMain)
+    // await redisClient.del(redisKeyMain)
     const redisCache = await redisClient.get(redisKeyMain)
 
     if (redisCache) {
@@ -336,9 +340,10 @@ const generateShareableFormLink = async (req: Request, res: Response): Promise<a
     }
 
     await form.save();
-    const redisKeyMain = `stage:RequirementFormModel:${projectId}`
-    await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+    // const redisKeyMain = `stage:RequirementFormModel:${projectId}`
+    // await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
+    await populateWithAssignedToField({ stageModel: RequirementFormModel, projectId, dataToCache: form })
 
     const link = `${process.env.FRONTEND_URL}/requirementform/${projectId}/${token}`;
 
@@ -360,8 +365,9 @@ const lockRequirementForm = async (req: Request, res: Response): Promise<any> =>
     form.status = "locked";
     await form.save();
 
-    const redisKeyMain = `stage:RequirementFormModel:${projectId}`
-    await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+    // const redisKeyMain = `stage:RequirementFormModel:${projectId}`
+    // await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+    await populateWithAssignedToField({ stageModel: RequirementFormModel, projectId, dataToCache: form })
 
     return res.status(200).json({ ok: true, message: "Form has been locked", data: form });
   } catch (err) {
@@ -422,8 +428,11 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
       await siteMeasurement.save()
     }
 
-    const redisKeyMain = `stage:RequirementFormModel:${projectId}`
-    await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+    // const redisKeyMain = `stage:RequirementFormModel:${projectId}`
+    // await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+
+   await populateWithAssignedToField({stageModel:RequirementFormModel, projectId, dataToCache:form})
+
 
     return res.status(200).json({ ok: true, message: "Requirement stage marked as completed", data: form });
   } catch (err) {
@@ -441,11 +450,43 @@ export const setRequirementStageDeadline = (req: Request, res: Response): Promis
   });
 };
 
+
+
+
+const deleteRequirementStageFile = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { projectId, fileId } = req.params;
+
+    const doc = await RequirementFormModel.findOne({ projectId });
+    if (!doc) return res.status(404).json({ ok: false, message: "requriement stage not found" });
+
+    // const file = doc.uploads.find((file: any) => file._id.toString() === fileId);
+
+    const index = doc.uploads.findIndex((upload: any) => upload._id?.toString() === fileId);
+    if (index === -1) return res.status(404).json({ ok: false, message: "File not found" });
+
+    doc.uploads.splice(index, 1);
+    await doc.save();
+    // const redisKeyMain = `stage:RequirementFormModel:${projectId}`
+    // await redisClient.set(redisKeyMain, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+
+   await populateWithAssignedToField({stageModel:RequirementFormModel, projectId, dataToCache:doc})
+
+
+    return res.status(200).json({ ok: true, message: "File deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting uploaded file:", err);
+    return res.status(500).json({ ok: false, message: "Internal server error" });
+  }
+};
+
 export {
   submitRequirementForm,
   delteRequirementForm,
   getFormFilledDetails,
   generateShareableFormLink,
   lockRequirementForm,
-  markFormAsCompleted
+  markFormAsCompleted,
+
+  deleteRequirementStageFile
 }

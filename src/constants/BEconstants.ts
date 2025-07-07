@@ -15,3 +15,10 @@ export const SUBSCRIPTION_PLANS = {
     durationInDays: 30,
   },
 };
+
+
+
+
+// ASSIGNED TO 
+export const assignedTo = "assignedTo"
+export const selectedFields = "_id staffName email"

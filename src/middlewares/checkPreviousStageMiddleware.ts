@@ -18,7 +18,7 @@ export const checkPreviousStageCompleted = (previousStageModel: any): any => {
         // console.log(previousStageModel.modelName)
         const redisKey = `stage:${previousStageModel.modelName}:${projectId}`
 
-        if (previousStageModel.modelName !== "CostEstimation") {
+        if (previousStageModel.modelName !== "CostEstimation" && previousStageModel.modelName !== "PaymentConfirmationModel") {
             // Try Redis first
             // console.log("gettin d")
             let cachedData = await redisClient.get(redisKey);
@@ -46,7 +46,7 @@ export const checkPreviousStageCompleted = (previousStageModel: any): any => {
 
 
         // Store in Redis for next time (e.g. 15 min TTL)
-       if(previousStageModel.modelName !== "CostEstimation"){
+       if(previousStageModel.modelName !== "CostEstimation" || previousStageModel.modelName !== "PaymentConfirmationModel"){
          await redisClient.set(redisKey, JSON.stringify(doc.toObject()), { EX: 60 * 15 });
        }
         next();

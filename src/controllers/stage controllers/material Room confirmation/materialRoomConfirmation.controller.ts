@@ -9,6 +9,7 @@ import { syncOrderingMaterials } from "../ordering material controller/orderingM
 import { syncWorkSchedule } from "../workTasksmain controllers/workMain.controller";
 import redisClient from "../../../config/redisClient";
 import { json } from "stream/consumers";
+import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 
 
 export const initializeMaterialSelection = async (req: Request, res: Response): Promise<any> => {
@@ -82,7 +83,10 @@ const getMaterialRoomConfirmationByProject = async (req: Request, res: Response)
       return res.status(404).json({ ok: false, message: "Material Room Confirmation not found." });
     }
 
-    await redisClient.set(redisMainKey, JSON.stringify(data.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(data.toObject()), { EX: 60 * 10 })
+
+    await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: data })
+
 
     return res.status(200).json({ message: "fetched all matieral confirmations successfully", ok: true, data });
   } catch (error) {
@@ -188,7 +192,9 @@ const updatePredefinedRoomField = async (req: Request, res: Response): Promise<a
       const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
       const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
       updatedRoom = predefinedRoom;
-      await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+      // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+      await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: doc })
+
       await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
 
       return res.status(200).json({
@@ -216,9 +222,10 @@ const updatePredefinedRoomField = async (req: Request, res: Response): Promise<a
       await doc.save();
 
       const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
-      const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+      // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
       updatedRoom = predefinedRoom;
-      await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+      // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+      await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: doc })
       await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
 
       return res.status(200).json({
@@ -275,8 +282,11 @@ const createCustomRoom = async (req: Request, res: Response): Promise<any> => {
     materialSelection.customRooms.push(newRoom);
     await materialSelection.save();
 
-    const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
-    await redisClient.set(redisMainKey, JSON.stringify(materialSelection.toObject()), { EX: 60 * 10 })
+    // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(materialSelection.toObject()), { EX: 60 * 10 })
+
+    await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: materialSelection })
+
 
     return res.status(201).json({
       ok: true,
@@ -335,11 +345,13 @@ const addItemToCustomRoom = async (req: Request, res: Response): Promise<any> =>
     await doc.save();
 
     const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
-    const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+    // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
 
     // ✅ Correct: updatedRoom is the room you just updated
     const updatedRoom = room;
-    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: doc })
+
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
 
     return res.status(201).json({
@@ -388,11 +400,13 @@ const deleteCustomRoomField = async (req: Request, res: Response): Promise<any> 
     await doc.save();
 
     const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
-    const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+    // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
 
     // ✅ Correct: updatedRoom is the room you just updated
     const updatedRoom = customRoom;
-    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: doc })
+
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
 
 
@@ -426,8 +440,11 @@ const materialSelectionCompletionStatus = async (req: Request, res: Response): P
     await syncOrderingMaterials(projectId)
     // }
 
-    const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
-    await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+    // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+
+    await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: form })
+
 
 
     return res.status(200).json({ ok: true, message: "Material Selection stage marked as completed", data: form });
@@ -487,12 +504,13 @@ const uploadMaterialRoomFiles = async (req: Request, res: Response): Promise<any
 
 
     const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
-    const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+    // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
 
     // ✅ Correct: updatedRoom is the room you just updated
     const updatedRoom = room;
-    await redisClient.set(redisMainKey, JSON.stringify(materialDoc.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(materialDoc.toObject()), { EX: 60 * 10 })
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
+    await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: materialDoc })
 
 
     return res.status(200).json({
@@ -540,12 +558,13 @@ const deleteMaterialRoomFile = async (req: Request, res: Response): Promise<any>
 
 
     const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
-    const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+    // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
 
     // ✅ Correct: updatedRoom is the room you just updated
     const updatedRoom = room;
-    await redisClient.set(redisMainKey, JSON.stringify(materialDoc.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(materialDoc.toObject()), { EX: 60 * 10 })
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
+    await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: materialDoc })
 
     return res.status(200).json({
       ok: true,

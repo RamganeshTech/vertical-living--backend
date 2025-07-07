@@ -12,6 +12,7 @@ import { Request, Response } from "express";
 import { isValidObjectId } from "mongoose";
 import { updateCachedeadline } from "../updateStageStatusInCache ";
 import { PopulateOptions, Model } from "mongoose";
+import { populateWithAssignedToField } from "../populateWithRedis";
 
 export const handleSetStageDeadline = async (req: Request, res: Response, { model, stageName, populate }: { model: Model<any>; stageName: string; populate?: string | PopulateOptions | (string | PopulateOptions)[]; }): Promise<Response> => {
   try {
@@ -24,7 +25,7 @@ export const handleSetStageDeadline = async (req: Request, res: Response, { mode
       return res.status(400).json({ ok: false, message: "Form Id required" });
     }
 
-     // If the input has no time, add "T00:00:00"
+    // If the input has no time, add "T00:00:00"
     if (deadLine && deadLine.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(deadLine)) {
       deadLine = `${deadLine}T00:00:00`;
     }
@@ -52,16 +53,23 @@ export const handleSetStageDeadline = async (req: Request, res: Response, { mode
 
     await doc.save();
 
-
-
     let docToCache = doc;
     if (populate) {
-      docToCache = await doc.populate(populate);
+      docToCache = await docToCache.populate(populate);
     }
 
+    // ✅ Then always ALSO populate assignedTo for Redis
     if (model.modelName !== "CostEstimation") {
-      await updateCachedeadline(model, projectId, docToCache)
+      await populateWithAssignedToField({
+        stageModel: model,
+        projectId,
+        dataToCache: docToCache,
+      });
     }
+
+    // if (model.modelName !== "CostEstimation") {
+    //   await updateCachedeadline(model, projectId, docToCache)
+    // }
 
     return res.status(200).json({
       ok: true,

@@ -3,7 +3,7 @@ import ClientAuthMiddleware from '../../../middlewares/clientAuthMiddleware';
 import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware'; 
 import { uploadGenericController } from '../../../utils/common features/uploadFiles'; 
 // import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader'; 
-import { createRoom, createSiteMeasurement, DeleteRooms, deleteSiteMeasurement, getTheSiteMeasurements, setSiteMeasurementStageDeadline, siteMeasurementCompletionStatus, updateCommonSiteMeasurements, updateRoomSiteMeasurements } from '../../../controllers/stage controllers/site measurement controller/siteMeasurements.controller';
+import { createRoom, createSiteMeasurement, DeleteRooms, deleteSiteMeasurement, deleteSiteMeasurementFile, getTheSiteMeasurements, setSiteMeasurementStageDeadline, siteMeasurementCompletionStatus, updateCommonSiteMeasurements, updateRoomSiteMeasurements } from '../../../controllers/stage controllers/site measurement controller/siteMeasurements.controller';
 import { SiteMeasurementModel } from '../../../models/Stage Models/siteMeasurement models/siteMeasurement.model';
 import { RequirementFormModel } from '../../../models/Stage Models/requirment model/requirement.model';
 import { checkPreviousStageCompleted } from '../../../middlewares/checkPreviousStageMiddleware';
@@ -25,7 +25,7 @@ siteMeasurementRoutes.put('/deletesitemeasurement/:projectId', multiRoleAuthMidd
 siteMeasurementRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel),setSiteMeasurementStageDeadline)
 siteMeasurementRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(RequirementFormModel), siteMeasurementCompletionStatus)
 
-
+siteMeasurementRoutes.patch("/:projectId/deleteuploadedfile/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(RequirementFormModel), deleteSiteMeasurementFile);
 siteMeasurementRoutes.post( "/upload/multiple/:projectId/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(RequirementFormModel), imageUploadToS3.array("file"), processUploadFiles, uploadGenericController(SiteMeasurementModel))
 
 export default siteMeasurementRoutes

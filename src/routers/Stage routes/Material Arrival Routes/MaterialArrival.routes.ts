@@ -5,13 +5,13 @@ import { multiRoleAuthMiddleware } from './../../../middlewares/multiRoleAuthMid
 // import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader";
 import OrderingMaterialModel from "../../../models/Stage Models/Ordering Material Model/orderingMaterial.model";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
-import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
+import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
 
 const materialArrivalRoutes = express.Router();
 
 materialArrivalRoutes.put("/:projectId/shop", multiRoleAuthMiddleware("owner", "staff", "CTO"),checkPreviousStageCompleted(OrderingMaterialModel), updateMaterialArrivalShopDetails);
 materialArrivalRoutes.put("/:projectId/delivery-location", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(OrderingMaterialModel),updateMaterialArrivalDeliveryLocation);
-materialArrivalRoutes.put("/:projectId/room/:roomKey", checkPreviousStageCompleted(OrderingMaterialModel), imageUploadToS3.single("upload"), updateMaterialArrivalRoomItem);
+materialArrivalRoutes.put("/:projectId/room/:roomKey", checkPreviousStageCompleted(OrderingMaterialModel), imageUploadToS3.single("upload"), processUploadFiles, updateMaterialArrivalRoomItem);
 materialArrivalRoutes.delete("/:projectId/room/:roomKey/:itemId", checkPreviousStageCompleted(OrderingMaterialModel),deleteMaterialArrivalRoomItem);
 materialArrivalRoutes.get("/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(OrderingMaterialModel),getAllMaterialArrivalDetails);
 materialArrivalRoutes.get("/:projectId/room/:roomKey", multiRoleAuthMiddleware("owner", "staff", "CTO"),checkPreviousStageCompleted(OrderingMaterialModel), getSingleRoomMaterialArrival);

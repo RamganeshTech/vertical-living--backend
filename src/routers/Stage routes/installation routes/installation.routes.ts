@@ -10,14 +10,14 @@ import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddl
 // import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader";
 import WorkMainStageScheduleModel from "../../../models/Stage Models/WorkTask Model/WorkTask.model";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
-import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
+import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
 
 const installationRoutes = Router();
 
-installationRoutes.post("/:projectId/:roomName/item/create", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"),   checkPreviousStageCompleted(WorkMainStageScheduleModel), imageUploadToS3.single("file"), createInstallationItem);
+installationRoutes.post("/:projectId/:roomName/item/create", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"),   checkPreviousStageCompleted(WorkMainStageScheduleModel), imageUploadToS3.single("file"), processUploadFiles, createInstallationItem);
 
-installationRoutes.put("/:projectId/:roomName/item/edit",multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"), checkPreviousStageCompleted(WorkMainStageScheduleModel) ,imageUploadToS3.single("file"), editInstallationItem);
-installationRoutes.delete("/item/delete", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"), checkPreviousStageCompleted(WorkMainStageScheduleModel),deleteInstallationItem);
+installationRoutes.put("/:projectId/:roomName/item/edit",multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"), checkPreviousStageCompleted(WorkMainStageScheduleModel) ,imageUploadToS3.single("file"), processUploadFiles, editInstallationItem);
+installationRoutes.delete("/:projectId/item/delete", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"), checkPreviousStageCompleted(WorkMainStageScheduleModel),deleteInstallationItem);
 installationRoutes.get("/:projectId/getalldetail",multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"), checkPreviousStageCompleted(WorkMainStageScheduleModel) ,getInstallationDetails);
 installationRoutes.get("/:projectId/getroomdetail/:roomName", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"), checkPreviousStageCompleted(WorkMainStageScheduleModel), getInstallationRoomDetails);
 

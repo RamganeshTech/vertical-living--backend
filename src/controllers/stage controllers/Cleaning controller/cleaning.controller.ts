@@ -5,6 +5,7 @@ import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common
 import { PREDEFINED_ROOMS } from "../../../constants/phaseConstants";
 import { syncProjectDelivery } from "../Project Delivery Controllers/projectDelivery.controllers";
 import redisClient from "../../../config/redisClient";
+import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 
 
 
@@ -95,11 +96,13 @@ const uploadCleaningStageFiles = async (req: Request, res: Response): Promise<an
     }
 
 
-    const redisMainKey = `stage:CleaningAndSanitationModel:${projectId}`
+    // const redisMainKey = `stage:CleaningAndSanitationModel:${projectId}`
     const redisRoomKey = `stage:CleaningAndSanitationModel:${projectId}:room:${roomId}`
 
     const updatedRoom = (updatedDoc.rooms as Types.DocumentArray<any>).id(roomId)
-    await redisClient.set(redisMainKey, JSON.stringify(updatedDoc.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(updatedDoc.toObject()), { EX: 60 * 10 })
+    await populateWithAssignedToField({ stageModel: CleaningAndSanitationModel, projectId, dataToCache: updatedDoc })
+
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
 
@@ -143,11 +146,13 @@ const deleteCleaningStageFile = async (req: Request, res: Response): Promise<any
       return res.status(404).json({ ok: false, message: "Record not found." });
     }
 
-    const redisMainKey = `stage:CleaningAndSanitationModel:${projectId}`
+    // const redisMainKey = `stage:CleaningAndSanitationModel:${projectId}`
     const redisRoomKey = `stage:CleaningAndSanitationModel:${projectId}:room:${roomId}`
 
     const updatedRoom = (doc.rooms as Types.DocumentArray<any>).id(roomId)
-    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    await populateWithAssignedToField({ stageModel: CleaningAndSanitationModel, projectId, dataToCache: doc })
+
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
 
@@ -179,11 +184,13 @@ const updateCleaningStageRoomNotes = async (req: Request, res: Response): Promis
       return res.status(404).json({ ok: false, message: "Room not found." });
     }
 
-    const redisMainKey = `stage:CleaningAndSanitationModel:${projectId}`
+    // const redisMainKey = `stage:CleaningAndSanitationModel:${projectId}`
     const redisRoomKey = `stage:CleaningAndSanitationModel:${projectId}:room:${roomId}`
 
     const updatedRoom = (doc.rooms as Types.DocumentArray<any>).id(roomId)
-    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    await populateWithAssignedToField({ stageModel: CleaningAndSanitationModel, projectId, dataToCache: doc })
+
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
 
@@ -224,11 +231,13 @@ const updateRoomCleaningStatus = async (req: Request, res: Response): Promise<an
     }
 
 
-     const redisMainKey = `stage:CleaningAndSanitationModel:${projectId}`
+    // const redisMainKey = `stage:CleaningAndSanitationModel:${projectId}`
     const redisRoomKey = `stage:CleaningAndSanitationModel:${projectId}:room:${roomId}`
 
     const updatedRoom = (doc.rooms as Types.DocumentArray<any>).id(roomId)
-    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    await populateWithAssignedToField({ stageModel: CleaningAndSanitationModel, projectId, dataToCache: doc })
+
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
 
@@ -246,6 +255,16 @@ const getCleaningAndSanitationDetails = async (req: Request, res: Response): Pro
   try {
     const { projectId } = req.params;
 
+    
+    const redisMainKey = `stage:CleaningAndSanitationModel:${projectId}`
+
+    const cachedData = await redisClient.get(redisMainKey)
+    
+
+    if(cachedData){
+      return res.status(200).json({message:"data fetched foem cache", data: JSON.parse(cachedData), ok:true})
+    }
+
     if (!projectId) {
       return res.status(400).json({ ok: false, message: "Missing projectId." });
     }
@@ -255,6 +274,9 @@ const getCleaningAndSanitationDetails = async (req: Request, res: Response): Pro
     if (!doc) {
       return res.status(404).json({ ok: false, message: "Record not found." });
     }
+
+    await populateWithAssignedToField({ stageModel: CleaningAndSanitationModel, projectId, dataToCache: doc })
+
 
     return res.json({ ok: true, data: doc });
   } catch (err: any) {
@@ -274,6 +296,15 @@ const getSingleCleaningStageRoomDetails = async (req: Request, res: Response): P
       return res.status(400).json({ ok: false, message: "Missing projectId or roomId." });
     }
 
+    const redisRoomKey = `stage:CleaningAndSanitationModel:${projectId}:room:${roomId}`
+
+     const cachedData = await redisClient.get(redisRoomKey)
+    
+
+    if(cachedData){
+      return res.status(200).json({message:"data fetched foem cache", data:JSON.parse(cachedData), ok:true})
+    }
+
     const doc = await CleaningAndSanitationModel.findOne(
       {
         projectId,
@@ -284,9 +315,12 @@ const getSingleCleaningStageRoomDetails = async (req: Request, res: Response): P
       }
     );
 
-    if (!doc || !doc.rooms || doc.rooms.length === 0) {
+    if (!doc || !doc.rooms || doc.rooms?.length === 0) {
       return res.status(404).json({ ok: false, message: "Room not found." });
     }
+
+    await redisClient.set(redisRoomKey, JSON.stringify(doc.rooms[0]), { EX: 60 * 10 })
+    
 
     return res.json({ ok: true, data: doc.rooms[0] });
   } catch (err: any) {
@@ -327,9 +361,10 @@ export const cleaningStageCompletionStatus = async (req: Request, res: Response)
     // }
 
 
-    const redisMainKey = `stage:CleaningAndSanitationModel:${projectId}`
-    await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+    // const redisMainKey = `stage:CleaningAndSanitationModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
+    await populateWithAssignedToField({ stageModel: CleaningAndSanitationModel, projectId, dataToCache: form })
 
     return res.status(200).json({ ok: true, message: "cleaning and sanitation stage marked as completed", data: form });
   } catch (err) {

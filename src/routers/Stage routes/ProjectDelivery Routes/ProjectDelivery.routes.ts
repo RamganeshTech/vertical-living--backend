@@ -5,12 +5,12 @@ import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddl
 import { deleteProjectDeliveryFile, getProjectDeliveryDetails, projectDeliveryCompletionStatus, setProjectDeliveryStageDeadline, updateClientConfirmation, updateOwnerConfirmation, uploadProjectDeliveryFile } from "../../../controllers/stage controllers/Project Delivery Controllers/projectDelivery.controllers";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
 import { CleaningAndSanitationModel } from "../../../models/Stage Models/Cleaning Model/cleaning.model";
-import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
+import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
 
 const projectDeliveryRoutes = express.Router();
 
 // ✅ Upload files (images, PDFs)
-projectDeliveryRoutes.post("/:projectId/upload",multiRoleAuthMiddleware("owner", "CTO", "staff"),checkPreviousStageCompleted(CleaningAndSanitationModel),imageUploadToS3.array("files"), uploadProjectDeliveryFile);
+projectDeliveryRoutes.post("/:projectId/upload",multiRoleAuthMiddleware("owner", "CTO", "staff"),checkPreviousStageCompleted(CleaningAndSanitationModel),imageUploadToS3.array("files"), processUploadFiles, uploadProjectDeliveryFile);
 
 // ✅ Delete an uploaded file by its _id in uploads array
 projectDeliveryRoutes.delete("/:projectId/upload/:fileId",multiRoleAuthMiddleware("owner", "CTO", "staff"),checkPreviousStageCompleted(CleaningAndSanitationModel),deleteProjectDeliveryFile);

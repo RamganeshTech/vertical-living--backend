@@ -5,7 +5,7 @@ import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddl
 // import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader';
 import MaterialRoomConfirmationModel from '../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model';
 import { checkPreviousStageCompleted } from '../../../middlewares/checkPreviousStageMiddleware';
-import { imageUploadToS3 } from '../../../utils/s3Uploads/s3upload';
+import { imageUploadToS3, processUploadFiles } from '../../../utils/s3Uploads/s3upload';
 
 const costEstimationRoutes = express.Router();
 
@@ -19,7 +19,7 @@ costEstimationRoutes.post("/:projectId/labour", multiRoleAuthMiddleware("owner",
 costEstimationRoutes.patch("/:projectId/labour/:labourId", multiRoleAuthMiddleware("owner", "staff", "CTO"),  checkPreviousStageCompleted(MaterialRoomConfirmationModel), editLabourEstimation);
 costEstimationRoutes.delete("/:projectId/labour/:labourId", multiRoleAuthMiddleware("owner", "staff", "CTO"),  checkPreviousStageCompleted(MaterialRoomConfirmationModel), deleteLabourEstimation);
 
-costEstimationRoutes.post("/:projectId/uploads/:roomId",  multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkPreviousStageCompleted(MaterialRoomConfirmationModel), imageUploadToS3.array("files"), uploadCostEstimationFiles);
+costEstimationRoutes.post("/:projectId/uploads/:roomId",  multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkPreviousStageCompleted(MaterialRoomConfirmationModel), imageUploadToS3.array("files"), processUploadFiles, uploadCostEstimationFiles);
 costEstimationRoutes.patch("/:projectId/deleteuploadedfile/:roomId/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(MaterialRoomConfirmationModel), deleteCostEstimationFile);
 
 costEstimationRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(MaterialRoomConfirmationModel), setCostEstimationStageDeadline)

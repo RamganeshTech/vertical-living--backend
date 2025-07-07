@@ -10,7 +10,7 @@ import { uploadCleaningStageFiles, deleteCleaningStageFile,
   updateCleaningStageRoomNotes, } from "../../../controllers/stage controllers/Cleaning controller/cleaning.controller";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
 import { QualityCheckupModel } from "../../../models/Stage Models/QualityCheck Model/QualityCheck.model";
-import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
+import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
 
 
 
@@ -22,6 +22,7 @@ cleaningRoutes.post(
   multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
   checkPreviousStageCompleted(QualityCheckupModel),
   imageUploadToS3.array("files"), // allows multiple files: `files` is your form field name
+  processUploadFiles,
   uploadCleaningStageFiles
 );
 

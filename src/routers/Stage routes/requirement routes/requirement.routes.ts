@@ -1,5 +1,5 @@
 import express from 'express';
-import { delteRequirementForm, generateShareableFormLink, getFormFilledDetails, lockRequirementForm, markFormAsCompleted, setRequirementStageDeadline, submitRequirementForm } from '../../../controllers/stage controllers/requirement controllers/mainRequirement.controller';
+import { deleteRequirementStageFile, delteRequirementForm, generateShareableFormLink, getFormFilledDetails, lockRequirementForm, markFormAsCompleted, setRequirementStageDeadline, submitRequirementForm } from '../../../controllers/stage controllers/requirement controllers/mainRequirement.controller';
 import ClientAuthMiddleware from '../../../middlewares/clientAuthMiddleware';
 // import { updateBedroomSection, updateKitchenSection, updateLivingHallSection, updateWardrobeSection } from '../../../controllers/client controllers/clientRequirement.controller';
 import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware';
@@ -8,6 +8,7 @@ import { RequirementFormModel } from '../../../models/Stage Models/requirment mo
 // import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader';
 import { updateBedroomSection, updateKitchenSection, updateLivingHallSection, updateWardrobeSection } from '../../../controllers/stage controllers/requirement controllers/subRoom.controller';
 import {imageUploadToS3, processUploadFiles}  from '../../../utils/s3Uploads/s3upload';
+import { checkPreviousStageCompleted } from '../../../middlewares/checkPreviousStageMiddleware';
 
 
 const requirementRoutes = express.Router()
@@ -27,6 +28,7 @@ requirementRoutes.patch('/formcompleted/:projectId/:formId', multiRoleAuthMiddle
 requirementRoutes.delete('/deleteform/:projectId',multiRoleAuthMiddleware("owner", "staff", "CTO"), delteRequirementForm)
 
 requirementRoutes.post( "/upload/multiple/:projectId/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), imageUploadToS3.array("file"), processUploadFiles, uploadGenericController(RequirementFormModel))
+requirementRoutes.patch("/:projectId/deleteuploadedfile/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",), deleteRequirementStageFile);
 
 // uncommenrt this if the form shoule be updated only by the client 
 // requirementRoutes.put("/:projectId/updatekitchen", ClientAuthMiddleware, updateKitchenSection);

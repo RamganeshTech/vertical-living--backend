@@ -64,9 +64,9 @@ export const processUploadFiles = async (req: Request, res: Response, next: Next
     }
     console.log("requst files", req.files)
     console.log("requst file", req.file)
-    if (!files.length) {
-      return res.status(400).json({ message: "No files uploaded." });
-    }
+    // if (!files.length) {
+    //   return res.status(400).json({ message: "No files uploaded." });
+    // }
 
     for (const file of files) {
       if (file.mimetype === "application/pdf") {

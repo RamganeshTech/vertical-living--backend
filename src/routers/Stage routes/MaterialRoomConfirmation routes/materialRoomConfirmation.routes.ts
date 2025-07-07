@@ -5,7 +5,7 @@ import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddl
 import { addItemToCustomRoom, createCustomRoom, deleteCustomRoomField, deleteMaterialRoomFile, getMaterialRoomConfirmationByProject, getSinglePredefinedRoom, materialSelectionCompletionStatus, setMaterialConfirmationStageDeadline, updatePredefinedRoomField, uploadMaterialRoomFiles } from "../../../controllers/stage controllers/material Room confirmation/materialRoomConfirmation.controller";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
 import { TechnicalConsultationModel } from "../../../models/Stage Models/technical consulatation/technicalconsultation.model";
-import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
+import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
 // import { addMaterialRoom, createModularWork, deleteMaterialRoom, deleteMaterialRoomFile, deleteModularWork, editModularWork, getAllMaterialRooms, getRoomById, materialSelectionCompletionStatus, setMaterialConfirmationStageDeadline, uploadMaterialRoomFiles } from "../../../controllers/stage controllers/material Room confirmation/materialRoomConfirmation.controller";
 
 
@@ -31,7 +31,7 @@ materialConfirmationRoutes.post("/:projectId/customroom/:roomId/field", multiRol
 materialConfirmationRoutes.delete("/:projectId/customroom/:roomId/field/:fieldKey", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(TechnicalConsultationModel), deleteCustomRoomField);
 
 
-materialConfirmationRoutes.post("/:projectId/uploads/:roomId", imageUploadToS3.array("files"), multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(TechnicalConsultationModel), uploadMaterialRoomFiles);
+materialConfirmationRoutes.post("/:projectId/uploads/:roomId",  multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(TechnicalConsultationModel), imageUploadToS3.array("files"), processUploadFiles, uploadMaterialRoomFiles);
 materialConfirmationRoutes.patch("/:projectId/deleteuploadedfile/:roomId/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(TechnicalConsultationModel), deleteMaterialRoomFile);
 
 materialConfirmationRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(TechnicalConsultationModel),setMaterialConfirmationStageDeadline)

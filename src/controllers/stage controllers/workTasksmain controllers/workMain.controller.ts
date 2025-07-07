@@ -6,6 +6,7 @@ import WorkMainStageScheduleModel from './../../../models/Stage Models/WorkTask 
 import { WorkerModel } from "../../../models/worker model/worker.model";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import redisClient from "../../../config/redisClient";
+import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 
 
 
@@ -99,8 +100,8 @@ const getAllWorkMainStageDetails = async (req: Request, res: Response): Promise<
       return res.status(404).json({ ok: false, message: "work Main stage not found" });
     }
 
-    await redisClient.set(redisMainKey, JSON.stringify(docs.toObject()), { EX: 60 * 10 })
-
+    // await redisClient.set(redisMainKey, JSON.stringify(docs.toObject()), { EX: 60 * 10 })
+    await populateWithAssignedToField({ stageModel: WorkMainStageScheduleModel, projectId, dataToCache: docs })
 
     res.status(200).json({ ok: true, data: docs });
   } catch (err: any) {
@@ -119,7 +120,7 @@ const getAllWorkSchedules = async (req: Request, res: Response): Promise<any> =>
     }
 
     const redisWorkScheduleKey = `stage:WorkScheduleModel:${projectId}`
-    await redisClient.del(redisWorkScheduleKey)
+    // await redisClient.del(redisWorkScheduleKey)
 
     const cachedData = await redisClient.get(redisWorkScheduleKey)
 
@@ -128,8 +129,10 @@ const getAllWorkSchedules = async (req: Request, res: Response): Promise<any> =>
     }
 
     const docs = await WorkScheduleModel.findOne({ projectId })
-    .populate({ path: "plans.assignedTo",
-                select: "_id email workerName"});;
+      .populate({
+        path: "plans.assignedTo",
+        select: "_id email workerName"
+      });;
 
     if (!docs) {
       return res.status(404).json({ ok: false, message: "work Schedule stage not found" });
@@ -137,7 +140,7 @@ const getAllWorkSchedules = async (req: Request, res: Response): Promise<any> =>
 
     await redisClient.set(redisWorkScheduleKey, JSON.stringify(docs.toObject()), { EX: 60 * 10 })
 
-console.log("dovch", docs)
+    console.log("dovch", docs)
     res.status(200).json({ ok: true, data: docs });
   } catch (err: any) {
     res.status(500).json({ ok: false, message: err.message });
@@ -165,8 +168,10 @@ const getAllDailySchedules = async (req: Request, res: Response): Promise<any> =
     }
 
     const docs = await DailyScheduleModel.findOne({ projectId })
-    .populate({ path: "tasks.assignedTo",
-                select: "_id email workerName"});
+      .populate({
+        path: "tasks.assignedTo",
+        select: "_id email workerName"
+      });
 
     if (!docs) {
       return res.status(404).json({ ok: false, message: "work Schedule stage not found" });
@@ -186,7 +191,7 @@ const getAllDailySchedules = async (req: Request, res: Response): Promise<any> =
 
 const mdApprovalAction = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { mainStageId } = req.params;
+    const { mainStageId, projectId } = req.params;
     const { action, remarks } = req.body;
 
     if (!mainStageId || !Types.ObjectId.isValid(mainStageId)) {
@@ -234,8 +239,11 @@ const mdApprovalAction = async (req: Request, res: Response): Promise<any> => {
 
     await mainStage.save();
 
-    const redisMainKey = `stage:WorkMainStageScheduleModel:${mainStage.projectId}`
-    await redisClient.set(redisMainKey, JSON.stringify(mainStage.toObject()), { EX: 60 * 10 })
+    // const redisMainKey = `stage:WorkMainStageScheduleModel:${mainStage.projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(mainStage.toObject()), { EX: 60 * 10 })
+
+    await populateWithAssignedToField({ stageModel: WorkMainStageScheduleModel, projectId, dataToCache: mainStage })
+
 
     const redisWorkScheduleKey = `stage:WorkScheduleModel:${mainStage.projectId}`
     const redisDailyScheduleKey = `stage:DailyScheduleModel:${mainStage.projectId}`
@@ -295,8 +303,11 @@ const workScheduleCompletionStatus = async (req: Request, res: Response): Promis
     timerFunctionlity(form, "completedAt")
     await form.save();
 
-    const redisMainKey = `stage:WorkMainStageScheduleModel:${projectId}`
-    await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+    // const redisMainKey = `stage:WorkMainStageScheduleModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+
+    await populateWithAssignedToField({ stageModel: WorkMainStageScheduleModel, projectId, dataToCache: form })
+
 
     return res.status(200).json({ ok: true, message: "work stage marked as completed", data: form });
   } catch (err) {

@@ -3,6 +3,71 @@ import { IFileItem, SampleDesignModel } from "../../../models/Stage Models/sampl
 import { handleSetStageDeadline } from "../../../utils/common features/timerFuncitonality";
 import { TechnicalConsultationModel } from "../../../models/Stage Models/technical consulatation/technicalconsultation.model";
 import redisClient from "../../../config/redisClient";
+import { PREDEFINED_ROOMS } from "../../../constants/phaseConstants";
+import { siteRooms } from "../../../utils/syncings/syncRoomsWithMaterialConfimation";
+import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+
+
+
+
+export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRooms[]) => {
+
+  let design = await SampleDesignModel.findOne({ projectId });
+
+
+  if (!design) {
+    console.log("PREDEFINED_ROOMS:", PREDEFINED_ROOMS);
+    console.log("Mapped Rooms:", PREDEFINED_ROOMS.map(roomName => ({ roomName, files: [] })));
+    console.log("coommign to if condition")
+
+    design = new SampleDesignModel({
+      projectId,
+      rooms: PREDEFINED_ROOMS.map(roomName => {
+        return {
+          roomName,
+          files: []
+        }
+      }),
+      assignedTo: null,
+
+      status: "pending",
+      isEditable: true,
+      timer: {
+        startedAt: null,
+        completedAt: null,
+        deadLine: null,
+        reminderSent: false
+      },
+      additionalNotes: null,
+    })
+  } else {
+
+    // console.log("coommign to else condition")
+    design.status = "pending";
+    design.isEditable = true;
+    design.timer.startedAt = null
+    design.timer.deadLine = null
+    design.timer.completedAt = null
+    design.timer.reminderSent = false
+    // design.timer.startedAt = new Date();
+    const existingRoomNames = design.rooms.map((room: any) => room.roomName);
+    siteRooms.forEach((room: { name: string | null }) => {
+      if (room.name?.trim() && !existingRoomNames.includes(room.name)) {
+        design!.rooms.push({
+          roomName: room.name,
+          files: [],
+        });
+      }
+    });
+    // const redisMainKey = `stage:SampleDesignModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(design.toObject()), { EX: 60 * 10 })
+    await populateWithAssignedToField({ stageModel: SampleDesignModel, projectId, dataToCache: design })
+
+
+  }
+  await design.save()
+}
+
 
 const addRoom = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -10,7 +75,7 @@ const addRoom = async (req: Request, res: Response): Promise<any> => {
     const { roomName } = req.body;
 
     if (!roomName || typeof roomName !== "string") {
-      return res.status(400).json({ message: "Room name is required." });
+      return res.status(400).json({ message: "Room name is required.", ok: false });
     }
 
     const design = await SampleDesignModel.findOne({ projectId });
@@ -21,24 +86,27 @@ const addRoom = async (req: Request, res: Response): Promise<any> => {
         rooms: [{ roomName, files: [] }]
       });
       await newDesign.save();
-      return res.status(201).json({ message: "Room created", data: newDesign.rooms });
+      return res.status(201).json({ message: "Room created", data: newDesign.rooms, ok: true });
     }
 
     const roomExists = design.rooms.some(room => room.roomName === roomName);
     if (roomExists) {
-      return res.status(400).json({ message: "Room already exists." });
+      return res.status(400).json({ message: "Room already exists.", ok: false });
     }
 
     design.rooms.push({ roomName, files: [] });
     await design.save();
 
 
-    const redisMainKey = `stage:SampleDesignModel:${projectId}`
-    await redisClient.set(redisMainKey, JSON.stringify(design.toObject()), { EX: 60 * 10 })
+    // const redisMainKey = `stage:SampleDesignModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(design.toObject()), { EX: 60 * 10 })
 
-    return res.status(200).json({ message: "Room added", data: design.rooms });
+    await populateWithAssignedToField({ stageModel: SampleDesignModel, projectId, dataToCache: design })
+
+
+    return res.status(200).json({ message: "Room added", data: design.rooms, ok: true });
   } catch (error) {
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error", ok: false });
   }
 };
 
@@ -48,12 +116,12 @@ const uploadFilesToRoom = async (req: Request, res: Response): Promise<any> => {
     const files = req.files as (Express.Multer.File & { location: string })[];
 
     if (!files || files.length === 0) {
-      return res.status(400).json({ message: "No files uploaded." });
+      return res.status(400).json({ message: "No files uploaded.", ok: false });
     }
 
     const design = await SampleDesignModel.findOne({ projectId });
     if (!design) {
-      return res.status(404).json({ message: "Sample design not found." });
+      return res.status(404).json({ message: "Sample design not found.", ok: false });
     }
 
     const room = design.rooms.find(r => r?.roomName === roomName);
@@ -75,12 +143,15 @@ const uploadFilesToRoom = async (req: Request, res: Response): Promise<any> => {
     room.files.push(...mappedFiles);
     await design.save();
 
-    const redisMainKey = `stage:SampleDesignModel:${projectId}`
-    await redisClient.set(redisMainKey, JSON.stringify(design.toObject()), { EX: 60 * 10 })
+    // const redisMainKey = `stage:SampleDesignModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(design.toObject()), { EX: 60 * 10 })
+
+    await populateWithAssignedToField({ stageModel: SampleDesignModel, projectId, dataToCache: design })
+
 
     return res.status(200).json({ message: "Files uploaded to room", data: room, ok: true });
   } catch (error) {
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error", ok: false });
   }
 };
 
@@ -90,7 +161,7 @@ const getFilesFromRoom = async (req: Request, res: Response): Promise<any> => {
 
 
     if (!projectId) {
-      return res.status(400).json({ message: "projectId is mandatory" })
+      return res.status(400).json({ message: "projectId is mandatory", ok: false })
     }
 
 
@@ -105,7 +176,7 @@ const getFilesFromRoom = async (req: Request, res: Response): Promise<any> => {
     const design = await SampleDesignModel.findOne({ projectId });
 
     if (!design) {
-      return res.status(404).json({ message: "Sample design not found." });
+      return res.status(404).json({ message: "Sample design not found.", ok: false });
     }
 
     console.log("design of the smaple deisng", design)
@@ -115,7 +186,10 @@ const getFilesFromRoom = async (req: Request, res: Response): Promise<any> => {
     // }
 
 
-    await redisClient.set(redisMainKey, JSON.stringify(design.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(design.toObject()), { EX: 60 * 10 })
+
+    await populateWithAssignedToField({ stageModel: SampleDesignModel, projectId, dataToCache: design })
+
 
     return res.status(200).json({ data: design, ok: true, message: "fetched successfully uploads" });
   } catch (error) {
@@ -133,22 +207,25 @@ const deleteFileFromRoom = async (req: Request, res: Response): Promise<any> => 
 
     const design = await SampleDesignModel.findOne({ projectId });
     if (!design) {
-      return res.status(404).json({ message: "Sample design not found." });
+      return res.status(404).json({ ok: false, message: "Sample design not found." });
     }
 
     const room = design.rooms.find(r => r.roomName === roomName);
     if (!room || !room.files[+fileIndex]) {
-      return res.status(404).json({ message: "File not found in room." });
+      return res.status(404).json({ ok: false, message: "File not found in room." });
     }
 
     room.files.splice(+fileIndex, 1);
     await design.save();
 
 
-    const redisMainKey = `stage:SampleDesignModel:${projectId}`
-    await redisClient.set(redisMainKey, JSON.stringify(design.toObject()), { EX: 60 * 10 })
+    // const redisMainKey = `stage:SampleDesignModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(design.toObject()), { EX: 60 * 10 })
 
-    return res.status(200).json({ message: "File deleted", data: room });
+    await populateWithAssignedToField({ stageModel: SampleDesignModel, projectId, dataToCache: design })
+
+
+    return res.status(200).json({ ok: true, message: "File deleted successfully", data: room });
   } catch (error) {
     return res.status(500).json({ message: "Server error" });
   }
@@ -163,18 +240,24 @@ const deleteRoom = async (req: Request, res: Response): Promise<any> => {
       return res.status(400).json({ message: "projectId is requried", ok: false })
     }
 
-    const design = await SampleDesignModel.findOneAndDelete({ projectId });
+    const design = await SampleDesignModel.findOne({ projectId });
     if (!design) {
-      return res.status(404).json({ message: "Sample design not found.", ok: true });
+      return res.status(404).json({ message: "Sample design not found.", ok: false });
     }
 
+    const index = design.rooms.findIndex((room: any) => room._id === roomId)
 
-    const redisMainKey = `stage:SampleDesignModel:${projectId}`
-    await redisClient.set(redisMainKey, JSON.stringify(design.toObject()), { EX: 60 * 10 })
+
+    design.rooms.splice(index, 1)
+    // const redisMainKey = `stage:SampleDesignModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(design.toObject()), { EX: 60 * 10 })
+
+    await populateWithAssignedToField({ stageModel: SampleDesignModel, projectId, dataToCache: design })
+
 
     return res.status(200).json({ message: "Room deleted", data: design, ok: true });
   } catch (error) {
-    return res.status(500).json({ message: "Server error", ok: true });
+    return res.status(500).json({ message: "Server error", ok: false });
   }
 }
 
@@ -223,8 +306,11 @@ const sampleDesignCompletionStatus = async (req: Request, res: Response): Promis
 
     await design.save();
 
-    const redisKey = `stage:SampleDesignModel:${projectId}`
-    await redisClient.set(redisKey, JSON.stringify(design.toObject()), { EX: 60 * 10 });
+    // const redisKey = `stage:SampleDesignModel:${projectId}`
+    // await redisClient.set(redisKey, JSON.stringify(design.toObject()), { EX: 60 * 10 });
+
+    await populateWithAssignedToField({ stageModel: SampleDesignModel, projectId, dataToCache: design })
+
 
     return res.status(200).json({ ok: true, message: "Sample design marked as completed", data: design });
   } catch (err) {

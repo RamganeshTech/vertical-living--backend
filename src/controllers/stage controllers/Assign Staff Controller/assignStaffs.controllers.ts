@@ -17,6 +17,8 @@ import { QualityCheckupModel } from "../../../models/Stage Models/QualityCheck M
 import { CleaningAndSanitationModel } from "../../../models/Stage Models/Cleaning Model/cleaning.model";
 import { ProjectDeliveryModel } from "../../../models/Stage Models/ProjectDelivery Model/ProjectDelivery.model";
 import { stageModels } from "../../../utils/common features/ressetStages";
+import redisClient from "../../../config/redisClient";
+import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 
 
 export const stageModelMap = new Map<string, Model<Document>>([
@@ -25,7 +27,7 @@ export const stageModelMap = new Map<string, Model<Document>>([
   ["SampleDesignModel", SampleDesignModel as unknown as Model<Document>],
   ["TechnicalConsultationModel", TechnicalConsultationModel as unknown as Model<Document>],
   ["MaterialRoomConfirmationModel", MaterialRoomConfirmationModel as unknown as Model<Document>],
-  ["CostEstimationModel", CostEstimationModel as unknown as Model<Document>],
+  ["CostEstimation", CostEstimationModel as unknown as Model<Document>],
   ["PaymentConfirmationModel", PaymentConfirmationModel as unknown as Model<Document>],
   ["OrderingMaterialModel", OrderingMaterialModel as unknown as Model<Document>],
   ["MaterialArrivalModel", MaterialArrivalModel as unknown as Model<Document>],
@@ -76,6 +78,13 @@ const assignStageStaffByName = async (req: Request, res: Response): Promise<any>
     if (!updated) {
       return res.status(404).json({ message: "Stage not found", ok: false });
     }
+
+
+    const populatedData = await updated.populate(assignedTo, selectedFields)
+    
+    const redisMainKey = `stage:${stageName}:${projectId}`
+    console.log("key name", redisMainKey)
+    await redisClient.set(redisMainKey, JSON.stringify(populatedData.toObject()), { EX: 60 * 10 })
 
     return res.status(200).json({ message: "Assigned successfully", data: updated, ok: true });
 

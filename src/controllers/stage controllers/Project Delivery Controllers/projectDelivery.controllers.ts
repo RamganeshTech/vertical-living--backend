@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { ProjectDeliveryModel } from "../../../models/Stage Models/ProjectDelivery Model/ProjectDelivery.model";
 import redisClient from "../../../config/redisClient";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
+import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 
 export const syncProjectDelivery = async (
     projectId: string
@@ -99,8 +100,11 @@ const uploadProjectDeliveryFile = async (req: Request, res: Response): Promise<a
             return res.status(404).json({ ok: false, message: "ProjectDelivery not found." });
         }
 
-        const cacheKey = `stage:ProjectDeliveryModel:${projectId}`;
-        await redisClient.set(cacheKey, JSON.stringify(updatedDoc.toObject()), { EX: 60 * 10 });
+        // const cacheKey = `stage:ProjectDeliveryModel:${projectId}`;
+        // await redisClient.set(cacheKey, JSON.stringify(updatedDoc.toObject()), { EX: 60 * 10 });
+
+        await populateWithAssignedToField({ stageModel: ProjectDeliveryModel, projectId, dataToCache: updatedDoc })
+
 
         return res.json({
             ok: true,
@@ -119,11 +123,16 @@ const uploadProjectDeliveryFile = async (req: Request, res: Response): Promise<a
  */
 const deleteProjectDeliveryFile = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { projectId, uploadId } = req.params;
+        const { projectId, fileId } = req.params;
 
-        if (!projectId || !uploadId) {
-            return res.status(400).json({ ok: false, message: "Missing projectId or uploadId" });
+
+
+        console.log("prjectid", projectId, fileId)
+        if (!projectId || !fileId) {
+            return res.status(400).json({ ok: false, message: "Missing projectId or fileId" });
         }
+
+
 
         const delivery = await ProjectDeliveryModel.findOne({ projectId });
 
@@ -132,15 +141,18 @@ const deleteProjectDeliveryFile = async (req: Request, res: Response): Promise<a
         }
 
         delivery.uploads = delivery.uploads.filter(
-            (file: any) => file._id?.toString() !== uploadId
+            (file: any) => file._id?.toString() !== fileId
         );
 
         await delivery.save();
 
         // Clear cache if exists
 
-        const cacheKey = `stage:ProjectDeliveryModel:${projectId}`;
-        await redisClient.set(cacheKey, JSON.stringify(delivery.toObject()), { EX: 60 * 10 });
+        // const cacheKey = `stage:ProjectDeliveryModel:${projectId}`;
+        // await redisClient.set(cacheKey, JSON.stringify(delivery.toObject()), { EX: 60 * 10 });
+
+        await populateWithAssignedToField({ stageModel: ProjectDeliveryModel, projectId, dataToCache: delivery })
+
 
         return res.status(200).json({ ok: true, message: "File deleted", data: delivery.uploads });
     } catch (error: any) {
@@ -171,8 +183,11 @@ const updateClientConfirmation = async (req: Request, res: Response): Promise<an
         delivery.clientAcceptedAt = confirmed ? new Date() : null;
 
         await delivery.save();
-        const cacheKey = `stage:ProjectDeliveryModel:${projectId}`;
-        await redisClient.set(cacheKey, JSON.stringify(delivery.toObject()), { EX: 60 * 10 });
+        // const cacheKey = `stage:ProjectDeliveryModel:${projectId}`;
+        // await redisClient.set(cacheKey, JSON.stringify(delivery.toObject()), { EX: 60 * 10 });
+
+        await populateWithAssignedToField({ stageModel: ProjectDeliveryModel, projectId, dataToCache: delivery })
+
 
 
         return res.status(200).json({ ok: true, message: "Client confirmation updated", data: delivery });
@@ -203,8 +218,11 @@ const updateOwnerConfirmation = async (req: Request, res: Response): Promise<any
         delivery.ownerConfirmation = confirmed;
 
         await delivery.save();
-        const cacheKey = `stage:ProjectDeliveryModel:${projectId}`;
-        await redisClient.set(cacheKey, JSON.stringify(delivery.toObject()), { EX: 60 * 10 });
+        // const cacheKey = `stage:ProjectDeliveryModel:${projectId}`;
+        // await redisClient.set(cacheKey, JSON.stringify(delivery.toObject()), { EX: 60 * 10 });
+
+        await populateWithAssignedToField({ stageModel: ProjectDeliveryModel, projectId, dataToCache: delivery })
+
 
         return res.status(200).json({ ok: true, message: "Owner confirmation updated", data: delivery });
     } catch (error: any) {
@@ -233,16 +251,16 @@ const getProjectDeliveryDetails = async (req: Request, res: Response): Promise<a
             return res.status(200).json({ ok: true, message: "Fetched from cache", data: JSON.parse(cached) });
         }
 
-        const delivery = await ProjectDeliveryModel.findOne({ projectId }).populate({
-            path: "assignedTo",
-            select: "_id staffName email",
-        });
+        const delivery = await ProjectDeliveryModel.findOne({ projectId })
 
         if (!delivery) {
             return res.status(404).json({ ok: false, message: "ProjectDelivery not found" });
         }
 
-        await redisClient.set(cacheKey, JSON.stringify(delivery.toObject()), { EX: 60 * 10 });
+        // await redisClient.set(cacheKey, JSON.stringify(delivery.toObject()), { EX: 60 * 10 });
+
+        await populateWithAssignedToField({ stageModel: ProjectDeliveryModel, projectId, dataToCache: delivery })
+
 
         return res.status(200).json({ ok: true, message: "Fetched successfully", data: delivery });
     } catch (error: any) {
@@ -279,8 +297,12 @@ const projectDeliveryCompletionStatus = async (req: Request, res: Response): Pro
         timerFunctionlity(form, "completedAt")
         await form.save();
 
-        const cacheKey = `stage:ProjectDeliveryModel:${projectId}`;
-        await redisClient.set(cacheKey, JSON.stringify(form.save()), { EX: 60 * 10 });
+        // const cacheKey = `stage:ProjectDeliveryModel:${projectId}`;
+
+        // await redisClient.set(cacheKey, JSON.stringify(form.save()), { EX: 60 * 10 });
+
+        await populateWithAssignedToField({ stageModel: ProjectDeliveryModel, projectId, dataToCache: form })
+
         return res.status(200).json({ ok: true, message: "Quality Checkup stage marked as completed", data: form });
     } catch (err) {
         console.error(err);

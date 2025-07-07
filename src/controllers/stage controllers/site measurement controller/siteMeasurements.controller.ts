@@ -3,10 +3,12 @@ import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasureme
 import { handleSetStageDeadline } from "../../../utils/common features/timerFuncitonality";
 import { SampleDesignModel } from "../../../models/Stage Models/sampleDesing model/sampleDesign.model";
 import { syncRoomsToMaterialConfirmation } from "../../../utils/syncings/syncRoomsWithMaterialConfimation";
-import { syncSampleDesignModel } from "../../../utils/syncings/syncSampleDesign";
 
 import redisClient from './../../../config/redisClient';
 import { Model } from "mongoose";
+import { syncSampleDesignModel } from "../sampledesign contorllers/sampledesign.controller";
+import { assignedTo, selectedFields } from "../../../constants/BEconstants";
+import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 
 
 
@@ -69,7 +71,10 @@ const createSiteMeasurement = async (req: Request, res: Response): Promise<any> 
 
     await form.save();
 
-    await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(form.toObject()), { EX: 60 * 15 });
+    // await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(form.toObject()), { EX: 60 * 15 });
+
+    await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: form })
+
 
     return res.status(201).json({ ok: true, message: "Site measurement data saved successfully.", data: form });
 
@@ -119,7 +124,9 @@ const createRoom = async (req: Request, res: Response): Promise<any> => {
     existingDoc.rooms.push(room);
     await existingDoc.save();
 
-    await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(existingDoc.toObject()), { EX: 60 * 15 });
+    // await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(existingDoc.toObject()), { EX: 60 * 15 });
+    await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: existingDoc })
+
 
     return res.status(201).json({ ok: true, message: "room has created successfully.", data: existingDoc });
 
@@ -139,7 +146,7 @@ const getTheSiteMeasurements = async (req: Request, res: Response): Promise<any>
       return res.status(400).json({ ok: false, message: "projectId is required" });
     }
 
-    // await redisClient.del(`stage:SiteMeasurementModel:${projectId}`)
+    await redisClient.del(`stage:SiteMeasurementModel:${projectId}`)
 
     const cacheKey = `stage:SiteMeasurementModel:${projectId}`;
     const cachedForm = await redisClient.get(cacheKey);
@@ -152,18 +159,23 @@ const getTheSiteMeasurements = async (req: Request, res: Response): Promise<any>
       });
     }
 
-    let form = await SiteMeasurementModel.findOne({ projectId });
+    let form = await SiteMeasurementModel.findOne({ projectId }).populate(assignedTo, selectedFields);
 
     if (!form) {
       return res.status(400).json({ message: "site measurement not found", ok: false })
     }
 
+
     // 3. Cache Mongo data after cache miss
-    await redisClient.set(
-      cacheKey,
-      JSON.stringify(form.toObject()), // always store plain object
-      { EX: 60 * 15 } // 15 min
-    );
+    // await redisClient.set(
+    //   cacheKey,
+    //   JSON.stringify(form.toObject()), // always store plain object
+    //   { EX: 60 * 15 } // 15 min
+    // );
+
+
+    await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: form })
+
 
     return res.status(200).json({ ok: true, message: "Site measurement fetched successfully.", data: form });
   } catch (err) {
@@ -196,7 +208,7 @@ const updateCommonSiteMeasurements = async (req: Request, res: Response): Promis
     }
 
     if (!siteDoc.isEditable) {
-      return res.status(403).json({ ok: false, message: "Site measurement is not editable" });
+      return res.status(400).json({ ok: false, message: "Site measurement is not editable" });
     }
 
     if (totalPlotAreaSqFt < 0 || builtUpAreaSqFt < 0 || numberOfFloors < 0) {
@@ -214,7 +226,10 @@ const updateCommonSiteMeasurements = async (req: Request, res: Response): Promis
 
     await siteDoc.save();
 
-    await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(siteDoc.toObject()), { EX: 60 * 15 }); // 15min
+    // await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(siteDoc.toObject()), { EX: 60 * 15 }); // 15min
+
+    await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: siteDoc })
+
 
     return res.status(200).json({ ok: true, message: "Common site details updated successfully", data: siteDoc.siteDetails });
   } catch (err) {
@@ -239,7 +254,7 @@ const updateRoomSiteMeasurements = async (req: Request, res: Response): Promise<
     }
 
     if (!siteDoc.isEditable) {
-      return res.status(403).json({ ok: false, message: "Site measurement is not editable" });
+      return res.status(400).json({ ok: false, message: "Site measurement is not editable" });
     }
 
     if (!room.name) {
@@ -265,10 +280,13 @@ const updateRoomSiteMeasurements = async (req: Request, res: Response): Promise<
 
     await siteDoc.save();
 
-    await redisClient.set(
-      `stage:SiteMeasurementModel:${projectId}`,
-      JSON.stringify(siteDoc.toObject()),
-      { EX: 60 * 15 })
+    // await redisClient.set(
+    //   `stage:SiteMeasurementModel:${projectId}`,
+    //   JSON.stringify(siteDoc.toObject()),
+    //   { EX: 60 * 15 })
+
+    await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: siteDoc })
+
 
     return res.status(200).json({ message: "Room updated successfully", data: room, ok: true });
   } catch (err) {
@@ -288,7 +306,7 @@ const DeleteRooms = async (req: Request, res: Response): Promise<any> => {
 
     const siteDoc = await SiteMeasurementModel.findOne({ projectId });
     if (!siteDoc) return res.status(404).json({ ok: false, message: "Site measurement not found" });
-    if (!siteDoc.isEditable) return res.status(403).json({ ok: false, message: "Site measurement is not editable" });
+    if (!siteDoc.isEditable) return res.status(400).json({ ok: false, message: "Site measurement is not editable" });
 
     const roomIndex = siteDoc.rooms.findIndex((r: any) => r._id.toString() === roomId);
     if (roomIndex === -1) return res.status(404).json({ ok: false, message: "Room not found" });
@@ -297,7 +315,10 @@ const DeleteRooms = async (req: Request, res: Response): Promise<any> => {
     siteDoc.rooms.splice(roomIndex, 1);
     await siteDoc.save();
 
-    await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(siteDoc.toObject()), { EX: 60 * 15 })
+    // await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(siteDoc.toObject()), { EX: 60 * 15 })
+
+    await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: siteDoc })
+
 
     return res.status(200).json({ message: "Room deleted successfully", data: siteDoc.rooms, ok: true });
   } catch (err) {
@@ -337,7 +358,10 @@ const deleteSiteMeasurement = async (req: Request, res: Response): Promise<any> 
 
     if (!siteDoc) return res.status(404).json({ ok: false, message: "Site measurement not found" });
 
-    await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(siteDoc.toObject()), { EX: 60 * 15 }); // 15min
+    // await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(siteDoc.toObject()), { EX: 60 * 15 }); // 15min
+
+    await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: siteDoc })
+
 
 
     return res.status(200).json({ message: "Site details deleted adn timer restarted successfully", data: siteDoc, ok: true });
@@ -366,26 +390,59 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
     const siteDoc = await SiteMeasurementModel.findOne({ projectId });
     if (!siteDoc) return res.status(404).json({ ok: false, message: "Site measurement not found" });
 
-    if (siteDoc.status === "completed") return res.status(400).json({ ok: false, message: "Already completed" });
+    // if (siteDoc.status === "completed") return res.status(400).json({ ok: false, message: "Already completed" });
 
     siteDoc.status = "completed";
     siteDoc.isEditable = false;
 
-    if (siteDoc.status === "completed") {
-      const siteRooms = siteDoc.rooms || [];
-      await syncSampleDesignModel(projectId, siteRooms)
-      // await syncRoomsToMaterialConfirmation(projectId, siteRooms)
-    }
+    // if (siteDoc.status === "completed") {
+    const siteRooms = siteDoc.rooms || [];
+    await syncSampleDesignModel(projectId, siteRooms)
+    // await syncRoomsToMaterialConfirmation(projectId, siteRooms)
+    // }
 
     await siteDoc.save();
 
     // await updateStageStatusInCache(SiteMeasurementModel, projectId, "completed");
-    await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(siteDoc.toObject()), { EX: 60 * 10 }); // 15min
+    // await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(siteDoc.toObject()), { EX: 60 * 10 }); // 15min
+
+    await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: siteDoc })
+
 
     return res.status(200).json({ ok: true, message: "Site measurement marked as completed", data: siteDoc });
   } catch (err) {
     console.error("Site Measurement Complete Error:", err);
     return res.status(500).json({ message: "Internal server error", ok: false });
+  }
+};
+
+
+const deleteSiteMeasurementFile = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { projectId, fileId } = req.params;
+
+    const doc = await SiteMeasurementModel.findOne({ projectId });
+    if (!doc) return res.status(404).json({ ok: false, message: "Site measurement not found" });
+
+    // const file = doc.uploads.find((file: any) => file._id.toString() === fileId);
+
+    const index = doc.uploads.findIndex((upload: any) => upload._id?.toString() === fileId);
+
+    console.log("index for file ", index)
+
+    if (index === -1) return res.status(404).json({ ok: false, message: "File not found" });
+
+    doc.uploads.splice(index, 1);
+    await doc.save();
+    // await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(doc.toObject()), { EX: 60 * 10 }); // 15min
+
+    await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: doc })
+
+
+    return res.status(200).json({ ok: true, message: "File deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting uploaded file:", err);
+    return res.status(500).json({ ok: false, message: "Internal server error" });
   }
 };
 
@@ -400,5 +457,8 @@ export {
   updateRoomSiteMeasurements,
   siteMeasurementCompletionStatus,
   DeleteRooms,
-  deleteSiteMeasurement
+  deleteSiteMeasurement,
+
+
+  deleteSiteMeasurementFile,
 }

@@ -4,6 +4,8 @@ import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common
 import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
 import { initializeMaterialSelection } from "../material Room confirmation/materialRoomConfirmation.controller";
 import redisClient from "../../../config/redisClient";
+import { assignedTo, selectedFields } from "../../../constants/BEconstants";
+import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 
 const addConsultationMessage = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -39,6 +41,8 @@ const addConsultationMessage = async (req: Request, res: Response): Promise<any>
       senderModel = "WorkerModel"
     }
 
+    console.log("hasMessage", message)
+    console.log("attachments", attachments)
 
     // ✅ Construct new message
     const newMessage = {
@@ -68,14 +72,17 @@ const addConsultationMessage = async (req: Request, res: Response): Promise<any>
       // }
     }
 
-  
+
 
     await doc.save();
 
-       const populatedDoc = await doc.populate("messages.sender");
+    const populatedDoc = await doc.populate("messages.sender");
 
-      const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
-    await redisClient.set(redisMainKey, JSON.stringify(populatedDoc.toObject()), { EX: 60 * 10 })
+
+    await populateWithAssignedToField({ stageModel: TechnicalConsultationModel, projectId, dataToCache: populatedDoc })
+
+    // const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(populatedDoc.toObject()), { EX: 60 * 10 })
 
 
     return res.status(200).json({ message: "Message added", data: doc.messages, ok: true });
@@ -102,13 +109,16 @@ const getConsultationMessages = async (req: Request, res: Response): Promise<any
 
 
     const doc = await TechnicalConsultationModel.findOne({ projectId })
-      .populate("messages.sender"); // if you're using refPath
+      .populate("messages.sender")
 
     if (!doc) {
       return res.status(404).json({ ok: false, message: "No confirmation found on last stage" });
     }
 
-    await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+
+    await populateWithAssignedToField({ stageModel: TechnicalConsultationModel, projectId, dataToCache: doc })
+
 
     return res.status(200).json({ ok: true, data: doc });
   } catch (err) {
@@ -155,8 +165,11 @@ const deleteConsultationMessage = async (req: Request, res: Response): Promise<a
     const populatedData = await consultation.populate("messages.sender")
 
 
-    const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
-    await redisClient.set(redisMainKey, JSON.stringify(populatedData.toObject()), { EX: 60 * 10 })
+    // const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(populatedData.toObject()), { EX: 60 * 10 })
+
+    await populateWithAssignedToField({ stageModel: TechnicalConsultationModel, projectId, dataToCache: populatedData })
+
 
     return res.status(200).json({ ok: true, message: "Message deleted." });
   } catch (err) {
@@ -195,7 +208,7 @@ const editConsultationMessage = async (req: Request, res: Response): Promise<any
     const isAdmin = senderRole === "owner" || senderRole === "CTO";
 
     if (!isSender && !isAdmin) {
-      return res.status(403).json({ ok: false, message: "Not authorized to edit this message." });
+      return res.status(404).json({ ok: false, message: "Not authorized to edit this message." });
     }
 
     msg.message = message.trim();
@@ -204,8 +217,11 @@ const editConsultationMessage = async (req: Request, res: Response): Promise<any
     const populatedData = await consultation.populate("messages.sender")
 
 
-    const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
-    await redisClient.set(redisMainKey, JSON.stringify(populatedData.toObject()), { EX: 60 * 10 })
+    // const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(populatedData.toObject()), { EX: 60 * 10 })
+
+    await populateWithAssignedToField({ stageModel: TechnicalConsultationModel, projectId, dataToCache: populatedData })
+
 
     return res.status(200).json({ ok: true, message: "Message updated successfully.", data: msg });
   } catch (error) {
@@ -262,8 +278,11 @@ const tehnicalConsultantCompletionStatus = async (req: Request, res: Response): 
     const populatedData = await techDoc.populate("messages.sender")
 
 
-    const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
-    await redisClient.set(redisMainKey, JSON.stringify(populatedData.toObject()), { EX: 60 * 10 })
+    // const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(populatedData.toObject()), { EX: 60 * 10 })
+
+        await populateWithAssignedToField({ stageModel: TechnicalConsultationModel, projectId, dataToCache: populatedData })
+
 
     return res.status(200).json({ ok: true, message: "Technical consultant marked as completed", data: techDoc });
   } catch (err) {

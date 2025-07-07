@@ -40,6 +40,15 @@ interface IRequirementFormSchema extends Document {
   
 }
 
+
+
+const uploadSchema = new Schema({
+  type: { type: String, enum: ["image", "pdf"] },
+  url: { type: String,  },
+  originalName: String,
+  uploadedAt: { type: Date, default: new Date() }
+}, {_id: true});
+
 const RequirementFormSchema = new Schema<IRequirementFormSchema>(
   {
     // Track which project and client this is for
@@ -106,15 +115,7 @@ const RequirementFormSchema = new Schema<IRequirementFormSchema>(
       deadLine: {type: Date, default: null},
       reminderSent: {type: Boolean, default: false},
     },
-    uploads: [
-    {
-      type: { type: String, enum: ["image", "pdf"] },
-      url: String,
-       originalName: { type: String, required: true }, 
-      uploadedAt: { type: Date, default: new Date() }
-    }
-  ],
-
+    uploads: {type: [uploadSchema], default:[]}
   },
   { timestamps: true }
 )

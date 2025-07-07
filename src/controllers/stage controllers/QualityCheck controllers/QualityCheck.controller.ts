@@ -6,6 +6,7 @@ import { RoleBasedRequest } from "../../../types/types";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import { syncCleaningSanitaionStage } from "../Cleaning controller/cleaning.controller";
 import redisClient from "../../../config/redisClient";
+import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 
 
 export const syncQualityCheck = async (projectId: string) => {
@@ -127,12 +128,13 @@ const createQualityCheckItem = async (req: RoleBasedRequest, res: Response): Pro
 
         if (!doc) return res.status(404).json({ ok: false, message: "Quality Checkup record not found." });
 
-        const redisMainKey = `stage:QualityCheckupModel:${projectId}`
+        // const redisMainKey = `stage:QualityCheckupModel:${projectId}`
         const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${roomName}`
 
         const updatedRoom = (doc as any)[roomName]
-        await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
         await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+        await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: doc })
 
         return res.json({ ok: true, data: doc[roomName] });
     } catch (err: any) {
@@ -207,11 +209,13 @@ const editQualityCheckItem = async (req: RoleBasedRequest, res: Response): Promi
         await doc.save();
 
 
-        const redisMainKey = `stage:QualityCheckupModel:${projectId}`
+        // const redisMainKey = `stage:QualityCheckupModel:${projectId}`
         const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${roomName}`
 
         const updatedRoom = (doc as any)[roomName]
-        await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: doc })
+
         await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
         return res.json({ ok: true, data: item });
@@ -245,11 +249,13 @@ const deleteQualityCheckItem = async (req: Request, res: Response): Promise<any>
         }
 
 
-        const redisMainKey = `stage:QualityCheckupModel:${projectId}`
+        // const redisMainKey = `stage:QualityCheckupModel:${projectId}`
         const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${roomName}`
 
         const updatedRoom = (doc as any)[roomName]
-        await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: doc })
+
         await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
         return res.json({ ok: true, message: "Item deleted successfully." });
@@ -278,7 +284,9 @@ const getQualityCheckup = async (req: Request, res: Response): Promise<any> => {
         const doc = await QualityCheckupModel.findOne({ projectId });
         if (!doc) return res.status(404).json({ ok: false, message: "Quality Checkup not found." });
 
-        await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: doc })
+        
         return res.json({ ok: true, data: doc });
     } catch (err: any) {
         console.error("Get QualityCheckup:", err);
@@ -314,6 +322,8 @@ const getQualityCheckRoomItems = async (req: Request, res: Response): Promise<an
         
         const updatedRoom = (doc as any)[roomName]
         await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+        await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: doc })
+
 
         return res.json({ ok: true, data: doc[roomName] || [] });
     } catch (err: any) {
@@ -349,8 +359,10 @@ const qualityCheckCompletionStatus = async (req: Request, res: Response): Promis
             await syncCleaningSanitaionStage(projectId)
         }
 
-        const redisMainKey = `stage:QualityCheckupModel:${projectId}`
-        await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+        // const redisMainKey = `stage:QualityCheckupModel:${projectId}`
+        // await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+        await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: form })
+
 
         return res.status(200).json({ ok: true, message: "Quality Checkup stage marked as completed", data: form });
     } catch (err) {

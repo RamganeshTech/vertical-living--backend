@@ -2,6 +2,7 @@ import { Response, Request } from "express";
 import { RequirementFormModel } from "../../../models/Stage Models/requirment model/requirement.model";
 import { RoleBasedRequest } from "../../../types/types";
 import redisClient from "../../../config/redisClient";
+import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 
 const updateKitchenSection = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
@@ -33,8 +34,11 @@ const updateKitchenSection = async (req: RoleBasedRequest, res: Response): Promi
         await form.save();
 
 
-        const redisKeyMain = `stage:RequirementFormModel:${projectId}`
-        await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+        // const redisKeyMain = `stage:RequirementFormModel:${projectId}`
+        // await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+
+           await populateWithAssignedToField({stageModel:RequirementFormModel, projectId, dataToCache:form})
+        
 
 
         return res.status(200).json({ ok: true, message: "Kitchen section updated successfully", data: form.kitchen });
@@ -69,8 +73,11 @@ const updateBedroomSection = async (req: RoleBasedRequest, res: Response): Promi
         await form.save();
 
 
-         const redisKeyMain = `stage:RequirementFormModel:${projectId}`
-        await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+        //  const redisKeyMain = `stage:RequirementFormModel:${projectId}`
+        // await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+
+           await populateWithAssignedToField({stageModel:RequirementFormModel, projectId, dataToCache:form})
+
 
         return res.status(200).json({ ok: true, message: "Bedroom updated", data: form.bedroom });
     }
@@ -105,8 +112,11 @@ const updateWardrobeSection = async (req: RoleBasedRequest, res: Response): Prom
         await form.save();
 
 
-         const redisKeyMain = `stage:RequirementFormModel:${projectId}`
-        await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+        //  const redisKeyMain = `stage:RequirementFormModel:${projectId}`
+        // await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+
+           await populateWithAssignedToField({stageModel:RequirementFormModel, projectId, dataToCache:form})
+
 
         return res.status(200).json({ ok: true, message: "Wardrobe updated", data: form.wardrobe });
     }
@@ -142,8 +152,11 @@ const updateLivingHallSection = async (req: RoleBasedRequest, res: Response): Pr
         await form.save();
 
 
-         const redisKeyMain = `stage:RequirementFormModel:${projectId}`
-        await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+        //  const redisKeyMain = `stage:RequirementFormModel:${projectId}`
+        // await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
+
+           await populateWithAssignedToField({stageModel:RequirementFormModel, projectId, dataToCache:form})
+
 
         return res.status(200).json({ ok: true, message: "Living hall updated", data: form.livingHall });
     }

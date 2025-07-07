@@ -8,10 +8,10 @@ export interface ISiteMeasurement extends Document {
         startedAt: Date | null;
         completedAt: Date | null;
         deadLine: Date | null;
-      reminderSent: boolean
+        reminderSent: boolean
 
     };
-  assignedTo: Types.ObjectId;
+    assignedTo: Types.ObjectId;
 
     uploads: {
         type: "image" | "pdf";
@@ -40,6 +40,16 @@ export interface ISiteMeasurement extends Document {
 }
 
 
+
+
+const uploadSchema = new Schema({
+    type: { type: String, enum: ["image", "pdf"] },
+    url: { type: String, },
+    originalName: String,
+    uploadedAt: { type: Date, default: new Date() }
+}, { _id: true });
+
+
 const SiteMeasurementSchema = new Schema<ISiteMeasurement>({
     projectId: { type: Schema.Types.ObjectId, required: true, ref: "ProjectModel" },
     status: { type: String, enum: ["pending", "completed"], default: "pending" },
@@ -49,18 +59,12 @@ const SiteMeasurementSchema = new Schema<ISiteMeasurement>({
         startedAt: { type: Date, default: new Date() },
         completedAt: { type: Date, default: null },
         deadLine: { type: Date, default: null },
-      reminderSent: {type: Boolean, default: false},
+        reminderSent: { type: Boolean, default: false },
 
     },
 
-    uploads: [
-        {
-            type: { type: String, enum: ["image", "pdf"],},
-            url: { type: String,  },
-            originalName: String,
-            uploadedAt: { type: Date, default: new Date() }
-        }
-    ],
+    uploads: { type: [uploadSchema], default: [] },
+
 
     siteDetails: {
         totalPlotAreaSqFt: { type: Number, default: null },
@@ -71,10 +75,10 @@ const SiteMeasurementSchema = new Schema<ISiteMeasurement>({
         boundaryWallExists: { type: Boolean, default: null },
         additionalNotes: { type: String, default: null }
     },
-     assignedTo:{
-      type: Schema.Types.ObjectId,
-      default: null,
-      ref:"StaffModel"
+    assignedTo: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        ref: "StaffModel"
     },
 
     rooms: [
@@ -93,7 +97,7 @@ const SiteMeasurementSchema = new Schema<ISiteMeasurement>({
 });
 
 
-SiteMeasurementSchema.index({projectId:1})
+SiteMeasurementSchema.index({ projectId: 1 })
 
 
 export const SiteMeasurementModel = model<ISiteMeasurement>("SiteMeasurementModel", SiteMeasurementSchema)
