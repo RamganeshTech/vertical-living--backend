@@ -8,6 +8,7 @@ import { handleSetStageDeadline, timerFunctionlity } from '../../../utils/common
 import { syncInstallationWork } from '../installation controllers/installation.controller';
 import { syncQualityCheck } from '../QualityCheck controllers/QualityCheck.controller';
 import { syncPaymentConfirationModel } from '../PaymentConfirmation controllers/PaymentMain.controllers';
+import { assignedTo, selectedFields } from '../../../constants/BEconstants';
 
 
 const generateCostEstimationFromMaterialSelection = async (
@@ -86,8 +87,6 @@ const generateCostEstimationFromMaterialSelection = async (
 };
 
 
-
-
 const getCostEstimationByProject = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
@@ -96,7 +95,7 @@ const getCostEstimationByProject = async (req: Request, res: Response): Promise<
             return res.status(400).json({ ok: false, message: "Project ID is required" });
         }
 
-        const costEstimation = await CostEstimationModel.findOne({ projectId });
+        const costEstimation = await CostEstimationModel.findOne({ projectId }).populate(assignedTo, selectedFields);
 
         if (!costEstimation) {
             return res.status(404).json({ ok: false, message: "Cost estimation not found" });
