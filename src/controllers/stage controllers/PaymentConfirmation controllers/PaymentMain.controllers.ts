@@ -4,53 +4,86 @@ import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confi
 
 
 
+
+
+// <h3 style="color: #1f2937; font-size: 20px; margin-top: 20px; margin-bottom: 8px;">
+//   4. Client Responsibilities
+// </h3>
+// <ul style="margin-bottom: 16px; padding-left: 20px;">
+//   <li>
+//     The client shall provide necessary approvals, information, and access in a timely manner to avoid project delays.
+//   </li>
+// </ul>
+
+// <h3 style="color: #1f2937; font-size: 20px; margin-top: 20px; margin-bottom: 8px;">
+//   5. Dispute Resolution
+// </h3>
+// <ul style="margin-bottom: 16px; padding-left: 20px;">
+//   <li style="margin-bottom: 6px;">
+//     In case of any disputes, both parties agree to resolve the matter amicably through mutual discussion.
+//   </li>
+//   <li>
+//     All legal matters will be governed by the jurisdiction of [Your City/State, India].
+//   </li>
+// </ul>
+
+
+
 // 📌 This is your reusable default HTML Terms
 const defaultConsentContent = `
-<h2 style="text-align: center;">Payment Terms & Client Consent</h2>
+<h2 style="text-align: center; color: #2563eb; font-size: 28px; margin-bottom: 20px;">
+  Payment Terms & Client Consent
+</h2>
 
-<p>
+<p style="margin-bottom: 16px; font-size: 16px; line-height: 1.5;">
   This agreement confirms that the client agrees to the full payment terms as outlined below for the
   execution of the project.
 </p>
 
-<h3>1. Payment Terms</h3>
-<ul>
-  <li>The total agreed project amount must be paid in full before commencement of work, unless otherwise mutually agreed in writing.</li>
-  <li>All payments shall be made through authorized payment methods as communicated by the company.</li>
+<h3 style="color: #1f2937; font-size: 20px; margin-top: 20px; margin-bottom: 8px;">
+  1. Payment Terms
+</h3>
+<ul style="margin-bottom: 16px; padding-left: 20px;">
+  <li style="margin-bottom: 6px;">
+    The total agreed project amount must be paid in full before commencement of work, unless otherwise mutually agreed in writing.
+  </li>
+  <li>
+    All payments shall be made through authorized payment methods as communicated by the company.
+  </li>
 </ul>
 
-<h3>2. No Refund Policy</h3>
-<ul>
-  <li>Payments made towards the project are non-refundable once the work has commenced, except in cases of proven negligence or breach of contract by the company.</li>
+<h3 style="color: #1f2937; font-size: 20px; margin-top: 20px; margin-bottom: 8px;">
+  2. No Refund Policy
+</h3>
+<ul style="margin-bottom: 16px; padding-left: 20px;">
+  <li>
+    Payments made towards the project are non-refundable once the work has commenced, except in cases of proven negligence or breach of contract by the company.
+  </li>
 </ul>
 
-<h3>3. Deliverables</h3>
-<ul>
-  <li>The project deliverables will be executed as per the agreed scope and timeline shared with the client.</li>
-  <li>Any additional work requested by the client will be treated as separate and may incur extra charges.</li>
+<h3 style="color: #1f2937; font-size: 20px; margin-top: 20px; margin-bottom: 8px;">
+  3. Deliverables
+</h3>
+<ul style="margin-bottom: 16px; padding-left: 20px;">
+  <li style="margin-bottom: 6px;">
+    The project deliverables will be executed as per the agreed scope and timeline shared with the client.
+  </li>
+  <li>
+    Any additional work requested by the client will be treated as separate and may incur extra charges.
+  </li>
 </ul>
 
-<h3>4. Client Responsibilities</h3>
-<ul>
-  <li>The client shall provide necessary approvals, information, and access in a timely manner to avoid project delays.</li>
-</ul>
-
-<h3>5. Dispute Resolution</h3>
-<ul>
-  <li>In case of any disputes, both parties agree to resolve the matter amicably through mutual discussion.</li>
-  <li>All legal matters will be governed by the jurisdiction of [Your City/State, India].</li>
-</ul>
-
-<h3>6. Consent</h3>
-<p>
+<h3 style="color: #1f2937; font-size: 20px; margin-top: 20px; margin-bottom: 8px;">
+  4. Consent
+</h3>
+<p style="margin-bottom: 20px; font-size: 16px; line-height: 1.5;">
   By clicking "I Agree", the client acknowledges that they have read, understood, and agree to abide by the above terms and conditions.
 </p>
 
-<p style="text-align: center;">
-  <strong>[Your Company Name]</strong><br/>
-  [Your Company Address]<br/>
-  [Contact: phone / email]
+<p style="text-align: center; font-weight: bold; color: #2563eb; font-size: 18px;">
+  Vertical Living Policy
 </p>
+
 `;
 
 export const syncPaymentConfirationModel = async (projectId: string, totalAmount: number): Promise<any> => {
