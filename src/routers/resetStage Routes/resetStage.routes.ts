@@ -1,21 +1,39 @@
 import express  from 'express';
 import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
-import { resetStage1, resetStage10, resetStage11, resetStage12, resetStage2, resetStage3, resetStage4, resetStage5, resetStage6, resetStage7, resetStage8, resetStage9 } from '../../controllers/stage controllers/resetStage Controller/resetStage.controller';
+import { resetStage1, resetStage10, resetStage11, resetStage12, resetStage13, resetStage14, resetStage2, resetStage3, resetStage4, resetStage5, resetStage6, resetStage7, resetStage8, resetStage9 } from '../../controllers/stage controllers/resetStage Controller/resetStage.controller';
+import { RequirementFormModel } from '../../models/Stage Models/requirment model/requirement.model';
+import { notToUpdateIfStageCompleted } from '../../middlewares/notToUpdateIfStageCompleted';
+import { SiteMeasurementModel } from '../../models/Stage Models/siteMeasurement models/siteMeasurement.model';
+import { SampleDesignModel } from '../../models/Stage Models/sampleDesing model/sampleDesign.model';
+import { TechnicalConsultationModel } from '../../models/Stage Models/technical consulatation/technicalconsultation.model';
+import MaterialRoomConfirmationModel from '../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model';
+import PaymentConfirmationModel from '../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model';
+import OrderingMaterialModel from '../../models/Stage Models/Ordering Material Model/orderingMaterial.model';
+import MaterialArrivalModel from '../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheck.model';
+import WorkMainStageScheduleModel from '../../models/Stage Models/WorkTask Model/WorkTask.model';
+import InstallationModel from '../../models/Stage Models/installation model/Installation.model';
+import { QualityCheckupModel } from '../../models/Stage Models/QualityCheck Model/QualityCheck.model';
+import { CleaningAndSanitationModel } from '../../models/Stage Models/Cleaning Model/cleaning.model';
+import { CostEstimationModel } from '../../models/Stage Models/Cost Estimation Model/costEstimation.model';
+import { ProjectDeliveryModel } from '../../models/Stage Models/ProjectDelivery Model/ProjectDelivery.model';
+import { checkPreviousStageCompleted } from '../../middlewares/checkPreviousStageMiddleware';
 
 
 const resetRouter = express.Router()
 
-resetRouter.put('/stage1/requirementform/:projectId', multiRoleAuthMiddleware("staff", "owner", "CTO"), resetStage1)
-resetRouter.put('/stage2/sitemeasurement/:projectId', multiRoleAuthMiddleware("staff", "owner", "CTO"), resetStage2)
-resetRouter.put('/stage3/sampledesign/:projectId', multiRoleAuthMiddleware("staff", "owner", "CTO"), resetStage3)
-resetRouter.put('/stage4/technicalconsultation/:projectId', multiRoleAuthMiddleware("staff", "owner", "CTO"), resetStage4)
-resetRouter.put('/stage5/materialconfirmation/:projectId', multiRoleAuthMiddleware("staff", "owner", "CTO"), resetStage5)
-resetRouter.put('/stage6/costestimation/:projectId', multiRoleAuthMiddleware("staff", "owner", "CTO"), resetStage6)
-resetRouter.put('/stage7/paymentconfirmation/:projectId', multiRoleAuthMiddleware("staff", "owner", "CTO"), resetStage7)
-resetRouter.put('/stage8/orderingmaterial/:projectId', multiRoleAuthMiddleware("staff", "owner", "CTO"), resetStage8)
-resetRouter.put('/stage9/materialarrivalcheck/:projectId', multiRoleAuthMiddleware("staff", "owner", "CTO"), resetStage9)
-resetRouter.put('/stage10/worktasks/:projectId', multiRoleAuthMiddleware("staff", "owner", "CTO"), resetStage10)
-resetRouter.put('/stage11/installation/:projectId', multiRoleAuthMiddleware("staff", "owner", "CTO"), resetStage11)
-resetRouter.put('/stage11/qualitycheck/:projectId', multiRoleAuthMiddleware("staff", "owner", "CTO"), resetStage12)
+resetRouter.put('/stage1/requirementform/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), resetStage1)
+resetRouter.put('/stage2/sitemeasurement/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), resetStage2)
+resetRouter.put('/stage3/sampledesign/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(SiteMeasurementModel), notToUpdateIfStageCompleted(SampleDesignModel), resetStage3)
+resetRouter.put('/stage4/technicalconsultation/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(SampleDesignModel), notToUpdateIfStageCompleted(TechnicalConsultationModel), resetStage4)
+resetRouter.put('/stage5/materialconfirmation/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"),  checkPreviousStageCompleted(TechnicalConsultationModel), notToUpdateIfStageCompleted(MaterialRoomConfirmationModel),resetStage5)
+resetRouter.put('/stage6/costestimation/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"),  checkPreviousStageCompleted(MaterialRoomConfirmationModel), notToUpdateIfStageCompleted(CostEstimationModel),resetStage6)
+resetRouter.put('/stage7/paymentconfirmation/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(CostEstimationModel), notToUpdateIfStageCompleted(PaymentConfirmationModel), resetStage7)
+resetRouter.put('/stage8/orderingmaterial/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(PaymentConfirmationModel), notToUpdateIfStageCompleted(OrderingMaterialModel), resetStage8)
+resetRouter.put('/stage9/materialarrivalcheck/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(OrderingMaterialModel), notToUpdateIfStageCompleted(MaterialArrivalModel), resetStage9)
+resetRouter.put('/stage10/worktasks/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(MaterialArrivalModel), notToUpdateIfStageCompleted(WorkMainStageScheduleModel), resetStage10)
+resetRouter.put('/stage11/installation/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(WorkMainStageScheduleModel), notToUpdateIfStageCompleted(InstallationModel), resetStage11)
+resetRouter.put('/stage12/qualitycheck/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(InstallationModel), notToUpdateIfStageCompleted(QualityCheckupModel), resetStage12)
+resetRouter.put('/stage13/cleaning/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(QualityCheckupModel), notToUpdateIfStageCompleted(CleaningAndSanitationModel), resetStage13)
+resetRouter.put('/stage14/projectdelivery/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(CleaningAndSanitationModel), notToUpdateIfStageCompleted(ProjectDeliveryModel), resetStage14)
 
 export default resetRouter

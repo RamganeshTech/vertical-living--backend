@@ -9,9 +9,50 @@ import { Model } from "mongoose";
 import { syncSampleDesignModel } from "../sampledesign contorllers/sampledesign.controller";
 import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+import { initializeSiteRequirement } from "../../../utils/Stage Utils/siteRequirementsInitialize";
 
 
+export const syncSiteMeasurement = async (projectId:string)=>{
 
+ let siteMeasurement = await SiteMeasurementModel.findOne({ projectId });
+
+      if (!siteMeasurement) {
+        siteMeasurement = new SiteMeasurementModel({
+          projectId: projectId,
+          status: "pending",
+          assignedTo: null,
+          isEditable: true,
+          timer: {
+            startedAt: null,
+            completedAt: null,
+            deadLine: null,
+            reminderSent: false
+          },
+          uploads: [],
+          siteDetails: {
+            totalPlotAreaSqFt: { type: Number, default: null },
+            builtUpAreaSqFt: { type: Number, default: null },
+            roadFacing: { type: Boolean, default: null },
+            numberOfFloors: { type: Number, default: null },
+            hasSlope: { type: Boolean, default: null },
+            boundaryWallExists: { type: Boolean, default: null },
+            additionalNotes: { type: String, default: null }
+          },
+          rooms: initializeSiteRequirement,
+        });
+      } else {
+        siteMeasurement.status = "pending";
+        siteMeasurement.isEditable = true;
+        siteMeasurement.timer.startedAt = null;
+        siteMeasurement.timer.reminderSent = false
+        siteMeasurement.timer.completedAt = null
+        siteMeasurement.timer.deadLine = null
+      }
+      await siteMeasurement.save()
+
+      await populateWithAssignedToField({stageModel:SiteMeasurementModel, dataToCache:siteMeasurement, projectId})
+
+    }
 
 const createSiteMeasurement = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -146,7 +187,7 @@ const getTheSiteMeasurements = async (req: Request, res: Response): Promise<any>
       return res.status(400).json({ ok: false, message: "projectId is required" });
     }
 
-    await redisClient.del(`stage:SiteMeasurementModel:${projectId}`)
+    // await redisClient.del(`stage:SiteMeasurementModel:${projectId}`)
 
     const cacheKey = `stage:SiteMeasurementModel:${projectId}`;
     const cachedForm = await redisClient.get(cacheKey);
@@ -207,9 +248,9 @@ const updateCommonSiteMeasurements = async (req: Request, res: Response): Promis
       return res.status(404).json({ ok: false, message: "Site measurement not found" });
     }
 
-    if (!siteDoc.isEditable) {
-      return res.status(400).json({ ok: false, message: "Site measurement is not editable" });
-    }
+    // if (!siteDoc.isEditable) {
+    //   return res.status(400).json({ ok: false, message: "Site measurement is not editable" });
+    // }
 
     if (totalPlotAreaSqFt < 0 || builtUpAreaSqFt < 0 || numberOfFloors < 0) {
       return res.status(400).json({ message: "should not contain negative vlaues", ok: false })
@@ -253,9 +294,9 @@ const updateRoomSiteMeasurements = async (req: Request, res: Response): Promise<
       return res.status(404).json({ ok: false, message: "Site measurement not found" });
     }
 
-    if (!siteDoc.isEditable) {
-      return res.status(400).json({ ok: false, message: "Site measurement is not editable" });
-    }
+    // if (!siteDoc.isEditable) {
+    //   return res.status(400).json({ ok: false, message: "Site measurement is not editable" });
+    // }
 
     if (!room.name) {
       return res.status(400).json({ message: `name must be provided`, ok: false })
@@ -306,7 +347,7 @@ const DeleteRooms = async (req: Request, res: Response): Promise<any> => {
 
     const siteDoc = await SiteMeasurementModel.findOne({ projectId });
     if (!siteDoc) return res.status(404).json({ ok: false, message: "Site measurement not found" });
-    if (!siteDoc.isEditable) return res.status(400).json({ ok: false, message: "Site measurement is not editable" });
+    // if (!siteDoc.isEditable) return res.status(400).json({ ok: false, message: "Site measurement is not editable" });
 
     const roomIndex = siteDoc.rooms.findIndex((r: any) => r._id.toString() === roomId);
     if (roomIndex === -1) return res.status(404).json({ ok: false, message: "Room not found" });
@@ -390,16 +431,16 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
     const siteDoc = await SiteMeasurementModel.findOne({ projectId });
     if (!siteDoc) return res.status(404).json({ ok: false, message: "Site measurement not found" });
 
-    // if (siteDoc.status === "completed") return res.status(400).json({ ok: false, message: "Already completed" });
+    if (siteDoc.status === "completed") return res.status(400).json({ ok: false, message: "Stage Already completed" });
 
     siteDoc.status = "completed";
     siteDoc.isEditable = false;
 
-    // if (siteDoc.status === "completed") {
+    if (siteDoc.status === "completed") {
     const siteRooms = siteDoc.rooms || [];
     await syncSampleDesignModel(projectId, siteRooms)
     // await syncRoomsToMaterialConfirmation(projectId, siteRooms)
-    // }
+    }
 
     await siteDoc.save();
 

@@ -11,6 +11,8 @@ import { uploadCleaningStageFiles, deleteCleaningStageFile,
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
 import { QualityCheckupModel } from "../../../models/Stage Models/QualityCheck Model/QualityCheck.model";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
+import { CleaningAndSanitationModel } from "../../../models/Stage Models/Cleaning Model/cleaning.model";
+import { notToUpdateIfStageCompleted } from "../../../middlewares/notToUpdateIfStageCompleted";
 
 
 
@@ -21,6 +23,8 @@ cleaningRoutes.post(
   "/:projectId/:roomId/upload",
   multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
   checkPreviousStageCompleted(QualityCheckupModel),
+    notToUpdateIfStageCompleted(CleaningAndSanitationModel),
+  
   imageUploadToS3.array("files"), // allows multiple files: `files` is your form field name
   processUploadFiles,
   uploadCleaningStageFiles
@@ -31,6 +35,8 @@ cleaningRoutes.delete(
   "/:projectId/:roomId/:fileId/file",
   multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
   checkPreviousStageCompleted(QualityCheckupModel),
+    notToUpdateIfStageCompleted(CleaningAndSanitationModel),
+
   deleteCleaningStageFile
 );
 
@@ -39,6 +45,8 @@ cleaningRoutes.put(
   "/:projectId/:roomId/cleaning-status",
   multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
   checkPreviousStageCompleted(QualityCheckupModel),
+    notToUpdateIfStageCompleted(CleaningAndSanitationModel),
+
   updateRoomCleaningStatus
 );
 
@@ -62,11 +70,12 @@ cleaningRoutes.put(
   "/:projectId/room/:roomId/notes",
   multiRoleAuthMiddleware("owner", "CTO", "staff"),
   checkPreviousStageCompleted(QualityCheckupModel),
+    notToUpdateIfStageCompleted(CleaningAndSanitationModel),
   updateCleaningStageRoomNotes
 );
 
-cleaningRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(QualityCheckupModel), setCleaningStageDeadline)
-cleaningRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(QualityCheckupModel), cleaningStageCompletionStatus)
+cleaningRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(QualityCheckupModel), notToUpdateIfStageCompleted(CleaningAndSanitationModel),setCleaningStageDeadline)
+cleaningRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(QualityCheckupModel), notToUpdateIfStageCompleted(CleaningAndSanitationModel),cleaningStageCompletionStatus)
 
 
 export default cleaningRoutes;

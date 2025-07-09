@@ -77,7 +77,7 @@ const registerStaff = async (req: Request, res: Response) => {
         }
         )
 
-        res.status(201).json({ message: "Staff registered successfully", staff, ok: true });
+        res.status(201).json({ message: "Staff registered successfully", data:staff, ok: true });
     } catch (error) {
         if (error instanceof Error) {
             console.error("Staff registration failed:", error);
@@ -138,6 +138,7 @@ const loginStaff = async (req: Request, res: Response) => {
             message: "Login successful",
             token,
             data: {
+                staffId: staff._id,
                 staffName: staff.staffName,
                 email: staff.email,
                 phoneNo: staff.phoneNo,

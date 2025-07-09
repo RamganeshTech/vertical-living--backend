@@ -13,6 +13,8 @@ import InstallationModel from "../../models/Stage Models/installation model/Inst
 import { QualityCheckupModel } from "../../models/Stage Models/QualityCheck Model/QualityCheck.model";
 import { CleaningAndSanitationModel } from "../../models/Stage Models/Cleaning Model/cleaning.model";
 import { ProjectDeliveryModel } from "../../models/Stage Models/ProjectDelivery Model/ProjectDelivery.model";
+import redisClient from "../../config/redisClient";
+import { populateWithAssignedToField } from "../populateWithRedis";
 
 
 
@@ -39,7 +41,31 @@ export const resetStages = async (projectId: string, upToStageNumber: number) =>
 
    
     // Reset only up to the requested stage
-    for (let i = 0; i < upToStageNumber; i++) {
+    // for (let i = 0; i < upToStageNumber; i++) {
+    //     const model = stageModels[i];
+    //     const doc = await model.findOne({ projectId });
+    //     if (!doc) continue;
+
+    //     // Reset stage
+    //     doc.status = "pending";
+    //     if ("isEditable" in doc) {
+    //         doc.isEditable = i === 0;
+    //     }
+    //     // doc.timer = {
+    //     //     startedAt: i === 0 ? now : null,
+    //     //     completedAt: null,
+    //     //     deadline: i === 0 ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) : null,
+    //     // };
+
+        
+    //     await doc.save();
+
+    //     populateWithAssignedToField({stageModel:model,dataToCache:doc, projectId})
+    // }
+
+
+// reset All Stages
+     for (let i = 0; i < stageModels?.length; i++) {
         const model = stageModels[i];
         const doc = await model.findOne({ projectId });
         if (!doc) continue;
@@ -55,8 +81,15 @@ export const resetStages = async (projectId: string, upToStageNumber: number) =>
         //     deadline: i === 0 ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) : null,
         // };
 
+        
         await doc.save();
+
+        populateWithAssignedToField({stageModel:model,dataToCache:doc, projectId})
     }
+
+
+    // Reset all stages
+
 
     return true;
 };

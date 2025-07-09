@@ -54,7 +54,16 @@ const clientLogin = async (req: Request, res: Response) => {
         }
         )
 
-        res.status(200).json({ message: `${client.clientName} loggedin successfull`, ok: true, error: false })
+        res.status(200).json({
+            message: `${client.clientName} loggedin successfull`, data: {
+                clientId: client._id,
+                clientName: client.clientName,
+                email: client.email,
+                phoneNo: client.phoneNo,
+                role: "client"
+            },
+            ok: true, error: false
+        })
     }
     catch (error) {
         console.log("error from cleintlogin", error)
@@ -86,7 +95,7 @@ const clientLogout = async (req: Request, res: Response) => {
         });
 
 
-        res.status(200).json({ message: "Logout successful", ok: true, error: false });
+        res.status(200).json({ message: "Logout successful", ok: true, error: false, });
         return;
     }
     catch (error) {
@@ -147,18 +156,29 @@ const registerClient = async (req: Request, res: Response) => {
         // }
 
         // One DB call to check if any of the unique fields are already taken
+        // const existingClient = await ClientModel.findOne({
+        //     $or: [
+        //         { projectId }, // Any client already assigned to this project
+        //         {
+        //             ownerId,
+        //             $or: [
+        //                 { email },
+        //                 { phoneNo }
+        //             ]
+        //         }
+        //     ]
+        // });
+
+
+
         const existingClient = await ClientModel.findOne({
+            projectId,
             $or: [
-                { projectId }, // Any client already assigned to this project
-                {
-                    ownerId,
-                    $or: [
-                        { email },
-                        { phoneNo }
-                    ]
-                }
+                { email },
+                { phoneNo }
             ]
         });
+
 
         if (existingClient) {
             if (existingClient.projectId.toString() === projectId) {
@@ -175,7 +195,7 @@ const registerClient = async (req: Request, res: Response) => {
                 });
             }
 
-             if (existingClient.ownerId.toString() === ownerId && existingClient.clientName === clientName) {
+            if (existingClient.ownerId.toString() === ownerId && existingClient.clientName === clientName) {
                 return res.status(400).json({
                     ok: false,
                     message: "A client with this name already exists",
@@ -239,7 +259,15 @@ const registerClient = async (req: Request, res: Response) => {
         )
 
 
-        res.status(200).json({ message: `${client.clientName} account created successfull`, ok: true, error: false, data: client })
+        res.status(200).json({
+            message: `${client.clientName} account created successfull`, ok: true, error: false, data: {
+                _id: client._id,
+                clientName: client.clientName,
+                email: client.email,
+                phoneNo: client.phoneNo,
+                role: "client"
+            }
+        })
 
     }
     catch (error) {
@@ -401,54 +429,54 @@ const clientResetForgotPassword = async (req: Request, res: Response): Promise<a
     }
 }
 
- const updateClientProfile = async (req: AuthenticatedClientRequest, res: Response) : Promise<any>=> {
-  try {
-    const clientId = req.client?._id;
-    const { clientName, phoneNo, location } = req.body;
+const updateClientProfile = async (req: AuthenticatedClientRequest, res: Response): Promise<any> => {
+    try {
+        const clientId = req.client?._id;
+        const { clientName, phoneNo, location } = req.body;
 
-    if (!clientName && !phoneNo && !location) {
-      return res.status(400).json({ok: false,message: "At least one field (clientName, phoneNo, or location) is required to update.",});
+        if (!clientName && !phoneNo && !location) {
+            return res.status(400).json({ ok: false, message: "At least one field (clientName, phoneNo, or location) is required to update.", });
+        }
+
+        const client = await ClientModel.findById(clientId);
+
+        if (!client) {
+            return res.status(404).json({ ok: false, message: "Client not found" });
+        }
+
+        // Check if phone number is valid and not used by another client under same owner
+        if (phoneNo && phoneNo !== client.phoneNo) {
+            if (String(phoneNo).length !== 10) {
+                return res.status(400).json({ ok: false, message: "Phone number must be exactly 10 digits", });
+            }
+
+            const phoneTaken = await ClientModel.findOne({
+                phoneNo,
+                ownerId: client.ownerId,
+                _id: { $ne: clientId }
+            });
+
+            if (phoneTaken) {
+                return res.status(400).json({ ok: false, message: "Phone number already in use by another client under this owner", });
+            }
+
+            client.phoneNo = phoneNo;
+        }
+
+        if (clientName) client.clientName = clientName;
+        if (location) client.location = location;
+
+        await client.save();
+
+        return res.status(200).json({ ok: true, message: "Client profile updated successfully", data: client, });
+
+    } catch (err) {
+        console.error("Error updating client profile:", err);
+        return res.status(500).json({
+            ok: false,
+            message: "Server error",
+        });
     }
-
-    const client = await ClientModel.findById(clientId);
-
-    if (!client) {
-      return res.status(404).json({ok: false,message: "Client not found"});
-    }
-
-    // Check if phone number is valid and not used by another client under same owner
-    if (phoneNo && phoneNo !== client.phoneNo) {
-      if (String(phoneNo).length !== 10) {
-        return res.status(400).json({ok: false,message: "Phone number must be exactly 10 digits",});
-      }
-
-      const phoneTaken = await ClientModel.findOne({
-        phoneNo,
-        ownerId: client.ownerId,
-        _id: { $ne: clientId }
-      });
-
-      if (phoneTaken) {
-        return res.status(400).json({  ok: false,  message: "Phone number already in use by another client under this owner",});
-      }
-
-      client.phoneNo = phoneNo;
-    }
-
-    if (clientName) client.clientName = clientName;
-    if (location) client.location = location;
-
-    await client.save();
-
-    return res.status(200).json({ok: true,message: "Client profile updated successfully",data: client,});
-    
-  } catch (err) {
-    console.error("Error updating client profile:", err);
-    return res.status(500).json({
-      ok: false,
-      message: "Server error",
-    });
-  }
 };
 
 

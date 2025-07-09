@@ -6,27 +6,29 @@ import { deleteProjectDeliveryFile, getProjectDeliveryDetails, projectDeliveryCo
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
 import { CleaningAndSanitationModel } from "../../../models/Stage Models/Cleaning Model/cleaning.model";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
+import { ProjectDeliveryModel } from "../../../models/Stage Models/ProjectDelivery Model/ProjectDelivery.model";
+import { notToUpdateIfStageCompleted } from "../../../middlewares/notToUpdateIfStageCompleted";
 
 const projectDeliveryRoutes = express.Router();
 
 // ✅ Upload files (images, PDFs)
-projectDeliveryRoutes.post("/:projectId/upload",multiRoleAuthMiddleware("owner", "CTO", "staff"),checkPreviousStageCompleted(CleaningAndSanitationModel),imageUploadToS3.array("files"), processUploadFiles, uploadProjectDeliveryFile);
+projectDeliveryRoutes.post("/:projectId/upload",multiRoleAuthMiddleware("owner", "CTO", "staff"),checkPreviousStageCompleted(CleaningAndSanitationModel), notToUpdateIfStageCompleted(ProjectDeliveryModel),imageUploadToS3.array("files"), processUploadFiles, uploadProjectDeliveryFile);
 
 // ✅ Delete an uploaded file by its _id in uploads array
-projectDeliveryRoutes.delete("/:projectId/upload/:fileId",multiRoleAuthMiddleware("owner", "CTO", "staff"),checkPreviousStageCompleted(CleaningAndSanitationModel),deleteProjectDeliveryFile);
+projectDeliveryRoutes.delete("/:projectId/upload/:fileId",multiRoleAuthMiddleware("owner", "CTO", "staff"),checkPreviousStageCompleted(CleaningAndSanitationModel),notToUpdateIfStageCompleted(ProjectDeliveryModel), deleteProjectDeliveryFile);
 
 // ✅ Update client confirmation
-projectDeliveryRoutes.put("/:projectId/client-confirmation",multiRoleAuthMiddleware("owner", "client"),checkPreviousStageCompleted(CleaningAndSanitationModel),updateClientConfirmation);
+projectDeliveryRoutes.put("/:projectId/client-confirmation",multiRoleAuthMiddleware("owner", "client"),checkPreviousStageCompleted(CleaningAndSanitationModel),notToUpdateIfStageCompleted(ProjectDeliveryModel), updateClientConfirmation);
 
 // ✅ Update owner confirmation
-projectDeliveryRoutes.put("/:projectId/owner-confirmation",multiRoleAuthMiddleware("owner"),checkPreviousStageCompleted(CleaningAndSanitationModel),updateOwnerConfirmation);
+projectDeliveryRoutes.put("/:projectId/owner-confirmation",multiRoleAuthMiddleware("owner"),checkPreviousStageCompleted(CleaningAndSanitationModel),notToUpdateIfStageCompleted(ProjectDeliveryModel), updateOwnerConfirmation);
 
 // ✅ Get full ProjectDelivery details (with assignedTo populated)
 projectDeliveryRoutes.get("/:projectId",multiRoleAuthMiddleware("owner", "CTO", "client"),checkPreviousStageCompleted(CleaningAndSanitationModel),getProjectDeliveryDetails);
 
 
-projectDeliveryRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(CleaningAndSanitationModel), setProjectDeliveryStageDeadline)
-projectDeliveryRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(CleaningAndSanitationModel),projectDeliveryCompletionStatus)
+projectDeliveryRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(CleaningAndSanitationModel),  notToUpdateIfStageCompleted(ProjectDeliveryModel), setProjectDeliveryStageDeadline)
+projectDeliveryRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(CleaningAndSanitationModel), notToUpdateIfStageCompleted(ProjectDeliveryModel), projectDeliveryCompletionStatus)
 
 
 export default projectDeliveryRoutes;

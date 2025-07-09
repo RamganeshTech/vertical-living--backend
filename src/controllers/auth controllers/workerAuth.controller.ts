@@ -3,6 +3,7 @@ import { WorkerModel } from "../../models/worker model/worker.model";
 import jwt from "jsonwebtoken";
 import { AuthenticatedWorkerRequest } from "../../types/types";
 import { ObjectId, Schema, Types } from "mongoose";
+import bcrypt from 'bcrypt';
 
 // Helper: Token generator
 const generateWorkerTokens = (workerId: string, role: string, workerName: string, projectId: string[]) => {
@@ -40,12 +41,12 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
     const { projectId, role, specificRole, expiresAt, invitedBy, invitedByModel, organizationId } = decoded;
 
     if (!projectId || !role || !specificRole || !expiresAt) {
-      res.status(400).json({ message: "Invite token is missing required fields." });
+      res.status(400).json({ message: "Invite token is missing required fields." , ok:false});
       return;
     }
-
+console.log(role, specificRole)
     if (new Date() > new Date(expiresAt)) {
-      res.status(400).json({ message: "Invitation link has expired." });
+      res.status(400).json({ message: "Invitation link has expired.", ok:false });
       return;
     }
 
@@ -56,16 +57,20 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
         { phoneNo },
       ]
     });
+
     if (exists) {
-      res.status(409).json({ message: "Worker already registered for this project." });
+      res.status(409).json({ message: "Worker already registered for this project." , ok:false });
       return;
     }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
     const newWorker = await WorkerModel.create({
       workerName,
       phoneNo,
       email,
-      password, // hash in real app
+      password:hashedPassword, // hash in real app
       role,
       specificRole,
       projectId: [projectId],
@@ -100,12 +105,13 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
       message: "Worker registered successfully",
       workeraccesstoken,
       workerrefreshtoken,
+      data: newWorker,
       ok: true
     });
 
   } catch (error) {
     console.error("Register error:", error);
-    res.status(500).json({ message: "Server error", error: (error as Error).message });
+    res.status(500).json({ message: "Server error", error: (error as Error).message , ok:false});
   }
 };
 
@@ -126,6 +132,15 @@ const loginWorker = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // const isPasswordCorrect = await bcrypt.compare(password, worker.password);
+    // if (!isPasswordCorrect) {
+    //   res.status(400).json({ message: "Invalid email or password", ok: false });
+    //   return
+    // }
+
+
+    console.log("worker", worker.password)
+    console.log("incomming pass", password)
     if (worker.password !== password) {
       res.status(400).json({ message: "Incorrect password.", ok: false });
       return;
@@ -156,12 +171,13 @@ const loginWorker = async (req: Request, res: Response): Promise<void> => {
       message: "Login successful",
       workeraccesstoken,
       workerrefreshtoken,
+      data: worker,
       ok: true
     });
 
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ message: "Server error", error: (error as Error).message });
+    res.status(500).json({ message: "Server error", error: (error as Error).message , ok:false});
   }
 };
 

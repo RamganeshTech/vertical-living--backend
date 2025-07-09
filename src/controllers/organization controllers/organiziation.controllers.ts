@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import OrganizationModel from "../../models/organization models/organization.model";
 import StaffModel from "../../models/staff model/staff.model";
 import CTOModel from "../../models/CTO model/CTO.model";
+import ClientModel from "../../models/client model/client.model";
 
 
 
@@ -68,12 +69,12 @@ const createOrganziation = async (req: AuthenticatedUserRequest, res: Response) 
 }
 
 
-const getMyOrganizations = async (req: AuthenticatedUserRequest, res: Response) => {
+const getMyOrganizations = async (req: RoleBasedRequest, res: Response) => {
     try {
         const user = req.user;
 
-        if (!user || !user.organization) {
-            res.status(404).json({ message: "No organization linked", data: [], ok: false });
+        if (!user?._id) {
+            res.status(404).json({ message: "No organization linked", data: {}, ok: false });
             return
         }
 
@@ -464,6 +465,32 @@ const inviteClient = async (req: RoleBasedRequest, res: Response): Promise<any> 
     }
 };
 
+const getClientByProject = async (req: RoleBasedRequest, res: Response):Promise<any> => {
+    try {
+        const { orgId, projectId } = req.params;
+
+        if (!orgId || !projectId) {
+            return res.status(400).json({ message: "Organization ID and project Id is required", ok: false });
+        }
+
+        // const client = await ClientModel.find({$and: [{organizationId:orgId, projectId:projectId}]}).select("-password -resetPasswordToken -resetPasswordExpire"); // Exclude sensitive fields
+        const client = await ClientModel.find({projectId:projectId}).select("-password -resetPasswordToken -resetPasswordExpire"); // Exclude sensitive fields
+
+        return res.status(200).json({
+            message: "client fetched successfully",
+            ok: true,
+            data: client
+        });
+
+    } catch (error) {
+        if (error instanceof Error) {
+            console.error("Error fetching client:", error);
+            res.status(500).json({ message: "Server error", ok: false, error: error.message });
+            return
+        }
+    }
+};
+
 
 
 export {
@@ -482,4 +509,5 @@ export {
     removeCTOFromOrganization,
 
     inviteClient,
+    getClientByProject
 }

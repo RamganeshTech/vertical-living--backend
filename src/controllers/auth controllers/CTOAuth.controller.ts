@@ -148,6 +148,7 @@ const loginCTO = async (req: Request, res: Response) => {
             message: "Login successful",
             token,
             data: {
+                CTOId: CTO._id,
                 CTOName: CTO.CTOName,
                 email: CTO.email,
                 phoneNo: CTO.phoneNo,

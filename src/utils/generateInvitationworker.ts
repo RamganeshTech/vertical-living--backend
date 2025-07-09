@@ -30,8 +30,8 @@ export const generateWorkerInviteLink = ({
 
   const baseUrl =
     process.env.NODE_ENV === "development"
-      ? "http://localhost:5173"
-      : "https://verticalliving.com";
+      ? process.env.FRONTEND_URL
+      : process.env.FRONTEND_URL;
 
   return `${baseUrl}/workerregister?invite=${encodedPayload}`;
 };

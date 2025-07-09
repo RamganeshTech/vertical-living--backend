@@ -9,6 +9,7 @@ import { RequirementFormModel } from '../../../models/Stage Models/requirment mo
 import { updateBedroomSection, updateKitchenSection, updateLivingHallSection, updateWardrobeSection } from '../../../controllers/stage controllers/requirement controllers/subRoom.controller';
 import {imageUploadToS3, processUploadFiles}  from '../../../utils/s3Uploads/s3upload';
 import { checkPreviousStageCompleted } from '../../../middlewares/checkPreviousStageMiddleware';
+import { notToUpdateIfStageCompleted } from '../../../middlewares/notToUpdateIfStageCompleted';
 
 
 const requirementRoutes = express.Router()
@@ -16,19 +17,19 @@ console.log("👉 imageUploadToS3:", imageUploadToS3);
 
 // 1 requirement routes
 
-requirementRoutes.post('/createrequirement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),submitRequirementForm)
+requirementRoutes.post('/createrequirement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), notToUpdateIfStageCompleted(RequirementFormModel),  submitRequirementForm)
 requirementRoutes.get('/getrequirementform/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), getFormFilledDetails)
 
-requirementRoutes.patch('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO"), setRequirementStageDeadline)
+requirementRoutes.patch('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO"), notToUpdateIfStageCompleted(RequirementFormModel), setRequirementStageDeadline)
 
-requirementRoutes.post('/formsharelink/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO"), generateShareableFormLink)
-requirementRoutes.patch('/lockupdation/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), lockRequirementForm)
-requirementRoutes.patch('/formcompleted/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), markFormAsCompleted)
+requirementRoutes.post('/formsharelink/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO"), notToUpdateIfStageCompleted(RequirementFormModel), generateShareableFormLink)
+requirementRoutes.patch('/lockupdation/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), notToUpdateIfStageCompleted(RequirementFormModel), lockRequirementForm)
+requirementRoutes.patch('/formcompleted/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),notToUpdateIfStageCompleted(RequirementFormModel),  markFormAsCompleted)
 
-requirementRoutes.delete('/deleteform/:projectId',multiRoleAuthMiddleware("owner", "staff", "CTO"), delteRequirementForm)
+requirementRoutes.delete('/deleteform/:projectId',multiRoleAuthMiddleware("owner", "staff", "CTO"), notToUpdateIfStageCompleted(RequirementFormModel), delteRequirementForm)
 
-requirementRoutes.post( "/upload/multiple/:projectId/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), imageUploadToS3.array("file"), processUploadFiles, uploadGenericController(RequirementFormModel))
-requirementRoutes.patch("/:projectId/deleteuploadedfile/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",), deleteRequirementStageFile);
+requirementRoutes.post( "/upload/multiple/:projectId/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), notToUpdateIfStageCompleted(RequirementFormModel), imageUploadToS3.array("file"), processUploadFiles, uploadGenericController(RequirementFormModel))
+requirementRoutes.patch("/:projectId/deleteuploadedfile/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",), notToUpdateIfStageCompleted(RequirementFormModel), deleteRequirementStageFile);
 
 // uncommenrt this if the form shoule be updated only by the client 
 // requirementRoutes.put("/:projectId/updatekitchen", ClientAuthMiddleware, updateKitchenSection);
@@ -37,10 +38,10 @@ requirementRoutes.patch("/:projectId/deleteuploadedfile/:fileId", multiRoleAuthM
 // requirementRoutes.put("/:projectId/updatelivinghall", ClientAuthMiddleware, updateLivingHallSection);
 
 
-requirementRoutes.put("/:projectId/updatekitchen", multiRoleAuthMiddleware("owner","CTO", "client"), updateKitchenSection);
-requirementRoutes.put("/:projectId/updatebedroom", multiRoleAuthMiddleware("owner","CTO", "client"), updateBedroomSection);
-requirementRoutes.put("/:projectId/updatewardrobe", multiRoleAuthMiddleware("owner","CTO", "client"), updateWardrobeSection);
-requirementRoutes.put("/:projectId/updatelivinghall", multiRoleAuthMiddleware("owner","CTO", "client"), updateLivingHallSection);
+requirementRoutes.put("/:projectId/updatekitchen", multiRoleAuthMiddleware("owner","CTO", "client"),notToUpdateIfStageCompleted(RequirementFormModel),  updateKitchenSection);
+requirementRoutes.put("/:projectId/updatebedroom", multiRoleAuthMiddleware("owner","CTO", "client"), notToUpdateIfStageCompleted(RequirementFormModel), updateBedroomSection);
+requirementRoutes.put("/:projectId/updatewardrobe", multiRoleAuthMiddleware("owner","CTO", "client"),notToUpdateIfStageCompleted(RequirementFormModel),  updateWardrobeSection);
+requirementRoutes.put("/:projectId/updatelivinghall", multiRoleAuthMiddleware("owner","CTO", "client"),notToUpdateIfStageCompleted(RequirementFormModel),  updateLivingHallSection);
 
 export default requirementRoutes
 

@@ -25,7 +25,7 @@ const ClientSchema: Schema<IClient> = new Schema({
     password: { type: String, required: true },
     projectId: {type: Schema.Types.ObjectId, required: true, ref:"ProjectModel"},
     ownerId: {type: Schema.Types.ObjectId, required: true, ref:"UserModel"},
-        organizationId: { type: [Schema.Types.ObjectId], ref: "OrganizationModel", required: true, default: [] },
+    organizationId: { type: [Schema.Types.ObjectId], ref: "OrganizationModel", required: true, default: [] },
     resetPasswordToken: { type: String },  // Token for password reset
     resetPasswordExpire: { type: Number },
 }, {
@@ -33,10 +33,8 @@ const ClientSchema: Schema<IClient> = new Schema({
 });
 
 
-ClientSchema.index({ email: 1, invitedBy: 1 }, { unique: true });
-ClientSchema.index({ clientName: 1, invitedBy: 1 }, { unique: true });
-ClientSchema.index({ phoneNo: 1, invitedBy: 1 }, { unique: true, sparse: true });
-
+ClientSchema.index({ email: 1, projectId: 1 }, { unique: true });
+ClientSchema.index({ phoneNo: 1, projectId: 1 }, { unique: true, sparse: true });
 
 const ClientModel: Model<IClient> = mongoose.model<IClient>("ClientModel", ClientSchema);
 

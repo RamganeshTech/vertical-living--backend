@@ -7,11 +7,11 @@ import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common
 import { isDate } from "util/types";
 import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
 import { resetStages } from "../../../utils/common features/ressetStages";
-import { initializeSiteRequirement } from "../../../utils/Stage Utils/siteRequirementsInitialize";
 import { isObjectHasValue } from "../../../utils/isObjectHasValue";
 import redisClient from "../../../config/redisClient";
 import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+import { syncSiteMeasurement } from "../site measurement controller/siteMeasurements.controller";
 
 
 
@@ -212,6 +212,13 @@ const delteRequirementForm = async (req: Request, res: Response,): Promise<void>
       return;
     }
 
+    const existingForm = await RequirementFormModel.findOne({projectId})
+
+    if(existingForm?.status === "completed"){
+      res.status(404).json({ ok: false, message: "status is already completed" });
+      return;
+    }
+
     const form = await RequirementFormModel.findOneAndDelete({ projectId })
 
     if (!form) {
@@ -385,47 +392,17 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
 
     if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
+    if(form.status === "completed"){
+      return res.status(400).json({ ok: false, message: "Stage already completed" });
+    }
+
     form.status = "completed";
     form.isEditable = false
     timerFunctionlity(form, "completedAt")
     await form.save();
 
     if (form.status === "completed") {
-      let siteMeasurement = await SiteMeasurementModel.findOne({ projectId: form.projectId });
-
-      if (!siteMeasurement) {
-        siteMeasurement = new SiteMeasurementModel({
-          projectId: form.projectId,
-          status: "pending",
-          assignedTo: null,
-          isEditable: true,
-          timer: {
-            startedAt: new Date(),
-            completedAt: null,
-            deadLine: null,
-            reminderSent: false
-          },
-          uploads: [],
-          siteDetails: {
-            totalPlotAreaSqFt: { type: Number, default: null },
-            builtUpAreaSqFt: { type: Number, default: null },
-            roadFacing: { type: Boolean, default: null },
-            numberOfFloors: { type: Number, default: null },
-            hasSlope: { type: Boolean, default: null },
-            boundaryWallExists: { type: Boolean, default: null },
-            additionalNotes: { type: String, default: null }
-          },
-          rooms: initializeSiteRequirement,
-        });
-      } else {
-        siteMeasurement.status = "pending";
-        siteMeasurement.isEditable = true;
-        siteMeasurement.timer.startedAt = new Date();
-        siteMeasurement.timer.reminderSent = false
-        siteMeasurement.timer.completedAt = null
-        siteMeasurement.timer.deadLine = null
-      }
-      await siteMeasurement.save()
+      await syncSiteMeasurement(projectId)
     }
 
     // const redisKeyMain = `stage:RequirementFormModel:${projectId}`
