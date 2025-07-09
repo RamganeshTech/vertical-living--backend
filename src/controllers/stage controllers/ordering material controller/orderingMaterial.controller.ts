@@ -93,7 +93,7 @@ const getRoomDetailsOrderMaterials = async (req: Request, res: Response): Promis
   try {
     const { projectId, roomKey } = req.params;
 
-    const redisRoomKey = `stage:OrderingMaterialModel:${projectId}:${roomKey}`
+    const redisRoomKey = `stage:OrderingMaterialModel:${projectId}:room:${roomKey}`
 
     const cachedData = await redisClient.get(redisRoomKey)
 
@@ -228,16 +228,16 @@ const updateRoomMaterials = async (req: Request, res: Response): Promise<any> =>
       return res.status(400).json({ ok: false, message: `Invalid room key: ${roomKey}` });
     }
 
-    for (const [i, item] of items.entries()) {
-      for (const field of requiredFields) {
-        if (!item[field]) {
-          return res.status(400).json({
-            ok: false,
-            message: `Missing field "${field}" in item at index ${i}`,
-          });
-        }
-      }
-    }
+    // for (const [i, item] of items.entries()) {
+    //   for (const field of requiredFields) {
+    //     if (!item[field]) {
+    //       return res.status(400).json({
+    //         ok: false,
+    //         message: `Missing field "${field}" in item at index ${i}`,
+    //       });
+    //     }
+    //   }
+    // }
 
     const orderingDoc = await OrderingMaterialModel.findOneAndUpdate(
       { projectId },
