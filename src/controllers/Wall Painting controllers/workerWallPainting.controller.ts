@@ -6,7 +6,7 @@ import { AdminWallPaintingModel } from "../../models/Wall Painting model/AdminSi
 // 1️⃣ Upload initial files
  const uploadWorkerInitialFiles = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { projectId, stepId } = req.params;
+    const { projectId, stepNumber } = req.params;
     const files = req.files as Express.Multer.File[];
 
     if (!files || files.length === 0) {
@@ -22,16 +22,16 @@ import { AdminWallPaintingModel } from "../../models/Wall Painting model/AdminSi
 
     // ➜ Update Worker SOP step by step _id
     await WorkerWallPaintingModel.updateOne(
-      { projectId, "steps._id": stepId },
+      { projectId, "steps.stepNumber": stepNumber },
       { $push: { "steps.$.initialUploads": { $each: uploads } } }
     );
 
     // ➜ Update Admin SOP step by step _id
-    await AdminWallPaintingModel.updateOne(
-      { projectId, "steps._id": stepId },
+    const data = await AdminWallPaintingModel.updateOne(
+      { projectId, "steps.stepNumber": stepNumber },
       { $push: { "steps.$.workerInitialUploads": { $each: uploads } } }
     );
-
+console.log("data", data)
     return res.status(200).json({ ok: true, message: "Initial uploads saved to both Worker & Admin." });
   } catch (err) {
     console.error(err);
@@ -86,9 +86,9 @@ import { AdminWallPaintingModel } from "../../models/Wall Painting model/AdminSi
 
  const uploadWorkerCorrectionFiles = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { projectId, stepId } = req.params;
+    const { projectId, stepNumber, correctionRound} = req.params;
     const files = req.files as Express.Multer.File[];
-
+console.log("step number",stepNumber)
     if (!files || files.length === 0) {
       return res.status(400).json({ message: "No files uploaded.", ok: false });
     }
@@ -102,7 +102,7 @@ import { AdminWallPaintingModel } from "../../models/Wall Painting model/AdminSi
 
     // 1️⃣ ➜ Find latest round number in this step
     const workerDoc = await WorkerWallPaintingModel.findOne(
-      { projectId, "steps._id": stepId },
+      { projectId, "steps.stepNumber": stepNumber },
       { "steps.$": 1 }
     ).lean();
 
@@ -115,17 +115,17 @@ import { AdminWallPaintingModel } from "../../models/Wall Painting model/AdminSi
       return res.status(404).json({ message: "Step not found.", ok: false });
     }
 
-    const latestRound = step.correctionRounds?.length
-      ? step.correctionRounds[step.correctionRounds.length - 1].roundNumber
-      : null;
+    // const latestRound = step.correctionRounds?.length
+    //   ? step.correctionRounds[step.correctionRounds.length - 1].roundNumber
+    //   : null;
 
-    if (!latestRound) {
-      return res.status(400).json({ message: "No admin correction round exists yet.", ok: false });
-    }
+    // if (!latestRound) {
+    //   return res.status(400).json({ message: "No admin correction round exists yet.", ok: false });
+    // }
 
     // 2️⃣ ➜ Update ONLY the latest round’s workerCorrectedUploads
     await WorkerWallPaintingModel.updateOne(
-      { projectId, "steps._id": stepId, "steps.correctionRounds.roundNumber": latestRound },
+      { projectId, "steps.stepNumber": stepNumber, "steps.correctionRounds.roundNumber": correctionRound },
       {
         $set: {
           "steps.$[step].correctionRounds.$[round].workerCorrectedUploads": uploads,
@@ -133,15 +133,15 @@ import { AdminWallPaintingModel } from "../../models/Wall Painting model/AdminSi
       },
       {
         arrayFilters: [
-          { "step._id": stepId },
-          { "round.roundNumber": latestRound },
+          { "step.stepNumber": stepNumber },
+          { "round.roundNumber": correctionRound },
         ],
       }
     );
 
     // 3️⃣ ➜ Also update Admin side’s workerInitialUploads with latest correction files
     await AdminWallPaintingModel.updateOne(
-      { projectId, "steps._id": stepId },
+      { projectId, "steps.stepNumber": stepNumber },
       {
         $set: {
           "steps.$.workerInitialUploads": uploads,
@@ -161,6 +161,7 @@ import { AdminWallPaintingModel } from "../../models/Wall Painting model/AdminSi
   try {
     const { projectId, stepId } = req.params;
 
+    console.log("stepId", stepId)
     const doc = await WorkerWallPaintingModel.findOne(
       { projectId, "steps._id": stepId },
       { "steps.$": 1 }

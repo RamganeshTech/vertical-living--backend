@@ -25,8 +25,7 @@ export interface IWorkerStep {
 export interface IWorkerSOP extends Document {
   projectId: Types.ObjectId;
   steps: IWorkerStep[];
-  createdAt?: Date;
-  updatedAt?: Date;
+
 }
 
 // ---------------- Schemas ----------------

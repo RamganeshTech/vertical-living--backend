@@ -13,6 +13,7 @@ import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { syncSiteMeasurement } from "../site measurement controller/siteMeasurements.controller";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
+import { syncAdminWall, syncWorkerWall } from "../../Wall Painting controllers/adminWallPainting.controller";
 
 
 
@@ -415,8 +416,10 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
     await populateWithAssignedToField({ stageModel: RequirementFormModel, projectId, dataToCache: form })
 
 
-     res.status(200).json({ ok: true, message: "Requirement stage marked as completed", data: form });
-      updateProjectCompletionPercentage(projectId);
+    res.status(200).json({ ok: true, message: "Requirement stage marked as completed", data: form });
+    updateProjectCompletionPercentage(projectId);
+    await syncWorkerWall(projectId)
+    await syncAdminWall(projectId)
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

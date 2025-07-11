@@ -7,24 +7,24 @@ import { imageUploadToS3, processUploadFiles } from "../../utils/s3Uploads/s3upl
 const workerWallRoutes = Router();
 
 // ✅ Get full Worker SOP details
-workerWallRoutes.get("/:projectId", multiRoleAuthMiddleware("worker"), getWorkerSOP);
+workerWallRoutes.get("/:projectId", multiRoleAuthMiddleware("worker", "staff"), getWorkerSOP);
 
 // ✅ Get specific step detail
-workerWallRoutes.get("/:projectId/step/:stepId", multiRoleAuthMiddleware("worker"), getWorkerStepDetails);
+workerWallRoutes.get("/:projectId/step/:stepId", multiRoleAuthMiddleware("worker", "staff"), getWorkerStepDetails);
 
 // ✅ Upload initial files to a step
 workerWallRoutes.post(
-  "/:projectId/step/:stepId/initial",
-  multiRoleAuthMiddleware("worker"),
+  "/:projectId/step/:stepNumber/initial",
+  multiRoleAuthMiddleware("worker", "staff"),
   imageUploadToS3.array("files"), // For multiple files
   processUploadFiles,
   uploadWorkerInitialFiles
 );
-
+ 
 // ✅ Upload correction files for a correction round
 workerWallRoutes.post(
-  "/:projectId/step/:stepId/correction",
-  multiRoleAuthMiddleware("worker"),
+  "/:projectId/step/:stepNumber/correction/:correctionRound",
+  multiRoleAuthMiddleware("worker","staff"),
   imageUploadToS3.array("files"),
   processUploadFiles,
   uploadWorkerCorrectionFiles

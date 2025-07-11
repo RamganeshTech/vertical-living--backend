@@ -48,8 +48,9 @@ const AdminStepSchema = new Schema<IAdminStep>(
 
 const AdminSOPSchema = new Schema<IAdminSOP>(
   {
-    projectId: {type: Schema.Types.ObjectId, ref:"ProjectModel", },
+    projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", },
     status: { type: String, enum: ["pending", "approved"] },
+    steps: { type: [AdminStepSchema], default: [] }
   },
   { timestamps: true }
 );

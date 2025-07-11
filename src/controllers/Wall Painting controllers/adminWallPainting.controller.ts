@@ -1,12 +1,45 @@
 import { Request, Response } from "express";
-import { WorkerWallPaintingModel } from "../../models/Wall Painting model/workerSideWallPainting.model"; 
+import { WorkerWallPaintingModel } from "../../models/Wall Painting model/workerSideWallPainting.model";
 import { AdminWallPaintingModel, IUpload } from "../../models/Wall Painting model/AdminSideWallPainting.model";
 
 
 
- const uploadAdminCorrectionRound = async (req: Request, res: Response): Promise<any> => {
+
+export const syncAdminWall = async (projectId: string) => {
+    await AdminWallPaintingModel.create({
+      projectId,
+      status: "pending",
+      steps: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(step => {
+        return {
+          stepNumber: step,
+          workerInitialUploads: [],
+          adminCorrectionNote: "",
+          adminCorrectionUploads: [],
+          status: "pending"
+        }
+      })
+    })
+}
+
+export const syncWorkerWall = async (projectId: string) => {
+    await WorkerWallPaintingModel.create({
+      projectId,
+      steps: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(step => {
+        return {
+          stepNumber: step,
+          initialUploads: [],
+          correctionRounds: [],
+        }
+      })
+    })
+}
+
+
+
+const uploadAdminCorrectionRound = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { projectId, stepId } = req.params;
+    const { projectId, stepNumber } = req.params;
+    console.log("req.body",req.body)
     const { adminNote } = req.body;
     const files = req.files as Express.Multer.File[];
 
@@ -23,7 +56,7 @@ import { AdminWallPaintingModel, IUpload } from "../../models/Wall Painting mode
 
     // 1️⃣ ➜ Update Admin SOP: push correction files + note
     await AdminWallPaintingModel.updateOne(
-      { projectId, "steps._id": stepId },
+      { projectId, "steps.stepNumber": stepNumber },
       {
         $set: { "steps.$.adminCorrectionNote": adminNote },
         $push: { "steps.$.adminCorrectionUploads": { $each: uploads } },
@@ -32,7 +65,7 @@ import { AdminWallPaintingModel, IUpload } from "../../models/Wall Painting mode
 
     // 2️⃣ ➜ Add new CorrectionRound in Worker SOP for same step
     const workerDoc = await WorkerWallPaintingModel.findOne(
-      { projectId, "steps._id": stepId },
+      { projectId, "steps.stepNumber": stepNumber },
       { "steps.$": 1 }
     ).lean();
 
@@ -44,7 +77,7 @@ import { AdminWallPaintingModel, IUpload } from "../../models/Wall Painting mode
     const nextRoundNumber = step?.correctionRounds?.length ? step.correctionRounds.length + 1 : 1;
 
     await WorkerWallPaintingModel.updateOne(
-      { projectId, "steps._id": stepId },
+      { projectId, "steps.stepNumber": stepNumber },
       {
         $push: {
           "steps.$.correctionRounds": {
@@ -66,10 +99,10 @@ import { AdminWallPaintingModel, IUpload } from "../../models/Wall Painting mode
 
 
 
- const approveStep = async (req: Request, res: Response): Promise<any> => {
+const approveStep = async (req: Request, res: Response): Promise<any> => {
   try {
     const { projectId, stepId } = req.params;
-    const {payload} = req.body
+    const { payload } = req.body
     // ➜ Mark step as approved in Admin SOP
     await AdminWallPaintingModel.updateOne(
       { projectId, "steps._id": stepId },
@@ -86,7 +119,7 @@ import { AdminWallPaintingModel, IUpload } from "../../models/Wall Painting mode
 
 
 
- const getAdminStepDetails = async (req: Request, res: Response): Promise<any> => {
+const getAdminStepDetails = async (req: Request, res: Response): Promise<any> => {
   try {
     const { projectId, stepId } = req.params;
 
@@ -130,8 +163,8 @@ const getAdminSOP = async (req: Request, res: Response): Promise<any> => {
 
 
 export {
- uploadAdminCorrectionRound,
- approveStep,
- getAdminStepDetails,
- getAdminSOP
+  uploadAdminCorrectionRound,
+  approveStep,
+  getAdminStepDetails,
+  getAdminSOP
 }

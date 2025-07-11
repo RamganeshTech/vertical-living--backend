@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import { multiRoleAuthMiddleware } from "../../middlewares/multiRoleAuthMiddleware";
 import { approveStep, getAdminSOP, getAdminStepDetails, uploadAdminCorrectionRound } from "../../controllers/Wall Painting controllers/adminWallPainting.controller";
+import { imageUploadToS3, processUploadFiles } from "../../utils/s3Uploads/s3upload";
 
 // Middlewares you probably already have:
 
@@ -17,8 +18,10 @@ adminWallroutes.get("/:projectId/step/:stepId", multiRoleAuthMiddleware("owner",
 
 // ✅ Upload admin correction round for a step
 adminWallroutes.post(
-  "/:projectId/step/:stepId/correction",
+  "/:projectId/step/:stepNumber/correction",
   multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
+  imageUploadToS3.array("files"), // For multiple files
+    processUploadFiles,
   uploadAdminCorrectionRound
 );
 
