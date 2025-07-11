@@ -3,6 +3,8 @@ import InstallationModel from "../../../models/Stage Models/installation model/I
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import redisClient from "../../../config/redisClient";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+import { syncQualityCheck } from "../QualityCheck controllers/QualityCheck.controller";
+import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 
 
 export const syncInstallationWork = async (projectId: string) => {
@@ -11,7 +13,7 @@ export const syncInstallationWork = async (projectId: string) => {
 
   if (!existing) {
     const timer = {
-      startedAt: new Date(),
+      startedAt: null,
       completedAt: null,
       deadLine: null,
       reminderSent: false,
@@ -41,14 +43,15 @@ export const syncInstallationWork = async (projectId: string) => {
     })
   }
   else {
-    existing.timer.startedAt = new Date()
+    existing.timer.startedAt = null
     existing.timer.deadLine = null,
       existing.timer.completedAt = null,
       existing.timer.reminderSent = false,
 
       await existing.save()
   }
-
+ const redisKey = `stage:InstallationModel:${projectId}`;
+    await redisClient.del(redisKey);
 }
 
 export const validRooms = [
@@ -309,11 +312,18 @@ const installationCompletionStatus = async (req: Request, res: Response): Promis
     timerFunctionlity(form, "completedAt")
     await form.save();
 
+    if(form.status === "completed"){
+      await syncQualityCheck(projectId)
+    }
+
     // const redisMainKey = `stage:InstallationModel:${projectId}`
     // await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
         await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: form })
 
-    return res.status(200).json({ ok: true, message: "installation check stage marked as completed", data: form });
+     res.status(200).json({ ok: true, message: "installation check stage marked as completed", data: form });
+
+         updateProjectCompletionPercentage(projectId);
+     
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

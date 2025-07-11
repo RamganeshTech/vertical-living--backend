@@ -18,33 +18,33 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
     const { workerName, phoneNo, email, password } = req.body;
 
     if (!invite || typeof invite !== "string") {
-      res.status(400).json({ message: "Missing or invalid invite token." });
+      res.status(400).json({ ok:false, message: "Missing or invalid invite token." });
       return;
     }
 
     if (!workerName || !phoneNo || !email || !password) {
-      res.status(400).json({ message: "All fields (name, phoneNo, email, password) are required." });
+      res.status(400).json({ ok:false, message: "All fields (name, phoneNo, email, password) are required." });
       return;
     }
 
     if (!email.includes("@") || !email.includes(".")) {
-      res.status(400).json({ message: "Invalid email format." });
+      res.status(400).json({ ok:false, message: "Invalid email format." });
       return;
     }
 
     if (password.length < 6) {
-      res.status(400).json({ message: "Password must be at least 6 characters." });
+      res.status(400).json({ message: "Password must be at least 6 characters.", ok:false });
       return;
     }
 
     const decoded = JSON.parse(Buffer.from(invite, "base64").toString("utf-8"));
-    const { projectId, role, specificRole, expiresAt, invitedBy, invitedByModel, organizationId } = decoded;
+    const { projectId, role, expiresAt, invitedBy, invitedByModel, organizationId } = decoded;
 
-    if (!projectId || !role || !specificRole || !expiresAt) {
+    if (!projectId || !role  || !expiresAt) {
       res.status(400).json({ message: "Invite token is missing required fields." , ok:false});
       return;
     }
-console.log(role, specificRole)
+console.log("organizatinId",organizationId)
     if (new Date() > new Date(expiresAt)) {
       res.status(400).json({ message: "Invitation link has expired.", ok:false });
       return;
@@ -59,10 +59,12 @@ console.log(role, specificRole)
     });
 
     if (exists) {
+      console.log("exists", exists)
       res.status(409).json({ message: "Worker already registered for this project." , ok:false });
       return;
     }
 
+    console.log("im also gettin executed ")
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -72,7 +74,6 @@ console.log(role, specificRole)
       email,
       password:hashedPassword, // hash in real app
       role,
-      specificRole,
       projectId: [projectId],
       organizationId: [organizationId],
       invitedBy,

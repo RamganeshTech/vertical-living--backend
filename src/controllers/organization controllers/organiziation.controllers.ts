@@ -6,6 +6,8 @@ import OrganizationModel from "../../models/organization models/organization.mod
 import StaffModel from "../../models/staff model/staff.model";
 import CTOModel from "../../models/CTO model/CTO.model";
 import ClientModel from "../../models/client model/client.model";
+import { getWorkerUtils, removeWorkerUtils } from "../../utils/workerUtils";
+import { generateWorkerInviteLink } from "../../utils/generateInvitationworker";
 
 
 
@@ -73,12 +75,25 @@ const getMyOrganizations = async (req: RoleBasedRequest, res: Response) => {
     try {
         const user = req.user;
 
-        if (!user?._id) {
+        let idToSearch;
+        
+        if(user?.role === "owner"){
+            console.log("im i getting inside", user?.role)
+            idToSearch = user._id
+        }
+        else{
+            console.log("im i getting else part", user?.role)
+
+             idToSearch = user?.ownerId
+        }
+
+        console.log("idto search", idToSearch)
+        if (!idToSearch) {
             res.status(404).json({ message: "No organization linked", data: {}, ok: false });
             return
         }
 
-        const organization = await OrganizationModel.findOne({ userId: user._id });
+        const organization = await OrganizationModel.findOne({ userId: idToSearch});
 
         if (!organization) {
             res.status(200).json({ message: "No organizations  found", ok: false, data: null });
@@ -95,15 +110,15 @@ const getMyOrganizations = async (req: RoleBasedRequest, res: Response) => {
 };
 
 
-const getOrganizationById = async (req: AuthenticatedUserRequest, res: Response) => {
+const getOrganizationById = async (req: RoleBasedRequest, res: Response) => {
     try {
-        const user = req.user;
+        // const user = req.user;
         const { orgs } = req.params
 
-        if (!user) {
-            res.status(404).json({ message: "No organization linked", ok: false });
-            return
-        }
+        // if (!user) {
+        //     res.status(404).json({ message: "No organization linked", ok: false });
+        //     return
+        // }
 
         if (!orgs) {
             res.status(404).json({ message: "No organization id provided", ok: false });
@@ -208,7 +223,7 @@ const deleteOrganization = async (req: AuthenticatedUserRequest, res: Response) 
 };
 
 
-const getStaffsByOrganization = async (req: AuthenticatedUserRequest, res: Response) => {
+const getStaffsByOrganization = async (req: RoleBasedRequest, res: Response) => {
     try {
         const { orgId } = req.params;
 
@@ -237,7 +252,7 @@ const getStaffsByOrganization = async (req: AuthenticatedUserRequest, res: Respo
 
 
 // POST /api/staff/invite
-const inviteStaff = async (req: AuthenticatedUserRequest, res: Response) => {
+const inviteStaff = async (req: RoleBasedRequest, res: Response) => {
     try {
         const { organizationId, role } = req.body;
         const user = req.user
@@ -257,14 +272,14 @@ const inviteStaff = async (req: AuthenticatedUserRequest, res: Response) => {
             organizationId,
             role,
             expiresAt,
-            ownerId: user._id
+            ownerId: user?.ownerId || user?._id
         };
 
         const encodedPayload = Buffer.from(JSON.stringify(invitationPayload)).toString("base64");
 
         const baseUrl = process.env.NODE_ENV === "development"
-            ? "http://localhost:5173"
-            : "https://verticalliving.com";
+            ? process.env.FRONTEND_URL
+            : process.env.FRONTEND_URL;
 
         const inviteLink = `${baseUrl}/staffregister?invite=${encodedPayload}`;
 
@@ -284,7 +299,7 @@ const inviteStaff = async (req: AuthenticatedUserRequest, res: Response) => {
 };
 
 // PATCH /api/staff/remove-from-org/:staffId/:orgId
-const removeStaffFromOrganization = async (req: AuthenticatedUserRequest, res: Response) => {
+const removeStaffFromOrganization = async (req: RoleBasedRequest, res: Response) => {
     const { staffId, orgId } = req.query;
 
     try {
@@ -313,7 +328,7 @@ const removeStaffFromOrganization = async (req: AuthenticatedUserRequest, res: R
 
 
 
-const getCTOByOrganization = async (req: AuthenticatedUserRequest, res: Response) => {
+const getCTOByOrganization = async (req: RoleBasedRequest, res: Response) => {
     try {
         const { orgId } = req.params;
 
@@ -341,7 +356,7 @@ const getCTOByOrganization = async (req: AuthenticatedUserRequest, res: Response
 };
 
 
-const inviteCTO = async (req: AuthenticatedUserRequest, res: Response) => {
+const inviteCTO = async (req: RoleBasedRequest, res: Response) => {
     try {
         const { organizationId } = req.body;
         const user = req.user
@@ -362,14 +377,15 @@ const inviteCTO = async (req: AuthenticatedUserRequest, res: Response) => {
             organizationId,
             role: "CTO",
             expiresAt,
-            ownerId: user._id
+            ownerId: user?.ownerId || user?._id
         };
 
         const encodedPayload = Buffer.from(JSON.stringify(invitationPayload)).toString("base64");
 
         const baseUrl = process.env.NODE_ENV === "development"
-            ? "http://localhost:5173"
-            : "https://verticalliving.com";
+            ? process.env.FRONTEND_URL
+            : process.env.FRONTEND_URL;
+
 
         const inviteLink = `${baseUrl}/ctoregister?invite=${encodedPayload}`;
 
@@ -388,7 +404,7 @@ const inviteCTO = async (req: AuthenticatedUserRequest, res: Response) => {
     }
 };
 
-const removeCTOFromOrganization = async (req: AuthenticatedUserRequest, res: Response) => {
+const removeCTOFromOrganization = async (req: RoleBasedRequest, res: Response) => {
     const { CTOId, orgId } = req.query;
 
     try {
@@ -415,14 +431,119 @@ const removeCTOFromOrganization = async (req: AuthenticatedUserRequest, res: Res
 };
 
 
+
+// WORKER CONTORLLERS 
+
+const inviteWorkerByStaff = async (req: RoleBasedRequest, res: Response): Promise<void> => {
+
+    try {
+        const { projectId, role, organizationId } = req.body;
+        const user = req.user
+
+        if (!projectId) {
+            res.status(400).json({
+                message: "projectId and specificRole are required",
+                ok: false,
+            });
+            return;
+        }
+
+
+        const inviteLink = generateWorkerInviteLink({
+            projectId,
+            organizationId: organizationId,
+            role,
+            expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
+            invitedBy: user?.ownerId! || user?._id!,
+            invitedByModel: user!.role === "staff" ? "StaffModel" : (user!.role === "CTO" ? "CTOModel" : "UserModel")
+        });
+
+        res.status(200).json({
+            message: "Invitation link generated successfully by staff",
+            data: inviteLink,
+            ok: true,
+        });
+
+    } catch (error) {
+        console.error("Error inviting worker:", error);
+        res.status(500).json({
+            message: "Server error",
+            ok: false,
+            error: (error as Error).message,
+        });
+    }
+};
+
+
+// PUT /api/worker/remove/:workerId/:projectId
+const removeWorkerFromProject = async (req: RoleBasedRequest, res: Response): Promise<void> => {
+    try {
+        const { workerId, projectId } = req.params;
+
+        if (!workerId) {
+            res.status(400).json({ message: "workerId is required", ok: false });
+            return;
+        }
+
+        const deletedWorker = await removeWorkerUtils({ workerId, projectId })
+
+        if (!deletedWorker) {
+            res.status(404).json({ message: "Worker not found", ok: false });
+            return;
+        }
+
+        res.status(200).json({
+            message: "Worker removed from the project successfully",
+            data: deletedWorker,
+            ok: true,
+        });
+    } catch (error) {
+        console.error("Error removing worker:", error);
+        res.status(500).json({
+            message: "Server error",
+            ok: false,
+            error: (error as Error).message,
+        });
+    }
+};
+
+
+const getWorkersByProject = async (req: RoleBasedRequest, res: Response): Promise<void> => {
+    try {
+        const { projectId } = req.params;
+
+        if (!projectId) {
+            res.status(400).json({ message: "projectId is required", ok: false });
+            return;
+        }
+
+        const workers = await getWorkerUtils({ projectId })
+
+        console.log("workers", workers)
+        res.status(200).json({
+            message: "Workers fetched successfully",
+            data: workers,
+            ok: true,
+        });
+    } catch (error) {
+        console.error("Error fetching workers:", error);
+        res.status(500).json({
+            message: "Server error",
+            ok: false,
+            error: (error as Error).message,
+        });
+    }
+};
+
+
 // CLIENT CONTROLLERS
 const inviteClient = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { projectId } = req.body;
+        const { projectId , organizationId} = req.body;
 
-        const { ownerId } = (req as any).user
+        const user = req.user
 
-        if (!projectId) {
+        if (!projectId ) {
             return res.status(400).json({
                 ok: false,
                 message: "projectId is required",
@@ -432,8 +553,9 @@ const inviteClient = async (req: RoleBasedRequest, res: Response): Promise<any> 
 
         const payload = {
             projectId,
-            ownerId,
+            ownerId: user?.ownerId || user?._id,
             expiresAt,
+            organizationId,
             role: "client"
         };
 
@@ -446,7 +568,7 @@ const inviteClient = async (req: RoleBasedRequest, res: Response): Promise<any> 
 
         const baseUrl = process.env.NODE_ENV === "development"
             ? process.env.FRONTEND_URL!
-            : "https://yourdomain.com";
+            : process.env.FRONTEND_URL;
 
         const registerLink = `${baseUrl}/clientregister?invite=${encodedToken}`;
 
@@ -465,7 +587,7 @@ const inviteClient = async (req: RoleBasedRequest, res: Response): Promise<any> 
     }
 };
 
-const getClientByProject = async (req: RoleBasedRequest, res: Response):Promise<any> => {
+const getClientByProject = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { orgId, projectId } = req.params;
 
@@ -474,7 +596,7 @@ const getClientByProject = async (req: RoleBasedRequest, res: Response):Promise<
         }
 
         // const client = await ClientModel.find({$and: [{organizationId:orgId, projectId:projectId}]}).select("-password -resetPasswordToken -resetPasswordExpire"); // Exclude sensitive fields
-        const client = await ClientModel.find({projectId:projectId}).select("-password -resetPasswordToken -resetPasswordExpire"); // Exclude sensitive fields
+        const client = await ClientModel.find({ projectId: projectId }).select("-password -resetPasswordToken -resetPasswordExpire"); // Exclude sensitive fields
 
         return res.status(200).json({
             message: "client fetched successfully",
@@ -507,6 +629,10 @@ export {
     getCTOByOrganization,
     inviteCTO,
     removeCTOFromOrganization,
+
+    getWorkersByProject,
+    inviteWorkerByStaff,
+    removeWorkerFromProject,
 
     inviteClient,
     getClientByProject

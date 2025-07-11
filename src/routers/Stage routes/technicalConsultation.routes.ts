@@ -13,16 +13,16 @@ const technicalConsultRoutes = express.Router()
 
 // 4. TECHNICAL CONSULTATION routes
 
-technicalConsultRoutes.post("/createmessage/:projectId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(SampleDesignModel), notToUpdateIfStageCompleted(TechnicalConsultationModel), imageUploadToS3.array("attachments"), processUploadFiles, addConsultationMessage); // field name used in FormData
+technicalConsultRoutes.post("/createmessage/:projectId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel), notToUpdateIfStageCompleted(TechnicalConsultationModel), imageUploadToS3.array("attachments"), processUploadFiles, addConsultationMessage); // field name used in FormData
 
 // ✅ GET all messages for a project
-technicalConsultRoutes.get("/getmessages/:projectId" ,multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(SampleDesignModel), getConsultationMessages);
+technicalConsultRoutes.get("/getmessages/:projectId" ,multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel), getConsultationMessages);
 
 // ✅ DELETE a specific message
-technicalConsultRoutes.delete("/deletemessage/:projectId/:messageId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(SampleDesignModel),  notToUpdateIfStageCompleted(TechnicalConsultationModel), deleteConsultationMessage);
+technicalConsultRoutes.delete("/deletemessage/:projectId/:messageId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel),  notToUpdateIfStageCompleted(TechnicalConsultationModel), deleteConsultationMessage);
 
 // EDIT a sepecific message
-technicalConsultRoutes.put("/editmessage/:projectId/:messageId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),checkPreviousStageCompleted(SampleDesignModel),  notToUpdateIfStageCompleted(TechnicalConsultationModel), editConsultationMessage);
+technicalConsultRoutes.put("/editmessage/:projectId/:messageId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel),  notToUpdateIfStageCompleted(TechnicalConsultationModel), editConsultationMessage);
 
 
 technicalConsultRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(SampleDesignModel),  notToUpdateIfStageCompleted(TechnicalConsultationModel), tehnicalConsultantCompletionStatus)

@@ -11,11 +11,11 @@ import { notToUpdateIfStageCompleted } from '../../../middlewares/notToUpdateIfS
 const costEstimationRoutes = express.Router();
 
 
-costEstimationRoutes.get('/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "staff"), checkPreviousStageCompleted(MaterialRoomConfirmationModel), getCostEstimationByProject)
+costEstimationRoutes.get('/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(MaterialRoomConfirmationModel), getCostEstimationByProject)
 costEstimationRoutes.get('/:projectId/room/:roomId',  multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),  checkPreviousStageCompleted(MaterialRoomConfirmationModel), getSingleRoomEstimation)
 costEstimationRoutes.patch("/:projectId/material/:materialKey", multiRoleAuthMiddleware("owner", "staff", "CTO"),  checkPreviousStageCompleted(MaterialRoomConfirmationModel),  notToUpdateIfStageCompleted(CostEstimationModel),updateMaterialEstimationItem);
 
-costEstimationRoutes.get("/:projectId/labour/getlabour", multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),  checkPreviousStageCompleted(MaterialRoomConfirmationModel), getLabourEstimations);
+costEstimationRoutes.get("/:projectId/labour/getlabour", multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),  checkPreviousStageCompleted(MaterialRoomConfirmationModel), getLabourEstimations);
 costEstimationRoutes.post("/:projectId/labour", multiRoleAuthMiddleware("owner", "staff", "CTO"),  checkPreviousStageCompleted(MaterialRoomConfirmationModel),addLabourEstimation);
 costEstimationRoutes.patch("/:projectId/labour/:labourId", multiRoleAuthMiddleware("owner", "staff", "CTO"),  checkPreviousStageCompleted(MaterialRoomConfirmationModel), notToUpdateIfStageCompleted(CostEstimationModel), editLabourEstimation);
 costEstimationRoutes.delete("/:projectId/labour/:labourId", multiRoleAuthMiddleware("owner", "staff", "CTO"),  checkPreviousStageCompleted(MaterialRoomConfirmationModel), notToUpdateIfStageCompleted(CostEstimationModel), deleteLabourEstimation);

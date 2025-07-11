@@ -58,8 +58,8 @@ const registerStaff = async (req: Request, res: Response) => {
             ownerId
         });
 
-        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId, role:staff.role }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, organizationId: staff.organizationId , role:staff.role}, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId:staff.ownerId, organizationId: staff.organizationId, role:staff.role }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId:staff.ownerId, organizationId: staff.organizationId , role:staff.role}, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("staffaccesstoken", token, {
             httpOnly: true,
@@ -114,8 +114,8 @@ const loginStaff = async (req: Request, res: Response) => {
         }
 
         // Generate JWT Token
-        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, role:staff.role, organizationId: staff.organizationId }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role:staff.role, organizationId: staff.organizationId }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, role:staff.role, ownerId:staff.ownerId, organizationId: staff.organizationId }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role:staff.role, ownerId:staff.ownerId, organizationId: staff.organizationId }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("staffaccesstoken", token, {
             httpOnly: true,

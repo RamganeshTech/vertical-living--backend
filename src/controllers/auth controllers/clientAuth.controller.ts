@@ -122,7 +122,7 @@ const registerClient = async (req: Request, res: Response) => {
             return res.status(400).json({ ok: false, message: "Invalid invite token" });
         }
 
-        const { projectId, ownerId, expiresAt, role } = decoded;
+        const { projectId, ownerId, expiresAt, role, organizationId } = decoded;
 
         if (!projectId || !Types.ObjectId.isValid(projectId)) {
             return res.status(400).json({ ok: false, message: "Invalid project ID in invite" });
@@ -172,10 +172,23 @@ const registerClient = async (req: Request, res: Response) => {
 
 
         const existingClient = await ClientModel.findOne({
-            projectId,
             $or: [
-                { email },
-                { phoneNo }
+                // 1️⃣ Project already has any client
+                { projectId },
+
+                // 2️⃣ Same org AND project AND (same email OR phone)
+                {
+                    $and: [
+                        { projectId },
+                        { organizationId },
+                        {
+                            $or: [
+                                { email },
+                                { phoneNo }
+                            ]
+                        }
+                    ]
+                }
             ]
         });
 
@@ -235,6 +248,7 @@ const registerClient = async (req: Request, res: Response) => {
             clientName,
             phoneNo: phoneNo ?? null,
             role,
+            organizationId: [organizationId],
             ownerId,
             projectId
         })

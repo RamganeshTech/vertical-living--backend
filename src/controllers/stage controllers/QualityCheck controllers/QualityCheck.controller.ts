@@ -7,6 +7,7 @@ import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common
 import { syncCleaningSanitaionStage } from "../Cleaning controller/cleaning.controller";
 import redisClient from "../../../config/redisClient";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 
 
 export const syncQualityCheck = async (projectId: string) => {
@@ -15,7 +16,7 @@ export const syncQualityCheck = async (projectId: string) => {
 
     if (!existing) {
         const timer = {
-            startedAt: new Date(),
+            startedAt: null,
             completedAt: null,
             deadLine: null,
             reminderSent: false,
@@ -45,13 +46,17 @@ export const syncQualityCheck = async (projectId: string) => {
         })
     }
     else {
-        existing.timer.startedAt = new Date()
+        existing.timer.startedAt = null
         existing.timer.deadLine = null,
             existing.timer.completedAt = null,
             existing.timer.reminderSent = false,
 
             await existing.save()
     }
+
+
+    const redisKey = `stage:QualityCheckupModel:${projectId}`;
+    await redisClient.del(redisKey);
 
 }
 
@@ -286,7 +291,7 @@ const getQualityCheckup = async (req: Request, res: Response): Promise<any> => {
 
         // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
         await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: doc })
-        
+
         return res.json({ ok: true, data: doc });
     } catch (err: any) {
         console.error("Get QualityCheckup:", err);
@@ -309,17 +314,17 @@ const getQualityCheckRoomItems = async (req: Request, res: Response): Promise<an
 
         const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${roomName}`
 
-         const cachedData = await redisClient.get(redisRoomKey)
+        const cachedData = await redisClient.get(redisRoomKey)
 
         if (cachedData) {
             return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
         }
 
 
-        
+
         const doc: any = await QualityCheckupModel.findOne({ projectId });
         if (!doc) return res.status(404).json({ ok: false, message: "Quality Checkup not found." });
-        
+
         const updatedRoom = (doc as any)[roomName]
         await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
         await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: doc })
@@ -364,7 +369,10 @@ const qualityCheckCompletionStatus = async (req: Request, res: Response): Promis
         await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: form })
 
 
-        return res.status(200).json({ ok: true, message: "Quality Checkup stage marked as completed", data: form });
+         res.status(200).json({ ok: true, message: "Quality Checkup stage marked as completed", data: form });
+
+             updateProjectCompletionPercentage(projectId);
+         
     } catch (err) {
         console.error(err);
         return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

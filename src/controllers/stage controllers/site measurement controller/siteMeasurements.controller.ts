@@ -10,53 +10,55 @@ import { syncSampleDesignModel } from "../sampledesign contorllers/sampledesign.
 import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { initializeSiteRequirement } from "../../../utils/Stage Utils/siteRequirementsInitialize";
+import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 
 
-export const syncSiteMeasurement = async (projectId:string)=>{
+export const syncSiteMeasurement = async (projectId: string) => {
 
- let siteMeasurement = await SiteMeasurementModel.findOne({ projectId });
+  let siteMeasurement = await SiteMeasurementModel.findOne({ projectId });
 
-      if (!siteMeasurement) {
-        siteMeasurement = new SiteMeasurementModel({
-          projectId: projectId,
-          status: "pending",
-          assignedTo: null,
-          isEditable: true,
-          timer: {
-            startedAt: null,
-            completedAt: null,
-            deadLine: null,
-            reminderSent: false
-          },
-          uploads: [],
-          siteDetails: {
-            totalPlotAreaSqFt: { type: Number, default: null },
-            builtUpAreaSqFt: { type: Number, default: null },
-            roadFacing: { type: Boolean, default: null },
-            numberOfFloors: { type: Number, default: null },
-            hasSlope: { type: Boolean, default: null },
-            boundaryWallExists: { type: Boolean, default: null },
-            additionalNotes: { type: String, default: null }
-          },
-          rooms: initializeSiteRequirement,
-        });
-      } else {
-        siteMeasurement.status = "pending";
-        siteMeasurement.isEditable = true;
-        siteMeasurement.timer.startedAt = null;
-        siteMeasurement.timer.reminderSent = false
-        siteMeasurement.timer.completedAt = null
-        siteMeasurement.timer.deadLine = null
-      }
-      await siteMeasurement.save()
+  if (!siteMeasurement) {
+    siteMeasurement = new SiteMeasurementModel({
+      projectId: projectId,
+      status: "pending",
+      assignedTo: null,
+      isEditable: true,
+      timer: {
+        startedAt: null,
+        completedAt: null,
+        deadLine: null,
+        reminderSent: false
+      },
+      uploads: [],
+      siteDetails: {
+        totalPlotAreaSqFt: { type: Number, default: null },
+        builtUpAreaSqFt: { type: Number, default: null },
+        roadFacing: { type: Boolean, default: null },
+        numberOfFloors: { type: Number, default: null },
+        hasSlope: { type: Boolean, default: null },
+        boundaryWallExists: { type: Boolean, default: null },
+        additionalNotes: { type: String, default: null }
+      },
+      rooms: initializeSiteRequirement,
+    });
+  } else {
+    siteMeasurement.status = "pending";
+    siteMeasurement.isEditable = true;
+    siteMeasurement.timer.startedAt = null;
+    siteMeasurement.timer.reminderSent = false
+    siteMeasurement.timer.completedAt = null
+    siteMeasurement.timer.deadLine = null
+  }
+  await siteMeasurement.save()
 
-      await populateWithAssignedToField({stageModel:SiteMeasurementModel, dataToCache:siteMeasurement, projectId})
+  // await populateWithAssignedToField({stageModel:SiteMeasurementModel, dataToCache:siteMeasurement, projectId})
+  const redisMainKey = `stage:SiteMeasurementModel:${projectId}`
+  await redisClient.del(redisMainKey)
 
-    }
+}
 
 const createSiteMeasurement = async (req: Request, res: Response): Promise<any> => {
   try {
-
     const { projectId } = req.params
     const { siteDetails } = req.body;
 
@@ -437,9 +439,8 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
     siteDoc.isEditable = false;
 
     if (siteDoc.status === "completed") {
-    const siteRooms = siteDoc.rooms || [];
-    await syncSampleDesignModel(projectId, siteRooms)
-    // await syncRoomsToMaterialConfirmation(projectId, siteRooms)
+      const siteRooms = siteDoc.rooms || [];
+      await syncSampleDesignModel(projectId, siteRooms)
     }
 
     await siteDoc.save();
@@ -450,7 +451,9 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
     await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: siteDoc })
 
 
-    return res.status(200).json({ ok: true, message: "Site measurement marked as completed", data: siteDoc });
+    res.status(200).json({ ok: true, message: "Site measurement marked as completed", data: siteDoc });
+    updateProjectCompletionPercentage(projectId);
+
   } catch (err) {
     console.error("Site Measurement Complete Error:", err);
     return res.status(500).json({ message: "Internal server error", ok: false });

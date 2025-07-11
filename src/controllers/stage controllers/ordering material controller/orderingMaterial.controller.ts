@@ -14,6 +14,7 @@ import { s3 } from "../../../config/awssdk";
 import { syncMaterialArrival } from "../MaterialArrival controllers/materialArrivalCheck.controller";
 import redisClient from "../../../config/redisClient";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 
 export const syncOrderingMaterials = async (projectId: string) => {
 
@@ -21,7 +22,7 @@ export const syncOrderingMaterials = async (projectId: string) => {
 
   if (!existing) {
     const timer: IMaterialOrderingTimer = {
-      startedAt: new Date(),
+      startedAt: null,
       completedAt: null,
       deadLine: null,
       reminderSent: false,
@@ -60,6 +61,16 @@ export const syncOrderingMaterials = async (projectId: string) => {
       generatedLink: null,
     });
   }
+  else {
+    existing.timer.startedAt = null
+    existing.timer.completedAt = null
+    existing.timer.deadLine = null
+    existing.timer.reminderSent = false
+
+    existing.save()
+  }
+  const redisKey = `stage:OrderingMaterialModel:${projectId}`;
+  await redisClient.del(redisKey);
 }
 
 const getAllOrderingMaterialDetails = async (req: Request, res: Response): Promise<any> => {
@@ -80,8 +91,8 @@ const getAllOrderingMaterialDetails = async (req: Request, res: Response): Promi
     if (!doc) return res.status(404).json({ ok: false, message: "Data not found" });
 
     // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
-        await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: doc })
-    
+    await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: doc })
+
 
     return res.status(200).json({ ok: true, data: doc });
   } catch (err: any) {
@@ -94,7 +105,7 @@ const getRoomDetailsOrderMaterials = async (req: Request, res: Response): Promis
     const { projectId, roomKey } = req.params;
 
     const redisRoomKey = `stage:OrderingMaterialModel:${projectId}:room:${roomKey}`
-
+    await redisClient.del(redisRoomKey)
     const cachedData = await redisClient.get(redisRoomKey)
 
     if (cachedData) {
@@ -148,7 +159,7 @@ const updateShopDetails = async (req: Request, res: Response): Promise<any> => {
     // const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
     // await redisClient.set(redisMainKey, JSON.stringify(orderingDoc.toObject()), { EX: 60 * 10 })
 
-        await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: orderingDoc })
+    await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: orderingDoc })
 
 
 
@@ -188,8 +199,8 @@ const updateDeliveryLocationDetails = async (req: Request, res: Response): Promi
     // const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
     // await redisClient.set(redisMainKey, JSON.stringify(orderingDoc.toObject()), { EX: 60 * 10 })
 
-        await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: orderingDoc })
-    
+    await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: orderingDoc })
+
 
     res.status(200).json({ ok: true, message: "Delivery location updated", data: orderingDoc.deliveryLocationDetails });
   }
@@ -199,15 +210,98 @@ const updateDeliveryLocationDetails = async (req: Request, res: Response): Promi
   }
 };
 
-// PATCH /api/ordering-materials/:projectId/room/:roomKey
-const updateRoomMaterials = async (req: Request, res: Response): Promise<any> => {
+
+
+const addRoomMaterialItem = async (req: Request, res: Response): Promise<any> => {
   try {
     const { projectId, roomKey } = req.params;
+    const newItem = req.body; // expecting a single new item!
+
+    if (!newItem || typeof newItem !== "object") {
+      return res.status(400).json({ ok: false, message: "No valid item provided." });
+    }
+
+    // Validate roomKey
+    const requiredFieldsByRoom = {
+      carpentry: ["material", "brandName", "specification", "quantity", "unit", "remarks"],
+      hardware: ["item", "size", "material", "brandName", "quantity", "unit", "remarks"],
+      electricalFittings: ["item", "specification", "quantity", "unit", "remarks"],
+      tiles: ["type", "brandName", "size", "quantity", "unit", "remarks"],
+      ceramicSanitaryware: ["item", "specification", "quantity", "unit", "remarks"],
+      paintsCoatings: ["type", "brandName", "color", "quantity", "unit", "remarks"],
+      lightsFixtures: ["type", "brandName", "specification", "quantity", "unit", "remarks"],
+      glassMirrors: ["type", "brandName", "size", "thickness", "quantity", "remarks"],
+      upholsteryCurtains: ["item", "fabric", "color", "quantity", "unit", "remarks"],
+      falseCeilingMaterials: ["item", "specification", "quantity", "unit", "remarks"],
+    };
+
+    const requiredFields = requiredFieldsByRoom[roomKey as keyof typeof requiredFieldsByRoom];
+    if (!requiredFields) {
+      return res.status(400).json({ ok: false, message: `Invalid room key: ${roomKey}` });
+    }
+
+    // Validate: first field is mandatory
+    const firstFieldKey = requiredFields[0];
+    const firstFieldValue = (newItem[firstFieldKey] || "").toString().trim();
+    if (!firstFieldValue) {
+      return res.status(400).json({ ok: false, message: `Field '${firstFieldKey}' is required.` });
+    }
+
+    // Load doc
+    const doc = await OrderingMaterialModel.findOne({ projectId });
+    if (!doc) {
+      return res.status(404).json({ ok: false, message: "Ordering material doc not found." });
+    }
+
+    const existingItems = (doc.materialOrderingList as any)[roomKey] || [];
+
+    // Check duplicate on first field
+    const exists = existingItems.some(
+      (item: any) => (item[firstFieldKey] || "").toString().trim().toLowerCase() === firstFieldValue.toLowerCase()
+    );
+
+    if (exists) {
+      return res.status(400).json({
+        ok: false,
+        message: `An item with '${firstFieldKey}' = '${firstFieldValue}' already exists.`,
+      });
+    }
+
+    // ✅ Push new item
+    existingItems.push(newItem);
+
+    // ✅ Save back
+    (doc.materialOrderingList as any)[roomKey] = existingItems;
+
+    await doc.save();
+
+    res.status(200).json({
+      ok: true,
+      message: `New item added to '${roomKey}'.`,
+      data: existingItems,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, message: "Server error." });
+  }
+};
+
+// put /api/ordering-materials/:projectId/room/:roomKey
+const updateRoomMaterials = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { projectId, roomKey, itemId } = req.params;
     const { items } = req.body;
+
+
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ ok: false, message: "Items array is required and cannot be empty." });
     }
+
+
+    const updateData = items[0];
+
 
     // Validate based on room type
     const requiredFieldsByRoom = {
@@ -223,46 +317,40 @@ const updateRoomMaterials = async (req: Request, res: Response): Promise<any> =>
       falseCeilingMaterials: ["item", "specification", "quantity", "unit", "remarks"]
     };
 
-    const requiredFields = requiredFieldsByRoom[roomKey as keyof typeof requiredFieldsByRoom];
-    if (!requiredFields) {
+    const orderingDoc = await OrderingMaterialModel.findOne({ projectId });
+    if (!orderingDoc) {
+      return res.status(404).json({ ok: false, message: "Ordering material document not found." });
+    }
+
+    // Get room array
+    const roomItems = (orderingDoc.materialOrderingList as any)[roomKey];
+    if (!Array.isArray(roomItems)) {
       return res.status(400).json({ ok: false, message: `Invalid room key: ${roomKey}` });
     }
 
-    // for (const [i, item] of items.entries()) {
-    //   for (const field of requiredFields) {
-    //     if (!item[field]) {
-    //       return res.status(400).json({
-    //         ok: false,
-    //         message: `Missing field "${field}" in item at index ${i}`,
-    //       });
-    //     }
-    //   }
-    // }
-
-    const orderingDoc = await OrderingMaterialModel.findOneAndUpdate(
-      { projectId },
-      {
-        $set: {
-          [`materialOrderingList.${roomKey}`]: items,
-        },
-      },
-      { new: true, upsert: true }
-    );
-
-
-    if (!orderingDoc) {
-      return res.status(400).json({ ok: false, message: "Failed to update delivery details." });
+    // Find item index by _id
+    const index = roomItems.findIndex(i => i._id.toString() === itemId);
+    if (index === -1) {
+      return res.status(404).json({ ok: false, message: "Item not found in the room." });
     }
 
+    // Replace item at index
+    roomItems[index] = {
+      ...roomItems[index].toObject?.() || roomItems[index],
+      ...updateData,
+      _id: itemId, // Ensure _id is preserved
+    };
 
-    const updatedRoom = (orderingDoc.materialOrderingList as any)[roomKey];
+    orderingDoc.markModified(`materialOrderingList.${roomKey}`);
+
+    await orderingDoc.save();
 
 
     // const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
     const redisRoomKey = `stage:OrderingMaterialModel:${projectId}:room:${roomKey}`
     // await redisClient.set(redisMainKey, JSON.stringify(orderingDoc.toObject()), { EX: 60 * 10 })
-    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
-        await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: orderingDoc })
+    await redisClient.set(redisRoomKey, JSON.stringify((orderingDoc.materialOrderingList as any)[roomKey]), { EX: 60 * 10 });
+    await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: orderingDoc })
 
     res.status(200).json({ ok: true, message: `Room '${roomKey}' materials updated.`, data: (orderingDoc.materialOrderingList as any)[roomKey] });
 
@@ -301,7 +389,7 @@ const deleteRoomMaterialItem = async (req: Request, res: Response): Promise<any>
     // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
-        await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: doc })
+    await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: doc })
 
 
     return res.status(200).json({ ok: true, message: "Item deleted successfully" });
@@ -398,17 +486,20 @@ const orderMaterialCompletionStatus = async (req: Request, res: Response): Promi
     if (form.status === "completed") {
       // await autoCreateCostEstimationRooms(req, res, projectId)
       await syncMaterialArrival(projectId)
-      
+
     }
 
     // const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
 
     // await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
-        await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: form })
+    await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: form })
 
 
-    return res.status(200).json({ ok: true, message: "order material stage marked as completed", data: form });
+     res.status(200).json({ ok: true, message: "order material stage marked as completed", data: form });
+
+    updateProjectCompletionPercentage(projectId);
+
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
@@ -451,7 +542,7 @@ const uploadOrderMaterialFiles = async (req: Request, res: Response): Promise<an
 
     // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
 
-        await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: doc })
+    await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: doc })
 
 
 
@@ -498,11 +589,12 @@ const deleteOrderMaterialFile = async (req: Request, res: Response): Promise<any
 
     // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
 
-        await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: doc })
+    await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: doc })
 
 
 
-    return res.status(200).json({ ok: true, message: "File deleted successfully" });
+    res.status(200).json({ ok: true, message: "File deleted successfully" });
+
   } catch (err) {
     console.error("Error deleting uploaded file:", err);
     return res.status(500).json({ ok: false, message: "Internal server error" });
@@ -512,6 +604,7 @@ const deleteOrderMaterialFile = async (req: Request, res: Response): Promise<any
 export {
   updateShopDetails,
   updateDeliveryLocationDetails,
+  addRoomMaterialItem,
   updateRoomMaterials,
   deleteRoomMaterialItem,
   getAllOrderingMaterialDetails,

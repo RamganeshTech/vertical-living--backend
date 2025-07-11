@@ -21,7 +21,7 @@ const qualityCheckRoutes = Router();
 // POST /api/quality-check/:projectId/:roomName/item/create
 qualityCheckRoutes.post(
   "/:projectId/:roomName/item/create",
-  multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
+  multiRoleAuthMiddleware("owner", "CTO", "staff"),
   checkPreviousStageCompleted(InstallationModel),
   notToUpdateIfStageCompleted(QualityCheckupModel),
   imageUploadToS3.single("file"),
@@ -32,7 +32,7 @@ qualityCheckRoutes.post(
 // PUT /api/quality-check/:projectId/:roomName/:itemId/item/edit
 qualityCheckRoutes.put(
   "/:projectId/:roomName/:itemId/item/edit",
-  multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
+  multiRoleAuthMiddleware("owner", "CTO", "staff"),
   checkPreviousStageCompleted(InstallationModel),
   notToUpdateIfStageCompleted(QualityCheckupModel),
   imageUploadToS3.single("file"),
@@ -43,7 +43,7 @@ qualityCheckRoutes.put(
 // DELETE /api/quality-check/:projectId/:roomName/:itemId/item/delete
 qualityCheckRoutes.delete(
   "/:projectId/:roomName/:itemId/item/delete",
-  multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
+  multiRoleAuthMiddleware("owner", "CTO", "staff"),
   checkPreviousStageCompleted(InstallationModel),
   notToUpdateIfStageCompleted(QualityCheckupModel),
 

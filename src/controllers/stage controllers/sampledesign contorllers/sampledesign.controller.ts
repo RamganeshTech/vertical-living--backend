@@ -6,6 +6,8 @@ import redisClient from "../../../config/redisClient";
 import { PREDEFINED_ROOMS } from "../../../constants/phaseConstants";
 import { siteRooms } from "../../../utils/syncings/syncRoomsWithMaterialConfimation";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+import { syncTechnicalConsultantStage } from "../technicalConsultant controllers/technicalConsultant.controller";
+import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 
 
 
@@ -16,9 +18,9 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
 
 
   if (!design) {
-    console.log("PREDEFINED_ROOMS:", PREDEFINED_ROOMS);
-    console.log("Mapped Rooms:", PREDEFINED_ROOMS.map(roomName => ({ roomName, files: [] })));
-    console.log("coommign to if condition")
+    // console.log("PREDEFINED_ROOMS:", PREDEFINED_ROOMS);
+    // console.log("Mapped Rooms:", PREDEFINED_ROOMS.map(roomName => ({ roomName, files: [] })));
+    // console.log("coommign to if condition")
 
     design = new SampleDesignModel({
       projectId,
@@ -29,7 +31,6 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
         }
       }),
       assignedTo: null,
-
       status: "pending",
       isEditable: true,
       timer: {
@@ -41,7 +42,6 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
       additionalNotes: null,
     })
   } else {
-
     // console.log("coommign to else condition")
     design.status = "pending";
     design.isEditable = true;
@@ -59,13 +59,12 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
         });
       }
     });
-    // const redisMainKey = `stage:SampleDesignModel:${projectId}`
-    // await redisClient.set(redisMainKey, JSON.stringify(design.toObject()), { EX: 60 * 10 })
-    await populateWithAssignedToField({ stageModel: SampleDesignModel, projectId, dataToCache: design })
-
 
   }
   await design.save()
+  const redisMainKey = `stage:SampleDesignModel:${projectId}`
+  await redisClient.del(redisMainKey)
+
 }
 
 
@@ -277,31 +276,7 @@ const sampleDesignCompletionStatus = async (req: Request, res: Response): Promis
     design.isEditable = false;
 
     if (design.status === "completed") {
-
-      let techConsultant = await TechnicalConsultationModel.findOne({ projectId });
-
-
-      if (!techConsultant) {
-        techConsultant = new TechnicalConsultationModel({
-          projectId,
-          status: "pending",
-          isEditable: true,
-          assignedTo: null,
-          timer: {
-            startedAt: new Date(),
-            completedAt: null,
-            deadLine: null
-          },
-          messages: []
-        })
-      } else {
-        techConsultant.status = "pending";
-        techConsultant.isEditable = true;
-        techConsultant.timer.startedAt = new Date();
-
-      }
-
-      await techConsultant.save()
+      await syncTechnicalConsultantStage(projectId)
     }
 
     await design.save();
@@ -312,7 +287,9 @@ const sampleDesignCompletionStatus = async (req: Request, res: Response): Promis
     await populateWithAssignedToField({ stageModel: SampleDesignModel, projectId, dataToCache: design })
 
 
-    return res.status(200).json({ ok: true, message: "Sample design marked as completed", data: design });
+     res.status(200).json({ ok: true, message: "Sample design marked as completed", data: design });
+           updateProjectCompletionPercentage(projectId);
+     
   } catch (err) {
     console.error("Sample design Complete Error:", err);
     return res.status(500).json({ message: "Internal server error", ok: false });

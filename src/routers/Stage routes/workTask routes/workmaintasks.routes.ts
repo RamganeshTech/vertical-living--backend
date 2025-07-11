@@ -6,7 +6,7 @@ import { multiRoleAuthMiddleware } from './../../../middlewares/multiRoleAuthMid
 import { getAllDailySchedules, getAllWorkMainStageDetails, getAllWorkSchedules, getProjectWorkers, mdApprovalAction, setWorkScheduleStageDeadline, workScheduleCompletionStatus } from "../../../controllers/stage controllers/workTasksmain controllers/workMain.controller";
 import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheck.model";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
-import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
+import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
 import WorkMainStageScheduleModel from "../../../models/Stage Models/WorkTask Model/WorkTask.model";
 import { notToUpdateIfStageCompleted } from "../../../middlewares/notToUpdateIfStageCompleted";
 
@@ -14,20 +14,20 @@ const workTaskRoutes = Router();
 
 // getting the detials of main and sub models
 workTaskRoutes.get("/getworktaksmain/:projectId",
-  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "staff"),
   checkPreviousStageCompleted(MaterialArrivalModel),
   getAllWorkMainStageDetails
 );
 
 workTaskRoutes.get("/getworkschedule/:projectId",
-  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "staff"),
   checkPreviousStageCompleted(MaterialArrivalModel),
 
   getAllWorkSchedules
 );
 
 workTaskRoutes.get("/getdailyschedule/:projectId",
-  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "staff"),
   checkPreviousStageCompleted(MaterialArrivalModel),
   getAllDailySchedules
 );
@@ -39,6 +39,7 @@ workTaskRoutes.post("/:projectId/daily-task/:dailyScheduleId",
   notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
 
   imageUploadToS3.single("file"), // single file!
+  processUploadFiles,
   addDailyTask
 );
 
@@ -48,6 +49,8 @@ workTaskRoutes.post("/:projectId/work-plan/:workScheduleId",
   notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
 
   imageUploadToS3.single("file"),
+  processUploadFiles,
+
   addWorkPlan
 );
 
@@ -59,6 +62,7 @@ workTaskRoutes.put(
   notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
 
   imageUploadToS3.single("file"),
+  processUploadFiles,
   updateDailyTask
 );
 
@@ -69,6 +73,8 @@ workTaskRoutes.put(
   notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
 
   imageUploadToS3.single("file"),
+  processUploadFiles,
+
   updateWorkPlan
 );
 
@@ -95,7 +101,7 @@ workTaskRoutes.delete(
 // status of three stages
 workTaskRoutes.post(
   "/:projectId/md-approval/:mainStageId",
-  multiRoleAuthMiddleware("owner, CTO"), // your MD role!
+  multiRoleAuthMiddleware("owner"), // your MD role!
   checkPreviousStageCompleted(MaterialArrivalModel),
   notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
 
@@ -129,12 +135,7 @@ workTaskRoutes.get("/:projectId/getworkers",
 
   // COMMON TASKS
 
-
-  
-
   workTaskRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),   checkPreviousStageCompleted(MaterialArrivalModel), notToUpdateIfStageCompleted(WorkMainStageScheduleModel), setWorkScheduleStageDeadline)
   workTaskRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),   checkPreviousStageCompleted(MaterialArrivalModel), notToUpdateIfStageCompleted(WorkMainStageScheduleModel), workScheduleCompletionStatus)
   
-
-
 export default workTaskRoutes;

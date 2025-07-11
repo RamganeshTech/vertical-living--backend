@@ -9,7 +9,7 @@ const assignRoutes = Router();
 
 // ✅ put => Assign staff to a stage by stage name
 assignRoutes.put("/:projectId/:staffId/:stageName",
-  multiRoleAuthMiddleware("CTO", "owner"), 
+  multiRoleAuthMiddleware("CTO", "owner", "staff"), 
   assignStageStaffByName
 );
 

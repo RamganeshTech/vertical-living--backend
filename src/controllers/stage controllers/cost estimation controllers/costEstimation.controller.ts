@@ -9,6 +9,7 @@ import { syncInstallationWork } from '../installation controllers/installation.c
 import { syncQualityCheck } from '../QualityCheck controllers/QualityCheck.controller';
 import { syncPaymentConfirationModel } from '../PaymentConfirmation controllers/PaymentMain.controllers';
 import { assignedTo, selectedFields } from '../../../constants/BEconstants';
+import { updateProjectCompletionPercentage } from '../../../utils/updateProjectCompletionPercentage ';
 
 
 const generateCostEstimationFromMaterialSelection = async (
@@ -18,18 +19,42 @@ const generateCostEstimationFromMaterialSelection = async (
 
     // Check if cost estimation already exists
     const existing = await CostEstimationModel.findOne({ projectId });
-    if (existing) {
-        return
-    }
 
+    const timer = {
+        startedAt: null,
+        completedAt: null,
+        deadLine: null,
+        reminderSent: false,
+    };
 
-    const materialEstimation: any[] = [];
+    if (!existing) {
+        const materialEstimation: any[] = [];
 
-    // Handle predefined rooms
-    for (const room of materialDoc.rooms || []) {
-        if (room.roomFields) {
-            const materials = Object.keys(room.roomFields).map((fieldKey) => ({
-                key: fieldKey,
+        // Handle predefined rooms
+        for (const room of materialDoc.rooms || []) {
+            if (room.roomFields) {
+                const materials = Object.keys(room.roomFields).map((fieldKey) => ({
+                    key: fieldKey,
+                    areaSqFt: null,
+                    predefinedRate: null,
+                    overriddenRate: null,
+                    finalRate: null,
+                    totalCost: null,
+                }));
+
+                materialEstimation.push({
+                    name: room.name,
+                    materials,
+                    totalCost: null,
+                    uploads: [],
+                });
+            }
+        }
+
+        // Handle custom rooms
+        for (const customRoom of materialDoc.customRooms || []) {
+            const materials = customRoom.items.map((item) => ({
+                key: item.itemKey,
                 areaSqFt: null,
                 predefinedRate: null,
                 overriddenRate: null,
@@ -38,52 +63,36 @@ const generateCostEstimationFromMaterialSelection = async (
             }));
 
             materialEstimation.push({
-                name: room.name,
+                name: customRoom.name,
                 materials,
                 totalCost: null,
                 uploads: [],
             });
         }
-    }
 
-    // Handle custom rooms
-    for (const customRoom of materialDoc.customRooms || []) {
-        const materials = customRoom.items.map((item) => ({
-            key: item.itemKey,
-            areaSqFt: null,
-            predefinedRate: null,
-            overriddenRate: null,
-            finalRate: null,
-            totalCost: null,
-        }));
-
-        materialEstimation.push({
-            name: customRoom.name,
-            materials,
-            totalCost: null,
-            uploads: [],
+        await CostEstimationModel.create({
+            projectId,
+            materialEstimation,
+            assignedTo: null,
+            labourEstimations: [],
+            totalMaterialCost: 0,
+            totalLabourCost: 0,
+            totalEstimation: 0,
+            isEditable: true,
+            timer: {
+                startedAt: null,
+                completedAt: null,
+                deadLine: null,
+                reminderSent: false,
+            },
+            status: "pending",
         });
+
     }
-
-    const costEstimation = new CostEstimationModel({
-        projectId,
-        materialEstimation,
-        assignedTo: null,
-        labourEstimations: [],
-        totalMaterialCost: 0,
-        totalLabourCost: 0,
-        totalEstimation: 0,
-        isEditable: true,
-        timer: {
-            startedAt: new Date(),
-            completedAt: null,
-            deadLine: null,
-            reminderSent: false,
-        },
-        status: "pending",
-    });
-
-    await costEstimation.save();
+    else {
+        existing.timer = timer
+        await existing.save()
+    }
 };
 
 
@@ -282,10 +291,10 @@ const addLabourEstimation = async (req: Request, res: Response): Promise<any> =>
             });
         }
 
-        if (!workType || !daysPlanned || !perdaySalary) {
+        if (!workType) {
             return res.status(400).json({
                 ok: false,
-                message: "Missing required fields: workType, daysPlanned, or perdaySalary",
+                message: "Missing required field: workType",
             });
         }
 
@@ -296,8 +305,8 @@ const addLabourEstimation = async (req: Request, res: Response): Promise<any> =>
         if (!doc) return res.status(404).json({ ok: false, message: "Project not found" });
 
 
-        const weeklySalary = (perdaySalary * noOfPeople) * 7;
-        const totalCost = (perdaySalary * daysPlanned) * noOfPeople;
+        const weeklySalary = perdaySalary ? (perdaySalary * noOfPeople) * 7   : 0;
+        const totalCost = daysPlanned ? (perdaySalary * daysPlanned) * noOfPeople : 0;
 
 
         const newEntry = {
@@ -447,11 +456,12 @@ const costEstimationCompletionStatus = async (req: Request, res: Response): Prom
 
         if (form.status === "completed") {
             await syncPaymentConfirationModel(projectId, form.totalEstimation)
-            await syncInstallationWork(projectId)
-            await syncQualityCheck(projectId)
         }
 
-        return res.status(200).json({ ok: true, message: "cost estimation stage marked as completed", data: form });
+        res.status(200).json({ ok: true, message: "cost estimation stage marked as completed", data: form });
+
+        updateProjectCompletionPercentage(projectId);
+
     } catch (err) {
         console.error(err);
         return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
@@ -486,7 +496,7 @@ const uploadCostEstimationFiles = async (req: Request, res: Response): Promise<a
 
         if (!room.uploads) room.uploads = [];
         room.uploads.push(...uploadedFiles);
-
+        console.log(room)
         await doc.save();
 
         return res.status(200).json({ ok: true, message: "Files uploaded successfully", data: uploadedFiles });
@@ -507,8 +517,18 @@ const deleteCostEstimationFile = async (req: Request, res: Response): Promise<an
 
         const room = doc.materialEstimation.find((room: any) => room._id.toString() === roomId);
         if (!room) return res.status(404).json({ ok: false, message: "Room not found" });
+        console.log(fileId,)
+        // const index = room.uploads.findIndex((upload: any) => upload._id?.toString() === fileId);
+        const index = room.uploads.findIndex((upload: any) => {
+            console.log("upload", upload)
+            console.log("filedi", fileId)
 
-        const index = room.uploads.findIndex((upload: any) => upload._id?.toString() === fileId);
+
+            return upload._id?.toString() === fileId
+        }
+
+        );
+
         if (index === -1) return res.status(404).json({ ok: false, message: "File not found" });
 
         room.uploads.splice(index, 1);

@@ -21,7 +21,7 @@ const cleaningRoutes = Router();
 // ✅ Upload multiple images/pdfs to a room
 cleaningRoutes.post(
   "/:projectId/:roomId/upload",
-  multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
+  multiRoleAuthMiddleware("owner", "CTO", "staff"),
   checkPreviousStageCompleted(QualityCheckupModel),
     notToUpdateIfStageCompleted(CleaningAndSanitationModel),
   
@@ -33,7 +33,7 @@ cleaningRoutes.post(
 // ✅ Delete one uploaded file from a room
 cleaningRoutes.delete(
   "/:projectId/:roomId/:fileId/file",
-  multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
+  multiRoleAuthMiddleware("owner", "CTO", "staff"),
   checkPreviousStageCompleted(QualityCheckupModel),
     notToUpdateIfStageCompleted(CleaningAndSanitationModel),
 
@@ -43,7 +43,7 @@ cleaningRoutes.delete(
 // ✅ Update `completelyCleaned` for a room
 cleaningRoutes.put(
   "/:projectId/:roomId/cleaning-status",
-  multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
+  multiRoleAuthMiddleware("owner", "CTO", "staff"),
   checkPreviousStageCompleted(QualityCheckupModel),
     notToUpdateIfStageCompleted(CleaningAndSanitationModel),
 

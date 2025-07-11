@@ -1,5 +1,5 @@
 import  express  from 'express';
-import { deleteOrderMaterialFile, deleteRoomMaterialItem, generateOrderingMaterialLink, getAllOrderingMaterialDetails, getOrderingMaterialPublicDetails,  getRoomDetailsOrderMaterials, orderMaterialCompletionStatus, setOrderMaterialFileStageDeadline, updateDeliveryLocationDetails, updateRoomMaterials, updateShopDetails, uploadOrderMaterialFiles } from '../../../controllers/stage controllers/ordering material controller/orderingMaterial.controller';
+import { addRoomMaterialItem, deleteOrderMaterialFile, deleteRoomMaterialItem, generateOrderingMaterialLink, getAllOrderingMaterialDetails, getOrderingMaterialPublicDetails,  getRoomDetailsOrderMaterials, orderMaterialCompletionStatus, setOrderMaterialFileStageDeadline, updateDeliveryLocationDetails, updateRoomMaterials, updateShopDetails, uploadOrderMaterialFiles } from '../../../controllers/stage controllers/ordering material controller/orderingMaterial.controller';
 import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware';
 // import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader';
 import { checkPreviousStageCompleted } from '../../../middlewares/checkPreviousStageMiddleware';
@@ -15,13 +15,14 @@ orderMaterialRoutes.put("/:projectId/shop", multiRoleAuthMiddleware("owner", "st
 
 orderMaterialRoutes.put("/:projectId/delivery-location", multiRoleAuthMiddleware("owner", "staff", "CTO",) ,checkPreviousStageCompleted(PaymentConfirmationModel), notToUpdateIfStageCompleted(OrderingMaterialModel), updateDeliveryLocationDetails);
 
-orderMaterialRoutes.put("/:projectId/room/:roomKey", multiRoleAuthMiddleware("owner", "staff", "CTO",) ,checkPreviousStageCompleted(PaymentConfirmationModel), notToUpdateIfStageCompleted(OrderingMaterialModel), updateRoomMaterials);
+orderMaterialRoutes.put("/:projectId/room/:itemId/:roomKey", multiRoleAuthMiddleware("owner", "staff", "CTO",) ,checkPreviousStageCompleted(PaymentConfirmationModel), notToUpdateIfStageCompleted(OrderingMaterialModel), updateRoomMaterials);
+orderMaterialRoutes.post("/:projectId/room/:roomKey/add", multiRoleAuthMiddleware("owner", "staff", "CTO",) ,checkPreviousStageCompleted(PaymentConfirmationModel), notToUpdateIfStageCompleted(OrderingMaterialModel), addRoomMaterialItem );
 
 orderMaterialRoutes.delete("/:projectId/room/:roomKey/:itemId", multiRoleAuthMiddleware("owner", "staff", "CTO",) , checkPreviousStageCompleted(PaymentConfirmationModel), notToUpdateIfStageCompleted(OrderingMaterialModel), deleteRoomMaterialItem);
 
-orderMaterialRoutes.get("/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO",) , checkPreviousStageCompleted(PaymentConfirmationModel),getAllOrderingMaterialDetails);
+orderMaterialRoutes.get("/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "client") , checkPreviousStageCompleted(PaymentConfirmationModel),getAllOrderingMaterialDetails);
 
-orderMaterialRoutes.get("/:projectId/room/:roomKey", multiRoleAuthMiddleware("owner", "staff", "CTO",) ,checkPreviousStageCompleted(PaymentConfirmationModel), getRoomDetailsOrderMaterials);
+orderMaterialRoutes.get("/:projectId/room/:roomKey", multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "client") ,checkPreviousStageCompleted(PaymentConfirmationModel), getRoomDetailsOrderMaterials);
 
 orderMaterialRoutes.post("/:projectId/generate-link", multiRoleAuthMiddleware("owner", "staff", "CTO"),checkPreviousStageCompleted(PaymentConfirmationModel),  notToUpdateIfStageCompleted(OrderingMaterialModel), generateOrderingMaterialLink);
 

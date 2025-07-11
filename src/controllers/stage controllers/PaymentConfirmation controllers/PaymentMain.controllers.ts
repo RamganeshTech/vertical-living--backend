@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
+import { syncOrderingMaterials } from "../ordering material controller/orderingMaterial.controller";
+import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 
 
 
@@ -90,44 +92,59 @@ export const syncPaymentConfirationModel = async (projectId: string, totalAmount
   if (!projectId) {
     return
   }
-  // 👇 Example doc creation
-  const paymentDoc = await PaymentConfirmationModel.create({
-    projectId: projectId,
-    assignedTo: null,
-    isConsentRequired: true, // default true
-    timer: {}, // Will initialize empty fields with default schema values
-    totalAmount: totalAmount || 0,
-    paymentClientConsent: {
-      content: defaultConsentContent,
-      agreedByClientId: null,
-      agreedAt: null,
-      // agreedByName: null,
-      // agreedByEmail: null,
-      agreementToken: null,
-      agreedByClient: false,
-    },
-    paymentSchedule: {
-      milestone: "Full Payment",
-      amount: totalAmount || 0,
-      dueDate: null,
-      clientApprovalStatus: "pending",
-      clientNotes: "",
-      clientApprovedAt: null,
-      mdApprovalStatus: "pending",
-      mdNotes: "",
-      mdApprovedAt: null,
-    },
-    paymentTransaction: {
-      clientId: null,
-      paymentGateway: null,
-      gatewayOrderId: null,
-      gatewayPaymentId: null,
-      status: null,
-      amount: null,
-      currency: "INR",
-      paidAt: null
-    },
-  });
+
+  const existing = await PaymentConfirmationModel.findOne({ projectId })
+  const timer = {
+    startedAt: null,
+    completedAt: null,
+    deadLine: null,
+    reminderSent: false,
+  };
+
+  if (!existing) {
+    await PaymentConfirmationModel.create({
+      projectId: projectId,
+      assignedTo: null,
+      isConsentRequired: true, // default true
+      timer: timer, // Will initialize empty fields with default schema values
+      totalAmount: totalAmount || 0,
+      paymentClientConsent: {
+        content: defaultConsentContent,
+        agreedByClientId: null,
+        agreedAt: null,
+        // agreedByName: null,
+        // agreedByEmail: null,
+        agreementToken: null,
+        agreedByClient: false,
+      },
+      paymentSchedule: {
+        milestone: "Full Payment",
+        amount: totalAmount || 0,
+        dueDate: null,
+        clientApprovalStatus: "pending",
+        clientNotes: "",
+        clientApprovedAt: null,
+        mdApprovalStatus: "pending",
+        mdNotes: "",
+        mdApprovedAt: null,
+      },
+      paymentTransaction: {
+        clientId: null,
+        paymentGateway: null,
+        gatewayOrderId: null,
+        gatewayPaymentId: null,
+        status: null,
+        amount: null,
+        currency: "INR",
+        paidAt: null
+      },
+    });
+  }
+  else {
+    existing.timer = timer
+
+    await existing.save()
+  }
 
 
 };
@@ -195,8 +212,15 @@ const paymentConfirmationCompletionStatus = async (req: Request, res: Response):
     timerFunctionlity(form, "completedAt")
     await form.save();
 
+    if (form.status === "completed") {
+      await syncOrderingMaterials(projectId)
+    }
 
-    return res.status(200).json({ ok: true, message: "cost estimation stage markjjjjjjjjjjed as completed", data: form });
+
+    res.status(200).json({ ok: true, message: "Payment stage marked as completed", data: form });
+
+    updateProjectCompletionPercentage(projectId);
+
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

@@ -7,6 +7,8 @@ import { WorkerModel } from "../../../models/worker model/worker.model";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import redisClient from "../../../config/redisClient";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+import { syncInstallationWork } from "../installation controllers/installation.controller";
+import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 
 
 
@@ -198,8 +200,8 @@ const mdApprovalAction = async (req: Request, res: Response): Promise<any> => {
       return res.status(400).json({ ok: false, message: "Valid Main Stage ID is required." });
     }
 
-    if (!["approved", "rejected"].includes(action)) {
-      return res.status(400).json({ ok: false, message: "Action must be 'approved' or 'rejected'." });
+    if (!["pending", "approved", "rejected"].includes(action)) {
+      return res.status(400).json({ ok: false, message: "Action must be 'approved' or 'rejected' or 'pending'" });
     }
 
     const mainStage = await WorkMainStageScheduleModel.findById(mainStageId);
@@ -303,13 +305,20 @@ const workScheduleCompletionStatus = async (req: Request, res: Response): Promis
     timerFunctionlity(form, "completedAt")
     await form.save();
 
+    if (form.status = "completed") {
+      await syncInstallationWork(projectId)
+    }
+
     // const redisMainKey = `stage:WorkMainStageScheduleModel:${projectId}`
     // await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
     await populateWithAssignedToField({ stageModel: WorkMainStageScheduleModel, projectId, dataToCache: form })
 
 
-    return res.status(200).json({ ok: true, message: "work stage marked as completed", data: form });
+    res.status(200).json({ ok: true, message: "work stage marked as completed", data: form });
+
+    updateProjectCompletionPercentage(projectId);
+
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

@@ -6,6 +6,7 @@ import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common
 import redisClient from "../../../config/redisClient";
 import { syncWorkSchedule } from "../workTasksmain controllers/workMain.controller";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 
 const allowedRooms = [
     "carpentry", "hardware", "electricalFittings", "tiles", "ceramicSanitaryware",
@@ -18,7 +19,7 @@ export const syncMaterialArrival = async (projectId: string) => {
 
     if (!existing) {
         const timer: IMaterialArrivalTimer = {
-            startedAt: new Date(),
+            startedAt: null,
             completedAt: null,
             deadLine: null,
             reminderSent: false,
@@ -57,6 +58,18 @@ export const syncMaterialArrival = async (projectId: string) => {
             timer,
         });
     }
+    else {
+        existing.timer.startedAt = null
+        existing.timer.completedAt = null
+        existing.timer.deadLine = null
+        existing.timer.reminderSent = false
+
+
+        existing.save()
+    }
+
+    const redisKey = `stage:MaterialArrivalModel:${projectId}`;
+    await redisClient.del(redisKey);
 }
 
 const updateMaterialArrivalShopDetails = async (req: Request, res: Response): Promise<any> => {
@@ -81,8 +94,8 @@ const updateMaterialArrivalShopDetails = async (req: Request, res: Response): Pr
         // const redisMainKey = `stage:MaterialArrivalModel:${projectId}`
         // await redisClient.set(redisMainKey, JSON.stringify(updated.toObject()), { EX: 60 * 10 })
 
-                await populateWithAssignedToField({ stageModel: MaterialArrivalModel, projectId, dataToCache: updated })
-        
+        await populateWithAssignedToField({ stageModel: MaterialArrivalModel, projectId, dataToCache: updated })
+
 
         res.json({ ok: true, data: updated?.shopDetails });
     } catch (err: any) {
@@ -113,7 +126,7 @@ const updateMaterialArrivalDeliveryLocation = async (req: Request, res: Response
         // const redisMainKey = `stage:MaterialArrivalModel:${projectId}`
         // await redisClient.set(redisMainKey, JSON.stringify(updated.toObject()), { EX: 60 * 10 })
 
-                await populateWithAssignedToField({ stageModel: MaterialArrivalModel, projectId, dataToCache: updated })
+        await populateWithAssignedToField({ stageModel: MaterialArrivalModel, projectId, dataToCache: updated })
 
 
         res.json({ ok: true, data: updated?.deliveryLocationDetails });
@@ -190,7 +203,7 @@ const updateMaterialArrivalRoomItem = async (req: Request, res: Response): Promi
             // await redisClient.set(redisMainKey, JSON.stringify(result.toObject()), { EX: 60 * 10 })
             await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
-                await populateWithAssignedToField({ stageModel: MaterialArrivalModel, projectId, dataToCache: result })
+            await populateWithAssignedToField({ stageModel: MaterialArrivalModel, projectId, dataToCache: result })
 
             return res.status(200).json({ ok: true, message: "Item updated", data: result });
         }
@@ -277,7 +290,7 @@ const getAllMaterialArrivalDetails = async (req: Request, res: Response): Promis
         }
 
         // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
-                await populateWithAssignedToField({ stageModel: MaterialArrivalModel, projectId, dataToCache: doc })
+        await populateWithAssignedToField({ stageModel: MaterialArrivalModel, projectId, dataToCache: doc })
 
 
         res.json({ ok: true, data: doc });
@@ -389,9 +402,12 @@ const materialArrivalCompletionStatus = async (req: Request, res: Response): Pro
         // await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
 
-                await populateWithAssignedToField({ stageModel: MaterialArrivalModel, projectId, dataToCache: form })
+        await populateWithAssignedToField({ stageModel: MaterialArrivalModel, projectId, dataToCache: form })
 
-        return res.status(200).json({ ok: true, message: "mateiral arrival stage marked as completed", data: form.status });
+        res.status(200).json({ ok: true, message: "mateiral arrival stage marked as completed", data: form.status });
+
+        updateProjectCompletionPercentage(projectId);
+
     } catch (err) {
         console.error(err);
         return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

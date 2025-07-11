@@ -45,6 +45,8 @@ import { s3 } from './config/awssdk';
 import fs from 'fs';
 import subscriptionRoutes from './routers/SubscriptionPayment Routes/subscriptionPayment.routes';
 import AWS from "aws-sdk";
+import adminWallroutes from './routers/WallPainting routes/adminWallPainting.routes';
+import workerWallRoutes from './routers/WallPainting routes/workerWallPainting.routes';
 
 dotenv.config();
 
@@ -133,6 +135,8 @@ app.use('/api/qualitycheck', qualityCheckRoutes)
 app.use('/api/cleaning', cleaningRoutes)
 app.use('/api/projectdelivery', projectDeliveryRoutes)
 
+app.use('/api/adminwall', adminWallroutes)
+app.use('/api/workerwall', workerWallRoutes)
 
 // RESET STAGE
 app.use('/api', resetRouter)

@@ -7,11 +7,18 @@ export const multiRoleAuthMiddleware =
   async (req: RoleBasedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       // console.log("usera cecess token", req.cookies.useraccesstoken)
+
       const ownerToken = req.cookies?.useraccesstoken;
       const ctoToken = req.cookies?.ctoaccesstoken;
       const staffToken = req.cookies?.staffaccesstoken;
       const workerToken = req.cookies?.workeraccesstoken;
       const clientToken = req.cookies?.clientaccesstoken;
+// console.log("ownerToken", ownerToken,
+// "ctoToken", ctoToken,
+// "staffToken",staffToken,
+// "workerToken",workerToken,
+// "clientToken", clientToken)
+
 
       let decoded: any = null;
 
@@ -39,7 +46,7 @@ export const multiRoleAuthMiddleware =
         res.status(401).json({ message: "Unauthorized: Please login", ok: false });
         return;
       }
-
+      // console.log("incomming role",decoded.role)
       if (!allowedRoles.includes(decoded.role)) {
         res.status(403).json({ message: "Access denied: Role not allowed", ok: false });
         return;
@@ -53,7 +60,7 @@ export const multiRoleAuthMiddleware =
 
       // console.log("owner", decoded)
       // console.log("req.user",req.user)
-
+console.log("im will be wpasdklfhslfjl")
       next();
     } catch (error) {
       console.error("multiRoleAuth error:", error);

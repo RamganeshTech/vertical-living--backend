@@ -10,33 +10,29 @@ import { syncWorkSchedule } from "../workTasksmain controllers/workMain.controll
 import redisClient from "../../../config/redisClient";
 import { json } from "stream/consumers";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 
 
-export const initializeMaterialSelection = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { projectId } = req.params;
+export const initializeMaterialSelection = async (projectId: string) => {
 
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ ok: false, message: "Invalid projectId" });
-    }
+  const existing = await MaterialRoomConfirmationModel.findOne({ projectId });
 
-    const existing = await MaterialRoomConfirmationModel.findOne({ projectId });
+  const timer = {
+    startedAt: null,
+    completedAt: null,
+    deadLine: null,
+    reminderSent: false,
+  };
 
-    if (existing) {
-      return res.status(200).json({
-        ok: true,
-        message: "Material Selection already initialized",
-        data: existing,
-      });
-    }
 
+  if (!existing) {
     const rooms = predefinedRooms.map((room) => ({
       name: room.name,
       roomFields: room.fields,
       uploads: [],
     }));
 
-    const newMaterialForm = await MaterialRoomConfirmationModel.create({
+    await MaterialRoomConfirmationModel.create({
       projectId,
       rooms,
       assignedTo: null,
@@ -44,22 +40,19 @@ export const initializeMaterialSelection = async (req: Request, res: Response): 
       status: "pending",
       isEditable: true,
       timer: {
-        startedAt: new Date(),
+        startedAt: null,
         completedAt: null,
         deadLine: null,
         reminderSent: false,
       },
     });
-
-    return res.status(201).json({
-      ok: true,
-      message: "Material selection initialized successfully",
-      data: newMaterialForm,
-    });
-  } catch (error) {
-    console.error("Error initializing material selection:", error);
-    return res.status(500).json({ ok: false, message: "Server error" });
   }
+  else {
+    existing.timer = timer
+    await existing.save()
+  }
+  const redisKey = `stage:MaterialRoomConfirmationModel:${projectId}`;
+  await redisClient.del(redisKey);
 };
 
 
@@ -435,10 +428,10 @@ const materialSelectionCompletionStatus = async (req: Request, res: Response): P
     timerFunctionlity(form, "completedAt")
     await form.save();
 
-    // if (form.status === "completed") {
-    await generateCostEstimationFromMaterialSelection(form, projectId)
-    await syncOrderingMaterials(projectId)
-    // }
+    if (form.status === "completed") {
+      await generateCostEstimationFromMaterialSelection(form, projectId)
+      // await syncOrderingMaterials(projectId)
+    }
 
     // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
     // await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
@@ -447,7 +440,9 @@ const materialSelectionCompletionStatus = async (req: Request, res: Response): P
 
 
 
-    return res.status(200).json({ ok: true, message: "Material Selection stage marked as completed", data: form });
+    res.status(200).json({ ok: true, message: "Material Selection stage marked as completed", data: form });
+    updateProjectCompletionPercentage(projectId);
+
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

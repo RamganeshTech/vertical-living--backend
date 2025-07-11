@@ -3,6 +3,7 @@ import { ProjectDeliveryModel } from "../../../models/Stage Models/ProjectDelive
 import redisClient from "../../../config/redisClient";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 
 export const syncProjectDelivery = async (
     projectId: string
@@ -12,7 +13,7 @@ export const syncProjectDelivery = async (
         return
     }
 
-    // const redisKey = `stage:projectDelivery:${projectId}`;
+    const redisKey = `stage:ProjectDeliveryModel:${projectId}`;
     // const cached = await redisClient.get(redisKey);
 
     // if (cached) {
@@ -46,7 +47,7 @@ export const syncProjectDelivery = async (
             clientAcceptedAt: null,
         });
     } else {
-        doc.timer.startedAt = new Date()
+        doc.timer.startedAt = null
         doc.timer.deadLine = null,
             doc.timer.completedAt = null,
             doc.timer.reminderSent = false,
@@ -54,11 +55,7 @@ export const syncProjectDelivery = async (
             await doc.save()
     }
 
-    // await redisClient.set(
-    //   redisKey,
-    //   JSON.stringify(doc.toObject()),
-    //   { EX: 60 * 10 }
-    // );
+    await redisClient.del(redisKey);
 };
 
 
@@ -303,7 +300,10 @@ const projectDeliveryCompletionStatus = async (req: Request, res: Response): Pro
 
         await populateWithAssignedToField({ stageModel: ProjectDeliveryModel, projectId, dataToCache: form })
 
-        return res.status(200).json({ ok: true, message: "Quality Checkup stage marked as completed", data: form });
+        res.status(200).json({ ok: true, message: "Quality Checkup stage marked as completed", data: form });
+
+        updateProjectCompletionPercentage(projectId);
+
     } catch (err) {
         console.error(err);
         return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

@@ -12,6 +12,7 @@ import redisClient from "../../../config/redisClient";
 import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { syncSiteMeasurement } from "../site measurement controller/siteMeasurements.controller";
+import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 
 
 
@@ -85,13 +86,16 @@ export const syncRequirmentForm = async (projectId: Types.ObjectId) => {
       uploads: [],
     });
   }
-  // else {
-  //   form.timer.startedAt = new Date()
-  //   form.timer.completedAt = null
-  //   form.timer.deadLine = null
-  //   form.timer.reminderSent = false
-  //   await form.save()
-  // }
+  else {
+    form.timer.startedAt = null
+    form.timer.completedAt = null
+    form.timer.deadLine = null
+    form.timer.reminderSent = false
+    await form.save()
+  }
+  const redisMainKey = `stage:RequirementFormModel:${projectId}`
+  await redisClient.del(redisMainKey)
+
 
 }
 
@@ -212,9 +216,9 @@ const delteRequirementForm = async (req: Request, res: Response,): Promise<void>
       return;
     }
 
-    const existingForm = await RequirementFormModel.findOne({projectId})
+    const existingForm = await RequirementFormModel.findOne({ projectId })
 
-    if(existingForm?.status === "completed"){
+    if (existingForm?.status === "completed") {
       res.status(404).json({ ok: false, message: "status is already completed" });
       return;
     }
@@ -392,7 +396,7 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
 
     if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
-    if(form.status === "completed"){
+    if (form.status === "completed") {
       return res.status(400).json({ ok: false, message: "Stage already completed" });
     }
 
@@ -408,10 +412,11 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
     // const redisKeyMain = `stage:RequirementFormModel:${projectId}`
     // await redisClient.set(redisKeyMain, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 
-   await populateWithAssignedToField({stageModel:RequirementFormModel, projectId, dataToCache:form})
+    await populateWithAssignedToField({ stageModel: RequirementFormModel, projectId, dataToCache: form })
 
 
-    return res.status(200).json({ ok: true, message: "Requirement stage marked as completed", data: form });
+     res.status(200).json({ ok: true, message: "Requirement stage marked as completed", data: form });
+      updateProjectCompletionPercentage(projectId);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
@@ -447,7 +452,7 @@ const deleteRequirementStageFile = async (req: Request, res: Response): Promise<
     // const redisKeyMain = `stage:RequirementFormModel:${projectId}`
     // await redisClient.set(redisKeyMain, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
 
-   await populateWithAssignedToField({stageModel:RequirementFormModel, projectId, dataToCache:doc})
+    await populateWithAssignedToField({ stageModel: RequirementFormModel, projectId, dataToCache: doc })
 
 
     return res.status(200).json({ ok: true, message: "File deleted successfully" });

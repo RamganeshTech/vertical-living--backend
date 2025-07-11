@@ -6,6 +6,42 @@ import { initializeMaterialSelection } from "../material Room confirmation/mater
 import redisClient from "../../../config/redisClient";
 import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
+
+
+export const syncTechnicalConsultantStage = async (projectId: string) => {
+  let techConsultant = await TechnicalConsultationModel.findOne({ projectId });
+
+
+  if (!techConsultant) {
+    techConsultant = new TechnicalConsultationModel({
+      projectId,
+      status: "pending",
+      isEditable: true,
+      assignedTo: null,
+      timer: {
+        startedAt: null,
+        completedAt: null,
+        deadLine: null,
+        reminderSent: false
+      },
+      messages: []
+    })
+  } else {
+    techConsultant.status = "pending";
+    techConsultant.isEditable = true;
+    techConsultant.timer = {
+      startedAt: null,
+      completedAt: null,
+      deadLine: null,
+      reminderSent: false
+    }
+  }
+
+  await techConsultant.save()
+   const redisKey = `stage:TechnicalConsultationModel:${projectId}`;
+    await redisClient.del(redisKey);
+}
 
 const addConsultationMessage = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -248,30 +284,7 @@ const tehnicalConsultantCompletionStatus = async (req: Request, res: Response): 
     techDoc.isEditable = false;
 
     if (techDoc.status === "completed") {
-      let material = await MaterialRoomConfirmationModel.findOne({ projectId });
-
-
-      if (!material) {
-        // material = new MaterialRoomConfirmationModel({
-        //   projectId,
-        //   status: "pending",
-        //   isEditable: true,
-        //   timer: {
-        //     startedAt: new Date(),
-        //     completedAt: null,
-        //     deadLine: null
-        //   },
-        //   rooms:[]
-        // })
-        material = await initializeMaterialSelection(req, res)
-      } else {
-        material.status = "pending";
-        material.isEditable = true;
-        material.timer.startedAt = new Date();
-
-        await material.save()
-      }
-
+      await initializeMaterialSelection(projectId)
     }
 
     await techDoc.save();
@@ -281,10 +294,12 @@ const tehnicalConsultantCompletionStatus = async (req: Request, res: Response): 
     // const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
     // await redisClient.set(redisMainKey, JSON.stringify(populatedData.toObject()), { EX: 60 * 10 })
 
-        await populateWithAssignedToField({ stageModel: TechnicalConsultationModel, projectId, dataToCache: populatedData })
+    await populateWithAssignedToField({ stageModel: TechnicalConsultationModel, projectId, dataToCache: populatedData })
 
 
-    return res.status(200).json({ ok: true, message: "Technical consultant marked as completed", data: techDoc });
+     res.status(200).json({ ok: true, message: "Technical consultant marked as completed", data: techDoc });
+           updateProjectCompletionPercentage(projectId);
+     
   } catch (err) {
     console.error("Technical consultant Complete Error:", err);
     return res.status(500).json({ message: "Internal server error", ok: false });

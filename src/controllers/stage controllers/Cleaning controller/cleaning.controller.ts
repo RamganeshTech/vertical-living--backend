@@ -6,6 +6,7 @@ import { PREDEFINED_ROOMS } from "../../../constants/phaseConstants";
 import { syncProjectDelivery } from "../Project Delivery Controllers/projectDelivery.controllers";
 import redisClient from "../../../config/redisClient";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 
 
 
@@ -15,7 +16,7 @@ export const syncCleaningSanitaionStage = async (projectId: string) => {
 
   if (!cleaningDoc) {
     const timer = {
-      startedAt: new Date(),
+      startedAt: null,
       completedAt: null,
       deadLine: null,
       reminderSent: false,
@@ -38,12 +39,16 @@ export const syncCleaningSanitaionStage = async (projectId: string) => {
       })
     })
   } else {
-    cleaningDoc.timer.startedAt = new Date()
+    cleaningDoc.timer.startedAt = null
     cleaningDoc.timer.completedAt = null
     cleaningDoc.timer.deadline = null
     cleaningDoc.timer.reminderSent = false
     await cleaningDoc.save()
   }
+
+    const redisKey = `stage:CleaningAndSanitationModel:${projectId}`;
+      await redisClient.del(redisKey);
+  
 
 }
 
@@ -356,9 +361,9 @@ export const cleaningStageCompletionStatus = async (req: Request, res: Response)
     timerFunctionlity(form, "completedAt")
     await form.save();
 
-    // if (form.status === "completed") {
+    if (form.status === "completed") {
     await syncProjectDelivery(projectId)
-    // }
+    }
 
 
     // const redisMainKey = `stage:CleaningAndSanitationModel:${projectId}`
@@ -366,7 +371,9 @@ export const cleaningStageCompletionStatus = async (req: Request, res: Response)
 
     await populateWithAssignedToField({ stageModel: CleaningAndSanitationModel, projectId, dataToCache: form })
 
-    return res.status(200).json({ ok: true, message: "cleaning and sanitation stage marked as completed", data: form });
+     res.status(200).json({ ok: true, message: "cleaning and sanitation stage marked as completed", data: form });
+         updateProjectCompletionPercentage(projectId);
+     
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

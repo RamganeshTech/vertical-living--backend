@@ -2,7 +2,6 @@ export const generateWorkerInviteLink = ({
   projectId,
   organizationId,
   role,
-  specificRole,
   expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day,
   invitedBy,
   invitedByModel
@@ -11,16 +10,15 @@ export const generateWorkerInviteLink = ({
   organizationId: string;
   role: string;
   expiresAt:Date;
-  specificRole: string;
   invitedBy: string;
   invitedByModel: "UserModel" | "StaffModel" | "CTOModel";
 }) => {
 
+  console.log("organziatonID form invitatio link", organizationId)
   const payload = {
     projectId,
     organizationId,
     role,
-    specificRole,
     invitedBy,
     invitedByModel,
     expiresAt
