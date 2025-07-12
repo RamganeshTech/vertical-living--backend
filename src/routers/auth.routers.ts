@@ -7,6 +7,7 @@ import staffAuthenticatedMiddleware from '../middlewares/staffAuthMiddleware';
 import workerAuthenticatedMiddleware from '../middlewares/workerAuthMiddleware';
 import CTOAuthenticatedMiddleware from '../middlewares/CTOAuthMiddleware';
 import { CTOIsAuthenticated, CTOLogout, loginCTO, refreshTokenCTO, registerCTO } from '../controllers/auth controllers/CTOAuth.controller';
+import { multiRoleAuthMiddleware } from '../middlewares/multiRoleAuthMiddleware';
 
 
 const authRoutes = express.Router()
@@ -16,7 +17,7 @@ authRoutes.post('/login', userlogin as RequestHandler)
 authRoutes.post('/registeruser', registerUser as RequestHandler)
 authRoutes.post('/logout', userLogout as RequestHandler)
 authRoutes.get('/refreshtoken', refreshToken as RequestHandler)
-authRoutes.get('/isauthenticated', userAuthenticatedMiddleware, isAuthenticated as RequestHandler)
+authRoutes.get('/isauthenticated', multiRoleAuthMiddleware("owner"), isAuthenticated as RequestHandler)
 authRoutes.post('/forgotpassword', userAuthenticatedMiddleware, forgotPassword as RequestHandler)
 authRoutes.post('/resetpassword', userAuthenticatedMiddleware, resetForgotPassword as RequestHandler)
 
@@ -27,7 +28,7 @@ authRoutes.post('/staff/login', loginStaff as RequestHandler)
 authRoutes.post('/staff/registerstaff', registerStaff as RequestHandler)
 authRoutes.post('/staff/logout', staffLogout as RequestHandler)
 authRoutes.get('/staff/refreshtoken', refreshTokenStaff as RequestHandler)
-authRoutes.get('/staff/isauthenticated', staffAuthenticatedMiddleware, staffIsAuthenticated as RequestHandler)
+authRoutes.get('/staff/isauthenticated',  multiRoleAuthMiddleware("staff"), staffIsAuthenticated as RequestHandler)
 
 
 // WORKER ROUTES
@@ -35,7 +36,7 @@ authRoutes.post('/worker/login', loginWorker as RequestHandler)
 authRoutes.post('/worker/registerworker', registerWorker as RequestHandler)
 authRoutes.post('/worker/logout', workerLogout as RequestHandler)
 authRoutes.get('/worker/refreshtoken', refreshTokenWorker as RequestHandler)
-authRoutes.get('/worker/isauthenticated', workerAuthenticatedMiddleware, workerIsAuthenticated as RequestHandler)
+authRoutes.get('/worker/isauthenticated',  multiRoleAuthMiddleware("worker"), workerIsAuthenticated as RequestHandler)
 
 
 
@@ -44,7 +45,7 @@ authRoutes.post('/CTO/login', loginCTO as RequestHandler)
 authRoutes.post('/CTO/registerCTO', registerCTO as RequestHandler)
 authRoutes.post('/CTO/logout', CTOLogout as RequestHandler)
 authRoutes.get('/CTO/refreshtoken', refreshTokenCTO as RequestHandler)
-authRoutes.get('/CTO/isauthenticated', CTOAuthenticatedMiddleware, CTOIsAuthenticated as RequestHandler)
+authRoutes.get('/CTO/isauthenticated',  multiRoleAuthMiddleware("CTO"), CTOIsAuthenticated as RequestHandler)
 
 
 

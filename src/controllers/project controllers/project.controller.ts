@@ -1,5 +1,5 @@
-import { Request, Response } from "express";
-import { AuthenticatedStaffRequest, AuthenticatedUserRequest } from "../../types/types";
+import {  Response } from "express";
+import { RoleBasedRequest } from "../../types/types";
 import ProjectModel from "../../models/project model/project.model";
 
 import redisClient from '../../config/redisClient'
@@ -8,7 +8,7 @@ import CTOModel from "../../models/CTO model/CTO.model";
 import UserModel from "../../models/usermodel/user.model";
 import { syncRequirmentForm } from "../stage controllers/requirement controllers/mainRequirement.controller";
 
-const createProject = async (req: AuthenticatedUserRequest, res: Response) => {
+const createProject = async (req: RoleBasedRequest, res: Response) => {
     try {
         let user = req.user
 
@@ -57,13 +57,13 @@ const createProject = async (req: AuthenticatedUserRequest, res: Response) => {
 
 
         const project = await ProjectModel.create({
-            userId: user._id,
+            userId: user?.role === "owner" ? user?._id : user?.ownerId,
             projectId: Date.now(),
             projectName,
             description: description ? description : null,
             organizationId,
             projectInformation: {
-                owner: user.username,
+                owner: user?.role === "owner" ? user?._id : user?.ownerId,
                 tags,
                 startDate,
                 endDate,
@@ -100,7 +100,7 @@ const createProject = async (req: AuthenticatedUserRequest, res: Response) => {
 
         
 
-        const cacheKey = `projects:${user._id}`;
+        const cacheKey = `projects:${organizationId}`;
         await redisClient.del(cacheKey);
 
         res.status(200).json({ message: "Projects created successfully", data: project, ok: true });
@@ -119,12 +119,11 @@ const createProject = async (req: AuthenticatedUserRequest, res: Response) => {
 }
 
 
-const getProjects = async (req: Request, res: Response) => {
+const getProjects = async (req: RoleBasedRequest, res: Response) => {
     try {
 
         const { organizationId } = req.params
 
-        console.log("jklsahdjlk")
         if (!organizationId) {
             res.status(400).json({ message: "organization Id is required", ok: false })
             return
@@ -132,7 +131,7 @@ const getProjects = async (req: Request, res: Response) => {
 
         const cacheKey = `projects:${organizationId}`;
 
-        await redisClient.del(`projects:${organizationId}`);
+        // await redisClient.del(`projects:${organizationId}`);
         let cachedData = await redisClient.get(cacheKey);
 
 
@@ -156,7 +155,7 @@ const getProjects = async (req: Request, res: Response) => {
 }
 
 
-const deleteProject = async (req: AuthenticatedUserRequest, res: Response): Promise<void> => {
+const deleteProject = async (req: RoleBasedRequest, res: Response): Promise<void> => {
     try {
         const { projectId } = req.params
 
@@ -194,6 +193,11 @@ const deleteProject = async (req: AuthenticatedUserRequest, res: Response): Prom
             ),
         ]);
 
+
+          const cacheKey = `projects:${data.organizationId}`;
+
+         await redisClient.del(cacheKey);
+
         res.status(200).json({ message: "project deleted successfully", data, ok: true })
 
     }
@@ -204,11 +208,9 @@ const deleteProject = async (req: AuthenticatedUserRequest, res: Response): Prom
     }
 }
 
-const assignClient = async (req: AuthenticatedUserRequest, res: Response): Promise<void> => {
+const assignClient = async (req: RoleBasedRequest, res: Response): Promise<void> => {
     try {
         const { clientId, projectId } = req.params
-
-        const user = req.user
 
         if (!clientId || !projectId) {
             res.status(400).json({ message: 'client id and project id is required', ok: false });
@@ -229,7 +231,7 @@ const assignClient = async (req: AuthenticatedUserRequest, res: Response): Promi
             return
         }
 
-        const cacheKey = `projects:${user._id}`;
+        const cacheKey = `projects:${project.organizationId}`;
         await redisClient.del(cacheKey);
 
 
@@ -242,7 +244,7 @@ const assignClient = async (req: AuthenticatedUserRequest, res: Response): Promi
     }
 }
 
-const updateProject = async (req: AuthenticatedUserRequest, res: Response): Promise<void> => {
+const updateProject = async (req: RoleBasedRequest, res: Response): Promise<void> => {
     try {
         let user = req.user
 
@@ -287,7 +289,7 @@ const updateProject = async (req: AuthenticatedUserRequest, res: Response): Prom
             projectName,
             description: description ? description : null,
             projectInformation: {
-                owner: user.username,
+                owner: user?.role === "owner" ? user?._id : user?.ownerId,
                 tags,
                 startDate,
                 endDate,
@@ -305,7 +307,7 @@ const updateProject = async (req: AuthenticatedUserRequest, res: Response): Prom
             return;
         }
 
-        const cacheKey = `projects:${user._id}`;
+        const cacheKey = `projects:${data.organizationId}`;
         await redisClient.del(cacheKey);
 
 
@@ -320,16 +322,10 @@ const updateProject = async (req: AuthenticatedUserRequest, res: Response): Prom
 }
 
 
-
-// FOR STAFFS 
-
-
-
 export {
     createProject,
     getProjects,
     deleteProject,
     assignClient,
     updateProject,
-
 }

@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import { WorkerModel } from "../../models/worker model/worker.model";
 import jwt from "jsonwebtoken";
-import { AuthenticatedWorkerRequest } from "../../types/types";
+import { AuthenticatedWorkerRequest, RoleBasedRequest } from "../../types/types";
 import { ObjectId, Schema, Types } from "mongoose";
 import bcrypt from 'bcrypt';
+import redisClient from "../../config/redisClient";
 
 // Helper: Token generator
 const generateWorkerTokens = (workerId: string, role: string, workerName: string, projectId: string[]) => {
@@ -18,35 +19,35 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
     const { workerName, phoneNo, email, password } = req.body;
 
     if (!invite || typeof invite !== "string") {
-      res.status(400).json({ ok:false, message: "Missing or invalid invite token." });
+      res.status(400).json({ ok: false, message: "Missing or invalid invite token." });
       return;
     }
 
     if (!workerName || !phoneNo || !email || !password) {
-      res.status(400).json({ ok:false, message: "All fields (name, phoneNo, email, password) are required." });
+      res.status(400).json({ ok: false, message: "All fields (name, phoneNo, email, password) are required." });
       return;
     }
 
     if (!email.includes("@") || !email.includes(".")) {
-      res.status(400).json({ ok:false, message: "Invalid email format." });
+      res.status(400).json({ ok: false, message: "Invalid email format." });
       return;
     }
 
     if (password.length < 6) {
-      res.status(400).json({ message: "Password must be at least 6 characters.", ok:false });
+      res.status(400).json({ message: "Password must be at least 6 characters.", ok: false });
       return;
     }
 
     const decoded = JSON.parse(Buffer.from(invite, "base64").toString("utf-8"));
     const { projectId, role, expiresAt, invitedBy, invitedByModel, organizationId } = decoded;
 
-    if (!projectId || !role  || !expiresAt) {
-      res.status(400).json({ message: "Invite token is missing required fields." , ok:false});
+    if (!projectId || !role || !expiresAt) {
+      res.status(400).json({ message: "Invite token is missing required fields.", ok: false });
       return;
     }
-console.log("organizatinId",organizationId)
+    console.log("organizatinId", organizationId)
     if (new Date() > new Date(expiresAt)) {
-      res.status(400).json({ message: "Invitation link has expired.", ok:false });
+      res.status(400).json({ message: "Invitation link has expired.", ok: false });
       return;
     }
 
@@ -60,7 +61,7 @@ console.log("organizatinId",organizationId)
 
     if (exists) {
       console.log("exists", exists)
-      res.status(409).json({ message: "Worker already registered for this project." , ok:false });
+      res.status(409).json({ message: "Worker already registered for this project.", ok: false });
       return;
     }
 
@@ -72,7 +73,7 @@ console.log("organizatinId",organizationId)
       workerName,
       phoneNo,
       email,
-      password:hashedPassword, // hash in real app
+      password: hashedPassword, // hash in real app
       role,
       projectId: [projectId],
       organizationId: [organizationId],
@@ -112,7 +113,7 @@ console.log("organizatinId",organizationId)
 
   } catch (error) {
     console.error("Register error:", error);
-    res.status(500).json({ message: "Server error", error: (error as Error).message , ok:false});
+    res.status(500).json({ message: "Server error", error: (error as Error).message, ok: false });
   }
 };
 
@@ -178,7 +179,7 @@ const loginWorker = async (req: Request, res: Response): Promise<void> => {
 
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ message: "Server error", error: (error as Error).message , ok:false});
+    res.status(500).json({ message: "Server error", error: (error as Error).message, ok: false });
   }
 };
 
@@ -265,25 +266,45 @@ const refreshTokenWorker = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-const workerIsAuthenticated = async (req: AuthenticatedWorkerRequest, res: Response) => {
+const workerIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
   try {
-    const worker = req.worker
+    const user = req?.user
 
-    const isExist = await WorkerModel.findById(worker._id)
+    if (!user?._id) {
+      return res.status(404).json({ message: "User id not found", ok: false })
+    }
+
+
+    const redisUserKey = `userAuth:${user?._id}`
+
+    const cachedData = await redisClient.get(redisUserKey)
+
+    if (cachedData) {
+      return res.status(200).json({
+        data: JSON.parse(cachedData),
+        message: "client is authenticated form cache", ok: true
+      })
+    }
+
+    const isExist = await WorkerModel.findById(user?._id)
 
     if (!isExist) {
       return res.status(404).json({ message: "worker not found", ok: false })
     }
 
+    const data = {
+      workerId: isExist._id,
+      role: isExist.role,
+      email: isExist.email,
+      phoneNo: isExist.phoneNo,
+      workerName: isExist.workerName,
+      isauthenticated: true,
+    }
+
+    await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })
+
     res.status(200).json({
-      data: {
-        workerId: isExist._id,
-        role: isExist.role,
-        email: isExist.email,
-        phoneNo: isExist.phoneNo,
-        workerName: isExist.workerName,
-        isauthenticated: true,
-      },
+      data,
       message: "worker is authenticated", ok: true
     })
   }

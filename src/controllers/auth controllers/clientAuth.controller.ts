@@ -2,10 +2,11 @@ import { Request, Response } from "express";
 import ClientModel from "../../models/client model/client.model";
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { AuthenticatedClientRequest } from "../../types/types";
+import { AuthenticatedClientRequest, RoleBasedRequest } from "../../types/types";
 import crypto from 'crypto';
 import sendResetEmail from "../../utils/forgotPasswordMail";
 import { Types } from "mongoose";
+import redisClient from "../../config/redisClient";
 
 const clientLogin = async (req: Request, res: Response) => {
     try {
@@ -328,25 +329,46 @@ const clientRefreshToken = async (req: Request, res: Response) => {
     }
 }
 
-const isClientAuthenticated = async (req: AuthenticatedClientRequest, res: Response) => {
+const isClientAuthenticated = async (req: RoleBasedRequest, res: Response) => {
     try {
-        const client = req.client
+        const user = req?.user
 
-        const isExist = await ClientModel.findById(client._id).select(["clientName", "email", "phoneNo", "createdAt", "comapany", "updatedAt"])
+
+        if (!user?._id) {
+            return res.status(404).json({ message: "User id not found", ok: false })
+        }
+
+        const redisUserKey = `userAuth:${user?._id}`
+
+        const cachedData = await redisClient.get(redisUserKey)
+
+        if (cachedData) {
+            return res.status(200).json({
+                data: JSON.parse(cachedData),
+                message: "client is authenticated form cache", ok: true
+            })
+        }
+
+
+        const isExist = await ClientModel.findById(user?._id).select(["clientName", "email", "phoneNo", "createdAt", "comapany", "updatedAt"])
 
         if (!isExist) {
             return res.status(404).json({ message: "client not found", ok: false })
         }
 
+        const data = {
+            clientId: isExist._id,
+            role: isExist.role,
+            email: isExist.email,
+            phoneNo: isExist.phoneNo,
+            clientName: isExist.clientName,
+            isauthenticated: true,
+        }
+
+        await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })
+
         res.status(200).json({
-            data: {
-                clientId: isExist._id,
-                role: isExist.role,
-                email: isExist.email,
-                phoneNo: isExist.phoneNo,
-                clientName: isExist.clientName,
-                isauthenticated: true,
-            }, message: "client is authenticated", ok: true
+            data, message: "client is authenticated", ok: true
         })
     }
     catch (error) {
@@ -384,10 +406,10 @@ const clientForgotPassword = async (req: Request, res: Response): Promise<any> =
         let resetLink: string;
 
         if (process.env.NODE_ENV === "production") {
-            resetLink = `https://www.verticalliving.com/reset-password?token=${resetToken}`;
+            resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
         }
         else {
-            resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
+            resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
         }
 
         // Send the password reset email

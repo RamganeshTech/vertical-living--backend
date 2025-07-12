@@ -2,8 +2,9 @@ import { Request, Response } from "express";
 
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { AuthenticatedCTORequest } from "../../types/types";
+import { AuthenticatedCTORequest, RoleBasedRequest } from "../../types/types";
 import CTOModel from "../../models/CTO model/CTO.model";
+import redisClient from "../../config/redisClient";
 
 // POST /api/CTO/register
 const registerCTO = async (req: Request, res: Response) => {
@@ -38,7 +39,7 @@ const registerCTO = async (req: Request, res: Response) => {
 
         // 5. Check for duplicate cTO
         const CTOExists = await CTOModel.findOne({
-            ownerId, 
+            ownerId,
             $or: [
                 { email },
                 { CTOName },
@@ -246,25 +247,46 @@ const refreshTokenCTO = async (req: Request, res: Response): Promise<void> => {
 
 
 
-const CTOIsAuthenticated = async (req: AuthenticatedCTORequest, res: Response) => {
+const CTOIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
     try {
-        const CTO = req.CTO
+        const user = req?.user
 
-        const isExist = await CTOModel.findById(CTO._id)
+        if (!user?._id) {
+            return res.status(404).json({ message: "User id not found", ok: false })
+        }
+
+        const redisUserKey = `userAuth:${user?._id}`
+
+        const cachedData = await redisClient.get(redisUserKey)
+
+        if (cachedData) {
+            return res.status(200).json({
+                data: JSON.parse(cachedData),
+                message: "client is authenticated form cache", ok: true
+            })
+        }
+
+        const isExist = await CTOModel.findById(user?._id)
 
         if (!isExist) {
             return res.status(404).json({ message: "CTO not found", ok: false })
         }
 
+
+        const data = {
+            CTOId: isExist._id,
+            role: isExist.role,
+            email: isExist.email,
+            phoneNo: isExist.phoneNo,
+            CTOName: isExist.CTOName,
+            isauthenticated: true,
+        }
+        
+        await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })
+
+
         res.status(200).json({
-            data: {
-                CTOId: isExist._id,
-                role: isExist.role,
-                email: isExist.email,
-                phoneNo: isExist.phoneNo,
-                CTOName: isExist.CTOName,
-                isauthenticated: true,
-            },
+            data,
             message: "CTO is authenticated", ok: true
         })
     }

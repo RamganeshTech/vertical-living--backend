@@ -60,7 +60,6 @@ export const multiRoleAuthMiddleware =
 
       // console.log("owner", decoded)
       // console.log("req.user",req.user)
-console.log("im will be wpasdklfhslfjl")
       next();
     } catch (error) {
       console.error("multiRoleAuth error:", error);

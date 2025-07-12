@@ -43,16 +43,18 @@ const uploadAdminCorrectionRound = async (req: Request, res: Response): Promise<
     const { adminNote } = req.body;
     const files = req.files as Express.Multer.File[];
 
-    if (!files || files.length === 0) {
-      return res.status(400).json({ message: "No files uploaded.", ok: false });
-    }
-
-    const uploads: IUpload[] = files.map((file) => ({
+    // if (!files || files.length === 0) {
+    //   return res.status(400).json({ message: "No files uploaded.", ok: false });
+    // }
+    let uploads: IUpload[] = [];
+    if (files && files.length) {
+     uploads = files.map((file) => ({
       type: file.mimetype.includes("pdf") ? "pdf" : "image",
       url: (file as any).location,
       originalName: file.originalname,
       uploadedAt: new Date(),
     }));
+  }
 
     // 1️⃣ ➜ Update Admin SOP: push correction files + note
     await AdminWallPaintingModel.updateOne(

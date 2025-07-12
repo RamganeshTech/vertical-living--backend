@@ -4,8 +4,9 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto'
 
 import UserModel from "../../models/usermodel/user.model";
-import { AuthenticatedUserRequest } from "../../types/types";
+import { AuthenticatedUserRequest, RoleBasedRequest } from "../../types/types";
 import sendResetEmail from "../../utils/forgotPasswordMail";
+import redisClient from "../../config/redisClient";
 
 const userlogin = async (req: Request, res: Response) => {
     try {
@@ -203,26 +204,46 @@ const refreshToken = async (req: Request, res: Response) => {
     }
 }
 
-const isAuthenticated = async (req: Request, res: Response) => {
+const isAuthenticated = async (req: RoleBasedRequest, res: Response) => {
     try {
-        const user = (req as AuthenticatedUserRequest).user as { _id: string }
+        const user = req?.user
 
-        const isExist = await UserModel.findById(user._id)
+        if (!user?._id) {
+            return res.status(404).json({ message: "User id not found", ok: false })
+        }
+
+        const redisUserKey = `userAuth:${user?._id}`
+
+        const cachedData = await redisClient.get(redisUserKey)
+
+        if (cachedData) {
+            return res.status(200).json({
+                data: JSON.parse(cachedData),
+                message: "client is authenticated form cache", ok: true
+            })
+        }
+
+
+        const isExist = await UserModel.findById(user?._id)
 
         if (!isExist) {
             return res.status(404).json({ message: "user not found", ok: false })
         }
 
+        const data = {
+            userId: isExist._id,
+            role: isExist.role,
+            email: isExist.email,
+            phoneNo: isExist.phoneNo,
+            userName: isExist.username,
+            isauthenticated: true,
+        }
+
+        await redisClient.set(redisUserKey, JSON.stringify(data), {EX: 60 * 10})
+
         res.status(200).json({
             message: "user is authenticated", ok: true,
-            data: {
-                userId: isExist._id,
-                role: isExist.role,
-                email: isExist.email,
-                phoneNo: isExist.phoneNo,
-                userName: isExist.username,
-                isauthenticated: true,
-            }
+            data
         })
     }
     catch (error) {
@@ -260,10 +281,10 @@ const forgotPassword = async (req: Request, res: Response): Promise<any> => {
         let resetLink: string;
 
         if (process.env.NODE_ENV === "production") {
-            resetLink = `https://www.verticalliving.com/reset-password?token=${resetToken}`;
+            resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
         }
         else {
-            resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
+            resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
         }
 
         // Send the password reset email

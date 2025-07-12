@@ -3,25 +3,22 @@ import { RoleBasedRequest } from "../types/types";
 import OrganizationModel from "../models/organization models/organization.model";
 import redisClient from "../config/redisClient";
 
-export const checkActivePlan = async (
-  req: RoleBasedRequest,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const checkActivePlan = () =>
+   async (req: RoleBasedRequest, res: Response, next: NextFunction): Promise<any> => {
+    try {
     const { _id, role, ownerId } = req.user!;
 
     const userIdToCheck = role === "owner" ? _id : ownerId;
 
      const redisKey = `org:plan:${userIdToCheck}`;
-    let planData = await redisClient.get(redisKey);
+      let planData = await redisClient.get(redisKey);
 
      if (!planData) {
       // If not cached → hit DB → write to Redis
       const org = await OrganizationModel.findOne({ userId: userIdToCheck });
      
       if (!org) {
-        return res.status(403).json({ ok: false, message: "Organization not found." });
+        return res.status(404).json({ ok: false, message: "Organization not found." });
       }
 
       planData = JSON.stringify({
@@ -56,4 +53,4 @@ export const checkActivePlan = async (
     console.error("checkActivePlan error:", err);
     return res.status(500).json({ ok: false, message: "Server error." });
   }
-};
+}

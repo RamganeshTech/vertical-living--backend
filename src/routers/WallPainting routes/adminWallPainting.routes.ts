@@ -11,8 +11,6 @@ const adminWallroutes = Router();
 // ✅ Get full Admin SOP details
 adminWallroutes.get("/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"), getAdminSOP);
 
-
-
 // ✅ Get specific step detail
 adminWallroutes.get("/:projectId/step/:stepId", multiRoleAuthMiddleware("owner", "staff", "CTO"), getAdminStepDetails);
 

@@ -47,6 +47,7 @@ import subscriptionRoutes from './routers/SubscriptionPayment Routes/subscriptio
 import AWS from "aws-sdk";
 import adminWallroutes from './routers/WallPainting routes/adminWallPainting.routes';
 import workerWallRoutes from './routers/WallPainting routes/workerWallPainting.routes';
+import downloadRouter from './routers/Download Routes/download.routes';
 
 dotenv.config();
 
@@ -140,6 +141,7 @@ app.use('/api/workerwall', workerWallRoutes)
 
 // RESET STAGE
 app.use('/api', resetRouter)
+app.use(downloadRouter)
 
 
 // ASSIGN STAFF 
