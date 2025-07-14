@@ -21,6 +21,7 @@ const ClientSchema: Schema<IClient> = new Schema({
     email: { type: String, required: true,  maxLength: [50, "it shoud be within 50 digits"], },
     phoneNo: { type: String,  maxLength: [10, "phoneNo shoud be only 10 digits"] },
     location: {type: String},
+    role: { type: String },
     // company: { type: String, default: null, maxlength: [50, "comapny name should not be more than 50 digits"] },
     password: { type: String, required: true },
     projectId: {type: Schema.Types.ObjectId, required: true, ref:"ProjectModel"},

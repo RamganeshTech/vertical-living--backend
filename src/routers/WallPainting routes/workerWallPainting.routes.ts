@@ -7,10 +7,10 @@ import { imageUploadToS3, processUploadFiles } from "../../utils/s3Uploads/s3upl
 const workerWallRoutes = Router();
 
 // ✅ Get full Worker SOP details
-workerWallRoutes.get("/:projectId", multiRoleAuthMiddleware("worker", "staff"), getWorkerSOP);
+workerWallRoutes.get("/:projectId", multiRoleAuthMiddleware("worker", "staff", "owner", "CTO"), getWorkerSOP);
 
 // ✅ Get specific step detail
-workerWallRoutes.get("/:projectId/step/:stepId", multiRoleAuthMiddleware("worker", "staff"), getWorkerStepDetails);
+workerWallRoutes.get("/:projectId/step/:stepId", multiRoleAuthMiddleware("worker", "staff",  "owner", "CTO"), getWorkerStepDetails);
 
 // ✅ Upload initial files to a step
 workerWallRoutes.post(

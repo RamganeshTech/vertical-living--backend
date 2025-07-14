@@ -1,4 +1,4 @@
-import {  Response } from "express";
+import { Response } from "express";
 import { RoleBasedRequest } from "../../types/types";
 import ProjectModel from "../../models/project model/project.model";
 
@@ -55,50 +55,67 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
         );
 
 
+        const project = await ProjectModel.findOne({ projectName, 
+            userId: user?.role === "owner" ? user?._id : user?.ownerId })
 
-        const project = await ProjectModel.create({
-            userId: user?.role === "owner" ? user?._id : user?.ownerId,
-            projectId: Date.now(),
-            projectName,
-            description: description ? description : null,
-            organizationId,
-            projectInformation: {
-                owner: user?.role === "owner" ? user?._id : user?.ownerId,
-                tags,
-                startDate,
-                endDate,
-                dueDate,
-                duration: durationInDays,
-                priority,
-                status,
-            },
-        })
 
-        await Promise.all([
-            UserModel.updateOne(
-                {
-                    role: "owner",
-                    organizationId: organizationId,
+        if (!project) {
+            console.log("project crated wiht new ", project)
+
+            // const existingCustomProjectId = project 
+
+            const projectNew = new ProjectModel({
+                userId: user?.role === "owner" ? user?._id : user?.ownerId,
+                projectId: Date.now(),
+                projectName,
+                description: description ? description : null,
+                organizationId,
+                projectInformation: {
+                    owner: user?.role === "owner" ? user?._id : user?.ownerId,
+                    tags,
+                    startDate,
+                    endDate,
+                    dueDate,
+                    duration: durationInDays,
+                    priority,
+                    status,
                 },
-                {
-                    $addToSet: { projectId: project._id },
-                }
-            ),
+            })
 
-            CTOModel.updateMany(
-                {
-                    organizationId: organizationId,
-                },
-                {
-                    $addToSet: { projectId: project._id },
-                }
-            ),
+            await projectNew.save()
 
-            syncRequirmentForm(project._id)
-        ]);
+            await Promise.all([
+                UserModel.updateOne(
+                    {
+                        role: "owner",
+                        organizationId: organizationId,
+                    },
+                    {
+                        $addToSet: { projectId: projectNew._id },
+                    }
+                ),
+
+                CTOModel.updateMany(
+                    {
+                        organizationId: organizationId,
+                    },
+                    {
+                        $addToSet: { projectId: projectNew._id },
+                    }
+                ),
+
+                syncRequirmentForm(projectNew._id)
+            ]);
+        }
+        else {
+            return res.status(400).json({
+                message: "A project with this name already exists for this user.",
+                ok: false
+            });
 
 
-        
+        }
+
 
         const cacheKey = `projects:${organizationId}`;
         await redisClient.del(cacheKey);
@@ -108,12 +125,12 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
     catch (error: any) {
         console.log("error form createProject", error)
 
-        if (error.errorResponse.code === 11000) {
-            return res.status(400).json({
-                message: "A project with this name already exists for this user.",
-                ok: false
-            });
-        }
+        // if (error?.errorResponse?.code === 11000) {
+        //     return res.status(400).json({
+        //         message: "A project with this name already exists for this user.",
+        //         ok: false
+        //     });
+        // }
         return res.status(500).json({ message: 'Server error. Please try again later.', errorMessage: error, error: true, ok: false });
     }
 }
@@ -187,16 +204,16 @@ const deleteProject = async (req: RoleBasedRequest, res: Response): Promise<void
                 {
                     projectId: projectId,
 
-                },{
-                    $pull: { projectId },
-                }
+                }, {
+                $pull: { projectId },
+            }
             ),
         ]);
 
 
-          const cacheKey = `projects:${data.organizationId}`;
+        const cacheKey = `projects:${data.organizationId}`;
 
-         await redisClient.del(cacheKey);
+        await redisClient.del(cacheKey);
 
         res.status(200).json({ message: "project deleted successfully", data, ok: true })
 

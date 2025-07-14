@@ -48,7 +48,6 @@ const ProjectSchema: Schema<IProject> = new Schema({
     projectName: {
         type: String,
         required: true,
-        unique: true
     },
     accessibleClientId: {
         type: [Schema.Types.ObjectId],
@@ -159,7 +158,7 @@ const ProjectSchema: Schema<IProject> = new Schema({
     timestamps: true
 })
 
-ProjectSchema.index({ projectName: 1, userId: 1 }, { unique: true });
+ProjectSchema.index({ projectName: 1, userId: 1 });
 
 const ProjectModel = mongoose.model<IProject>("ProjectModel", ProjectSchema)
 

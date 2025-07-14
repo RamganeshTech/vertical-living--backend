@@ -48,6 +48,7 @@ import AWS from "aws-sdk";
 import adminWallroutes from './routers/WallPainting routes/adminWallPainting.routes';
 import workerWallRoutes from './routers/WallPainting routes/workerWallPainting.routes';
 import downloadRouter from './routers/Download Routes/download.routes';
+import profileRoutes from './routers/Profile Role Routes/ProfileRole.routes';
 
 dotenv.config();
 
@@ -149,7 +150,7 @@ app.use('/api/assignstafftostage', assignRoutes)
 
 app.use("/api/subscriptionpayment", subscriptionRoutes);
 
-
+app.use('/api/profile', profileRoutes)
 
 // app.get("/download/:filename", async (req, res) => {
 //   const s3 = new AWS.S3({

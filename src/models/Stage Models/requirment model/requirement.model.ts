@@ -99,7 +99,7 @@ const RequirementFormSchema = new Schema<IRequirementFormSchema>(
     },
     shareToken: {
       type: String,
-      unique: true,
+      // unique: true,
     },
     shareTokenExpiredAt: {
       type: Date,

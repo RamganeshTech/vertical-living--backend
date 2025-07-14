@@ -18,6 +18,7 @@ export interface IConsultationMessage {
     section?: string; // Optional tag like "Kitchen"
     attachments?: IConsultationAttachment[];
     createdAt: Date;
+    isEdited:boolean,
 }
 
 export interface IConsultationTimer {
@@ -55,7 +56,8 @@ const messageSchema = new Schema<IConsultationMessage>({
     message: { type: String },
     section: { type: String, required: false }, // e.g., "Kitchen"
     attachments: [attachmentSchema],
-    createdAt: { type: Date, default: new Date() }
+    createdAt: { type: Date, default: new Date() },
+    isEdited: {type:Boolean, default:false}
 }, { _id: true });
 
 const technicalConsultationSchema = new Schema<ITechnicalConsultation>({

@@ -89,6 +89,7 @@ const addConsultationMessage = async (req: Request, res: Response): Promise<any>
       section,
       attachments,
       createdAt: new Date(),
+      isEdited:false
     };
 
     // ✅ Add to existing or create new doc
@@ -248,6 +249,9 @@ const editConsultationMessage = async (req: Request, res: Response): Promise<any
     }
 
     msg.message = message.trim();
+    msg.senderRole = senderRole
+    msg.isEdited = true
+    msg.createdAt = new Date()
     await consultation.save();
 
     const populatedData = await consultation.populate("messages.sender")
