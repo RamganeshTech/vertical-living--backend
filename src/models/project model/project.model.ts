@@ -9,9 +9,11 @@ interface projectInformation {
     duration: (number | null)
     priority: "none" | "low" | "medium" | "high"
     status: "Active" | "Delayed" | "In Progress" | "In Testing" | "On Track" | "On Hold" | "Approved" | "Cancelled" | "Planning" | "Invoice";
-    projectGroup: mongoose.Schema.Types.ObjectId | null,
+    // projectGroup: mongoose.Schema.Types.ObjectId | null,
     completionTime: (string | null),
-    TaskAndIssuePrefix: (string | null),
+    // TaskAndIssuePrefix: (string | null),
+      preRequisites: Types.ObjectId
+    
 }
 
 
@@ -22,17 +24,18 @@ interface IProject extends Document {
     accessibleClientId: Types.ObjectId[],
     description: (string | null);
     projectInformation: projectInformation
-    tasks: (number | null),
-    issues: (number | null),
-    phases: (number | null),
+    // tasks: (number | null),
+    // issues: (number | null),
+    // phases: (number | null),
     completionPercentage: (number | null),
-    projectAccess: string,
-    taskLists: mongoose.Schema.Types.ObjectId[],
+    // projectAccess: string,
+    // taskLists: mongoose.Schema.Types.ObjectId[],
     materials: Types.ObjectId[]
     labours: Types.ObjectId[],
     materialsFullyApproved: "approved" | "rejected" | "pending"
     laboursFullyApproved: "approved" | "rejected" | "pending",
     organizationId: Types.ObjectId
+    preRequiretiesCheckID: Types.ObjectId
 }
 
 const ProjectSchema: Schema<IProject> = new Schema({
@@ -95,40 +98,40 @@ const ProjectSchema: Schema<IProject> = new Schema({
             type: String,
             default: null
         },
-        TaskAndIssuePrefix: {
-            type: String,
-            default: null
-        },
-        projectGroup: {
-            type: mongoose.Schema.ObjectId,
-            default: null,
-            ref: "ProjectGroup"
-        },
+        // TaskAndIssuePrefix: {
+        //     type: String,
+        //     default: null
+        // },
+        // projectGroup: {
+        //     type: mongoose.Schema.ObjectId,
+        //     default: null,
+        //     ref: "ProjectGroup"
+        // },
     },
-    tasks: {
-        type: Number,
-        default: 0,
-    },
-    issues: {
-        type: Number,
-        default: 0,
-    },
-    phases: {
-        type: Number,
-        default: 0,
-    },
+    // tasks: {
+    //     type: Number,
+    //     default: 0,
+    // },
+    // issues: {
+    //     type: Number,
+    //     default: 0,
+    // },
+    // phases: {
+    //     type: Number,
+    //     default: 0,
+    // },
     completionPercentage: {
         type: Number,
         default: 0,
     },
-    projectAccess: {
-        type: String,
-        default:"private"
-    },
-    taskLists: [{
-        type: mongoose.Schema.ObjectId,
-        ref: 'TaskModel'
-    }],
+    // projectAccess: {
+    //     type: String,
+    //     default:"private"
+    // },
+    // taskLists: [{
+    //     type: mongoose.Schema.ObjectId,
+    //     ref: 'TaskModel'
+    // }],
     materials: {
         type: [Schema.Types.ObjectId],
         ref: "MaterialListModel",
@@ -153,6 +156,11 @@ const ProjectSchema: Schema<IProject> = new Schema({
         type: Schema.Types.ObjectId,
         ref: "OrganizationModel",
         required:true
+    },
+    preRequiretiesCheckID :{
+        type: Schema.Types.ObjectId,
+        ref: "PreRequiretiesModel",
+        default: null
     }
 }, {
     timestamps: true

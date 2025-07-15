@@ -40,6 +40,7 @@
     "multer-s3-transform": "^2.10.3",
     "node-cron": "^4.1.1",
     "nodemailer": "^7.0.3",
+    "openai": "^5.9.0",
     "path": "^0.12.7",
     "razorpay": "^2.9.6",
     "redis": "^5.1.0",

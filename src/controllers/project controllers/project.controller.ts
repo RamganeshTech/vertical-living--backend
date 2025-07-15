@@ -7,6 +7,7 @@ import ClientModel from "../../models/client model/client.model";
 import CTOModel from "../../models/CTO model/CTO.model";
 import UserModel from "../../models/usermodel/user.model";
 import { syncRequirmentForm } from "../stage controllers/requirement controllers/mainRequirement.controller";
+import { syncPreRequireties } from "../PreRequireties Controllers/preRequireties.controllers";
 
 const createProject = async (req: RoleBasedRequest, res: Response) => {
     try {
@@ -103,8 +104,9 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
                         $addToSet: { projectId: projectNew._id },
                     }
                 ),
-
-                syncRequirmentForm(projectNew._id)
+                
+                syncRequirmentForm(projectNew._id),
+                syncPreRequireties(projectNew._id)
             ]);
         }
         else {

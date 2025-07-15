@@ -49,6 +49,8 @@ import adminWallroutes from './routers/WallPainting routes/adminWallPainting.rou
 import workerWallRoutes from './routers/WallPainting routes/workerWallPainting.routes';
 import downloadRouter from './routers/Download Routes/download.routes';
 import profileRoutes from './routers/Profile Role Routes/ProfileRole.routes';
+import preRequiretiesRoutes from './routers/PreRequireties Routes/preRequireties.routes';
+import utilAiRoutes from './routers/Util routes/util.routes';
 
 dotenv.config();
 
@@ -121,6 +123,11 @@ app.use('/api/getusers', getUsersRoutes)
 // Timer routes for starting for all stages
 app.use('/api/starttimer', stageTimerRoutes)
 
+// PREREQUIRETIES APIS
+
+app.use('/api/prerequireties', preRequiretiesRoutes)
+
+
 // STAGE APIS
 app.use('/api/requirementform', requirementRoutes)
 app.use('/api/sitemeasurement', siteMeasurementRoutes)
@@ -152,52 +159,9 @@ app.use("/api/subscriptionpayment", subscriptionRoutes);
 
 app.use('/api/profile', profileRoutes)
 
-// app.get("/download/:filename", async (req, res) => {
-//   const s3 = new AWS.S3({
-//     region: process.env.AWS_REGION!,
-//     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-//     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-//   });
 
-//   const params = {
-//     Bucket: process.env.AWS_S3_BUCKET!,
-//     Key: req.params.filename,
-//   };
-
-//   // ✅ Tell browser "force download"
-//   // res.attachment(req.params.filename);
-
-//   try {
-//     const fileStream = s3.getObject(params).createReadStream();
-//     fileStream.pipe(res).on("error", (err) => {
-//       console.error("Stream error", err);
-//       res.sendStatus(500);
-//     });
-//   } catch (err) {
-//     console.error("S3 download error", err);
-//     res.sendStatus(500);
-//   }
-// });
-
-
-
-app.get("/preview/:filename", (req, res) => {
-  const key = `uploads/${req.params.filename}`;
-  const params = {
-    Bucket: process.env.AWS_S3_BUCKET!,
-    Key: key,
-  };
-
-  const s3 = new AWS.S3();
-  const fileStream = s3.getObject(params).createReadStream();
-
-  // 👉 No `res.attachment()` — just stream raw!
-  fileStream.pipe(res).on("error", (err) => {
-    console.error(err);
-    res.sendStatus(500);
-  });
-});
-
+// AI ROUTES FOR BRANDNAMES , MATIERAISL, AND OTHER EXTRA THINGS...
+app.use('/api/ai', utilAiRoutes)
 
 
 const PORT = process.env.PORT

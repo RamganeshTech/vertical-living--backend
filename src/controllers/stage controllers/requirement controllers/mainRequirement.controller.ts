@@ -14,6 +14,7 @@ import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { syncSiteMeasurement } from "../site measurement controller/siteMeasurements.controller";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { syncAdminWall, syncWorkerWall } from "../../Wall Painting controllers/adminWallPainting.controller";
+import { syncPreRequireties } from "../../PreRequireties Controllers/preRequireties.controllers";
 
 
 
@@ -250,7 +251,7 @@ const getFormFilledDetails = async (req: Request, res: Response,): Promise<any> 
       return;
     }
 
-
+    
     const redisKeyMain = `stage:RequirementFormModel:${projectId}`
     // await redisClient.del(redisKeyMain)
     const redisCache = await redisClient.get(redisKeyMain)
