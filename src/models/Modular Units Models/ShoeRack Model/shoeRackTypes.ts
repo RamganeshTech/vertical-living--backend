@@ -95,6 +95,20 @@ export enum InstallationType {
   Hybrid = "Hybrid",
 }
 
+
+export enum ShoeRackVisibilityType {
+  Closed = "Closed",
+  SemiOpen = "Semi-Open",
+  Open = "Open",
+}
+
+
+export enum ShoeRackModularType {
+  FactoryModular = "Factory Modular",
+  CarpenterMade = "Carpenter-Made",
+}
+
+
 export enum BudgetRange {
   ThreeToSixK = "₹3,000–₹6,000",
   SixToTwelveK = "₹6,000–₹12,000",

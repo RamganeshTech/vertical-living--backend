@@ -51,6 +51,7 @@ import downloadRouter from './routers/Download Routes/download.routes';
 import profileRoutes from './routers/Profile Role Routes/ProfileRole.routes';
 import preRequiretiesRoutes from './routers/PreRequireties Routes/preRequireties.routes';
 import utilAiRoutes from './routers/Util routes/util.routes';
+import modularUnitRoutes from './routers/Modular Unit routes/modularUnit.routes';
 
 dotenv.config();
 
@@ -93,9 +94,6 @@ app.use(express.json())
 
 // checkRedisConnection() //for redis
 
-
-
-
 app.use('/api/auth', authRoutes)
 app.use('/api/auth/client', clientRoutes)
 app.use('/api/auth/clientapproval', clientApprovalRoutes)
@@ -124,8 +122,11 @@ app.use('/api/getusers', getUsersRoutes)
 app.use('/api/starttimer', stageTimerRoutes)
 
 // PREREQUIRETIES APIS
-
 app.use('/api/prerequireties', preRequiretiesRoutes)
+
+
+// PREREQUIRETIES APIS
+app.use('/api/modularunit', modularUnitRoutes)
 
 
 // STAGE APIS
@@ -164,7 +165,8 @@ app.use('/api/profile', profileRoutes)
 app.use('/api/ai', utilAiRoutes)
 
 
-const PORT = process.env.PORT
+const PORT = process.env.PORT || 3000
+
 connectDB().then(() => {
   app.listen(PORT, () => {
     console.log("DB connected")

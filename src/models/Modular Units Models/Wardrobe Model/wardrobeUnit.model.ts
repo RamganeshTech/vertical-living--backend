@@ -1,17 +1,17 @@
 import { CommonUnitsSchema, ICommonUnit } from "../All Unit Model/common.model";
 
 export interface IWardrobeUnit extends ICommonUnit {
-  mirrorConfiguration: "With Mirror" | "Without Mirror" | "Partial Mirror" | "";
-  doorType: "Swing (Hinged) Doors" | "Sliding Doors" | "Folding Doors" | "Open/Walk-in" | "";
-  numberOfDoors: "Single Door" | "2-Door" | "3-Door" | "4-Door & Above" | "L-Shaped / Corner Units" | "";
-  styleAesthetic:
+  mirrorConfiguration?: "With Mirror" | "Without Mirror" | "Partial Mirror" | "";
+  doorType?: "Swing (Hinged) Doors" | "Sliding Doors" | "Folding Doors" | "Open/Walk-in" | "";
+  numberOfDoors?: "Single Door" | "2-Door" | "3-Door" | "4-Door & Above" | "L-Shaped / Corner Units" | "";
+  styleAesthetic?:
     | "Modern Minimalist"
     | "Classic / Traditional"
     | "Contemporary Glossy"
     | "Rustic / Matte Wood"
     | "Industrial"
     | "";
-  colorToneFinish:
+  colorToneFinish?:
     | "Dark Wood (Walnut/Wenge)"
     | "Light Wood (Oak/Maple)"
     | "White / Off-White"
@@ -20,14 +20,14 @@ export interface IWardrobeUnit extends ICommonUnit {
     | "Matte Finish"
     | "Glass / Lacquered Glass"
     | "";
-  materialType:
+  materialType?:
     | "Plywood with Laminate"
     | "MDF or HDF with Acrylic"
     | "Particle Board"
     | "Solid Wood"
     | "Glass Panelled (Lacquered/Mirror)"
     | "";
-  storageFunctionality:
+  storageFunctionality?:
     | "Hanging Space Only"
     | "Drawers + Hanging"
     | "Full Custom Interior"
@@ -35,21 +35,21 @@ export interface IWardrobeUnit extends ICommonUnit {
     | "Inbuilt Dresser"
     | "Integrated Study Table"
     | "";
-  roomType:
+  roomType?:
     | "Master Bedroom Wardrobe"
     | "Kids' Room Wardrobe"
     | "Guest Bedroom Wardrobe"
     | "Studio/Compact Room"
     | "Walk-in Closet Setup"
     | "";
-  layout:
+  layout?:
     | "Straight Wall Wardrobe"
     | "L-Shaped"
     | "U-Shaped"
     | "Sliding with Dressing Unit"
     | "Wardrobe with TV Unit"
     | "";
-  handleType:
+  handleType?:
     | "Handle-less / Push to Open"
     | "External Handles"
     | "Recessed Handles"
@@ -66,7 +66,7 @@ import { Schema, model } from "mongoose";
 
 const WardrobeUnitSchema = new Schema<IWardrobeUnit>(
   {
-    ...CommonUnitsSchema,
+    ...CommonUnitsSchema.obj,
     mirrorConfiguration: { type: String, default: "" },
     doorType: { type: String, default: "" },
     numberOfDoors: { type: String, default: "" },

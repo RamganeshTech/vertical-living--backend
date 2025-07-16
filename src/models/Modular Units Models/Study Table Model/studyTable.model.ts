@@ -54,6 +54,6 @@ const StudyTableUnitSchema = new Schema<IStudyTableUnit>(
 );
 
 export const StudyTableUnitModel = model<IStudyTableUnit>(
-  "StudyTableUnit",
+  "StudyTableUnitModel",
   StudyTableUnitSchema
 );

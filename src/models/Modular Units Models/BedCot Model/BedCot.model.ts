@@ -59,6 +59,6 @@ const BedCotUnitSchema = new Schema<IBedCotUnit>(
 );
 
 export const BedCotUnitModel = model<IBedCotUnit>(
-  "BedCotUnit",
+  "BedCotUnitModel",
   BedCotUnitSchema
 );

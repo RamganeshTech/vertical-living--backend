@@ -8,6 +8,7 @@ import CTOModel from "../../models/CTO model/CTO.model";
 import UserModel from "../../models/usermodel/user.model";
 import { syncRequirmentForm } from "../stage controllers/requirement controllers/mainRequirement.controller";
 import { syncPreRequireties } from "../PreRequireties Controllers/preRequireties.controllers";
+import { syncAllMixedRoutes } from "../Modular Units Controllers/modularUnit.controller";
 
 const createProject = async (req: RoleBasedRequest, res: Response) => {
     try {
@@ -106,7 +107,8 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
                 ),
                 
                 syncRequirmentForm(projectNew._id),
-                syncPreRequireties(projectNew._id)
+                syncPreRequireties(projectNew._id),
+                syncAllMixedRoutes(organizationId )
             ]);
         }
         else {

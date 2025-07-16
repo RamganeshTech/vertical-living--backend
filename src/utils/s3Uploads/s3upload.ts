@@ -62,8 +62,8 @@ export const processUploadFiles = async (req: Request, res: Response, next: Next
     } else if (req.file) {
       files.push(req.file);
     }
-    console.log("requst files", req.files)
-    console.log("requst file", req.file)
+    // console.log("requst files", req.files)
+    // console.log("requst file", req.file)
     // if (!files.length) {
     //   return res.status(400).json({ message: "No files uploaded." });
     // }

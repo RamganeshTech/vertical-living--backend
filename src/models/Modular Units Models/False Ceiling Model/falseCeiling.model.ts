@@ -47,7 +47,7 @@ const FalseCeilingUnitSchema = new Schema<IFalseCeilingUnit>(
     lightingType: [{ type: String, enum: Object.values(LightingType) }],
     roomType: [{ type: String, enum: Object.values(RoomType) }],
     materialType: [{ type: String, enum: Object.values(MaterialType) }],
-    designStyle: [{ type: String, enum: Object.values(DesignStyle) }],
+    designStyle: [{ type: String, enum: Object.values(DesignStyle) }], //but presnt in the filters
     colorTheme: [{ type: String, enum: Object.values(ColorTheme) }],
     levels: { type: String, enum: Object.values(Levels) },
     edgeProfile: { type: String, enum: Object.values(EdgeProfile) },
@@ -55,13 +55,13 @@ const FalseCeilingUnitSchema = new Schema<IFalseCeilingUnit>(
     panelType: [{ type: String, enum: Object.values(PanelType) }],
     shapeGeometry: { type: String, enum: Object.values(ShapeGeometry) },
     modularType: { type: String, enum: Object.values(ModularType) },
-    installationComplexity: { type: String, enum: Object.values(InstallationComplexity) },
+    installationComplexity: { type: String, enum: Object.values(InstallationComplexity) }, //but presnt in the filters
     budgetRange: { type: String, enum: Object.values(CeilingBudgetRange) },
   },
   { timestamps: true }
 );
 
 export const FalseCeilingUnitModel = model<IFalseCeilingUnit>(
-  "FalseCeilingUnit",
+  "FalseCeilingUnitModel",
   FalseCeilingUnitSchema
 );

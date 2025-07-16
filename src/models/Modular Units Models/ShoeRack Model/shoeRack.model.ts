@@ -4,10 +4,14 @@
 import { model, Schema } from "mongoose";
 import { CommonUnitsSchema, ICommonUnit } from "../All Unit Model/common.model";
 
-import { ShoeRackUnitType ,  ShoeRackCapacity,ShoeRackDoorType,
- CarcassMaterial,ShutterMaterial,FinishType,HeightCategory,
- ShoeTypesSupported,VentilationFeature,AddOnFeatures,PlacementArea,
- InstallationType,BudgetRange} from "./shoeRackTypes";
+import {
+  ShoeRackUnitType, ShoeRackCapacity, ShoeRackDoorType,
+  CarcassMaterial, ShutterMaterial, FinishType, HeightCategory,
+  ShoeTypesSupported, VentilationFeature, AddOnFeatures, PlacementArea,
+  InstallationType, BudgetRange,
+  ShoeRackVisibilityType,
+  ShoeRackModularType
+} from "./shoeRackTypes";
 
 export interface IShoeRackUnit extends ICommonUnit {
   unitType?: ShoeRackUnitType;
@@ -19,6 +23,9 @@ export interface IShoeRackUnit extends ICommonUnit {
   heightCategory?: HeightCategory;
   shoeTypesSupported?: ShoeTypesSupported[];
   ventilationFeature?: VentilationFeature;
+  visibilityType?: ShoeRackVisibilityType;
+  modularType?: ShoeRackModularType;
+
   addOnFeatures?: AddOnFeatures[];
   placementArea?: PlacementArea[];
   installationType?: InstallationType;
@@ -39,6 +46,8 @@ export const ShoeRackUnitSchema = new Schema<IShoeRackUnit>(
     heightCategory: { type: String, enum: Object.values(HeightCategory) },
     shoeTypesSupported: [{ type: String, enum: Object.values(ShoeTypesSupported) }],
     ventilationFeature: { type: String, enum: Object.values(VentilationFeature) },
+    visibilityType: { type: String, enum: Object.values(ShoeRackVisibilityType) },
+    modularType: { type: String, enum: Object.values(ShoeRackModularType) },
     addOnFeatures: [{ type: String, enum: Object.values(AddOnFeatures) }],
     placementArea: [{ type: String, enum: Object.values(PlacementArea) }],
     installationType: { type: String, enum: Object.values(InstallationType) },

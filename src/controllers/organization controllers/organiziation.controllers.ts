@@ -8,6 +8,7 @@ import CTOModel from "../../models/CTO model/CTO.model";
 import ClientModel from "../../models/client model/client.model";
 import { getWorkerUtils, removeWorkerUtils } from "../../utils/workerUtils";
 import { generateWorkerInviteLink } from "../../utils/generateInvitationworker";
+import { syncAllMixedRoutes } from "../Modular Units Controllers/modularUnit.controller";
 
 
 
@@ -55,11 +56,13 @@ const createOrganziation = async (req: AuthenticatedUserRequest, res: Response) 
             return
         }
 
-        return res.status(201).json({
+         res.status(201).json({
             message: "Organization successfully",
             data: organization,
             ok: true
         });
+
+        await syncAllMixedRoutes((organization._id as string) )
     }
     catch (error) {
         if (error instanceof Error) {

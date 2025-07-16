@@ -21,8 +21,8 @@ export interface IKitchenCabinetUnit extends ICommonUnit {
   unitType?: KitchenUnitType;
   internalLayout?: InternalLayout;
   compartments?: Compartments;
-  featureTags?: FeatureTags[];
-  dimensions?: Dimensions[];
+  featureTags?: FeatureTags;
+  dimensions?: Dimensions;
   carcassMaterial?: CarcassMaterial;
   doorsMaterial?: DoorsMaterial;
   finish?: FinishType;
@@ -48,8 +48,8 @@ const KitchenCabinetUnitSchema = new Schema<IKitchenCabinetUnit>(
     unitType: { type: String, enum: Object.values(KitchenUnitType) },
     internalLayout: { type: String, enum: Object.values(InternalLayout) },
     compartments: { type: String, enum: Object.values(Compartments) },
-    featureTags: [{ type: String, enum: Object.values(FeatureTags) }],
-    dimensions: [{ type: String, enum: Object.values(Dimensions) }],
+    featureTags: { type: String, enum: Object.values(FeatureTags) },
+    dimensions: { type: String, enum: Object.values(Dimensions) },
     carcassMaterial: { type: String, enum: Object.values(CarcassMaterial) },
     doorsMaterial: { type: String, enum: Object.values(DoorsMaterial) },
     finish: { type: String, enum: Object.values(FinishType) },
@@ -65,6 +65,6 @@ const KitchenCabinetUnitSchema = new Schema<IKitchenCabinetUnit>(
 );
 
 export const KitchenCabinetUnitModel = model<IKitchenCabinetUnit>(
-  "KitchenCabinetUnit",
+  "KitchenCabinetUnitModel",
   KitchenCabinetUnitSchema
 );
