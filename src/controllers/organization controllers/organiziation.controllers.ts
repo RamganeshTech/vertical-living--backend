@@ -12,7 +12,7 @@ import { syncAllMixedRoutes } from "../Modular Units Controllers/modularUnit.con
 
 
 
-const createOrganziation = async (req: AuthenticatedUserRequest, res: Response) => {
+const createOrganziation = async (req: RoleBasedRequest, res: Response) => {
     try {
 
         let user = req.user
@@ -25,7 +25,7 @@ const createOrganziation = async (req: AuthenticatedUserRequest, res: Response) 
         }
 
         // ✅ Check directly in OrganizationModel
-        const existingOrg = await OrganizationModel.findOne({ userId: user._id });
+        const existingOrg = await OrganizationModel.findOne({ userId: user?._id });
         if (existingOrg) {
             return res.status(400).json({
                 message: "Owner already has an organization",
@@ -41,7 +41,7 @@ const createOrganziation = async (req: AuthenticatedUserRequest, res: Response) 
             address: address || null,
             logoUrl: logoUrl || null,
             organizationPhoneNo: organizationPhoneNo || null,
-            userId: user._id
+            userId: user?._id
         });
 
         if (!organization) {
@@ -49,7 +49,7 @@ const createOrganziation = async (req: AuthenticatedUserRequest, res: Response) 
             return
         }
 
-        const existingUser = await UserModel.findByIdAndUpdate(user._id, { $push: { organizationId: organization._id } }, { returnDocument: "after" })
+        const existingUser = await UserModel.findByIdAndUpdate(user?._id, { $push: { organizationId: organization._id } }, { returnDocument: "after" })
 
         if (!existingUser) {
             res.status(404).json({ message: "user not found", ok: false })
@@ -147,13 +147,13 @@ const getOrganizationById = async (req: RoleBasedRequest, res: Response) => {
 };
 
 
-const updateOrganizationDetails = async (req: AuthenticatedUserRequest, res: Response) => {
+const updateOrganizationDetails = async (req: RoleBasedRequest, res: Response) => {
     try {
         const user = req.user;
         const updatedData = req.body;
         const { orgId } = req.params;
 
-        if (!user || !user.organization) {
+        if (!user || !user._id) {
             return res.status(404).json({ message: "User not associated with this organization", ok: false });
         }
 
@@ -184,7 +184,7 @@ const updateOrganizationDetails = async (req: AuthenticatedUserRequest, res: Res
     }
 };
 
-const deleteOrganization = async (req: AuthenticatedUserRequest, res: Response) => {
+const deleteOrganization = async (req: RoleBasedRequest, res: Response) => {
     try {
         const user = req.user;
         const { orgId } = req.params
@@ -208,7 +208,7 @@ const deleteOrganization = async (req: AuthenticatedUserRequest, res: Response) 
         );
 
         // 3. Remove orgId from the Product Owner (UserModel)
-        await UserModel.findByIdAndUpdate(user._id, {
+        await UserModel.findByIdAndUpdate(user?._id, {
             $pull: { organizationId: orgId }
         }, { returnDocument: "after" });
 
