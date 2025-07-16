@@ -11,6 +11,7 @@ export const checkActivePlan = () =>
     const userIdToCheck = role === "owner" ? _id : ownerId;
 
      const redisKey = `org:plan:${userIdToCheck}`;
+     await redisClient.del(redisKey)
       let planData = await redisClient.get(redisKey);
 
      if (!planData) {

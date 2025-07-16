@@ -42,13 +42,10 @@ const OrganizationSchema = new Schema<IOrganization>({
         ref: "UserModel",
         default: null
     },
-
-
-
     planType: {
         type: String,
         enum: ["basic", "enterprise", "advanced"],
-        default: "basic",
+        default: null,
     },
     planStatus: {
         type: String,

@@ -83,7 +83,7 @@ const app = express()
 
 
 
-// console.log("env file", process.env.FRONTEND_URL)
+console.log("env file", process.env.FRONTEND_URL)
 app.use(cors({
   origin: process.env.FRONTEND_URL,
   credentials: true
