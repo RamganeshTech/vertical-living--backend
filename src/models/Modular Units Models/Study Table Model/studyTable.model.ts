@@ -28,7 +28,7 @@ export interface IStudyTableUnit extends ICommonUnit {
   lockerOpeningType?: LockerOpeningType;
   storageType?: StorageType;
   usagePurpose?: UsagePurpose;
-  priceRange?: PriceRange;
+  // priceRange?: PriceRange;
 }
 
 
@@ -37,18 +37,18 @@ const StudyTableUnitSchema = new Schema<IStudyTableUnit>(
   {
     ...CommonUnitsSchema.obj,
 
-    unitType: { type: String, enum: Object.values(StudyTableUnitType) },
-    length: { type: String, enum: Object.values(StudyTableLength) },
-    breadth: { type: String, enum: Object.values(StudyTableBreadth) },
-    carcassMaterial: { type: String, enum: Object.values(CarcassMaterial) },
-    topSurfaceMaterial: { type: String, enum: Object.values(TopSurfaceMaterial) },
-    finish: { type: String, enum: Object.values(FinishType) },
-    lockers: { type: String, enum: Object.values(Lockers) },
-    lockerPosition: { type: String, enum: Object.values(LockerPosition) },
-    lockerOpeningType: { type: String, enum: Object.values(LockerOpeningType) },
-    storageType: { type: String, enum: Object.values(StorageType) },
-    usagePurpose: { type: String, enum: Object.values(UsagePurpose) },
-    priceRange: { type: String, enum: Object.values(PriceRange) },
+    unitType: { type: String, default:"",   },
+    length: { type: String, default:"",   },
+    breadth: { type: String, default:"",   },
+    carcassMaterial: { type: String, default:"",   },
+    topSurfaceMaterial: { type: String, default:"",   },
+    finish: { type: String, default:"",   },
+    lockers: { type: String, default:"",   },
+    lockerPosition: { type: String, default:"",   },
+    lockerOpeningType: { type: String, default:"",   },
+    storageType: { type: String, default:"",   },
+    usagePurpose: { type: String, default:"",   },
+    // priceRange: { type: String, default:"",  enum: Object.values(PriceRange) },
   },
   { timestamps: true }
 );

@@ -32,7 +32,7 @@ export interface IKitchenCabinetUnit extends ICommonUnit {
   installationType?: InstallationType;
   designCollection?: DesignCollection;
   modularType?: ModularType;
-  priceRange?: KitchenPriceRange;
+  // priceRange?: KitchenPriceRange;
 }
 
 
@@ -45,21 +45,21 @@ const KitchenCabinetUnitSchema = new Schema<IKitchenCabinetUnit>(
   {
     ...CommonUnitsSchema.obj,
 
-    unitType: { type: String, enum: Object.values(KitchenUnitType) },
-    internalLayout: { type: String, enum: Object.values(InternalLayout) },
-    compartments: { type: String, enum: Object.values(Compartments) },
-    featureTags: { type: String, enum: Object.values(FeatureTags) },
-    dimensions: { type: String, enum: Object.values(Dimensions) },
-    carcassMaterial: { type: String, enum: Object.values(CarcassMaterial) },
-    doorsMaterial: { type: String, enum: Object.values(DoorsMaterial) },
-    finish: { type: String, enum: Object.values(FinishType) },
-    ssHardwareBrand: { type: String, enum: Object.values(SSHardwareBrand) },
-    visibilityType: { type: String, enum: Object.values(VisibilityType) },
-    positionUsage: { type: String, enum: Object.values(PositionUsage) },
-    installationType: { type: String, enum: Object.values(InstallationType) },
-    designCollection: { type: String, enum: Object.values(DesignCollection) },
-    modularType: { type: String, enum: Object.values(ModularType) },
-    priceRange: { type: String, enum: Object.values(KitchenPriceRange) },
+    unitType: { type: String, default:"",  },
+    internalLayout: { type: String, default:"",  },
+    compartments: { type: String, default:"",  },
+    featureTags: { type: String, default:"",  },
+    dimensions: { type: String, default:"",  },
+    carcassMaterial: { type: String, default:"",  },
+    doorsMaterial: { type: String, default:"",  },
+    finish: { type: String, default:"",  },
+    ssHardwareBrand: { type: String, default:"",  },
+    visibilityType: { type: String, default:"",  },
+    positionUsage: { type: String, default:"",  },
+    installationType: { type: String, default:"",  },
+    designCollection: { type: String, default:"",  },
+    modularType: { type: String, default:"",  },
+    // priceRange: { type: String, default:"", enum: Object.values(KitchenPriceRange) },
   },
   { timestamps: true }
 );

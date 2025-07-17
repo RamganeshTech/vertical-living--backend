@@ -28,7 +28,7 @@ export interface ITVUnit extends ICommonUnit {
   tvPlacementType?: TVPlacementType;
   installationType?: TVInstallationType;
   modularType?: TVModularType;
-  priceRange?: TVPriceRange; // price range string, flexible
+  // priceRange?: TVPriceRange; // price range string, flexible
 }
 
 
@@ -40,19 +40,18 @@ export const TVUnitSchema = new Schema<ITVUnit>(
   {
     ...CommonUnitsSchema.obj,
 
-    unitType: { type: String, enum: Object.values(TVUnitType) },
-    internalLayout: { type: String, enum: Object.values(TVInternalLayout) },
-    compartments: { type: String, enum: Object.values(TVCompartments) },
-    featureTags: { type: String, enum: Object.values(TVFeatureTags) },
-    dimensions: { type: String, enum: Object.values(TVDimensions) },
-    materialCarcass: { type: String, enum: Object.values(TVMaterialCarcass) },
-    materialFront: { type: String, enum: Object.values(TVMaterialFront) },
-    finish: { type: String, enum: Object.values(TVFinish) },
-    visibilityType: { type: String, enum: Object.values(TVVisibilityType) },
-    tvPlacementType: { type: String, enum: Object.values(TVPlacementType) },
-    installationType: { type: String, enum: Object.values(TVInstallationType) },
-    modularType: { type: String, enum: Object.values(TVModularType) },
-    priceRange: { type: String },
+    unitType: { type: String, default:"",  },
+    internalLayout: { type: String, default:"",  },
+    compartments: { type: String, default:"",  },
+    featureTags: { type: String, default:"",  },
+    dimensions: { type: String, default:"",  },
+    materialCarcass: { type: String, default:"",  },
+    materialFront: { type: String, default:"",  },
+    finish: { type: String, default:"",  },
+    visibilityType: { type: String, default:"",  },
+    tvPlacementType: { type: String, default:"",  },
+    installationType: { type: String, default:"",  },
+    modularType: { type: String, default:"",  },
   },
   { timestamps: true }
 );

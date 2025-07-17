@@ -29,7 +29,7 @@ export interface IShoeRackUnit extends ICommonUnit {
   addOnFeatures?: AddOnFeatures[];
   placementArea?: PlacementArea[];
   installationType?: InstallationType;
-  budgetRange?: BudgetRange;
+  // budgetRange?: BudgetRange;
 }
 
 /** Mongoose Schema */
@@ -37,21 +37,21 @@ export interface IShoeRackUnit extends ICommonUnit {
 export const ShoeRackUnitSchema = new Schema<IShoeRackUnit>(
   {
     ...CommonUnitsSchema.obj,
-    unitType: { type: String, enum: Object.values(ShoeRackUnitType) },
-    capacity: { type: String, enum: Object.values(ShoeRackCapacity) },
-    doorType: { type: String, enum: Object.values(ShoeRackDoorType) },
-    carcassMaterial: { type: String, enum: Object.values(CarcassMaterial) },
-    shutterMaterial: { type: String, enum: Object.values(ShutterMaterial) },
-    finish: { type: String, enum: Object.values(FinishType) },
-    heightCategory: { type: String, enum: Object.values(HeightCategory) },
-    shoeTypesSupported: [{ type: String, enum: Object.values(ShoeTypesSupported) }],
-    ventilationFeature: { type: String, enum: Object.values(VentilationFeature) },
-    visibilityType: { type: String, enum: Object.values(ShoeRackVisibilityType) },
-    modularType: { type: String, enum: Object.values(ShoeRackModularType) },
-    addOnFeatures: [{ type: String, enum: Object.values(AddOnFeatures) }],
-    placementArea: [{ type: String, enum: Object.values(PlacementArea) }],
-    installationType: { type: String, enum: Object.values(InstallationType) },
-    budgetRange: { type: String, enum: Object.values(BudgetRange) },
+    unitType: { type: String, default:"",   },
+    capacity: { type: String, default:"",   },
+    doorType: { type: String, default:"",   },
+    carcassMaterial: { type: String, default:"",   },
+    shutterMaterial: { type: String, default:"",   },
+    finish: { type: String, default:"",   },
+    heightCategory: { type: String, default:"",   },
+    shoeTypesSupported: { type: [String], default:[]},
+    ventilationFeature: { type: String, default:"",   },
+    visibilityType: { type: String, default:"",   },
+    modularType: { type: String, default:"",   },
+    addOnFeatures: { type: [String], default:[] },
+    placementArea: { type: [String], default:[] },
+    installationType: { type: String, default:"",   },
+    // budgetRange: { type: String,  },
   },
   { timestamps: true }
 );

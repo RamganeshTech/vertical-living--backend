@@ -36,11 +36,11 @@ export interface IShowcaseUnit extends ICommonUnit {
   lighting?: ShowcaseLighting;
   installationType?: ShowcaseInstallationType;
   usagePurpose?: ShowcaseUsagePurpose;
-  addons?: ShowcaseAddons[]; // Multiple add-ons possible
+  addOns?: ShowcaseAddons[]; // Multiple add-ons possible
   compartments?: ShowcaseCompartments;
   edges?: ShowcaseEdges;
   modularType?: ShowcaseModularType;
-  priceRange?: ShowcasePriceRange;
+  // priceRange?: ShowcasePriceRange;
 }
 
 // 3️⃣ Schema
@@ -49,23 +49,23 @@ const ShowcaseUnitSchema = new Schema<IShowcaseUnit>(
   {
     ...CommonUnitsSchema.obj,
 
-    unitType: { type: String, enum: Object.values(ShowcaseUnitType) },
-    length: { type: String, enum: Object.values(ShowcaseLength) },
-    breadth: { type: String, enum: Object.values(ShowcaseBreadth) },
-    carcassMaterial: { type: String, enum: Object.values(ShowcaseCarcassMaterial) },
-    frontMaterial: { type: String, enum: Object.values(ShowcaseFrontMaterial) },
-    finish: { type: String, enum: Object.values(ShowcaseFinish) },
-    storageType: { type: String, enum: Object.values(ShowcaseStorageType) },
-    shutterType: { type: String, enum: Object.values(ShowcaseShutterType) },
-    glassVisibility: { type: String, enum: Object.values(ShowcaseGlassVisibility) },
-    lighting: { type: String, enum: Object.values(ShowcaseLighting) },
-    installationType: { type: String, enum: Object.values(ShowcaseInstallationType) },
-    usagePurpose: { type: String, enum: Object.values(ShowcaseUsagePurpose) },
-    addons: [{ type: String, enum: Object.values(ShowcaseAddons) }],
-    compartments: { type: String, enum: Object.values(ShowcaseCompartments) },
-    edges: { type: String, enum: Object.values(ShowcaseEdges) },
-    modularType: { type: String, enum: Object.values(ShowcaseModularType) },
-    priceRange: { type: String, enum: Object.values(ShowcasePriceRange) },
+    unitType: { type: String, default: "", },
+    length: { type: String, default: "", },
+    breadth: { type: String, default: "", },
+    carcassMaterial: { type: String, default: "", },
+    frontMaterial: { type: String, default: "", },
+    finish: { type: String, default: "", },
+    storageType: { type: String, default: "", },
+    shutterType: { type: String, default: "", },
+    glassVisibility: { type: String, default: "", },
+    lighting: { type: String, default: "", },
+    installationType: { type: String, default: "", },
+    usagePurpose: { type: String, default: "", },
+    addOns: { type: [String], default: [] },
+    compartments: { type: String, default: "", },
+    edges: { type: String, default: "", },
+    modularType: { type: String, default: "", },
+    // priceRange: { type: String, default:"", enum: Object.values(ShowcasePriceRange) },
   },
   { timestamps: true }
 );

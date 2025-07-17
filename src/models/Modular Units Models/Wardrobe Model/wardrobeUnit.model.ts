@@ -55,6 +55,20 @@ export interface IWardrobeUnit extends ICommonUnit {
     | "Recessed Handles"
     | "Profile Handles (Aluminum)"
     | "";
+
+   height?: "2100 mm" | "2400 mm";
+  breadth?: "450 mm" | "600 mm";
+  length?: "1200 mm" | "1800 mm" | "2400 mm+";
+  carcassMaterial?: "Plywood" | "MDF";
+  shutterMaterial?: "Laminate" | "Acrylic";
+  finish?: "Matte" | "Glossy";
+  internalAccessories?: "Pull-out Basket" | "Tie Rack";
+  mirrorProvision?: "Yes" | "No";
+  lighting?: "LED Strip" | "Spotlight";
+  lockType?: "Central Lock" | "Individual Lock";
+  edges?: "Rounded" | "Sharp";
+  installationType?: "Floor Standing" | "Wall Mounted";
+  modularType?: "Factory Modular" | "Carpenter-Made";
 }
 
 
@@ -77,6 +91,21 @@ const WardrobeUnitSchema = new Schema<IWardrobeUnit>(
     roomType: { type: String, default: "" },
     layout: { type: String, default: "" },
     handleType: { type: String, default: "" },
+   
+      // Fixed & Newly Added
+    height: { type: String, default: "" },
+    breadth: { type: String, default: "" },
+    length: { type: String, default: "" },
+    carcassMaterial: { type: String, default: "" },
+    shutterMaterial: { type: String, default: "" },
+    finish: { type: String, default: "" },
+    internalAccessories: { type: [String], default: [] },
+    mirrorProvision: { type: String, default: "" },
+    lighting: { type: String, default: "" },
+    lockType: { type: String, default: "" },
+    edges: { type: String, default: "" },
+    installationType: { type: String, default: "" },
+    modularType: { type: String, default: "" },
   },
   { timestamps: true }
 );

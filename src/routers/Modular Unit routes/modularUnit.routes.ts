@@ -1,7 +1,7 @@
 
 import express, { RequestHandler }  from 'express';
 import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
-import { deleteUnit, getAllMixedUnits, getUnits, updateUnit } from '../../controllers/Modular Units Controllers/modularUnit.controller';
+import { createUnit, deleteUnit, getAllMixedUnits, getUnits, updateUnit } from '../../controllers/Modular Units Controllers/modularUnit.controller';
 import { imageUploadToS3, processUploadFiles } from '../../utils/s3Uploads/s3upload';
 
 const modularUnitRoutes = express.Router()
@@ -13,7 +13,7 @@ modularUnitRoutes.post(
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   imageUploadToS3.array("images"), // multiple images
   processUploadFiles,
-  updateUnit
+  createUnit
 );
 
 
@@ -34,7 +34,7 @@ modularUnitRoutes.delete(
 );
 
 modularUnitRoutes.get(
-  "/getunits/:unitType",
+  "/getunits/:organizationId/:unitType",
   multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),
   getUnits
 );

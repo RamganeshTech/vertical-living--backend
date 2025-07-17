@@ -24,7 +24,7 @@ export interface ICrockeryUnit extends ICommonUnit {
   storageType?: CrockeryStorageType;
   installationType?: CrockeryInstallationType;
   modularType?: CrockeryModularType;
-  priceRange?: string; // keep simple string if price is dynamic
+  // priceRange?: string; // keep simple string if price is dynamic
   glassVisibility?: CrockeryGlassVisibility;
   usagePurpose?: CrockeryUsagePurpose;
   doorOpeningStyle?: CrockeryDoorOpeningStyle;
@@ -38,25 +38,25 @@ export interface ICrockeryUnit extends ICommonUnit {
 export const CrockeryUnitSchema = new Schema<ICrockeryUnit>(
   {
     ...CommonUnitsSchema.obj,
-    unitType: { type: String, enum: Object.values(CrockeryUnitType) },
-    internalLayout: { type: String, enum: Object.values(CrockeryInternalLayout) },
-    compartments: { type: String, enum: Object.values(CrockeryCompartments) },
-    featureTags: { type: String, enum: Object.values(CrockeryFeatureTags) },
-    dimensions: { type: String, enum: Object.values(CrockeryDimensions) },
-    materialCarcass: { type: String, enum: Object.values(CrockeryMaterialCarcass) },
-    materialFront: { type: String, enum: Object.values(CrockeryMaterialFront) },
-    finish: { type: String, enum: Object.values(CrockeryFinish) },
-    visibilityType: { type: String, enum: Object.values(CrockeryVisibilityType) },
-    placementLocation: { type: String, enum: Object.values(CrockeryPlacementLocation) },
-    lightingType: { type: String, enum: Object.values(CrockeryLightingType) },
-    storageType: { type: String, enum: Object.values(CrockeryStorageType) },
-    installationType: { type: String, enum: Object.values(CrockeryInstallationType) },
-    modularType: { type: String, enum: Object.values(CrockeryModularType) },
-    priceRange: { type: String }, // optional: keep dynamic
-    glassVisibility: { type: String, enum: Object.values(CrockeryGlassVisibility) },
-    usagePurpose: { type: String, enum: Object.values(CrockeryUsagePurpose) },
-    doorOpeningStyle: { type: String, enum: Object.values(CrockeryDoorOpeningStyle) },
-    addons: { type: String, enum: Object.values(CrockeryAddons) },
+    unitType: { type: String, default:"",  },
+    internalLayout: { type: String, default:"",  },
+    compartments: { type: String, default:"",  },
+    featureTags: { type: String, default:"",  },
+    dimensions: { type: String, default:"",  },
+    materialCarcass: { type: String, default:"",  },
+    materialFront: { type: String, default:"",  },
+    finish: { type: String, default:"",  },
+    visibilityType: { type: String, default:"",  },
+    placementLocation: { type: String, default:"",  },
+    lightingType: { type: String, default:"",  },
+    storageType: { type: String, default:"",  },
+    installationType: { type: String, default:"",  },
+    modularType: { type: String, default:"",  },
+    glassVisibility: { type: String, default:"",  },
+    usagePurpose: { type: String, default:"",  },
+    doorOpeningStyle: { type: String, default:"",  },
+    addons: { type: String, default:"",  },
+    // priceRange: { type: String }, // optional: keep dynamic
   },
   { timestamps: true }
 );

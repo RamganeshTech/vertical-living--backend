@@ -17,6 +17,7 @@ import {
 } from "./falseCeilingTypes";
 
 export interface IFalseCeilingUnit extends ICommonUnit {
+ 
   ceilingType?: CeilingType[];
   lightingType?: LightingType[];
   roomType?: RoomType[];
@@ -30,7 +31,7 @@ export interface IFalseCeilingUnit extends ICommonUnit {
   shapeGeometry?: ShapeGeometry;
   modularType?: ModularType;
   installationComplexity?: InstallationComplexity;
-  budgetRange?: CeilingBudgetRange;
+  // budgetRange?: CeilingBudgetRange;
 }
 
 
@@ -43,20 +44,20 @@ const FalseCeilingUnitSchema = new Schema<IFalseCeilingUnit>(
   {
     ...CommonUnitsSchema.obj,
 
-    ceilingType: [{ type: String, enum: Object.values(CeilingType) }],
-    lightingType: [{ type: String, enum: Object.values(LightingType) }],
-    roomType: [{ type: String, enum: Object.values(RoomType) }],
-    materialType: [{ type: String, enum: Object.values(MaterialType) }],
-    designStyle: [{ type: String, enum: Object.values(DesignStyle) }], //but presnt in the filters
-    colorTheme: [{ type: String, enum: Object.values(ColorTheme) }],
-    levels: { type: String, enum: Object.values(Levels) },
-    edgeProfile: { type: String, enum: Object.values(EdgeProfile) },
-    fixtureIntegration: [{ type: String, enum: Object.values(FixtureIntegration) }],
-    panelType: [{ type: String, enum: Object.values(PanelType) }],
-    shapeGeometry: { type: String, enum: Object.values(ShapeGeometry) },
-    modularType: { type: String, enum: Object.values(ModularType) },
-    installationComplexity: { type: String, enum: Object.values(InstallationComplexity) }, //but presnt in the filters
-    budgetRange: { type: String, enum: Object.values(CeilingBudgetRange) },
+    ceilingType: { type: [String], default: [] },
+lightingType: { type: [String], default: [] },
+roomType: { type: [String], default: [] },
+materialType: { type: [String], default: [] },
+designStyle: { type: [String], default: [] },
+colorTheme: { type: [String], default: [] },
+levels: { type: String, default: "" },
+edgeProfile: { type: String, default: "" },
+fixtureIntegration: { type: [String], default: [] },
+panelType: { type: [String], default: [] },
+shapeGeometry: { type: String, default: "" },
+modularType: { type: String, default: "" },
+installationComplexity: { type: String, default: "" }, //but presnt in the filters
+    // budgetRange: { type: String, enum: Object.values(CeilingBudgetRange) },
   },
   { timestamps: true }
 );

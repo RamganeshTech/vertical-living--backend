@@ -76,18 +76,40 @@ const createUnit = async (req: RoleBasedRequest, res: Response): Promise<any> =>
         }
 
 
+        const masterDoc = await AllUnitModel.findOne({ organizationId });
+
+        if (!masterDoc) {
+            return res.status(404).json({ message: "not found", ok: false })
+        }
+
+        let unitCount = 0;
+        if (masterDoc && Array.isArray((masterDoc as any)[unitType])) {
+            unitCount = (masterDoc as any)[unitType].length;
+        }
+
+
+        const customId = `${unitType.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${unitCount + 1}`;
+
+
+
         const newUnit = new Model({
             ...req.body,
             images: uploads,
+            customId, // ✅ attach human-readable unique ID
+            organizationId
         });
 
         const saved = await newUnit.save();
 
-        await AllUnitModel.findOneAndUpdate(
-            { organizationId }, // ✅ find only for this org
-            { $addToSet: { [unitType]: saved._id } },
-            { upsert: true, new: true }
-        );
+        // await AllUnitModel.findOneAndUpdate(
+        //     { organizationId }, // ✅ find only for this org
+        //     { $addToSet: { [unitType]: saved._id } },
+        //     { upsert: true, new: true }
+        // );
+
+
+        (masterDoc as any)[unitType].push(saved._id)
+        await masterDoc.save()
 
         return res.status(201).json({ ok: true, message: "Unit created.", data: saved });
 
@@ -185,11 +207,9 @@ const deleteUnit = async (req: RoleBasedRequest, res: Response): Promise<any> =>
             return res.status(404).json({ ok: false, message: "Unit not found." });
         }
 
-        const data = await Model.findByIdAndDelete(unitId);
+        await Model.findByIdAndDelete(unitId);
 
-        if (!data) {
-            return res.status(400).json({ message: "item not found", ok: false })
-        }
+
 
         await AllUnitModel.findOneAndUpdate(
             { organizationId }, // ✅ find only for this org
@@ -203,20 +223,83 @@ const deleteUnit = async (req: RoleBasedRequest, res: Response): Promise<any> =>
         res.status(500).json({ ok: false, message: "Failed to delete unit.", error: err.message });
     }
 };
+function parseBudgetRange(range: string): Record<string, number> {
+  // Remove ₹ and spaces
+  console.log("range",range)
+  const cleaned = range.replace(/[₹,\s]/g, "");
+
+  console.log("cleaned",cleaned)
+  if (cleaned.endsWith("+")) {
+    const min = parseInt(cleaned.slice(0, -1), 10); // "25000+"
+    console.log("+ ends with", min)
+    return { $gte: min };
+  }
+
+  const [minStr, maxStr] = cleaned.split(/[-–]/); // or "-"
+
+  console.log("minStr", minStr)
+  console.log("maxStr", maxStr)
+  if (maxStr && maxStr) {
+    const min = parseInt(minStr, 10);
+    const max = parseInt(maxStr, 10);
+    return { $gte: min, $lte: max };
+  }
+
+  return {};
+}
+
 
 
 const getUnits = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { unitType } = req.params; // e.g. showcase, falseCeiling, etc.
+        const { unitType, organizationId } = req.params; // e.g. showcase, falseCeiling, etc.
+        const { searchQuery = "", ...rawFilters } = req.query;
 
         const Model = unitModels[unitType];
         if (!Model) {
             return res.status(400).json({ ok: false, message: "Invalid unit type." });
         }
 
-        const units = await Model.find().sort({ createdAt: -1 });
+        const filterQuery: any = {
+            organizationId,
+        };
 
-        res.status(200).json({ ok: true, data: units });
+
+        console.log("rawFilters",rawFilters)
+
+       // Handle filters
+    for (const key in rawFilters) {
+     
+
+     const rawValue = rawFilters[key];
+
+    if (key === "budgetRange" || key === "priceRange") {
+    const priceFilter = parseBudgetRange(String(rawValue || ""));
+      if (Object.keys(priceFilter).length > 0) {
+        filterQuery.price = priceFilter;
+      }
+    } else {
+         const values = String(rawFilters[key]).split(",").map((v) => v.trim());
+        console.log("values",values)
+        // 🔁 Regular field filters
+        filterQuery[key] = { $in: values };
+      }
+    }
+
+        console.log("filterQuery", filterQuery)
+        // Optional search text (case-insensitive search over string fields)
+        if (searchQuery) {
+            filterQuery.$or = [
+                { name: { $regex: searchQuery, $options: "i" } },
+                { customId: { $regex: searchQuery, $options: "i" } },
+                // You can add more searchable fields here
+            ];
+        }
+
+        const units = await Model.find(filterQuery).sort({ createdAt: -1 });
+
+    
+        res.status(200).json({ ok: true, data: units, message: `fetched products from ${unitType} category` });
     } catch (err: any) {
         console.error(err);
         res.status(500).json({ ok: false, message: "Failed to fetch units.", error: err.message });
@@ -233,26 +316,29 @@ const getAllMixedUnits = async (req: RoleBasedRequest, res: Response): Promise<a
         const { organizationId } = req.params
 
         const allUnitsMaster = await AllUnitModel.findOne({ organizationId })
-            .populate("wardrobes")
-            .populate("studyTables")
-            .populate("cots")
-            .populate("mirrorUnits")
-            .populate("dressingTables")
-            .populate("tvUnits")
-            .populate("diningTables")
-            .populate("sofas")
-            .populate("crockeryUnits")
-            .populate("kitchenBaseUnits")
-            .populate("kitchenTallUnits")
-            .populate("kitchenWallUnits")
-            .populate("pantryUnits")
-            .populate("foyerAreaDesigns")
-            .populate("falseCeilings")
-            .populate("wallpapers")
-            .populate("balconyUnits");
+            .populate("wardrobe")
+            .populate("studyTable")
+            .populate("BedCot")
+            // .populate("mirrorUnits")
+            // .populate("dressingTables")
+            .populate("tv")
+            // .populate("diningTables")
+            // .populate("sofas")
+            .populate("crockery")
+            .populate("kitchenCabinet")
+            // .populate("kitchenBaseUnits")
+            // .populate("kitchenTallUnits")
+            // .populate("kitchenWallUnits")
+            // .populate("pantryUnits")
+            // .populate("foyerAreaDesigns")
+            .populate("falseCeiling")
+            // .populate("wallpapers")
+            // .populate("balconyUnits")
+            .populate("showcase")
+            .populate("shoeRack")
 
         if (!allUnitsMaster) {
-            return res.status(404).json({ ok: false, message: "No units found.", data: [] });
+            return res.status(200).json({ ok: true, message: "No units found.", data: [] });
         }
 
         // Flatten and add type for FE
@@ -266,7 +352,7 @@ const getAllMixedUnits = async (req: RoleBasedRequest, res: Response): Promise<a
             }
         });
 
-        return res.status(200).json({ ok: true, data: allUnits });
+        return res.status(200).json({ ok: true, data: allUnits, message: "get all category products" });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ ok: false, message: "Failed to fetch units." });
@@ -275,7 +361,7 @@ const getAllMixedUnits = async (req: RoleBasedRequest, res: Response): Promise<a
 
 
 export const syncAllMixedRoutes = async (organizationId: string) => {
-    const allUnitsMaster = await AllUnitModel.create({
+    await AllUnitModel.create({
         organizationId,
         wardrobe: [],
         studyTable: [],
