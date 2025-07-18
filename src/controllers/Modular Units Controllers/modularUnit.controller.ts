@@ -46,6 +46,7 @@ const createUnit = async (req: RoleBasedRequest, res: Response): Promise<any> =>
         if (!allowed) {
             return res.status(400).json({ ok: false, message: "No allowed fields defined for this unit type." });
         }
+console.log("req.bdoy", req.body)
 
         const bodyKeys = Object.keys(req.body);
         const invalidKeys = bodyKeys.filter((key) => !allowed.includes(key));
@@ -89,7 +90,6 @@ const createUnit = async (req: RoleBasedRequest, res: Response): Promise<any> =>
 
 
         const customId = `${unitType.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${unitCount + 1}`;
-
 
 
         const newUnit = new Model({
@@ -197,7 +197,11 @@ const deleteUnit = async (req: RoleBasedRequest, res: Response): Promise<any> =>
     try {
         const { unitId, unitType, organizationId } = req.params; // The _id of the unit you want to update
 
+        console.log("unittype", unitType, "unitId",unitId)
         const Model = unitModels[unitType];
+
+        console.log("model", Model)
+
         if (!Model) {
             return res.status(400).json({ ok: false, message: "Invalid unit type." });
         }

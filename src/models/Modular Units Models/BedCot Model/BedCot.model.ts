@@ -19,7 +19,7 @@ export interface IBedCotUnit extends ICommonUnit {
   bedSize?: BedSize;
   length?: BedLength;
   breadth?: BedBreadth;
-  headboardStyle?: HeadboardStyle;
+  // headboardStyle?: HeadboardStyle;
   storageType?: StorageType;
   frameMaterial?: FrameMaterial;
   headboardMaterial?: HeadboardMaterial;
@@ -27,8 +27,11 @@ export interface IBedCotUnit extends ICommonUnit {
   edges?: Edges;
   modularType?: ModularType;
   installationType?: InstallationType;
-  usagePurpose?: UsagePurpose;
-  priceRange?: BedCotPriceRange;
+  // usagePurpose?: UsagePurpose;
+  bedType?:string,
+  height?:string,
+  addOns?:string[]
+  // priceRange?: BedCotPriceRange;
 }
 
 
@@ -41,19 +44,23 @@ const BedCotUnitSchema = new Schema<IBedCotUnit>(
   {
     ...CommonUnitsSchema.obj,
 
-    bedSize: { type: String,  },
-    length: { type: String,  },
-    breadth: { type: String,  },
-    headboardStyle: { type: String,  },
-    storageType: { type: String,  },
-    frameMaterial: { type: String,  },
-    headboardMaterial: { type: String,  },
-    finish: { type: String,  },
-    edges: { type: String,  },
-    modularType: { type: String,  },
-    installationType: { type: String,  },
-    usagePurpose: { type: String,  },
-    priceRange: { type: String,  },
+    bedSize: { type: String, default:"" },
+    length: { type: String, default:"" },
+    breadth: { type: String, default:"" },
+    // headboardStyle: { type: String, default:"" },
+    storageType: { type: String, default:"" },
+    frameMaterial: { type: String, default:"" },
+    headboardMaterial: { type: String, default:"" },
+    finish: { type: String, default:"" },
+    edges: { type: String, default:"" },
+    modularType: { type: String, default:"" },
+    installationType: { type: String, default:"" },
+    // usagePurpose: { type: String, default:"" },
+    // priceRange: { type: String, default:""  },
+    bedType: { type: String, default: "" },
+    height: { type: String, default: "" },
+    addOns: { type: [String], default: [] },
+
   },
   { timestamps: true }
 );

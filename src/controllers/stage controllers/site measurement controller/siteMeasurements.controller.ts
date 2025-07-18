@@ -31,13 +31,13 @@ export const syncSiteMeasurement = async (projectId: string) => {
       },
       uploads: [],
       siteDetails: {
-        totalPlotAreaSqFt: { type: Number, default: null },
-        builtUpAreaSqFt: { type: Number, default: null },
-        roadFacing: { type: Boolean, default: null },
-        numberOfFloors: { type: Number, default: null },
-        hasSlope: { type: Boolean, default: null },
-        boundaryWallExists: { type: Boolean, default: null },
-        additionalNotes: { type: String, default: null }
+        totalPlotAreaSqFt: null,
+        builtUpAreaSqFt: null,
+        roadFacing: null,
+        numberOfFloors: null,
+        hasSlope: null,
+        boundaryWallExists: null ,
+        additionalNotes:null 
       },
       rooms: initializeSiteRequirement,
     });

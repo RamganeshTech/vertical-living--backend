@@ -49,8 +49,8 @@ export enum TVDimensions {
 }
 
 export enum TVMaterialCarcass {
-  BWP_PLYWOOD = "BWP Plywood",
-  HDHMR = "HDHMR",
+  BWP_PLYWOOD = "Plywood",
+  // HDHMR = "HDHMR",
   MDF = "MDF",
   PARTICLE_BOARD = "Particle Board",
 }

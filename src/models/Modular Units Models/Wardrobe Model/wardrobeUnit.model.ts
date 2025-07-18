@@ -69,6 +69,7 @@ export interface IWardrobeUnit extends ICommonUnit {
   edges?: "Rounded" | "Sharp";
   installationType?: "Floor Standing" | "Wall Mounted";
   modularType?: "Factory Modular" | "Carpenter-Made";
+  wardrobeType?:"Sliding" | "Hinged" | "Walk-in"
 }
 
 
@@ -93,6 +94,7 @@ const WardrobeUnitSchema = new Schema<IWardrobeUnit>(
     handleType: { type: String, default: "" },
    
       // Fixed & Newly Added
+    wardrobeType: { type: String, default: "" },
     height: { type: String, default: "" },
     breadth: { type: String, default: "" },
     length: { type: String, default: "" },

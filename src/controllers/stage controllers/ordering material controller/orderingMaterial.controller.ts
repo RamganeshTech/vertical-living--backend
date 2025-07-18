@@ -78,7 +78,7 @@ const getAllOrderingMaterialDetails = async (req: Request, res: Response): Promi
     const { projectId } = req.params;
 
     const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
-
+     await redisClient.del(redisMainKey)
     const cachedData = await redisClient.get(redisMainKey)
 
     if (cachedData) {
@@ -414,7 +414,8 @@ const generateOrderingMaterialLink = async (req: Request, res: Response): Promis
     }
 
     const token = generateOrderingToken();
-    form.generatedLink = token;
+
+    form.generatedLink = `${process.env.FRONTEND_URL}/ordermaterial/public/${projectId}/${token}`;
     await form.save();
 
     return res.status(200).json({
@@ -422,7 +423,7 @@ const generateOrderingMaterialLink = async (req: Request, res: Response): Promis
       message: "Link generated successfully",
       data: {
         token,
-        shareableUrl: `${process.env.BASE_URL}/orderingmaterial/public/${projectId}/${token}`,
+        shareableUrl: form.generatedLink,
       },
     });
   }
@@ -439,9 +440,9 @@ const getOrderingMaterialPublicDetails = async (req: Request, res: Response): Pr
     const form = await OrderingMaterialModel.findOne({ projectId });
     if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
-    if (form.generatedLink !== token) {
-      return res.status(403).json({ ok: false, message: "Invalid or unauthorized token" });
-    }
+    // if (form.generatedLink !== token) {
+    //   return res.status(403).json({ ok: false, message: "Invalid or unauthorized token" });
+    // }
     return res.status(200).json({
       ok: true,
       data: {

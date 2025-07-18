@@ -18,7 +18,7 @@ materialArrivalRoutes.delete("/:projectId/room/:roomKey/:itemId", checkPreviousS
 materialArrivalRoutes.get("/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "client"), checkPreviousStageCompleted(OrderingMaterialModel),getAllMaterialArrivalDetails);
 materialArrivalRoutes.get("/:projectId/room/:roomKey", multiRoleAuthMiddleware("owner", "staff", "CTO",  "worker", "client"),checkPreviousStageCompleted(OrderingMaterialModel), getSingleRoomMaterialArrival);
 materialArrivalRoutes.post("/:projectId/generate-link", multiRoleAuthMiddleware("owner", "staff", "CTO"),checkPreviousStageCompleted(OrderingMaterialModel),notToUpdateIfStageCompleted(MaterialArrivalModel), generateMaterialArrivalLink);
-materialArrivalRoutes.get("/public/:projectId/:token", checkPreviousStageCompleted(OrderingMaterialModel),notToUpdateIfStageCompleted(MaterialArrivalModel),getMaterialArrivalPublicDetails);
+materialArrivalRoutes.get("/public/:projectId/:token", checkPreviousStageCompleted(OrderingMaterialModel),getMaterialArrivalPublicDetails);
 
 
 materialArrivalRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderingMaterialModel),notToUpdateIfStageCompleted(MaterialArrivalModel), setMaterialArrivalStageDeadline)

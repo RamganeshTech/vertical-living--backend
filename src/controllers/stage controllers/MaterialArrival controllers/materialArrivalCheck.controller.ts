@@ -338,7 +338,7 @@ const generateMaterialArrivalLink = async (req: Request, res: Response): Promise
         }
 
         const token = generateOrderingToken(); // or use your custom function like generateMaterialArrivalToken()
-        doc.generatedLink = token;
+        doc.generatedLink = `${process.env.FRONTEND_URL}/materialarrival/public/${projectId}/${token}`;
         await doc.save();
 
         return res.status(200).json({
@@ -346,7 +346,7 @@ const generateMaterialArrivalLink = async (req: Request, res: Response): Promise
             message: "Link generated successfully",
             data: {
                 token,
-                shareableUrl: `${process.env.FRONTEND_URL}/materialarrival/public/${projectId}/${token}`,
+                shareableUrl: doc.generatedLink,
             }
         });
     } catch (err: any) {
@@ -357,7 +357,7 @@ const generateMaterialArrivalLink = async (req: Request, res: Response): Promise
 const getMaterialArrivalPublicDetails = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId, token } = req.params;
-        const doc = await MaterialArrivalModel.findOne({ projectId, generatedLink: token });
+        const doc = await MaterialArrivalModel.findOne({ projectId });
 
         if (!doc) return res.status(404).json({ ok: false, message: "Invalid or expired link" });
 

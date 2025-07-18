@@ -20,14 +20,20 @@ export interface IStudyTableUnit extends ICommonUnit {
   unitType?: StudyTableUnitType;
   length?: StudyTableLength;
   breadth?: StudyTableBreadth;
+  height?: string,
   carcassMaterial?: CarcassMaterial;
-  topSurfaceMaterial?: TopSurfaceMaterial;
+  // topSurfaceMaterial?: TopSurfaceMaterial;
+  tableTopMaterial?: string,
   finish?: FinishType;
-  lockers?: Lockers;
-  lockerPosition?: LockerPosition;
-  lockerOpeningType?: LockerOpeningType;
+  // lockers?: Lockers;
+  // lockerPosition?: LockerPosition;
+  // lockerOpeningType?: LockerOpeningType;
   storageType?: StorageType;
-  usagePurpose?: UsagePurpose;
+  addOns?:string[]
+edges?:string
+installationType?:string
+modularType?:string
+  // usagePurpose?: UsagePurpose;
   // priceRange?: PriceRange;
 }
 
@@ -37,18 +43,25 @@ const StudyTableUnitSchema = new Schema<IStudyTableUnit>(
   {
     ...CommonUnitsSchema.obj,
 
-    unitType: { type: String, default:"",   },
-    length: { type: String, default:"",   },
-    breadth: { type: String, default:"",   },
-    carcassMaterial: { type: String, default:"",   },
-    topSurfaceMaterial: { type: String, default:"",   },
-    finish: { type: String, default:"",   },
-    lockers: { type: String, default:"",   },
-    lockerPosition: { type: String, default:"",   },
-    lockerOpeningType: { type: String, default:"",   },
-    storageType: { type: String, default:"",   },
-    usagePurpose: { type: String, default:"",   },
+    unitType: { type: String, default: "", },
+    length: { type: String, default: "", },
+    breadth: { type: String, default: "", },
+    height: { type: String, default: "", },
+    carcassMaterial: { type: String, default: "", },
+    // topSurfaceMaterial: { type: String, default:"",   },
+    tableTopMaterial: { type: String, default: "", },
+    finish: { type: String, default: "", },
+    // lockers: { type: String, default:"",   },
+    // lockerPosition: { type: String, default:"",   },
+    // lockerOpeningType: { type: String, default:"",   },
+    storageType: { type: String, default: "", },
+    // usagePurpose: { type: String, default:"",   },
+    addOns: { type: [String], default: [] }, // ✅ added as array
+    edges: { type: String, default: "" }, // ✅ new
+    installationType: { type: String, default: "" }, // ✅ new
+    modularType: { type: String, default: "" }, // ✅ new
     // priceRange: { type: String, default:"",  enum: Object.values(PriceRange) },
+
   },
   { timestamps: true }
 );

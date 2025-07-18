@@ -38,10 +38,10 @@ requirementRoutes.patch("/:projectId/deleteuploadedfile/:fileId", multiRoleAuthM
 // requirementRoutes.put("/:projectId/updatelivinghall", ClientAuthMiddleware, updateLivingHallSection);
 
 
-requirementRoutes.put("/:projectId/updatekitchen", multiRoleAuthMiddleware("owner","CTO", "client"),notToUpdateIfStageCompleted(RequirementFormModel),  updateKitchenSection);
-requirementRoutes.put("/:projectId/updatebedroom", multiRoleAuthMiddleware("owner","CTO", "client"), notToUpdateIfStageCompleted(RequirementFormModel), updateBedroomSection);
-requirementRoutes.put("/:projectId/updatewardrobe", multiRoleAuthMiddleware("owner","CTO", "client"),notToUpdateIfStageCompleted(RequirementFormModel),  updateWardrobeSection);
-requirementRoutes.put("/:projectId/updatelivinghall", multiRoleAuthMiddleware("owner","CTO", "client"),notToUpdateIfStageCompleted(RequirementFormModel),  updateLivingHallSection);
+requirementRoutes.put("/:projectId/updatekitchen", multiRoleAuthMiddleware("owner","CTO",  "staff",  "client"),notToUpdateIfStageCompleted(RequirementFormModel),  updateKitchenSection);
+requirementRoutes.put("/:projectId/updatebedroom", multiRoleAuthMiddleware("owner","CTO",  "staff", "client"), notToUpdateIfStageCompleted(RequirementFormModel), updateBedroomSection);
+requirementRoutes.put("/:projectId/updatewardrobe", multiRoleAuthMiddleware("owner","CTO", "staff",  "client"),notToUpdateIfStageCompleted(RequirementFormModel),  updateWardrobeSection);
+requirementRoutes.put("/:projectId/updatelivinghall", multiRoleAuthMiddleware("owner","CTO", "staff",  "client"),notToUpdateIfStageCompleted(RequirementFormModel),  updateLivingHallSection);
 
 export default requirementRoutes
 

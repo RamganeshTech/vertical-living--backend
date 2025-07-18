@@ -15,6 +15,9 @@ import {
 
 export interface IShoeRackUnit extends ICommonUnit {
   unitType?: ShoeRackUnitType;
+  length?: string;
+  breadth?: string;
+  height?: string;
   capacity?: ShoeRackCapacity;
   doorType?: ShoeRackDoorType;
   carcassMaterial?: CarcassMaterial;
@@ -26,10 +29,17 @@ export interface IShoeRackUnit extends ICommonUnit {
   visibilityType?: ShoeRackVisibilityType;
   modularType?: ShoeRackModularType;
 
-  addOnFeatures?: AddOnFeatures[];
+  addOns?: AddOnFeatures[];
   placementArea?: PlacementArea[];
   installationType?: InstallationType;
-  // budgetRange?: BudgetRange;
+  // priceRange?: BudgetRange;
+
+
+  storageType?:string;
+  handleType?:string;
+  usagePurpose?:string;
+  edges?:string;
+  shoeCapacity?:string;
 }
 
 /** Mongoose Schema */
@@ -37,21 +47,31 @@ export interface IShoeRackUnit extends ICommonUnit {
 export const ShoeRackUnitSchema = new Schema<IShoeRackUnit>(
   {
     ...CommonUnitsSchema.obj,
-    unitType: { type: String, default:"",   },
-    capacity: { type: String, default:"",   },
-    doorType: { type: String, default:"",   },
-    carcassMaterial: { type: String, default:"",   },
-    shutterMaterial: { type: String, default:"",   },
-    finish: { type: String, default:"",   },
-    heightCategory: { type: String, default:"",   },
-    shoeTypesSupported: { type: [String], default:[]},
-    ventilationFeature: { type: String, default:"",   },
-    visibilityType: { type: String, default:"",   },
-    modularType: { type: String, default:"",   },
-    addOnFeatures: { type: [String], default:[] },
-    placementArea: { type: [String], default:[] },
-    installationType: { type: String, default:"",   },
-    // budgetRange: { type: String,  },
+    unitType: { type: String, default: "", },
+    length: { type: String, default: "", },
+    breadth: { type: String, default: "", },
+    height: { type: String, default: "", },
+    // capacity: { type: String, default: "", },
+    doorType: { type: String, default: "", },
+    carcassMaterial: { type: String, default: "", },
+    shutterMaterial: { type: String, default: "", },
+    finish: { type: String, default: "", },
+    heightCategory: { type: String, default: "", },
+    shoeTypesSupported: { type: [String], default: [] },
+    ventilationFeature: { type: String, default: "", },
+    visibilityType: { type: String, default: "", },
+    modularType: { type: String, default: "", },
+    addOns: { type: [String], default: [] },
+    placementArea: { type: [String], default: [] },
+    installationType: { type: String, default: "", },
+
+    storageType: { type: String, default: "" },
+    handleType: { type: String, default: "" },
+    usagePurpose: { type: String, default: "" },
+    edges: { type: String, default: "" },
+    shoeCapacity: { type: String, default: "" }, // OR map to capacity
+
+    // priceRange: { type: String,  },
   },
   { timestamps: true }
 );
