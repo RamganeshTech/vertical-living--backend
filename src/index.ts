@@ -52,6 +52,9 @@ import profileRoutes from './routers/Profile Role Routes/ProfileRole.routes';
 import preRequiretiesRoutes from './routers/PreRequireties Routes/preRequireties.routes';
 import utilAiRoutes from './routers/Util routes/util.routes';
 import modularUnitRoutes from './routers/Modular Unit routes/modularUnit.routes';
+import SelectedModularUnits from './routers/Modular Unit routes/SelectedModularUnit Routes/selectedModularUnit.routes';
+import stageSelectetionRoutes from './routers/Modular Unit routes/SelectionStage Routes/selectionStage.routes';
+import SelectedModularUnitRoutes from './routers/Modular Unit routes/SelectedModularUnit Routes/selectedModularUnit.routes';
 
 dotenv.config();
 
@@ -127,6 +130,8 @@ app.use('/api/prerequireties', preRequiretiesRoutes)
 
 // PREREQUIRETIES APIS
 app.use('/api/modularunit', modularUnitRoutes)
+app.use('/api/selectedmodularunits', SelectedModularUnitRoutes)
+app.use('/api/selectedstage', stageSelectetionRoutes)
 
 
 // STAGE APIS
