@@ -13,6 +13,7 @@ import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousS
 import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
 import { QualityCheckupModel } from "../../../models/Stage Models/QualityCheck Model/QualityCheck.model";
 import { notToUpdateIfStageCompleted } from "../../../middlewares/notToUpdateIfStageCompleted";
+import { checkIfStaffIsAssignedToStage } from "../../../middlewares/checkIfStaffIsAssignedToStage";
 
 
 const qualityCheckRoutes = Router();
@@ -24,6 +25,8 @@ qualityCheckRoutes.post(
   multiRoleAuthMiddleware("owner", "CTO", "staff"),
   checkPreviousStageCompleted(InstallationModel),
   notToUpdateIfStageCompleted(QualityCheckupModel),
+  checkIfStaffIsAssignedToStage(QualityCheckupModel),
+  
   imageUploadToS3.single("file"),
   createQualityCheckItem
 );
@@ -35,6 +38,8 @@ qualityCheckRoutes.put(
   multiRoleAuthMiddleware("owner", "CTO", "staff"),
   checkPreviousStageCompleted(InstallationModel),
   notToUpdateIfStageCompleted(QualityCheckupModel),
+  checkIfStaffIsAssignedToStage(QualityCheckupModel),
+
   imageUploadToS3.single("file"),
   editQualityCheckItem
 );
@@ -46,6 +51,8 @@ qualityCheckRoutes.delete(
   multiRoleAuthMiddleware("owner", "CTO", "staff"),
   checkPreviousStageCompleted(InstallationModel),
   notToUpdateIfStageCompleted(QualityCheckupModel),
+  checkIfStaffIsAssignedToStage(QualityCheckupModel),
+
 
   deleteQualityCheckItem
 );
@@ -73,7 +80,7 @@ qualityCheckRoutes.get(
 
 
   
-qualityCheckRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(InstallationModel), notToUpdateIfStageCompleted(QualityCheckupModel),setQualityCheckStageDeadline)
-qualityCheckRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkPreviousStageCompleted(InstallationModel),notToUpdateIfStageCompleted(QualityCheckupModel), qualityCheckCompletionStatus)
+qualityCheckRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(InstallationModel), notToUpdateIfStageCompleted(QualityCheckupModel), checkIfStaffIsAssignedToStage(QualityCheckupModel), setQualityCheckStageDeadline)
+qualityCheckRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkPreviousStageCompleted(InstallationModel),notToUpdateIfStageCompleted(QualityCheckupModel), checkIfStaffIsAssignedToStage(QualityCheckupModel),  qualityCheckCompletionStatus)
 
 export default qualityCheckRoutes;

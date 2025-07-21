@@ -16,11 +16,11 @@ const getUsers = async (req: Request, res: Response): Promise<any> => {
         }
 
         const cacheKey = `getusers:${role}:${organizationId}`;
-await redisClient.del(cacheKey);
+// await redisClient.del(cacheKey);
         // Try Redis cache first
         const cached = await redisClient.get(cacheKey);
         if (cached) {
-            console.log("Using cached data");
+            // console.log("Using cached data");
             return res.status(200).json({ data: JSON.parse(cached), ok: true });
         }
 
@@ -55,7 +55,7 @@ await redisClient.del(cacheKey);
         // Find users with the given organizationId
         const users = await Model.find({ organizationId: organizationId }).select(projection);
 
-        console.log("users",users)
+        // console.log("users",users)
         // Cache the result for 5 minutes
         await redisClient.set(cacheKey, JSON.stringify(users), {EX:60 * 10});
 

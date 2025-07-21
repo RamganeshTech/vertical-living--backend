@@ -7,6 +7,7 @@ import redisClient from "../../../config/redisClient";
 import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
+import { Model } from "mongoose";
 
 
 export const syncTechnicalConsultantStage = async (projectId: string) => {
@@ -39,8 +40,8 @@ export const syncTechnicalConsultantStage = async (projectId: string) => {
   }
 
   await techConsultant.save()
-   const redisKey = `stage:TechnicalConsultationModel:${projectId}`;
-    await redisClient.del(redisKey);
+  const redisKey = `stage:TechnicalConsultationModel:${projectId}`;
+  await redisClient.del(redisKey);
 }
 
 const addConsultationMessage = async (req: Request, res: Response): Promise<any> => {
@@ -77,9 +78,6 @@ const addConsultationMessage = async (req: Request, res: Response): Promise<any>
       senderModel = "WorkerModel"
     }
 
-    console.log("hasMessage", message)
-    console.log("attachments", attachments)
-
     // ✅ Construct new message
     const newMessage = {
       sender,
@@ -89,7 +87,7 @@ const addConsultationMessage = async (req: Request, res: Response): Promise<any>
       section,
       attachments,
       createdAt: new Date(),
-      isEdited:false
+      isEdited: false
     };
 
     // ✅ Add to existing or create new doc
@@ -138,6 +136,7 @@ const getConsultationMessages = async (req: Request, res: Response): Promise<any
 
     const redisMainKey = `stage:TechnicalConsultationModel:${projectId}`
     const redisCachedData = await redisClient.get(redisMainKey)
+    await redisClient.del(redisMainKey)
 
 
     if (redisCachedData) {
@@ -146,18 +145,27 @@ const getConsultationMessages = async (req: Request, res: Response): Promise<any
 
 
     const doc = await TechnicalConsultationModel.findOne({ projectId })
-      .populate("messages.sender")
+    .populate("messages.sender")
+      // .populate({
+      //   path: "messages",
+      //   populate: {
+      //     path: "sender",
+      //     strictPopulate: false // important for refPath
+      //   }
+      // });
 
+      // console.log("doc", doc)
     if (!doc) {
       return res.status(404).json({ ok: false, message: "No confirmation found on last stage" });
     }
 
+    // console.log("doc", doc)
     // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
 
     await populateWithAssignedToField({ stageModel: TechnicalConsultationModel, projectId, dataToCache: doc })
 
 
-    return res.status(200).json({ ok: true, data: doc });
+    return res.status(200).json({ ok: true, data: doc, message: "fetch successfully" });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, message: "Server error while fetching messages." });
@@ -248,8 +256,24 @@ const editConsultationMessage = async (req: Request, res: Response): Promise<any
       return res.status(404).json({ ok: false, message: "Not authorized to edit this message." });
     }
 
+    let senderModel;
+    if (senderRole === "owner") {
+      senderModel = "UserModel"
+    }
+    else if (senderRole === "CTO") {
+      senderModel = "CTOModel"
+    }
+    else if (senderRole === "staff") {
+      senderModel = "StaffModel"
+    }
+    else if (senderRole === "worker") {
+      senderModel = "WorkerModel"
+    }
+
+
     msg.message = message.trim();
     msg.senderRole = senderRole
+    msg.senderModel = senderModel!;
     msg.isEdited = true
     msg.createdAt = new Date()
     await consultation.save();
@@ -301,9 +325,9 @@ const tehnicalConsultantCompletionStatus = async (req: Request, res: Response): 
     await populateWithAssignedToField({ stageModel: TechnicalConsultationModel, projectId, dataToCache: populatedData })
 
 
-     res.status(200).json({ ok: true, message: "Technical consultant marked as completed", data: techDoc });
-           updateProjectCompletionPercentage(projectId);
-     
+    res.status(200).json({ ok: true, message: "Technical consultant marked as completed", data: techDoc });
+    updateProjectCompletionPercentage(projectId);
+
   } catch (err) {
     console.error("Technical consultant Complete Error:", err);
     return res.status(500).json({ message: "Internal server error", ok: false });

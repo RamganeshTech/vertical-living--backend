@@ -7,7 +7,7 @@ import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousS
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
 import { notToUpdateIfStageCompleted } from "../../../middlewares/notToUpdateIfStageCompleted";
 import { SampleDesignModel } from "../../../models/Stage Models/sampleDesing model/sampleDesign.model";
-// import { deleteKitchenFile, deleteLivingHallFile, deleteWardrobeFile, getKitchenDesign, getLivingHallFiles, getWardrobeDesign, uploadKitchenFiles, uploadLivingHallFiles, uploadWardrobeFiles } from "../../../controllers/stage controllers/sampledesign contorllers/sampledesign.controller";
+import { checkIfStaffIsAssignedToStage } from './../../../middlewares/checkIfStaffIsAssignedToStage';
 
 
 const sampleDesignRoutes = express.Router();
@@ -16,21 +16,21 @@ const sampleDesignRoutes = express.Router();
 
 
 // Add a new room
-sampleDesignRoutes.post("/:projectId/rooms", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel),  notToUpdateIfStageCompleted(SampleDesignModel),addRoom);
+sampleDesignRoutes.post("/:projectId/rooms", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel),  notToUpdateIfStageCompleted(SampleDesignModel), checkIfStaffIsAssignedToStage(SampleDesignModel), addRoom);
 
 // Upload files to a dynamic room
-sampleDesignRoutes.post("/:projectId/rooms/:roomName/upload", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel), notToUpdateIfStageCompleted(SampleDesignModel), imageUploadToS3.array("files"), processUploadFiles, uploadFilesToRoom);
+sampleDesignRoutes.post("/:projectId/rooms/:roomName/upload", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel), notToUpdateIfStageCompleted(SampleDesignModel), checkIfStaffIsAssignedToStage(SampleDesignModel), imageUploadToS3.array("files"), processUploadFiles, uploadFilesToRoom);
 
 // Get files from a room
 sampleDesignRoutes.get("/:projectId/rooms", multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(SiteMeasurementModel), getFilesFromRoom);
 
 // Delete file by index
-sampleDesignRoutes.delete("/:projectId/rooms/:roomName/delete/:fileIndex", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel), notToUpdateIfStageCompleted(SampleDesignModel), deleteFileFromRoom);
-sampleDesignRoutes.delete("/:projectId/:roomId/deleteroom", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel),  notToUpdateIfStageCompleted(SampleDesignModel),deleteRoom);
+sampleDesignRoutes.delete("/:projectId/rooms/:roomName/delete/:fileIndex", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel), notToUpdateIfStageCompleted(SampleDesignModel), checkIfStaffIsAssignedToStage(SampleDesignModel), deleteFileFromRoom);
+sampleDesignRoutes.delete("/:projectId/:roomId/deleteroom", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel),  notToUpdateIfStageCompleted(SampleDesignModel), checkIfStaffIsAssignedToStage(SampleDesignModel),deleteRoom);
 
 
-sampleDesignRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel), notToUpdateIfStageCompleted(SampleDesignModel), setSampleDesignStageDeadline)
-sampleDesignRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel),  notToUpdateIfStageCompleted(SampleDesignModel),sampleDesignCompletionStatus)
+sampleDesignRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel), notToUpdateIfStageCompleted(SampleDesignModel), checkIfStaffIsAssignedToStage(SampleDesignModel), setSampleDesignStageDeadline)
+sampleDesignRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel),  notToUpdateIfStageCompleted(SampleDesignModel),checkIfStaffIsAssignedToStage(SampleDesignModel), sampleDesignCompletionStatus)
 
 
 export default sampleDesignRoutes;

@@ -26,9 +26,18 @@ export const notToUpdateIfStageCompleted = (currentStage: any): any => {
             // console.log("gettin d", cachedData)
 
             if (cachedData) {
+
+                const parsed = JSON.parse(cachedData);
+
                 // console.log(JSON.parse(cachedData))
-                if (JSON.parse(cachedData)?.status !== "completed") {
-                    return next()
+                if (parsed?.status !== "completed") {
+                    return next();
+                }
+                if (parsed?.status === "completed") {
+                    return res.status(400).json({
+                        ok: false,
+                        message: "Cannot update: The Current stage is already completed. Please reset the stage to make changes.",
+                    });
                 }
             }
         }
@@ -37,6 +46,13 @@ export const notToUpdateIfStageCompleted = (currentStage: any): any => {
         const doc = await currentStage.findOne({ projectId });
 
         if (!doc || doc?.status === "completed") {
+
+
+
+            if (currentStage.modelName !== "CostEstimation" && currentStage.modelName !== "PaymentConfirmationModel") {
+                await redisClient.set(redisKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 });
+            }
+
             return res.status(400).json({
                 ok: false,
                 message:
@@ -44,11 +60,10 @@ export const notToUpdateIfStageCompleted = (currentStage: any): any => {
             });
         }
 
-
-        // Store in Redis for next time (e.g. 15 min TTL)
-       if(currentStage.modelName !== "CostEstimation" || currentStage.modelName !== "PaymentConfirmationModel"){
-         await redisClient.set(redisKey, JSON.stringify(doc.toObject()), { EX: 60 * 15 });
-       }
+        if (currentStage.modelName !== "CostEstimation" && currentStage.modelName !== "PaymentConfirmationModel") {
+            await redisClient.set(redisKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 });
+        }
         next();
+
     };
 };

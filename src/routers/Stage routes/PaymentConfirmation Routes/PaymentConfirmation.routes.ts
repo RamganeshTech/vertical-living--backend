@@ -10,6 +10,7 @@ import { getPaymentSchedule, updateClientApprovalStatus, updateClientNotes, upda
 import { createPaymentConfirmationOrder, getPaymentTransaction, verifyPaymentConfirmation } from "../../../controllers/stage controllers/PaymentConfirmation controllers/Payment Transaction/paymentTransaction.controller";
 import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
 import { notToUpdateIfStageCompleted } from "../../../middlewares/notToUpdateIfStageCompleted";
+import { checkIfStaffIsAssignedToStage } from "../../../middlewares/checkIfStaffIsAssignedToStage";
 
 // import { createPaymentConfirmationOrder, getPaymentTransaction, verifyPaymentConfirmation } from "../../../controllers/stage controllers/PaymentConfirmation controllers/Payment Transaction/paymentTransaction.controller";
 
@@ -18,10 +19,10 @@ const paymentConsentRoutes = express.Router();
 paymentConsentRoutes.get("/getpaymentconfirmation/:projectId", multiRoleAuthMiddleware("CTO", "owner", "staff", "client"), checkPreviousStageCompleted(CostEstimationModel), getPaymentConfirmation);
 
 // Example: PUT /api/payment/toggle-consent/:projectId
-paymentConsentRoutes.put("/toggleconsent/:projectId", multiRoleAuthMiddleware("CTO", "owner", "staff"),  checkPreviousStageCompleted(CostEstimationModel),  notToUpdateIfStageCompleted(PaymentConfirmationModel), toggleConsentRequired);
+paymentConsentRoutes.put("/toggleconsent/:projectId", multiRoleAuthMiddleware("CTO", "owner", "staff"),  checkPreviousStageCompleted(CostEstimationModel),  notToUpdateIfStageCompleted(PaymentConfirmationModel),  checkIfStaffIsAssignedToStage(PaymentConfirmationModel), toggleConsentRequired);
 
 // step 1
-paymentConsentRoutes.post("/generatepayementconsentlink/:projectId", multiRoleAuthMiddleware("CTO", "owner", "staff",), checkPreviousStageCompleted(CostEstimationModel), notToUpdateIfStageCompleted(PaymentConfirmationModel), generateConsentLink);
+paymentConsentRoutes.post("/generatepayementconsentlink/:projectId", multiRoleAuthMiddleware("CTO", "owner", "staff",), checkPreviousStageCompleted(CostEstimationModel), notToUpdateIfStageCompleted(PaymentConfirmationModel), checkIfStaffIsAssignedToStage(PaymentConfirmationModel), generateConsentLink);
 paymentConsentRoutes.post("/acceptconsent/:projectId/:token", multiRoleAuthMiddleware("client"), checkPreviousStageCompleted(CostEstimationModel), notToUpdateIfStageCompleted(PaymentConfirmationModel), acceptClientConsent);
 
 // step2
@@ -31,7 +32,7 @@ paymentConsentRoutes.get("/getschedule/:projectId",multiRoleAuthMiddleware("CTO"
 // Client approval status
 paymentConsentRoutes.put("/clientapprovalstatus/:projectId",multiRoleAuthMiddleware("client"),checkPreviousStageCompleted(CostEstimationModel),notToUpdateIfStageCompleted(PaymentConfirmationModel), updateClientApprovalStatus);
 // Due Date
-paymentConsentRoutes.put("/dueDate/:projectId",multiRoleAuthMiddleware("CTO", "owner", "staff",),checkPreviousStageCompleted(CostEstimationModel),notToUpdateIfStageCompleted(PaymentConfirmationModel), updateDueDate);
+paymentConsentRoutes.put("/dueDate/:projectId",multiRoleAuthMiddleware("CTO", "owner", "staff",),checkPreviousStageCompleted(CostEstimationModel),notToUpdateIfStageCompleted(PaymentConfirmationModel),  checkIfStaffIsAssignedToStage(PaymentConfirmationModel),updateDueDate);
 // Client notes
 paymentConsentRoutes.put("/clientnotes/:projectId",multiRoleAuthMiddleware("client"), checkPreviousStageCompleted(CostEstimationModel),notToUpdateIfStageCompleted(PaymentConfirmationModel), updateClientNotes);
 // MD approval status
@@ -49,7 +50,7 @@ paymentConsentRoutes.get("/gettransaction/:projectId", multiRoleAuthMiddleware("
 
 
 // COMMON ROUTES
-paymentConsentRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(CostEstimationModel), notToUpdateIfStageCompleted(PaymentConfirmationModel), setPayementConfirmationStageDeadline)
-paymentConsentRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(CostEstimationModel), notToUpdateIfStageCompleted(PaymentConfirmationModel), paymentConfirmationCompletionStatus)
+paymentConsentRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(CostEstimationModel), notToUpdateIfStageCompleted(PaymentConfirmationModel), checkIfStaffIsAssignedToStage(PaymentConfirmationModel), setPayementConfirmationStageDeadline)
+paymentConsentRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(CostEstimationModel), notToUpdateIfStageCompleted(PaymentConfirmationModel), checkIfStaffIsAssignedToStage(PaymentConfirmationModel), paymentConfirmationCompletionStatus)
 
 export default paymentConsentRoutes;

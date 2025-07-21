@@ -13,18 +13,19 @@ import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousS
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
 import InstallationModel from "../../../models/Stage Models/installation model/Installation.model";
 import { notToUpdateIfStageCompleted } from "../../../middlewares/notToUpdateIfStageCompleted";
+import { checkIfStaffIsAssignedToStage } from "../../../middlewares/checkIfStaffIsAssignedToStage";
 
 const installationRoutes = Router();
 
-installationRoutes.post("/:projectId/:roomName/item/create", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"),   checkPreviousStageCompleted(WorkMainStageScheduleModel),notToUpdateIfStageCompleted(InstallationModel), imageUploadToS3.single("file"), processUploadFiles, createInstallationItem);
+installationRoutes.post("/:projectId/:roomName/item/create", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"),   checkPreviousStageCompleted(WorkMainStageScheduleModel),notToUpdateIfStageCompleted(InstallationModel), checkIfStaffIsAssignedToStage(InstallationModel), imageUploadToS3.single("file"), processUploadFiles, createInstallationItem);
 
-installationRoutes.put("/:projectId/:roomName/item/edit",multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"), checkPreviousStageCompleted(WorkMainStageScheduleModel),notToUpdateIfStageCompleted(InstallationModel), imageUploadToS3.single("file"), processUploadFiles, editInstallationItem);
-installationRoutes.delete("/:projectId/item/delete", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"), checkPreviousStageCompleted(WorkMainStageScheduleModel),notToUpdateIfStageCompleted(InstallationModel),deleteInstallationItem);
+installationRoutes.put("/:projectId/:roomName/item/edit",multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"), checkPreviousStageCompleted(WorkMainStageScheduleModel),notToUpdateIfStageCompleted(InstallationModel),  checkIfStaffIsAssignedToStage(InstallationModel),imageUploadToS3.single("file"), processUploadFiles, editInstallationItem);
+installationRoutes.delete("/:projectId/item/delete", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"), checkPreviousStageCompleted(WorkMainStageScheduleModel),notToUpdateIfStageCompleted(InstallationModel), checkIfStaffIsAssignedToStage(InstallationModel),deleteInstallationItem);
 installationRoutes.get("/:projectId/getalldetail",multiRoleAuthMiddleware("CTO", "owner", "staff", "worker", "client"), checkPreviousStageCompleted(WorkMainStageScheduleModel) ,getInstallationDetails);
 installationRoutes.get("/:projectId/getroomdetail/:roomName", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker", "client"), checkPreviousStageCompleted(WorkMainStageScheduleModel), getInstallationRoomDetails);
 
 
-installationRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkPreviousStageCompleted(WorkMainStageScheduleModel),notToUpdateIfStageCompleted(InstallationModel),setInstallationStageDeadline)
-installationRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkPreviousStageCompleted(WorkMainStageScheduleModel),notToUpdateIfStageCompleted(InstallationModel),installationCompletionStatus)
+installationRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkPreviousStageCompleted(WorkMainStageScheduleModel),notToUpdateIfStageCompleted(InstallationModel), checkIfStaffIsAssignedToStage(InstallationModel),setInstallationStageDeadline)
+installationRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkPreviousStageCompleted(WorkMainStageScheduleModel),notToUpdateIfStageCompleted(InstallationModel), checkIfStaffIsAssignedToStage(InstallationModel),installationCompletionStatus)
 
 export default installationRoutes;

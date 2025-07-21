@@ -11,6 +11,7 @@ import redisClient from "../../../config/redisClient";
 import { json } from "stream/consumers";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
+import { RoleBasedRequest } from "../../../types/types";
 
 
 export const initializeMaterialSelection = async (projectId: string) => {
@@ -90,7 +91,7 @@ const getMaterialRoomConfirmationByProject = async (req: Request, res: Response)
 
 const getSinglePredefinedRoom = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { projectId, roomId } = req.params;
+    const { projectId, roomId, roomType } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(roomId)) {
       return res.status(400).json({ ok: false, message: "Invalid room ID." });
@@ -111,30 +112,35 @@ const getSinglePredefinedRoom = async (req: Request, res: Response): Promise<any
       return res.status(404).json({ ok: false, message: "Material Room Confirmation not found." });
     }
 
-    // Check in predefined rooms
-    const predefinedRoom = data.rooms.find(r => (r as any)._id?.toString() === roomId);
+    if (roomType === "customRoom") {
+      // Check in custom rooms
+      const customRoom = data.customRooms.find(r => (r as any)._id?.toString() === roomId);
 
-    if (predefinedRoom) {
-      await redisClient.set(redisRoomKey, JSON.stringify(predefinedRoom), { EX: 60 * 10 })
-      return res.status(200).json({
-        ok: true,
-        message: "fetched room",
-        data: predefinedRoom
-      });
+
+      if (customRoom) {
+        await redisClient.set(redisRoomKey, JSON.stringify(customRoom), { EX: 60 * 10 })
+        return res.status(200).json({
+          ok: true,
+          message: "fetched room",
+          data: customRoom
+        });
+      }
+    }
+    else {
+      // Check in predefined rooms
+      const predefinedRoom = data.rooms.find(r => (r as any)._id?.toString() === roomId);
+
+      if (predefinedRoom) {
+        await redisClient.set(redisRoomKey, JSON.stringify(predefinedRoom), { EX: 60 * 10 })
+        return res.status(200).json({
+          ok: true,
+          message: "fetched room",
+          data: predefinedRoom
+        });
+      }
+
     }
 
-    // Check in custom rooms
-    const customRoom = data.customRooms.find(r => (r as any)._id?.toString() === roomId);
-
-
-    if (customRoom) {
-      await redisClient.set(redisRoomKey, JSON.stringify(customRoom), { EX: 60 * 10 })
-      return res.status(200).json({
-        ok: true,
-        message: "fetched room",
-        data: customRoom
-      });
-    }
 
     return res.status(404).json({ message: "Room not found.", ok: false });
 
@@ -197,6 +203,9 @@ const updatePredefinedRoomField = async (req: Request, res: Response): Promise<a
       });
     }
 
+
+    console.log("fieldKey", fieldKey)
+    console.log("updated data",  quantity, unit, remarks )
     // 2. Check Custom Rooms
     const customRoom = doc.customRooms.find((r: any) => r._id.toString() === roomId);
     if (customRoom) {
@@ -216,7 +225,7 @@ const updatePredefinedRoomField = async (req: Request, res: Response): Promise<a
 
       const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
       // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
-      updatedRoom = predefinedRoom;
+      updatedRoom = customRoom;
       // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
       await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: doc })
       await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
@@ -293,7 +302,48 @@ const createCustomRoom = async (req: Request, res: Response): Promise<any> => {
   }
 };
 
+const deleteRoom = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+    const { projectId, roomId } = req.params;
 
+
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({ ok: false, message: "Invalid projectId." });
+    }
+
+    const updated = await MaterialRoomConfirmationModel.findOneAndUpdate(
+      { projectId },
+      {
+        $pull: {
+          rooms: { _id: roomId },
+          customRooms: { _id: roomId },
+        },
+      },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ ok: false, message: "Material selection document not found." });
+    }
+
+
+    // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+    // await redisClient.set(redisMainKey, JSON.stringify(materialSelection.toObject()), { EX: 60 * 10 })
+
+    await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: updated })
+
+
+    return res.status(200).json({
+      ok: true,
+      message: "Room deleted successfully.",
+      data: updated,
+    });
+
+  } catch (error) {
+    console.error("Error deleting room:", error);
+    return res.status(500).json({ ok: false, message: "Server error" });
+  }
+};
 
 const addItemToCustomRoom = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -578,6 +628,7 @@ export {
   getSinglePredefinedRoom,
   updatePredefinedRoomField,
   createCustomRoom,
+  deleteRoom,
   addItemToCustomRoom,
   deleteCustomRoomField,
 

@@ -90,8 +90,45 @@ const generateCostEstimationFromMaterialSelection = async (
 
     }
     else {
-        existing.timer = timer
-        await existing.save()
+        // Update timer
+        existing.timer = timer;
+
+        // Get current valid room names from materialDoc
+        const validRoomNames = new Set([
+            ...(materialDoc.rooms || []).map(r => r.name),
+            ...(materialDoc.customRooms || []).map(r => r.name)
+        ]);
+
+        // Filter out deleted rooms from materialEstimation
+        existing.materialEstimation = existing.materialEstimation.filter((estimation) =>
+            validRoomNames.has(estimation.name)
+        );
+
+
+            const existingRoomNames = new Set(existing.materialEstimation.map((r) => r.name));
+
+         for (const customRoom of materialDoc.customRooms || []) {
+        if (!existingRoomNames.has(customRoom.name)) {
+            const materials = customRoom.items.map((item) => ({
+                key: item.itemKey,
+                areaSqFt: null,
+                predefinedRate: null,
+                overriddenRate: null,
+                finalRate: null,
+                totalCost: null,
+            }));
+
+            existing.materialEstimation.push({
+                name: customRoom.name,
+                materials,
+                totalCost: 0,
+                uploads: [],
+            });
+        }
+    }
+
+        await existing.save();
+
     }
 };
 
@@ -305,7 +342,7 @@ const addLabourEstimation = async (req: Request, res: Response): Promise<any> =>
         if (!doc) return res.status(404).json({ ok: false, message: "Project not found" });
 
 
-        const weeklySalary = perdaySalary ? (perdaySalary * noOfPeople) * 7   : 0;
+        const weeklySalary = perdaySalary ? (perdaySalary * noOfPeople) * 7 : 0;
         const totalCost = daysPlanned ? (perdaySalary * daysPlanned) * noOfPeople : 0;
 
 

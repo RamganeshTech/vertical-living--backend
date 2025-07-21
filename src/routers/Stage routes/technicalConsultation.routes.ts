@@ -7,29 +7,29 @@ import { SampleDesignModel } from '../../models/Stage Models/sampleDesing model/
 import { checkPreviousStageCompleted } from '../../middlewares/checkPreviousStageMiddleware';
 import { imageUploadToS3, processUploadFiles } from '../../utils/s3Uploads/s3upload';
 import { notToUpdateIfStageCompleted } from '../../middlewares/notToUpdateIfStageCompleted';
+import { checkIfStaffIsAssignedToStage } from '../../middlewares/checkIfStaffIsAssignedToStage';
 
 
 const technicalConsultRoutes = express.Router()
 
 // 4. TECHNICAL CONSULTATION routes
 
-technicalConsultRoutes.post("/createmessage/:projectId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel), notToUpdateIfStageCompleted(TechnicalConsultationModel), imageUploadToS3.array("attachments"), processUploadFiles, addConsultationMessage); // field name used in FormData
+technicalConsultRoutes.post("/createmessage/:projectId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel), notToUpdateIfStageCompleted(TechnicalConsultationModel), checkIfStaffIsAssignedToStage(TechnicalConsultationModel),  imageUploadToS3.array("attachments"), processUploadFiles, addConsultationMessage); // field name used in FormData
 
 // ✅ GET all messages for a project
 technicalConsultRoutes.get("/getmessages/:projectId" ,multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel), getConsultationMessages);
 
 // ✅ DELETE a specific message
-technicalConsultRoutes.delete("/deletemessage/:projectId/:messageId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel),  notToUpdateIfStageCompleted(TechnicalConsultationModel), deleteConsultationMessage);
+technicalConsultRoutes.delete("/deletemessage/:projectId/:messageId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel),  notToUpdateIfStageCompleted(TechnicalConsultationModel), checkIfStaffIsAssignedToStage(TechnicalConsultationModel), deleteConsultationMessage);
 
 // EDIT a sepecific message
-technicalConsultRoutes.put("/editmessage/:projectId/:messageId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel),  notToUpdateIfStageCompleted(TechnicalConsultationModel), editConsultationMessage);
+technicalConsultRoutes.put("/editmessage/:projectId/:messageId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel),  notToUpdateIfStageCompleted(TechnicalConsultationModel), checkIfStaffIsAssignedToStage(TechnicalConsultationModel), editConsultationMessage);
 
 
-technicalConsultRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(SampleDesignModel),  notToUpdateIfStageCompleted(TechnicalConsultationModel), tehnicalConsultantCompletionStatus)
-technicalConsultRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(SampleDesignModel), notToUpdateIfStageCompleted(TechnicalConsultationModel),  setTechnicalConsultantStageDeadline)
+technicalConsultRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(SampleDesignModel),  notToUpdateIfStageCompleted(TechnicalConsultationModel), checkIfStaffIsAssignedToStage(TechnicalConsultationModel), tehnicalConsultantCompletionStatus)
+technicalConsultRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(SampleDesignModel), notToUpdateIfStageCompleted(TechnicalConsultationModel), checkIfStaffIsAssignedToStage(TechnicalConsultationModel),  setTechnicalConsultantStageDeadline)
 
 
-// technicalConsultRoutes.post( "/upload/multiple/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), imageUploadToS3.array("file"), uploadGenericController(TechnicalConsultationModel))
 
 export default technicalConsultRoutes
 

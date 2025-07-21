@@ -82,7 +82,7 @@ const assignStageStaffByName = async (req: Request, res: Response): Promise<any>
     const populatedData = await updated.populate(assignedTo, selectedFields)
     
     const redisMainKey = `stage:${stageName}:${projectId}`
-    console.log("key name", redisMainKey)
+    // console.log("key name", redisMainKey)
     await redisClient.set(redisMainKey, JSON.stringify(populatedData.toObject()), { EX: 60 * 10 })
 
     return res.status(200).json({ message: "Assigned successfully", data: updated, ok: true });

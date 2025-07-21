@@ -9,25 +9,26 @@ import { RequirementFormModel } from '../../../models/Stage Models/requirment mo
 import { checkPreviousStageCompleted } from '../../../middlewares/checkPreviousStageMiddleware';
 import { imageUploadToS3, processUploadFiles } from '../../../utils/s3Uploads/s3upload';
 import { notToUpdateIfStageCompleted } from '../../../middlewares/notToUpdateIfStageCompleted';
+import { checkIfStaffIsAssignedToStage } from '../../../middlewares/checkIfStaffIsAssignedToStage';
 
 const siteMeasurementRoutes = express.Router()
 
 // 2 Site requirements routes
 
-siteMeasurementRoutes.post('/createmeasurement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), createSiteMeasurement)
-siteMeasurementRoutes.post('/createroom/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), createRoom)
+siteMeasurementRoutes.post('/createmeasurement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), checkIfStaffIsAssignedToStage(SiteMeasurementModel), createSiteMeasurement)
+siteMeasurementRoutes.post('/createroom/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), checkIfStaffIsAssignedToStage(SiteMeasurementModel),  createRoom)
 siteMeasurementRoutes.get('/getmeasurement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), getTheSiteMeasurements)
 
-siteMeasurementRoutes.put('/updatecommonmeasurement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), updateCommonSiteMeasurements)
-siteMeasurementRoutes.put('/updateroommeasurement/:projectId/:roomId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), updateRoomSiteMeasurements)
-siteMeasurementRoutes.patch('/deleteroom/:projectId/:roomId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), DeleteRooms)
-siteMeasurementRoutes.put('/deletesitemeasurement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), deleteSiteMeasurement)
+siteMeasurementRoutes.put('/updatecommonmeasurement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), checkIfStaffIsAssignedToStage(SiteMeasurementModel),  updateCommonSiteMeasurements)
+siteMeasurementRoutes.put('/updateroommeasurement/:projectId/:roomId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), checkIfStaffIsAssignedToStage(SiteMeasurementModel),  updateRoomSiteMeasurements)
+siteMeasurementRoutes.patch('/deleteroom/:projectId/:roomId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), checkIfStaffIsAssignedToStage(SiteMeasurementModel),  DeleteRooms)
+siteMeasurementRoutes.put('/deletesitemeasurement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), checkIfStaffIsAssignedToStage(SiteMeasurementModel),  deleteSiteMeasurement)
 
-siteMeasurementRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), setSiteMeasurementStageDeadline)
-siteMeasurementRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), siteMeasurementCompletionStatus)
+siteMeasurementRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), checkIfStaffIsAssignedToStage(SiteMeasurementModel),  setSiteMeasurementStageDeadline)
+siteMeasurementRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel),  checkIfStaffIsAssignedToStage(SiteMeasurementModel), siteMeasurementCompletionStatus)
 
-siteMeasurementRoutes.patch("/:projectId/deleteuploadedfile/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), deleteSiteMeasurementFile);
-siteMeasurementRoutes.post("/upload/multiple/:projectId/:formId", multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), imageUploadToS3.array("file"), processUploadFiles, uploadGenericController(SiteMeasurementModel))
+siteMeasurementRoutes.patch("/:projectId/deleteuploadedfile/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel), checkIfStaffIsAssignedToStage(SiteMeasurementModel),  deleteSiteMeasurementFile);
+siteMeasurementRoutes.post("/upload/multiple/:projectId/:formId", multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(RequirementFormModel), notToUpdateIfStageCompleted(SiteMeasurementModel),  checkIfStaffIsAssignedToStage(SiteMeasurementModel), imageUploadToS3.array("file"), processUploadFiles, uploadGenericController(SiteMeasurementModel))
 
 export default siteMeasurementRoutes
 
