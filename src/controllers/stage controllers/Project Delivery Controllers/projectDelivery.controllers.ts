@@ -4,6 +4,8 @@ import redisClient from "../../../config/redisClient";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
+import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
+import { DocUpload } from "../../../types/types";
 
 export const syncProjectDelivery = async (
     projectId: string
@@ -292,7 +294,22 @@ const projectDeliveryCompletionStatus = async (req: Request, res: Response): Pro
         form.status = "completed";
         form.isEditable = false
         timerFunctionlity(form, "completedAt")
+
         await form.save();
+
+
+        const uploadedFiles:DocUpload[] = (form.uploads || []).map((upload:any) => ({
+            type: upload.type,
+            url: upload.url,
+            originalName: upload.originalName,
+        }));
+
+        await addOrUpdateStageDocumentation({
+            projectId,
+            stageNumber: "14", // Project Delivery Stage Number
+            description: "Project delivery documentation generated",
+            uploadedFiles,
+        });
 
         // const cacheKey = `stage:ProjectDeliveryModel:${projectId}`;
 

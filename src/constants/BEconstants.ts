@@ -280,3 +280,31 @@ export const allowedFieldsModularUnit: Record<string, string[]> = {
     "priceRange",
   ],
 };
+
+
+
+
+
+
+
+
+// FOR DOCUMENTATION
+
+// constants/stageMapping.ts
+
+export const STAGE_KEY_DOCMENTION_MAP: Record<string, string> = {
+  "1": "Requirement Stage",
+  "2": "Site Mesasurement",
+  "3": "Sample Design",
+  "4": "TECHNICAL CONSULTATION",
+  "5": "MATERIAL_SELECTION",
+  "6": "COST_ESTIMATION",
+  "7": "PAYMENT_CONFIRMATION",
+  "8": "ORDERING_MATERIAL",
+  "9": "Material Arrival",
+  "10": "Worker Schedule",
+  "11": "Installation ",
+  "12": "Quality Check",
+  "13": "Cleaning And Sanitization",
+  "14": "Project Delivery",
+};

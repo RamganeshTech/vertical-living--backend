@@ -15,6 +15,8 @@ import { syncSiteMeasurement } from "../site measurement controller/siteMeasurem
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { syncAdminWall, syncWorkerWall } from "../../Wall Painting controllers/adminWallPainting.controller";
 import { syncSelectStage } from "../../Modular Units Controllers/StageSelection Controller/stageSelection.controller";
+import { addOrUpdateStageDocumentation, syncDocumentationModel } from "../../documentation controller/documentation.controller";
+import { DocUpload } from "../../../types/types";
 
 
 
@@ -413,6 +415,13 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
 
     if (form.status === "completed") {
       await syncSiteMeasurement(projectId)
+      const uploadedFiles:DocUpload[] = form.uploads.map((upload:any)=> ({type:upload.type, originalName:upload.originalName, url:upload.url}))
+      await addOrUpdateStageDocumentation({
+        projectId,
+        stageNumber: "1", // ✅ Put correct stage number here
+        description: "Requirement Form marked as completed",
+        uploadedFiles, // optionally add files here
+      })
     }
 
     // const redisKeyMain = `stage:RequirementFormModel:${projectId}`

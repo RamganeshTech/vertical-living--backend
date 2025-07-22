@@ -52,35 +52,11 @@ import profileRoutes from './routers/Profile Role Routes/ProfileRole.routes';
 import preRequiretiesRoutes from './routers/PreRequireties Routes/preRequireties.routes';
 import utilAiRoutes from './routers/Util routes/util.routes';
 import modularUnitRoutes from './routers/Modular Unit routes/modularUnit.routes';
-import SelectedModularUnits from './routers/Modular Unit routes/SelectedModularUnit Routes/selectedModularUnit.routes';
 import stageSelectetionRoutes from './routers/Modular Unit routes/SelectionStage Routes/selectionStage.routes';
 import SelectedModularUnitRoutes from './routers/Modular Unit routes/SelectedModularUnit Routes/selectedModularUnit.routes';
+import documentaitonRoutes from './routers/Documentation Routes/documentation.routes';
 
 dotenv.config();
-
-// (async () => {
-//   try {
-//     const fileName = "Screenshot (11).png";
-
-//     // Absolute or relative path to your image
-//     const filePath = path.join(__dirname, fileName);
-
-//     console.log("Uploading:", filePath);
-
-//     const result = await s3.upload({
-//       Bucket: process.env.AWS_S3_BUCKET!,
-//       Key: `test-upload/${Date.now()}-${fileName}`,
-//       Body: fs.createReadStream(filePath),
-//       // ACL: "public-read",
-//       ContentType: "image/png",
-//     }).promise();
-
-//     console.log("✅ Upload success!");
-//     console.log("S3 URL:", result.Location);
-//   } catch (err) {
-//     console.error("❌ Upload failed:", err);
-//   }
-// })();
 
 const app = express()
 
@@ -128,11 +104,13 @@ app.use('/api/starttimer', stageTimerRoutes)
 app.use('/api/prerequireties', preRequiretiesRoutes)
 
 
-// PREREQUIRETIES APIS
+// MODULAR UNITS APIS
 app.use('/api/modularunit', modularUnitRoutes)
 app.use('/api/selectedmodularunits', SelectedModularUnitRoutes)
 app.use('/api/selectedstage', stageSelectetionRoutes)
 
+// DOCUEMENTATION APIS
+app.use('/api/documentation', documentaitonRoutes)
 
 // STAGE APIS
 app.use('/api/requirementform', requirementRoutes)

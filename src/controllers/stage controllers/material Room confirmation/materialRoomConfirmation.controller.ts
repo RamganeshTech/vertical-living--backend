@@ -11,7 +11,8 @@ import redisClient from "../../../config/redisClient";
 import { json } from "stream/consumers";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
-import { RoleBasedRequest } from "../../../types/types";
+import { DocUpload, RoleBasedRequest } from "../../../types/types";
+import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 
 
 export const initializeMaterialSelection = async (projectId: string) => {
@@ -205,7 +206,7 @@ const updatePredefinedRoomField = async (req: Request, res: Response): Promise<a
 
 
     console.log("fieldKey", fieldKey)
-    console.log("updated data",  quantity, unit, remarks )
+    console.log("updated data", quantity, unit, remarks)
     // 2. Check Custom Rooms
     const customRoom = doc.customRooms.find((r: any) => r._id.toString() === roomId);
     if (customRoom) {
@@ -480,7 +481,30 @@ const materialSelectionCompletionStatus = async (req: Request, res: Response): P
 
     if (form.status === "completed") {
       await generateCostEstimationFromMaterialSelection(form, projectId)
-      // await syncOrderingMaterials(projectId)
+
+
+      let uploadedFiles: DocUpload[] = [];
+
+      const extractUploads = (rooms: any[]): DocUpload[] => {
+        return rooms.flatMap(room =>
+          room.uploads?.map((file: any) => ({
+            type: file.type,
+            url: file.url,
+            originalName: file.originalName,
+          })) || []
+        );
+      };
+
+      uploadedFiles = [
+        ...extractUploads(form.rooms),
+        ...extractUploads(form.customRooms),
+      ];
+      await addOrUpdateStageDocumentation({
+        projectId,
+        stageNumber: "5", // ✅ Put correct stage number here
+        description: "Material Selection Stage is documented",
+        uploadedFiles, // optionally add files here
+      })
     }
 
     // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`

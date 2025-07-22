@@ -7,6 +7,8 @@ import { syncProjectDelivery } from "../Project Delivery Controllers/projectDeli
 import redisClient from "../../../config/redisClient";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
+import { DocUpload } from "../../../types/types";
+import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 
 
 
@@ -46,9 +48,9 @@ export const syncCleaningSanitaionStage = async (projectId: string) => {
     await cleaningDoc.save()
   }
 
-    const redisKey = `stage:CleaningAndSanitationModel:${projectId}`;
-      await redisClient.del(redisKey);
-  
+  const redisKey = `stage:CleaningAndSanitationModel:${projectId}`;
+  await redisClient.del(redisKey);
+
 
 }
 
@@ -260,14 +262,14 @@ const getCleaningAndSanitationDetails = async (req: Request, res: Response): Pro
   try {
     const { projectId } = req.params;
 
-    
+
     const redisMainKey = `stage:CleaningAndSanitationModel:${projectId}`
 
     const cachedData = await redisClient.get(redisMainKey)
-    
 
-    if(cachedData){
-      return res.status(200).json({message:"data fetched foem cache", data: JSON.parse(cachedData), ok:true})
+
+    if (cachedData) {
+      return res.status(200).json({ message: "data fetched foem cache", data: JSON.parse(cachedData), ok: true })
     }
 
     if (!projectId) {
@@ -303,11 +305,11 @@ const getSingleCleaningStageRoomDetails = async (req: Request, res: Response): P
 
     const redisRoomKey = `stage:CleaningAndSanitationModel:${projectId}:room:${roomId}`
 
-     const cachedData = await redisClient.get(redisRoomKey)
-    
+    const cachedData = await redisClient.get(redisRoomKey)
 
-    if(cachedData){
-      return res.status(200).json({message:"data fetched foem cache", data:JSON.parse(cachedData), ok:true})
+
+    if (cachedData) {
+      return res.status(200).json({ message: "data fetched foem cache", data: JSON.parse(cachedData), ok: true })
     }
 
     const doc = await CleaningAndSanitationModel.findOne(
@@ -325,7 +327,7 @@ const getSingleCleaningStageRoomDetails = async (req: Request, res: Response): P
     }
 
     await redisClient.set(redisRoomKey, JSON.stringify(doc.rooms[0]), { EX: 60 * 10 })
-    
+
 
     return res.json({ ok: true, data: doc.rooms[0] });
   } catch (err: any) {
@@ -362,7 +364,31 @@ export const cleaningStageCompletionStatus = async (req: Request, res: Response)
     await form.save();
 
     if (form.status === "completed") {
-    await syncProjectDelivery(projectId)
+      await syncProjectDelivery(projectId)
+
+
+      let uploadedFiles: DocUpload[] = [];
+
+      for (const room of form.rooms || []) {
+        for (const upload of room.uploads || []) {
+          if (upload.url && upload.type) {
+            uploadedFiles.push({
+              type: upload.type,
+              url: upload.url,
+              originalName: upload.originalName,
+            });
+          }
+        }
+      }
+
+      await addOrUpdateStageDocumentation({
+        projectId,
+        stageNumber: "13", // or whatever number corresponds to Cleaning/Sanitation
+        description: "Cleaning & Sanitation stage documented",
+        uploadedFiles,
+      });
+
+
     }
 
 
@@ -371,9 +397,9 @@ export const cleaningStageCompletionStatus = async (req: Request, res: Response)
 
     await populateWithAssignedToField({ stageModel: CleaningAndSanitationModel, projectId, dataToCache: form })
 
-     res.status(200).json({ ok: true, message: "cleaning and sanitation stage marked as completed", data: form });
-         updateProjectCompletionPercentage(projectId);
-     
+    res.status(200).json({ ok: true, message: "cleaning and sanitation stage marked as completed", data: form });
+    updateProjectCompletionPercentage(projectId);
+
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

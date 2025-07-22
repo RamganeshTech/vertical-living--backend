@@ -2,12 +2,13 @@ import { QualityCheckupModel } from "../../../models/Stage Models/QualityCheck M
 import { Request, Response } from "express";
 import { Types } from "mongoose";
 import { validRooms } from "../installation controllers/installation.controller";
-import { RoleBasedRequest } from "../../../types/types";
+import { DocUpload, RoleBasedRequest } from "../../../types/types";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import { syncCleaningSanitaionStage } from "../Cleaning controller/cleaning.controller";
 import redisClient from "../../../config/redisClient";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
+import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 
 
 export const syncQualityCheck = async (projectId: string) => {
@@ -351,7 +352,7 @@ const setQualityCheckStageDeadline = (req: Request, res: Response): Promise<any>
 const qualityCheckCompletionStatus = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
-        const form = await QualityCheckupModel.findOne({ projectId });
+        const form: any = await QualityCheckupModel.findOne({ projectId });
 
         if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
@@ -362,6 +363,45 @@ const qualityCheckCompletionStatus = async (req: Request, res: Response): Promis
 
         if (form.status === "completed") {
             await syncCleaningSanitaionStage(projectId)
+
+
+            let uploadedFiles: DocUpload[] = [];
+
+
+            const roomKeys = Object.keys(form.toObject() || {}).filter(
+                (key) =>
+                    Array.isArray(form[key]) &&
+                    form[key]?.length &&
+                    typeof form[key][0] === "object" &&
+                    form[key][0]?.upload
+            );
+
+            for (const room of roomKeys) {
+                const items = form[room] || [];
+
+                items.forEach((item: any) => {
+                    if (item.upload?.url) {
+                        uploadedFiles.push({
+                            type: item.upload.type,
+                            url: item.upload.url,
+                            originalName: item.upload.originalName,
+                        });
+                    }
+                });
+
+
+            }
+
+            if (!uploadedFiles.length) {
+                uploadedFiles = []
+            }
+
+            await addOrUpdateStageDocumentation({
+                projectId,
+                stageNumber: "12", // Assuming 12 is for Quality Check
+                description: "Quality Checkup documentation completed",
+                uploadedFiles,
+            });
         }
 
         // const redisMainKey = `stage:QualityCheckupModel:${projectId}`
@@ -369,10 +409,10 @@ const qualityCheckCompletionStatus = async (req: Request, res: Response): Promis
         await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: form })
 
 
-         res.status(200).json({ ok: true, message: "Quality Checkup stage marked as completed", data: form });
+        res.status(200).json({ ok: true, message: "Quality Checkup stage marked as completed", data: form });
 
-             updateProjectCompletionPercentage(projectId);
-         
+        updateProjectCompletionPercentage(projectId);
+
     } catch (err) {
         console.error(err);
         return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

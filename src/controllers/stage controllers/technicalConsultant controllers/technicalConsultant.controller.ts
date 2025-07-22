@@ -8,6 +8,8 @@ import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { Model } from "mongoose";
+import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
+import { DocUpload } from "../../../types/types";
 
 
 export const syncTechnicalConsultantStage = async (projectId: string) => {
@@ -145,16 +147,16 @@ const getConsultationMessages = async (req: Request, res: Response): Promise<any
 
 
     const doc = await TechnicalConsultationModel.findOne({ projectId })
-    .populate("messages.sender")
-      // .populate({
-      //   path: "messages",
-      //   populate: {
-      //     path: "sender",
-      //     strictPopulate: false // important for refPath
-      //   }
-      // });
+      .populate("messages.sender")
+    // .populate({
+    //   path: "messages",
+    //   populate: {
+    //     path: "sender",
+    //     strictPopulate: false // important for refPath
+    //   }
+    // });
 
-      // console.log("doc", doc)
+    // console.log("doc", doc)
     if (!doc) {
       return res.status(404).json({ ok: false, message: "No confirmation found on last stage" });
     }
@@ -313,6 +315,28 @@ const tehnicalConsultantCompletionStatus = async (req: Request, res: Response): 
 
     if (techDoc.status === "completed") {
       await initializeMaterialSelection(projectId)
+
+
+      const uploadedFiles: DocUpload[] = techDoc.messages.flatMap(msgSection => {
+        if (msgSection.attachments?.length) {
+          return msgSection.attachments.map((file: any) => {
+            return {
+              type: file.type,
+              url: file.url,
+              originalName: file.originalName,
+            }
+          });
+        }
+        return []; // ⚠️ Always return an array from flatMap
+      })
+
+      await addOrUpdateStageDocumentation({
+        projectId,
+        stageNumber: "4", // ✅ Put correct stage number here
+        description: "Technical consultation Stage is documented",
+        uploadedFiles, // optionally add files here
+      })
+
     }
 
     await techDoc.save();

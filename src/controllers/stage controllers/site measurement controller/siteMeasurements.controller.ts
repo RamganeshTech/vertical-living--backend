@@ -11,6 +11,8 @@ import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { initializeSiteRequirement } from "../../../utils/Stage Utils/siteRequirementsInitialize";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
+import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
+import { DocUpload } from "../../../types/types";
 
 
 export const syncSiteMeasurement = async (projectId: string) => {
@@ -36,8 +38,8 @@ export const syncSiteMeasurement = async (projectId: string) => {
         roadFacing: null,
         numberOfFloors: null,
         hasSlope: null,
-        boundaryWallExists: null ,
-        additionalNotes:null 
+        boundaryWallExists: null,
+        additionalNotes: null
       },
       rooms: initializeSiteRequirement,
     });
@@ -441,6 +443,14 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
     if (siteDoc.status === "completed") {
       const siteRooms = siteDoc.rooms || [];
       await syncSampleDesignModel(projectId, siteRooms)
+
+      const uploadedFiles: DocUpload[] = siteDoc.uploads.map((upload) => ({ type: upload.type, originalName: upload.originalName, url: upload.url }))
+      await addOrUpdateStageDocumentation({
+        projectId,
+        stageNumber: "2", // ✅ Put correct stage number here
+        description: "Site Measurement Stage marked is documented",
+        uploadedFiles, // optionally add files here
+      })
     }
 
     await siteDoc.save();

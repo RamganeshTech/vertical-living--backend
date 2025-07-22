@@ -5,6 +5,8 @@ import redisClient from "../../../config/redisClient";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { syncQualityCheck } from "../QualityCheck controllers/QualityCheck.controller";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
+import { DocUpload } from "../../../types/types";
+import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 
 
 export const syncInstallationWork = async (projectId: string) => {
@@ -50,8 +52,8 @@ export const syncInstallationWork = async (projectId: string) => {
 
       await existing.save()
   }
- const redisKey = `stage:InstallationModel:${projectId}`;
-    await redisClient.del(redisKey);
+  const redisKey = `stage:InstallationModel:${projectId}`;
+  await redisClient.del(redisKey);
 }
 
 export const validRooms = [
@@ -120,7 +122,7 @@ const createInstallationItem = async (req: Request, res: Response): Promise<any>
 
     const updatedRoom = doc[roomName]
     // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
-        await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
+    await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
 
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
@@ -182,7 +184,7 @@ const editInstallationItem = async (req: Request, res: Response): Promise<any> =
 
     const updatedRoom = doc[roomName]
     // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
-        await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
+    await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
 
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
@@ -195,8 +197,8 @@ const editInstallationItem = async (req: Request, res: Response): Promise<any> =
 
 const deleteInstallationItem = async (req: Request, res: Response): Promise<any> => {
   try {
-    const {  roomName, itemId } = req.body;
-    const {projectId} = req.params
+    const { roomName, itemId } = req.body;
+    const { projectId } = req.params
     if (!projectId || !roomName || !itemId) {
       return res.status(400).json({ ok: false, message: "projectId, roomName, and itemId are required." });
     }
@@ -220,7 +222,7 @@ const deleteInstallationItem = async (req: Request, res: Response): Promise<any>
 
     const updatedRoom = (doc as any)[roomName]
     // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
-        await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
+    await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
 
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
 
@@ -247,7 +249,7 @@ const getInstallationDetails = async (req: Request, res: Response): Promise<any>
     if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
 
     // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
-        await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
+    await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
 
     return res.status(200).json({ ok: true, data: doc, message: "fetched properly" });
   } catch (error) {
@@ -303,7 +305,7 @@ const setInstallationStageDeadline = (req: Request, res: Response): Promise<any>
 const installationCompletionStatus = async (req: Request, res: Response): Promise<any> => {
   try {
     const { projectId } = req.params;
-    const form = await InstallationModel.findOne({ projectId });
+    const form: any = await InstallationModel.findOne({ projectId });
 
     if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
@@ -312,18 +314,50 @@ const installationCompletionStatus = async (req: Request, res: Response): Promis
     timerFunctionlity(form, "completedAt")
     await form.save();
 
-    if(form.status === "completed"){
+    if (form.status === "completed") {
       await syncQualityCheck(projectId)
+
+      let uploadedFiles: DocUpload[] = [];
+
+      const roomKeys = Object.keys(form || {}).filter(
+        (key) =>
+          Array.isArray(form[key]) && // it's an array of installation items
+          form[key]?.length &&
+          typeof form[key][0] === "object" &&
+          form[key][0]?.upload
+      );
+
+      for (const room of roomKeys) {
+        const items = form[room] || [];
+
+        items.forEach((item: any) => {
+          if (item.upload?.url) {
+            uploadedFiles.push({
+              type: item.upload.type,
+              url: item.upload.url,
+              originalName: item.upload.originalName,
+            });
+          }
+        });
+      }
+
+      await addOrUpdateStageDocumentation({
+        projectId,
+        stageNumber: "11", // Installation Stage
+        description: "Installation Stage is documented",
+        uploadedFiles,
+      });
+
     }
 
     // const redisMainKey = `stage:InstallationModel:${projectId}`
     // await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
-        await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: form })
+    await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: form })
 
-     res.status(200).json({ ok: true, message: "installation check stage marked as completed", data: form });
+    res.status(200).json({ ok: true, message: "installation check stage marked as completed", data: form });
 
-         updateProjectCompletionPercentage(projectId);
-     
+    updateProjectCompletionPercentage(projectId);
+
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

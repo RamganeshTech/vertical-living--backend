@@ -10,6 +10,8 @@ import { syncQualityCheck } from '../QualityCheck controllers/QualityCheck.contr
 import { syncPaymentConfirationModel } from '../PaymentConfirmation controllers/PaymentMain.controllers';
 import { assignedTo, selectedFields } from '../../../constants/BEconstants';
 import { updateProjectCompletionPercentage } from '../../../utils/updateProjectCompletionPercentage ';
+import { addOrUpdateStageDocumentation } from '../../documentation controller/documentation.controller';
+import { DocUpload } from '../../../types/types';
 
 
 const generateCostEstimationFromMaterialSelection = async (
@@ -105,27 +107,27 @@ const generateCostEstimationFromMaterialSelection = async (
         );
 
 
-            const existingRoomNames = new Set(existing.materialEstimation.map((r) => r.name));
+        const existingRoomNames = new Set(existing.materialEstimation.map((r) => r.name));
 
-         for (const customRoom of materialDoc.customRooms || []) {
-        if (!existingRoomNames.has(customRoom.name)) {
-            const materials = customRoom.items.map((item) => ({
-                key: item.itemKey,
-                areaSqFt: null,
-                predefinedRate: null,
-                overriddenRate: null,
-                finalRate: null,
-                totalCost: null,
-            }));
+        for (const customRoom of materialDoc.customRooms || []) {
+            if (!existingRoomNames.has(customRoom.name)) {
+                const materials = customRoom.items.map((item) => ({
+                    key: item.itemKey,
+                    areaSqFt: null,
+                    predefinedRate: null,
+                    overriddenRate: null,
+                    finalRate: null,
+                    totalCost: null,
+                }));
 
-            existing.materialEstimation.push({
-                name: customRoom.name,
-                materials,
-                totalCost: 0,
-                uploads: [],
-            });
+                existing.materialEstimation.push({
+                    name: customRoom.name,
+                    materials,
+                    totalCost: 0,
+                    uploads: [],
+                });
+            }
         }
-    }
 
         await existing.save();
 
@@ -493,6 +495,27 @@ const costEstimationCompletionStatus = async (req: Request, res: Response): Prom
 
         if (form.status === "completed") {
             await syncPaymentConfirationModel(projectId, form.totalEstimation)
+
+            let uploadedFiles: DocUpload[] = [];
+
+            const extractUploads = (room: any): DocUpload[] => {
+                return room.uploads?.map((file: any) => ({
+                    type: file.type,
+                    url: file.url,
+                    originalName: file.originalName,
+                })) || []
+
+            };
+
+            uploadedFiles = form.materialEstimation.flatMap(extractUploads);
+
+            await addOrUpdateStageDocumentation({
+                projectId,
+                stageNumber: "6", // ✅ Put correct stage number here
+                description: "Cost Estimation Stage is documented",
+                uploadedFiles, // optionally add files here
+                price: form.totalEstimation
+            })
         }
 
         res.status(200).json({ ok: true, message: "cost estimation stage marked as completed", data: form });

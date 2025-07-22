@@ -3,6 +3,7 @@ import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common
 import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
 import { syncOrderingMaterials } from "../ordering material controller/orderingMaterial.controller";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
+import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 
 
 
@@ -142,7 +143,9 @@ export const syncPaymentConfirationModel = async (projectId: string, totalAmount
   }
   else {
     existing.timer = timer
-
+    existing.totalAmount= totalAmount || 0,
+    existing.paymentSchedule.amount = totalAmount
+      
     await existing.save()
   }
 
@@ -214,6 +217,14 @@ const paymentConfirmationCompletionStatus = async (req: Request, res: Response):
 
     if (form.status === "completed") {
       await syncOrderingMaterials(projectId)
+
+        await addOrUpdateStageDocumentation({
+                projectId,
+                stageNumber: "7", // ✅ Put correct stage number here
+                description: "Payment Stage is documented",
+                uploadedFiles:[], // optionally add files here
+                price: form.totalAmount
+            })
     }
 
 

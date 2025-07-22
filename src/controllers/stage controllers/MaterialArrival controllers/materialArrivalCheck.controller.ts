@@ -7,6 +7,8 @@ import redisClient from "../../../config/redisClient";
 import { syncWorkSchedule } from "../workTasksmain controllers/workMain.controller";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
+import { DocUpload } from "../../../types/types";
+import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 
 const allowedRooms = [
     "carpentry", "hardware", "electricalFittings", "tiles", "ceramicSanitaryware",
@@ -394,10 +396,36 @@ const materialArrivalCompletionStatus = async (req: Request, res: Response): Pro
         timerFunctionlity(form, "completedAt")
         await form.save();
 
-        // if (form.status === "completed") {
-        await syncWorkSchedule(projectId)
+        if (form.status === "completed") {
+            await syncWorkSchedule(projectId)
 
-        // }
+            let uploadedFiles: DocUpload[] = [];
+
+            const categories = Object.keys(form.materialArrivalList || {});
+
+            for (const category of categories) {
+                const items = (form.materialArrivalList as any)[category] || [];
+
+                items.forEach((item: any) => {
+                    if (item.upload && item.upload.url) {
+                        uploadedFiles.push({
+                            type: item.upload.type,
+                            url: item.upload.url,
+                            originalName: item.upload.originalName,
+                        });
+                    }
+                });
+            }
+
+
+            await addOrUpdateStageDocumentation({
+                projectId,
+                stageNumber: "8", // Material Arrival stage number
+                description: "Material Arrival Stage is documented",
+                uploadedFiles,
+            });
+
+        }
         // const redisMainKey = `stage:MaterialArrivalModel:${projectId}}`
         // await redisClient.set(redisMainKey, JSON.stringify(form.toObject()), { EX: 60 * 10 })
 

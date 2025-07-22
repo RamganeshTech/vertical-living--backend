@@ -8,6 +8,8 @@ import { siteRooms } from "../../../utils/syncings/syncRoomsWithMaterialConfimat
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { syncTechnicalConsultantStage } from "../technicalConsultant controllers/technicalConsultant.controller";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
+import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
+import { DocUpload } from "../../../types/types";
 
 
 
@@ -277,6 +279,21 @@ const sampleDesignCompletionStatus = async (req: Request, res: Response): Promis
 
     if (design.status === "completed") {
       await syncTechnicalConsultantStage(projectId)
+
+
+      const uploadedFiles:DocUpload[] = design.rooms.flatMap((room) =>
+        room.files.map((file:any) => ({
+          type: file.type,
+          url: file.url,
+          originalName: file.originalName,
+        }))
+      );
+      await addOrUpdateStageDocumentation({
+        projectId,
+        stageNumber: "3", // ✅ Put correct stage number here
+        description: "Sample Design Stage marked is documented",
+        uploadedFiles, // optionally add files here
+      })
     }
 
     await design.save();
@@ -287,9 +304,9 @@ const sampleDesignCompletionStatus = async (req: Request, res: Response): Promis
     await populateWithAssignedToField({ stageModel: SampleDesignModel, projectId, dataToCache: design })
 
 
-     res.status(200).json({ ok: true, message: "Sample design marked as completed", data: design });
-           updateProjectCompletionPercentage(projectId);
-     
+    res.status(200).json({ ok: true, message: "Sample design marked as completed", data: design });
+    updateProjectCompletionPercentage(projectId);
+
   } catch (err) {
     console.error("Sample design Complete Error:", err);
     return res.status(500).json({ message: "Internal server error", ok: false });

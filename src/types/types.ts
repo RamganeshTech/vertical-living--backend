@@ -32,3 +32,8 @@ export interface RoleUserPayload {
 export interface RoleBasedRequest extends Request {
   user?: RoleUserPayload;
 }
+
+
+
+
+export interface DocUpload{ type:"image" | "pdf" , url: string; originalName: string }[]

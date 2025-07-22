@@ -28,7 +28,7 @@ export interface ICleaningAndSanitation extends Document {
         deadline: Date | null;
         reminderSent: boolean
     };
-          assignedTo: Types.ObjectId;
+    assignedTo: Types.ObjectId;
 
 }
 
@@ -45,16 +45,16 @@ const uploadSchema = new Schema<ICleaningUpload>({
 const RoomCleaningSchema = new Schema<IRoomCleaning>(
     {
         roomName: { type: String, required: true },
-        uploads: {type: [uploadSchema], default:[]},
+        uploads: { type: [uploadSchema], default: [] },
         completelyCleaned: { type: Boolean, default: false },
-        notes: { type: String, default:null },
+        notes: { type: String, default: null },
     },
-    { _id: true } 
+    { _id: true }
 );
 
 const CleaningAndSanitationSchema = new Schema<ICleaningAndSanitation>(
     {
-        projectId: { type: Schema.Types.ObjectId, required: true , ref:"ProjectModel"},
+        projectId: { type: Schema.Types.ObjectId, required: true, ref: "ProjectModel" },
         rooms: [RoomCleaningSchema],
         status: {
             type: String,
@@ -68,11 +68,11 @@ const CleaningAndSanitationSchema = new Schema<ICleaningAndSanitation>(
             deadLine: { type: Date, default: null },
             reminderSent: { type: Boolean, default: false },
         },
-  assignedTo:{
-      type: Schema.Types.ObjectId,
-      default: null,
-      ref:"StaffModel"
-    },
+        assignedTo: {
+            type: Schema.Types.ObjectId,
+            default: null,
+            ref: "StaffModel"
+        },
 
 
     },
@@ -80,7 +80,7 @@ const CleaningAndSanitationSchema = new Schema<ICleaningAndSanitation>(
 );
 
 
-CleaningAndSanitationSchema.index({projectId:1})
+CleaningAndSanitationSchema.index({ projectId: 1 })
 
 
 export const CleaningAndSanitationModel = mongoose.model<ICleaningAndSanitation>(

@@ -15,6 +15,8 @@ import { syncMaterialArrival } from "../MaterialArrival controllers/materialArri
 import redisClient from "../../../config/redisClient";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
+import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
+import { DocUpload } from "../../../types/types";
 
 export const syncOrderingMaterials = async (projectId: string) => {
 
@@ -78,7 +80,7 @@ const getAllOrderingMaterialDetails = async (req: Request, res: Response): Promi
     const { projectId } = req.params;
 
     const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
-     await redisClient.del(redisMainKey)
+    await redisClient.del(redisMainKey)
     const cachedData = await redisClient.get(redisMainKey)
 
     if (cachedData) {
@@ -488,7 +490,26 @@ const orderMaterialCompletionStatus = async (req: Request, res: Response): Promi
       // await autoCreateCostEstimationRooms(req, res, projectId)
       await syncMaterialArrival(projectId)
 
-    }
+
+
+      let uploadedFiles: DocUpload[] = form.uploads?.map((file: any) => ({
+        type: file.type,
+        url: file.url,
+        originalName: file.originalName,
+      })) || []
+    
+
+
+
+    await addOrUpdateStageDocumentation({
+      projectId,
+      stageNumber: "6", // ✅ Put correct stage number here
+      description: "Ordering Material Stage is documented",
+      uploadedFiles, // optionally add files here
+    })
+
+
+  }
 
     // const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
 
@@ -497,14 +518,14 @@ const orderMaterialCompletionStatus = async (req: Request, res: Response): Promi
     await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: form })
 
 
-     res.status(200).json({ ok: true, message: "order material stage marked as completed", data: form });
+  res.status(200).json({ ok: true, message: "order material stage marked as completed", data: form });
 
-    updateProjectCompletionPercentage(projectId);
+  updateProjectCompletionPercentage(projectId);
 
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
-  }
+} catch (err) {
+  console.error(err);
+  return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
+}
 };
 
 

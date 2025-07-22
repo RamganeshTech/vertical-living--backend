@@ -33,6 +33,7 @@ interface IRequirementFormSchema extends Document {
     reminderSent: boolean
   },
   uploads: {
+    type?:"image" |" pdf",
       url: string,
       uploadedAt: Date,
       originalName: string,
