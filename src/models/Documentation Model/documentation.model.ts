@@ -15,6 +15,7 @@ interface IStageSchema {
     description: string,
     uploadedFiles: IStageUpload[],
     price?:number | null
+    pdfLink?:string
 }
 
 
@@ -37,7 +38,8 @@ const stageSchema = new Schema<IStageSchema>({
     stageNumber: { type: String },
     description: { type: String, }, // what was done
     uploadedFiles: [uploadedFileSchema],
-    price:{type:Number, default:null}
+    price:{type:Number, default:null},
+    pdfLink: {type:String, default:null}
 }, { _id: true })
 
 const StageDocumentationSchema = new Schema<IStageDocumentation>({

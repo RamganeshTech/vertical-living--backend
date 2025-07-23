@@ -298,7 +298,12 @@ const workScheduleCompletionStatus = async (req: Request, res: Response): Promis
     const { projectId } = req.params;
     const form = await WorkMainStageScheduleModel.findOne({ projectId });
 
+
     if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
+
+    if(form.mdApproval.status !== "approved"){
+      return res.status(400).json({message:"MD has not approved yet, please update MD approval as approved" , ok:false})
+    }
 
     form.status = "completed";
     form.isEditable = false

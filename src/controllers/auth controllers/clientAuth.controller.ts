@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { AuthenticatedClientRequest, RoleBasedRequest } from "../../types/types";
 import crypto from 'crypto';
-import sendResetEmail from "../../utils/forgotPasswordMail";
+import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail";
 import { Types } from "mongoose";
 import redisClient from "../../config/redisClient";
 
@@ -272,6 +272,8 @@ const registerClient = async (req: Request, res: Response) => {
             maxAge: 1000 * 60 * 60 * 24 * 7
         }
         )
+
+        await redisClient.del(`getusers:${role}:${organizationId}`)
 
 
         res.status(200).json({

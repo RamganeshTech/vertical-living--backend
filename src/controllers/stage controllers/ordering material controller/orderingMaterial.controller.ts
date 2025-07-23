@@ -80,7 +80,7 @@ const getAllOrderingMaterialDetails = async (req: Request, res: Response): Promi
     const { projectId } = req.params;
 
     const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
-    await redisClient.del(redisMainKey)
+    // await redisClient.del(redisMainKey)
     const cachedData = await redisClient.get(redisMainKey)
 
     if (cachedData) {
@@ -107,7 +107,7 @@ const getRoomDetailsOrderMaterials = async (req: Request, res: Response): Promis
     const { projectId, roomKey } = req.params;
 
     const redisRoomKey = `stage:OrderingMaterialModel:${projectId}:room:${roomKey}`
-    await redisClient.del(redisRoomKey)
+    // await redisClient.del(redisRoomKey)
     const cachedData = await redisClient.get(redisRoomKey)
 
     if (cachedData) {

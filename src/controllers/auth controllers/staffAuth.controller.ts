@@ -78,6 +78,8 @@ const registerStaff = async (req: Request, res: Response) => {
         }
         )
 
+        await redisClient.del(`getusers:${role}:${organizationId}`)
+
         res.status(201).json({ message: "Staff registered successfully", data: staff, ok: true });
     } catch (error) {
         if (error instanceof Error) {
@@ -248,7 +250,7 @@ const staffIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
 
         const redisUserKey = `userAuth:${user?._id}`
 
-        await redisClient.del(redisUserKey)
+        // await redisClient.del(redisUserKey)
         const cachedData = await redisClient.get(redisUserKey)
 
         if (cachedData) {

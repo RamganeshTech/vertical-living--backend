@@ -274,6 +274,7 @@ const getAllMaterialArrivalDetails = async (req: Request, res: Response): Promis
         const { projectId } = req.params;
 
         const redisMainKey = `stage:MaterialArrivalModel:${projectId}`
+    // await redisClient.del(redisMainKey);
 
         const cachedData = await redisClient.get(redisMainKey)
 

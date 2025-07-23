@@ -3,8 +3,8 @@ import nodemailer from 'nodemailer';
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: "pk2262620@gmail.com", // Your email address
-    pass: 'kehm ifpm ozas cxbw', // Your email password or app password
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
@@ -54,14 +54,14 @@ export const sendResetEmail = async (email: string, userName: string, resetLink:
   try {
     await transporter.sendMail({
       to: email,
-      from: "pk2262620@gmail.com", // Sender's email
+      from: process.env.EMAIL_USER, // Sender's email
       subject: 'Password Reset Request',
       html: emailContent, // HTML content
     });
     console.log('Password reset email sent!');
   } catch (error) {
-    if(error instanceof Error)
-    console.error('Error sending email: ', error.message);
+    if (error instanceof Error)
+      console.error('Error sending email: ', error.message);
     throw new Error('Error sending email');
   }
 };
