@@ -127,7 +127,7 @@ const getAllStageDocumentation = async (req: RoleBasedRequest, res: Response): P
     const doc = await StageDocumentationModel.findOne({ projectId });
 
     if (!doc) {
-      return res.status(404).json({ message: "No stage documentation found.", ok: false });
+      return res.status(200).json({ message: "No stage documentation found.", ok: true, data:null });
     }
 
     return res.status(200).json({ data: doc, ok: true });
@@ -276,6 +276,7 @@ const manuallyGenerateStagePdfAndSendMail = async (req: RoleBasedRequest, res: R
     }
 
     const stage = stageDoc.stages[stageIndex];
+
 
     // Generate PDF buffer
     const pdfBuffer = await generateStagePDF({

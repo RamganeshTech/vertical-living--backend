@@ -45,10 +45,10 @@ export interface IQualityCheckup extends Document {
 import { Schema, model, Types, Document } from "mongoose";
 
 const UploadSchema = new Schema<QualityCheckUpload>({
-  type: { type: String, enum: ["image"], required: true },
-  url: { type: String, required: true },
-  originalName: { type: String, required: true },
-  uploadedAt: { type: Date, default: Date.now },
+  type: { type: String, enum: ["image"],  },
+  url: { type: String,  },
+  originalName: { type: String,  },
+  uploadedAt: { type: Date, default: new Date() },
 }, { _id: true });
 
 const QualityCheckItemSchema = new Schema<QualityCheckItem>({

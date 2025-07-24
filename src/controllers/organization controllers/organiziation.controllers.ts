@@ -81,16 +81,15 @@ const getMyOrganizations = async (req: RoleBasedRequest, res: Response) => {
         let idToSearch;
         
         if(user?.role === "owner"){
-            console.log("im i getting inside", user?.role)
+            // console.log("im i getting inside", user?.role)
             idToSearch = user._id
         }
         else{
-            console.log("im i getting else part", user?.role)
+            // console.log("im i getting else part", user?.role)
 
              idToSearch = user?.ownerId
         }
 
-        console.log("idto search", idToSearch)
         if (!idToSearch) {
             res.status(404).json({ message: "No organization linked", data: {}, ok: false });
             return
@@ -135,7 +134,7 @@ const getOrganizationById = async (req: RoleBasedRequest, res: Response) => {
             return
         }
 
-        console.log(organization)
+        // console.log(organization)
 
         return res.status(200).json({ ok: true, message: "fetched successfully", data: organization });
     } catch (error) {

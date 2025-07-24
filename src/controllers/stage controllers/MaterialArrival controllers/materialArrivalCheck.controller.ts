@@ -421,7 +421,7 @@ const materialArrivalCompletionStatus = async (req: Request, res: Response): Pro
 
             await addOrUpdateStageDocumentation({
                 projectId,
-                stageNumber: "8", // Material Arrival stage number
+                stageNumber: "9", // Material Arrival stage number
                 description: "Material Arrival Stage is documented",
                 uploadedFiles,
             });

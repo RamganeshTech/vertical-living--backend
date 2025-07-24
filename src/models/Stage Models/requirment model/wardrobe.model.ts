@@ -20,7 +20,7 @@ export interface IWardrobeRequirement {
 export const WardrobeRequirementSchema = new Schema<IWardrobeRequirement>({
   wardrobeType: {
     type: String,
-    enum: ["Sliding", "Openable", null],
+    enum: ["Sliding", "Openable", null, ""],
     default: null
   },
   lengthInFeet: {
@@ -37,7 +37,7 @@ export const WardrobeRequirementSchema = new Schema<IWardrobeRequirement>({
   },
   wardrobePackage: {
     type: String,
-    enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package", null],
+    enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package", null, ""],
     default: null
   },
   numberOfShelves: {

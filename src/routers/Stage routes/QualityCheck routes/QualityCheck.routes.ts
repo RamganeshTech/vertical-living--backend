@@ -10,7 +10,7 @@ setQualityCheckStageDeadline,
 qualityCheckCompletionStatus, } from "../../../controllers/stage controllers/QualityCheck controllers/QualityCheck.controller";
 import InstallationModel from "../../../models/Stage Models/installation model/Installation.model";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
-import { imageUploadToS3 } from "../../../utils/s3Uploads/s3upload";
+import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
 import { QualityCheckupModel } from "../../../models/Stage Models/QualityCheck Model/QualityCheck.model";
 import { notToUpdateIfStageCompleted } from "../../../middlewares/notToUpdateIfStageCompleted";
 import { checkIfStaffIsAssignedToStage } from "../../../middlewares/checkIfStaffIsAssignedToStage";
@@ -28,6 +28,7 @@ qualityCheckRoutes.post(
   checkIfStaffIsAssignedToStage(QualityCheckupModel),
   
   imageUploadToS3.single("file"),
+  processUploadFiles,
   createQualityCheckItem
 );
 
@@ -41,6 +42,7 @@ qualityCheckRoutes.put(
   checkIfStaffIsAssignedToStage(QualityCheckupModel),
 
   imageUploadToS3.single("file"),
+  processUploadFiles,
   editQualityCheckItem
 );
 
@@ -52,8 +54,6 @@ qualityCheckRoutes.delete(
   checkPreviousStageCompleted(InstallationModel),
   notToUpdateIfStageCompleted(QualityCheckupModel),
   checkIfStaffIsAssignedToStage(QualityCheckupModel),
-
-
   deleteQualityCheckItem
 );
 

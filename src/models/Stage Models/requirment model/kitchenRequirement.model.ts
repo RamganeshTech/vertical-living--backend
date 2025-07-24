@@ -17,7 +17,7 @@ export interface IKitchenRequirement {
 export const KitchenRequirementSchema = new Schema<IKitchenRequirement>({
     layoutType: {
         type: String,
-        enum: ["L-shaped", "Straight", "U-shaped", "Parallel", null],
+        enum: ["L-shaped", "Straight", "U-shaped", "Parallel", null, ""],
         default: null
     },
     measurements: {
@@ -27,7 +27,7 @@ export const KitchenRequirementSchema = new Schema<IKitchenRequirement>({
     },
     kitchenPackage: {
         type: String,
-        enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package", null],
+        enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package", null, ""],
         default: null
     },
     graniteCountertop: {

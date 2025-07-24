@@ -18,7 +18,7 @@ export const BedroomRequirementSchema = new Schema<IBedroomRequirement>({
   },
   bedType: {
     type: String,
-    enum: ["Single", "Double", "Queen", "King", null],
+    enum: ["Single", "Double", "Queen", "King", null,  ""],
     default: null
   },
   wardrobeIncluded: {
@@ -39,7 +39,7 @@ export const BedroomRequirementSchema = new Schema<IBedroomRequirement>({
   },
   bedroomPackage: {
     type: String,
-    enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package", null],
+    enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package", null,  ""],
     default: null
   },
   notes: {

@@ -15,7 +15,7 @@ export interface ILivingHallRequirement {
 export const LivingHallRequirementSchema = new Schema<ILivingHallRequirement>({
   seatingStyle: {
     type: String,
-    enum: ["Sofa Set", "L-Shaped Sofa", "Recliner Chairs", "Floor Seating", null],
+    enum: ["Sofa Set", "L-Shaped Sofa", "Recliner Chairs", "Floor Seating", null, ""],
     default: null
   },
   tvUnitDesignRequired: {
@@ -28,7 +28,7 @@ export const LivingHallRequirementSchema = new Schema<ILivingHallRequirement>({
   },
   wallDecorStyle: {
     type: String,
-    enum: ["Paint", "Wallpaper", "Wood Paneling", "Stone Cladding", null],
+    enum: ["Paint", "Wallpaper", "Wood Paneling", "Stone Cladding", null, ""],
     default: null
   },
   numberOfFans: {
@@ -43,7 +43,7 @@ export const LivingHallRequirementSchema = new Schema<ILivingHallRequirement>({
   },
   livingHallPackage: {
     type: String,
-    enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package", null],
+    enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package", null, ""],
     default: null
   },
   notes: {

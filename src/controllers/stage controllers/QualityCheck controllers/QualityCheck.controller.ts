@@ -9,6 +9,7 @@ import redisClient from "../../../config/redisClient";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
+import { validRoomKeys } from "../../../constants/BEconstants";
 
 
 export const syncQualityCheck = async (projectId: string) => {
@@ -235,6 +236,7 @@ const editQualityCheckItem = async (req: RoleBasedRequest, res: Response): Promi
 const deleteQualityCheckItem = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId, roomName, itemId } = req.params;
+        
 
         if (!projectId || !roomName || !itemId) {
             return res.status(400).json({ ok: false, message: "Missing required fields." });
@@ -368,13 +370,23 @@ const qualityCheckCompletionStatus = async (req: Request, res: Response): Promis
             let uploadedFiles: DocUpload[] = [];
 
 
-            const roomKeys = Object.keys(form.toObject() || {}).filter(
-                (key) =>
-                    Array.isArray(form[key]) &&
-                    form[key]?.length &&
-                    typeof form[key][0] === "object" &&
-                    form[key][0]?.upload
-            );
+            // const roomKeys = Object.keys(form.toObject() || {}).filter(
+            //     (key) =>
+            //         Array.isArray(form[key]) &&
+            //         form[key]?.length &&
+            //         typeof form[key][0] === "object" &&
+            //         form[key][0]?.upload
+            // );
+
+            const roomKeys = validRoomKeys.filter((key) => {
+                const roomItems = form?.[key];
+                return (
+                    Array.isArray(roomItems) &&
+                    roomItems.some((item: any) => item?.upload?.url) // has at least one upload
+                );
+            });
+
+
 
             for (const room of roomKeys) {
                 const items = form[room] || [];

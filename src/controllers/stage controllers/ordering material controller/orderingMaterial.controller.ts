@@ -503,7 +503,7 @@ const orderMaterialCompletionStatus = async (req: Request, res: Response): Promi
 
     await addOrUpdateStageDocumentation({
       projectId,
-      stageNumber: "6", // ✅ Put correct stage number here
+      stageNumber: "8", // ✅ Put correct stage number here
       description: "Ordering Material Stage is documented",
       uploadedFiles, // optionally add files here
     })

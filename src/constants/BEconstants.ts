@@ -285,6 +285,24 @@ export const allowedFieldsModularUnit: Record<string, string[]> = {
 
 
 
+// ✅ Define the valid room keys as per your schema
+export const validRoomKeys = [
+  "LivingRoom",
+  "Bedroom",
+  "Kitchen",
+  "DiningRoom",
+  "Balcony",
+  "FoyerArea",
+  "Terrace",
+  "StudyRoom",
+  "CarParking",
+  "Garden",
+  "StorageRoom",
+  "EntertainmentRoom",
+  "HomeGym",
+];
+
+
 
 
 
@@ -296,11 +314,11 @@ export const STAGE_KEY_DOCMENTION_MAP: Record<string, string> = {
   "1": "Requirement Stage",
   "2": "Site Mesasurement",
   "3": "Sample Design",
-  "4": "TECHNICAL CONSULTATION",
-  "5": "MATERIAL_SELECTION",
-  "6": "COST_ESTIMATION",
-  "7": "PAYMENT_CONFIRMATION",
-  "8": "ORDERING_MATERIAL",
+  "4": "Technical Consultant",
+  "5": "Material Selection",
+  "6": "Cost Estimation",
+  "7": "Payment Confirmation",
+  "8": "Ordering Material",
   "9": "Material Arrival",
   "10": "Worker Schedule",
   "11": "Installation ",

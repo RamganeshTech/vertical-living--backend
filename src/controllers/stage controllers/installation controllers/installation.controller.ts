@@ -7,6 +7,7 @@ import { syncQualityCheck } from "../QualityCheck controllers/QualityCheck.contr
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { DocUpload } from "../../../types/types";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
+import { validRoomKeys } from "../../../constants/BEconstants";
 
 
 export const syncInstallationWork = async (projectId: string) => {
@@ -238,7 +239,7 @@ const getInstallationDetails = async (req: Request, res: Response): Promise<any>
     const { projectId } = req.params;
 
     const redisMainKey = `stage:InstallationModel:${projectId}`
-
+    // await redisClient.del(redisMainKey)
     const cachedData = await redisClient.get(redisMainKey)
 
     if (cachedData) {
@@ -318,15 +319,24 @@ const installationCompletionStatus = async (req: Request, res: Response): Promis
       await syncQualityCheck(projectId)
 
       let uploadedFiles: DocUpload[] = [];
+      // const roomKeys = Object.keys(form || {}).filter(
+      //   (key) =>
+      //     Array.isArray(form[key]) && // it's an array of installation items
+      //     form[key]?.length
+      // );
 
-      const roomKeys = Object.keys(form || {}).filter(
-        (key) =>
-          Array.isArray(form[key]) && // it's an array of installation items
-          form[key]?.length &&
-          typeof form[key][0] === "object" &&
-          form[key][0]?.upload
-      );
 
+      const roomKeys = validRoomKeys.filter((key) => {
+        const roomItems = form?.[key];
+        return (
+          Array.isArray(roomItems) &&
+          roomItems.some((item: any) => item?.upload?.url) // has at least one upload
+        );
+      });
+
+     
+
+      console.log("roomKeys", roomKeys)
       for (const room of roomKeys) {
         const items = form[room] || [];
 

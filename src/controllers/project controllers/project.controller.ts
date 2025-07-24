@@ -9,6 +9,7 @@ import UserModel from "../../models/usermodel/user.model";
 import { syncRequirmentForm } from "../stage controllers/requirement controllers/mainRequirement.controller";
 import { syncPreRequireties } from "../PreRequireties Controllers/preRequireties.controllers";
 import { syncSelectStage } from "../Modular Units Controllers/StageSelection Controller/stageSelection.controller";
+import { syncDocumentationModel } from "../documentation controller/documentation.controller";
 
 const createProject = async (req: RoleBasedRequest, res: Response) => {
     try {
@@ -108,7 +109,8 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
                 
                 syncRequirmentForm(projectNew._id),
                 syncPreRequireties(projectNew._id),
-                syncSelectStage(projectNew._id)
+                syncSelectStage(projectNew._id),
+                syncDocumentationModel(projectNew._id)
             ]);
         }
         else {

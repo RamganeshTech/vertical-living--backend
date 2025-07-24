@@ -1,22 +1,17 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
 import { RequirementFormModel } from "../../../models/Stage Models/requirment model/requirement.model";
 import { validateBedroomInput, validateKitchenInput, validateLivingHallInput, validateWardrobeInput } from "../../../validations/requirement validation/kitchenValidation";
-import { Model, Types } from "mongoose";
+import { Types } from "mongoose";
 import crypto from 'crypto';
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
-import { isDate } from "util/types";
-import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
-import { resetStages } from "../../../utils/common features/ressetStages";
 import { isObjectHasValue } from "../../../utils/isObjectHasValue";
 import redisClient from "../../../config/redisClient";
-import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { syncSiteMeasurement } from "../site measurement controller/siteMeasurements.controller";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { syncAdminWall, syncWorkerWall } from "../../Wall Painting controllers/adminWallPainting.controller";
-import { syncSelectStage } from "../../Modular Units Controllers/StageSelection Controller/stageSelection.controller";
-import { addOrUpdateStageDocumentation, syncDocumentationModel } from "../../documentation controller/documentation.controller";
-import { DocUpload } from "../../../types/types";
+import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
+import { DocUpload, RoleBasedRequest } from "../../../types/types";
 
 
 
@@ -121,7 +116,7 @@ const submitRequirementForm = async (req: Request, res: Response,): Promise<void
     }
 
     // Validate required client info
-    if (!clientData?.clientName || !clientData?.email || !clientData?.whatsapp) {
+    if (!clientData?.clientName || !clientData?.whatsapp) {
       res.status(400).json({
         success: false,
         message: "Missing required client information.",
@@ -187,9 +182,9 @@ const submitRequirementForm = async (req: Request, res: Response,): Promise<void
 
     form.clientData = {
       clientName: clientData.clientName,
-      email: clientData.email,
+      email: clientData.email || null,
       whatsapp: clientData.whatsapp,
-      location: clientData?.location || "N/A",
+      location: clientData?.location || "",
     };
     form.kitchen = kitchen;
     form.wardrobe = wardrobe;
@@ -279,7 +274,7 @@ const getFormFilledDetails = async (req: Request, res: Response,): Promise<any> 
 
 
 
-const generateShareableFormLink = async (req: Request, res: Response): Promise<any> => {
+const generateShareableFormLink = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { projectId } = req.params;
     if (!Types.ObjectId.isValid(projectId)) {
@@ -292,71 +287,23 @@ const generateShareableFormLink = async (req: Request, res: Response): Promise<a
     // Save token to DB in requirement form with status draft if it doesn't exist
     let form = await RequirementFormModel.findOne({ projectId });
 
+    if (!form) {
+      res.status(404).json({ ok: false, message: "Form not found" });
+      return;
+    }
+
     if (form?.clientConfirmed) {
       res.status(400).json({ ok: false, message: "Client Has confirmed, Cannot generate new link." });
       return
     }
 
-    if (!form) {
-      form = new RequirementFormModel({
-        projectId,
-        shareToken: token,
-        shareTokenExpiredAt: null,
-        clientConfirmed: false,
-        isEditable: true,
-        status: "pending",
-        timer: {},
-        clientData: {
-          clientName: "",
-          email: "",
-          whatsapp: "",
-          location: ""
-        },
-        kitchen: {
-          //   layoutType: "L-shaped",
-          //   measurements: { top: 0, left: 0, right: 0 },
-          //   kitchenPackage: "Essentials",
-        },
-        livingHall: {
-          //   seatingStyle: "Sofa Set",
-          //   tvUnitDesignRequired: false,
-          //   falseCeilingRequired: false,
-          //   wallDecorStyle: "Paint",
-          //   numberOfFans: 0,
-          //   numberOfLights: 0,
-          //   livingHallPackage: "Essentials",
-          //   notes: ""
-        },
-        bedroom: {
-          //   numberOfBedrooms: 0,
-          //   bedType: "Single",
-          //   wardrobeIncluded: false,
-          //   falseCeilingRequired: false,
-          //   tvUnitRequired: false,
-          //   studyTableRequired: false,
-          //   bedroomPackage: "Essentials",
-          //   notes: ""
-        },
-        wardrobe: {
-          //   wardrobeType: "Sliding",
-          //   lengthInFeet: 0,
-          //   heightInFeet: 0,
-          //   mirrorIncluded: false,
-          //   wardrobePackage: "Essentials",
-          //   numberOfShelves: 0,
-          //   numberOfDrawers: 0,
-          //   notes: ""
-        },
-        // additionalNotes: ""
-      });
-    } else {
+    form.shareTokenExpiredAt = null
+    form.shareToken = process.env.NODE_ENV === "development" ?
+      `${process.env.FRONTEND_URL}/requirementform/${projectId}/token=${token}`
+      :
+      `${process.env.FRONTEND_URL}/requirementform/${projectId}/token=${token}`
 
-      form.shareToken = process.env.NODE_ENV === "development" ?
-       `${process.env.FRONTEND_URL}/requirementform/${projectId}/token=${token}`
-        :
-       `${process.env.FRONTEND_URL}/requirementform/${projectId}/token=${token}`
 
-    }
 
     await form.save();
     // const redisKeyMain = `stage:RequirementFormModel:${projectId}`
@@ -415,7 +362,7 @@ const markFormAsCompleted = async (req: Request, res: Response): Promise<any> =>
 
     if (form.status === "completed") {
       await syncSiteMeasurement(projectId)
-      const uploadedFiles:DocUpload[] = form.uploads.map((upload:any)=> ({type:upload.type, originalName:upload.originalName, url:upload.url}))
+      const uploadedFiles: DocUpload[] = form.uploads.map((upload: any) => ({ type: upload.type, originalName: upload.originalName, url: upload.url }))
       await addOrUpdateStageDocumentation({
         projectId,
         stageNumber: "1", // ✅ Put correct stage number here
