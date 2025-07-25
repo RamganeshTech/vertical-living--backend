@@ -1,10 +1,16 @@
 import nodemailer from 'nodemailer';
+import dotenv from "dotenv"
+
+dotenv.config()
+
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
+    // user: "pk2262620@gmail.com",
+    // pass: "kehm ifpm ozas cxbw",
   },
 });
 
@@ -33,7 +39,7 @@ export const sendResetEmail = async (email: string, userName: string, resetLink:
                   <p>This link is valid for 1 hour. If you did not request this, please ignore this email. Your account will remain secure.</p>
 
                   <p>Best regards,<br>
-                  The Support Team</p>
+                  Vertical Living</p>
 
                   <hr style="margin-top: 30px; border: none; border-top: 1px solid #ddd;">
                   <p style="font-size: 12px; color: #888;">
@@ -52,6 +58,8 @@ export const sendResetEmail = async (email: string, userName: string, resetLink:
 
 
   try {
+    console.log("process.env email", process.env.EMAIL_USER)
+    console.log("process.env password", process.env.EMAIL_PASS)
     await transporter.sendMail({
       to: email,
       from: process.env.EMAIL_USER, // Sender's email
@@ -60,6 +68,7 @@ export const sendResetEmail = async (email: string, userName: string, resetLink:
     });
     console.log('Password reset email sent!');
   } catch (error) {
+      console.error("Full email error:", error); // full dump
     if (error instanceof Error)
       console.error('Error sending email: ', error.message);
     throw new Error('Error sending email');

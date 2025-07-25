@@ -5,6 +5,8 @@ import bcrypt from 'bcrypt';
 import { AuthenticatedCTORequest, RoleBasedRequest } from "../../types/types";
 import CTOModel from "../../models/CTO model/CTO.model";
 import redisClient from "../../config/redisClient";
+import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail";
+import crypto from 'crypto';
 
 // POST /api/CTO/register
 const registerCTO = async (req: Request, res: Response) => {
@@ -39,10 +41,8 @@ const registerCTO = async (req: Request, res: Response) => {
 
         // 5. Check for duplicate cTO
         const CTOExists = await CTOModel.findOne({
-            ownerId,
             $or: [
                 { email },
-                { CTOName },
                 { phoneNo }
             ]
         });
@@ -111,7 +111,7 @@ const loginCTO = async (req: Request, res: Response) => {
         }
 
         // Find CTO by email
-        const CTO = await CTOModel.findOne({ email });
+        const CTO = await CTOModel.findOne({ email});
         if (!CTO) {
             res.status(404).json({ message: "Invalid email or password", ok: false });
             return
@@ -298,10 +298,101 @@ const CTOIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
     }
 }
 
+
+
+const CTOforgotPassword = async (req: Request, res: Response): Promise<any> => {
+    const { email } = req.body;
+
+    // Check if the email exists in the database
+    try {
+        const cto = await CTOModel.findOne({ email });
+
+        if (!cto) {
+            return res.status(404).json({ message: 'CTO not found', error: true, ok: false });
+        }
+
+        // Generate a token for password reset (using crypto or JWT)
+        const resetToken = crypto.randomBytes(32).toString('hex');
+
+        // Hash the token and store it in the database for later validation
+        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+        // Store the hashed token and set an expiration time (1 hour)
+        cto.resetPasswordToken = hashedToken;
+        cto.resetPasswordExpire = (Date.now() + 3600000); // 1 hour in milliseconds
+
+        await cto.save();
+
+        // Generate the password reset URL (ensure to use your real app's URL)
+        let resetLink: string;
+
+        if (process.env.NODE_ENV === "production") {
+            resetLink = `${process.env.FRONTEND_URL}/reset-password/CTO?token=${resetToken}`;
+        }
+        else {
+            resetLink = `${process.env.FRONTEND_URL}/reset-password/CTO?token=${resetToken}`;
+        }
+
+        // Send the password reset email
+        await sendResetEmail(cto.email, cto.CTOName, resetLink);
+
+        return res.status(200).json({
+            message: 'Password reset email sent. Please check your registered email inbox.',
+        });
+    } catch (error) {
+        console.error('Error handling forgot password request: ', error);
+        return res.status(500).json({ message: 'Server error. Please try again later.', error: true, ok: false });
+    }
+};
+
+const CTOResetForgotPassword = async (req: Request, res: Response): Promise<any> => {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+        return res.status(400).json({ message: "Invalid request. Token and password are required.", error: true, ok: false });
+    }
+
+
+    try {
+        // Hash the received token to match the stored one
+        const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+        // Find the user with the provided reset token (and check if it’s not expired)
+        const cto = await CTOModel.findOne({
+            resetPasswordToken: hashedToken,
+            resetPasswordExpire: { $gt: Date.now() }, // Ensure token is not expired
+        });
+
+        if (!cto) {
+            return res.status(400).json({ message: "Invalid or expired token.", error: true, ok: false });
+        }
+
+
+        // Hash the new password
+        const salt = await bcrypt.genSalt(10);
+        cto.password = await bcrypt.hash(password, salt);
+
+        // Clear the reset token fields
+        cto.resetPasswordToken = undefined;
+        cto.resetPasswordExpire = undefined;
+
+        // Save the updated cto data
+        await cto.save();
+
+        return res.status(200).json({ message: "Password reset successful. You can now log in.", error: false, ok: true });
+    } catch (error) {
+        console.error("Error resetting password:", error);
+        return res.status(500).json({ message: "Server error. Please try again later.", error: true, ok: false });
+    }
+}
+
 export {
     registerCTO,
     loginCTO,
     CTOLogout,
     refreshTokenCTO,
-    CTOIsAuthenticated
+    CTOIsAuthenticated,
+
+    CTOforgotPassword,
+    CTOResetForgotPassword
 }

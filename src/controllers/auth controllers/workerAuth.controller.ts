@@ -5,6 +5,8 @@ import { AuthenticatedWorkerRequest, RoleBasedRequest } from "../../types/types"
 import { ObjectId, Schema, Types } from "mongoose";
 import bcrypt from 'bcrypt';
 import redisClient from "../../config/redisClient";
+import crypto from 'crypto';
+import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail";
 
 // Helper: Token generator
 const generateWorkerTokens = (workerId: string, role: string, workerName: string, projectId: string[]) => {
@@ -45,27 +47,25 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({ message: "Invite token is missing required fields.", ok: false });
       return;
     }
-    console.log("organizatinId", organizationId)
+
     if (new Date() > new Date(expiresAt)) {
       res.status(400).json({ message: "Invitation link has expired.", ok: false });
       return;
     }
-
+    
     const exists = await WorkerModel.findOne({
-      projectId,
       $or: [
         { email },
         { phoneNo },
       ]
     });
 
+
     if (exists) {
-      console.log("exists", exists)
       res.status(409).json({ message: "Worker already registered for this project.", ok: false });
       return;
     }
 
-    console.log("im also gettin executed ")
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -134,19 +134,16 @@ const loginWorker = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // const isPasswordCorrect = await bcrypt.compare(password, worker.password);
-    // if (!isPasswordCorrect) {
-    //   res.status(400).json({ message: "Invalid email or password", ok: false });
-    //   return
-    // }
-
-
-    console.log("worker", worker.password)
-    console.log("incomming pass", password)
-    if (worker.password !== password) {
-      res.status(400).json({ message: "Incorrect password.", ok: false });
-      return;
+    const isPasswordCorrect = await bcrypt.compare(password, worker.password);
+    if (!isPasswordCorrect) {
+      res.status(400).json({ message: "Invalid email or password", ok: false });
+      return
     }
+
+    // if (worker.password !== password) {
+    //   res.status(400).json({ message: "Incorrect password.", ok: false });
+    //   return;
+    // }
 
     const projectIdStrings = worker.projectId.map(id => id.toString());
 
@@ -317,6 +314,95 @@ const workerIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
 }
 
 
+
+const workerforgotPassword = async (req: Request, res: Response): Promise<any> => {
+  const { email } = req.body;
+
+  // Check if the email exists in the database
+  try {
+    const worker = await WorkerModel.findOne({ email });
+
+    if (!worker) {
+      return res.status(404).json({ message: 'worker not found', error: true, ok: false });
+    }
+
+    // Generate a token for password reset (using crypto or JWT)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    // Hash the token and store it in the database for later validation
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    // Store the hashed token and set an expiration time (1 hour)
+    worker.resetPasswordToken = hashedToken;
+    worker.resetPasswordExpire = (Date.now() + 3600000); // 1 hour in milliseconds
+
+    await worker.save();
+
+    // Generate the password reset URL (ensure to use your real app's URL)
+    let resetLink: string;
+
+    if (process.env.NODE_ENV === "production") {
+      resetLink = `${process.env.FRONTEND_URL}/reset-password/worker?token=${resetToken}`;
+    }
+    else {
+      resetLink = `${process.env.FRONTEND_URL}/reset-password/worker?token=${resetToken}`;
+    }
+
+    // Send the password reset email
+    await sendResetEmail(worker.email, worker.workerName, resetLink);
+
+    return res.status(200).json({
+      message: 'Password reset email sent. Please check your registered email inbox.',
+    });
+  } catch (error) {
+    console.error('Error handling forgot password request: ', error);
+    return res.status(500).json({ message: 'Server error. Please try again later.', error: true, ok: false });
+  }
+};
+
+const workerResetForgotPassword = async (req: Request, res: Response): Promise<any> => {
+  const { token, password } = req.body;
+
+  if (!token || !password) {
+    return res.status(400).json({ message: "Invalid request. Token and password are required.", error: true, ok: false });
+  }
+
+
+  try {
+    // Hash the received token to match the stored one
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    // Find the user with the provided reset token (and check if it’s not expired)
+    const worker = await WorkerModel.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() }, // Ensure token is not expired
+    });
+
+    if (!worker) {
+      return res.status(400).json({ message: "Invalid or expired token.", error: true, ok: false });
+    }
+
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    worker.password = await bcrypt.hash(password, salt);
+
+    // Clear the reset token fields
+    worker.resetPasswordToken = undefined;
+    worker.resetPasswordExpire = undefined;
+
+    // Save the updated worker data
+    await worker.save();
+
+    return res.status(200).json({ message: "Password reset successful. You can now log in.", error: false, ok: true });
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    return res.status(500).json({ message: "Server error. Please try again later.", error: true, ok: false });
+  }
+}
+
+
 export {
-  loginWorker, registerWorker, workerLogout, refreshTokenWorker, workerIsAuthenticated
+  loginWorker, registerWorker, workerLogout, refreshTokenWorker, workerIsAuthenticated,
+  workerforgotPassword, workerResetForgotPassword
 }

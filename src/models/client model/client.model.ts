@@ -34,8 +34,14 @@ const ClientSchema: Schema<IClient> = new Schema({
 });
 
 
-ClientSchema.index({ email: 1, projectId: 1 }, { unique: true });
-ClientSchema.index({ phoneNo: 1, projectId: 1 }, { unique: true, sparse: true });
+// ClientSchema.index({ email: 1, projectId: 1 }, { unique: true });
+// ClientSchema.index({ phoneNo: 1, projectId: 1 }, { unique: true, sparse: true });
+
+
+ClientSchema.index({ email: 1 }, { unique: true, sparse: true });
+ClientSchema.index({ phoneNo: 1 }, { unique: true, sparse: true });
+ClientSchema.index({ projectId: 1 }, { unique: true }); // only one client per project
+
 
 const ClientModel: Model<IClient> = mongoose.model<IClient>("ClientModel", ClientSchema);
 

@@ -281,10 +281,10 @@ const forgotPassword = async (req: Request, res: Response): Promise<any> => {
         let resetLink: string;
 
         if (process.env.NODE_ENV === "production") {
-            resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+            resetLink = `${process.env.FRONTEND_URL}/reset-password/owner?token=${resetToken}`;
         }
         else {
-            resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+            resetLink = `${process.env.FRONTEND_URL}/reset-password/owner?token=${resetToken}`;
         }
 
         // Send the password reset email

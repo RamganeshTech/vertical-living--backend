@@ -13,8 +13,8 @@ router.post('/registerclient', registerClient as RequestHandler) //?invite= quer
 router.post('/logout', clientLogout as RequestHandler)
 router.get('/refreshtoken', clientRefreshToken as RequestHandler)
 router.get('/isauthenticated',  multiRoleAuthMiddleware("client"), isClientAuthenticated as RequestHandler)
-router.post('/forgotpassword', ClientAuthMiddleware, clientForgotPassword as RequestHandler)
-router.post('/resetpassword', ClientAuthMiddleware, clientResetForgotPassword as RequestHandler)
+router.post('/forgotpassword',  clientForgotPassword as RequestHandler)
+router.post('/resetpassword',  clientResetForgotPassword as RequestHandler)
 
 // not used yet
 router.put('/updateclientinfo', ClientAuthMiddleware, updateClientProfile as RequestHandler)

@@ -26,12 +26,10 @@ const StaffSchema: Schema<IStaff> = new Schema({
     },
     staffName: {
         type: String,
-        unique: true,
         maxlength: [100, "staffname should be under 100 characters"]
     },
     phoneNo: {
         type: String,
-        unique: true,
         maxlength: [10, "it should be exactly 10 digits"]
     },
     role: {
@@ -56,8 +54,7 @@ const StaffSchema: Schema<IStaff> = new Schema({
 })
 
 
-StaffSchema.index({ email: 1 , ownerId:1}, { unique: true })
-
+StaffSchema.index({ email: 1 }, { unique: true });
 
 const StaffModel = mongoose.model<IStaff>("StaffModel", StaffSchema)
 

@@ -1,11 +1,12 @@
 import { Request, Response } from "express";
 import StaffModel from "../../models/staff model/staff.model";
-
+import { Types } from "mongoose"
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { AuthenticatedStaffRequest, RoleBasedRequest } from "../../types/types";
-import { ObjectId } from "mongoose";
+import { RoleBasedRequest } from "../../types/types";
 import redisClient from "../../config/redisClient";
+import crypto from 'crypto';
+import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail";
 
 // POST /api/staff/register
 const registerStaff = async (req: Request, res: Response) => {
@@ -39,7 +40,8 @@ const registerStaff = async (req: Request, res: Response) => {
         }
 
         // 5. Check for duplicate staff
-        const staffExists = await StaffModel.findOne({ email });
+        const staffExists = await StaffModel.findOne({ email: email });
+
         if (staffExists) {
             return res.status(409).json({ message: "Staff with this email already exists", ok: false });
         }
@@ -102,8 +104,13 @@ const loginStaff = async (req: Request, res: Response) => {
             return
         }
 
+
         // Find staff by email
-        const staff = await StaffModel.findOne({ email });
+        // const staff = await StaffModel.findOne({ email, organizationId });
+        const staff = await StaffModel.findOne({
+            email,
+        });
+
         if (!staff) {
             res.status(404).json({ message: "Invalid email or password", ok: false });
             return
@@ -290,10 +297,105 @@ const staffIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
     }
 }
 
+
+
+
+
+
+const staffforgotPassword = async (req: Request, res: Response): Promise<any> => {
+    const { email } = req.body;
+
+    // Check if the email exists in the database
+    try {
+        const staff = await StaffModel.findOne({ email });
+
+        if (!staff) {
+            return res.status(404).json({ message: 'staff not found', error: true, ok: false });
+        }
+
+        // Generate a token for password reset (using crypto or JWT)
+        const resetToken = crypto.randomBytes(32).toString('hex');
+
+        // Hash the token and store it in the database for later validation
+        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+        // Store the hashed token and set an expiration time (1 hour)
+        staff.resetPasswordToken = hashedToken;
+        staff.resetPasswordExpire = (Date.now() + 3600000); // 1 hour in milliseconds
+
+        await staff.save();
+
+        // Generate the password reset URL (ensure to use your real app's URL)
+        let resetLink: string;
+
+        if (process.env.NODE_ENV === "production") {
+            resetLink = `${process.env.FRONTEND_URL}/reset-password/staff?token=${resetToken}`;
+        }
+        else {
+            resetLink = `${process.env.FRONTEND_URL}/reset-password/staff?token=${resetToken}`;
+        }
+
+        // Send the password reset email
+        await sendResetEmail(staff.email, staff.staffName, resetLink);
+
+        return res.status(200).json({
+            message: 'Password reset email sent. Please check your registered email inbox.',
+        });
+    } catch (error) {
+        console.error('Error handling forgot password request: ', error);
+        return res.status(500).json({ message: 'Server error. Please try again later.', error: true, ok: false });
+    }
+};
+
+const staffResetForgotPassword = async (req: Request, res: Response): Promise<any> => {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+        return res.status(400).json({ message: "Invalid request. Token and password are required.", error: true, ok: false });
+    }
+
+
+    try {
+        // Hash the received token to match the stored one
+        const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+        // Find the user with the provided reset token (and check if it’s not expired)
+        const staff = await StaffModel.findOne({
+            resetPasswordToken: hashedToken,
+            resetPasswordExpire: { $gt: Date.now() }, // Ensure token is not expired
+        });
+
+        if (!staff) {
+            return res.status(400).json({ message: "Invalid or expired token.", error: true, ok: false });
+        }
+
+
+        // Hash the new password
+        const salt = await bcrypt.genSalt(10);
+        staff.password = await bcrypt.hash(password, salt);
+
+        // Clear the reset token fields
+        staff.resetPasswordToken = undefined;
+        staff.resetPasswordExpire = undefined;
+
+        // Save the updated staff data
+        await staff.save();
+
+        return res.status(200).json({ message: "Password reset successful. You can now log in.", error: false, ok: true });
+    } catch (error) {
+        console.error("Error resetting password:", error);
+        return res.status(500).json({ message: "Server error. Please try again later.", error: true, ok: false });
+    }
+}
+
 export {
     registerStaff,
     loginStaff,
     staffLogout,
     refreshTokenStaff,
-    staffIsAuthenticated
+    staffIsAuthenticated,
+
+
+    staffResetForgotPassword,
+    staffforgotPassword
 }

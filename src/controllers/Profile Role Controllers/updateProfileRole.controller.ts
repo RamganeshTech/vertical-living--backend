@@ -66,6 +66,23 @@ export const updateProfile = async (req: RoleBasedRequest, res: Response): Promi
             }
         }
 
+
+        // Check for email uniqueness within the same model
+        if (email) {
+            const existingEmail = await Model.findOne({
+                email,
+                _id: { $ne: user._id }, // exclude self
+            });
+
+            if (existingEmail) {
+                return res.status(400).json({
+                    ok: false,
+                    message: "Email already exists. Please use a different one.",
+                });
+            }
+        }
+
+
         // update document
         const updatedUser = await Model.findByIdAndUpdate(
             user._id,

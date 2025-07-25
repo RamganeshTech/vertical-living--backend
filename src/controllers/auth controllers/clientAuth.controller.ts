@@ -19,8 +19,9 @@ const clientLogin = async (req: Request, res: Response) => {
         }
 
         if (!email || !password) {
-            res.status(404).json({ message: "please provide the input properly", error: true, ok: false })
+            return res.status(404).json({ message: "please provide the input properly", error: true, ok: false })
         }
+
 
         const client = await ClientModel.findOne({ email: email })
 
@@ -138,60 +139,73 @@ const registerClient = async (req: Request, res: Response) => {
             return;
         }
 
-
-        // const orConditions: Array<any> = [
-        //     { email },
-        //     { clientName },
-        //     { phoneNo }
-        // ];
-
-        // Add phone check only if it's provided
-        // if (phoneNo) {
-        //     if (String(phoneNo).length !== 10) {
-        //         return res.status(400).json({
-        //             message: "Phone number should be exactly 10 digits",
-        //             ok: false,
-        //         });
-        //     }
-        //     orConditions.push({ phoneNo });
-        // }
-
-        // One DB call to check if any of the unique fields are already taken
         // const existingClient = await ClientModel.findOne({
         //     $or: [
-        //         { projectId }, // Any client already assigned to this project
+        //         // 1️⃣ Project already has any client
+        //         { projectId },
+
+        //         // 2️⃣ Same org AND project AND (same email OR phone)
         //         {
-        //             ownerId,
-        //             $or: [
-        //                 { email },
-        //                 { phoneNo }
+        //             $and: [
+        //                 { projectId },
+        //                 { organizationId },
+        //                 {
+        //                     $or: [
+        //                         { email },
+        //                         { phoneNo }
+        //                     ]
+        //                 }
         //             ]
         //         }
         //     ]
         // });
 
 
-
         const existingClient = await ClientModel.findOne({
             $or: [
-                // 1️⃣ Project already has any client
+                // 1️⃣ A client already exists for this project
                 { projectId },
 
-                // 2️⃣ Same org AND project AND (same email OR phone)
-                {
-                    $and: [
-                        { projectId },
-                        { organizationId },
-                        {
-                            $or: [
-                                { email },
-                                { phoneNo }
-                            ]
-                        }
-                    ]
-                }
+                // 2️⃣ A client exists with same email (anywhere)
+                { email },
+
+                // 3️⃣ A client exists with same phone number (anywhere)
+                { phoneNo },
             ]
         });
+
+
+        // if (existingClient) {
+        //     if (existingClient.projectId.toString() === projectId) {
+        //         return res.status(400).json({
+        //             ok: false,
+        //             message: "A client is already assigned to this project.",
+        //         });
+        //     }
+
+        //     if (existingClient.ownerId.toString() === ownerId && existingClient.email === email) {
+        //         return res.status(400).json({
+        //             ok: false,
+        //             message: "A client with this email already exists ",
+        //         });
+        //     }
+
+        //     if (existingClient.ownerId.toString() === ownerId && existingClient.clientName === clientName) {
+        //         return res.status(400).json({
+        //             ok: false,
+        //             message: "A client with this name already exists",
+        //         });
+        //     }
+
+        //     if (existingClient.ownerId.toString() === ownerId && existingClient.phoneNo === phoneNo) {
+        //         return res.status(400).json({
+        //             ok: false,
+        //             message: "A client with this phone number already exists",
+        //         });
+        //     }
+
+
+        // }
 
 
         if (existingClient) {
@@ -202,28 +216,19 @@ const registerClient = async (req: Request, res: Response) => {
                 });
             }
 
-            if (existingClient.ownerId.toString() === ownerId && existingClient.email === email) {
+            if (existingClient.email === email) {
                 return res.status(400).json({
                     ok: false,
-                    message: "A client with this email already exists ",
+                    message: "A client with this email already exists.",
                 });
             }
 
-            if (existingClient.ownerId.toString() === ownerId && existingClient.clientName === clientName) {
+            if (existingClient.phoneNo === phoneNo) {
                 return res.status(400).json({
                     ok: false,
-                    message: "A client with this name already exists",
+                    message: "A client with this phone number already exists.",
                 });
             }
-
-            if (existingClient.ownerId.toString() === ownerId && existingClient.phoneNo === phoneNo) {
-                return res.status(400).json({
-                    ok: false,
-                    message: "A client with this phone number already exists",
-                });
-            }
-
-
         }
 
         // if (existingClient) {
@@ -408,10 +413,10 @@ const clientForgotPassword = async (req: Request, res: Response): Promise<any> =
         let resetLink: string;
 
         if (process.env.NODE_ENV === "production") {
-            resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+            resetLink = `${process.env.FRONTEND_URL}/reset-password/client?token=${resetToken}`;
         }
         else {
-            resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+            resetLink = `${process.env.FRONTEND_URL}/reset-password/client?token=${resetToken}`;
         }
 
         // Send the password reset email

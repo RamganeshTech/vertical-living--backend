@@ -26,12 +26,10 @@ const UserSchema: Schema<IUser> = new Schema({
     },
     username: {
         type: String,
-        unique: true,
         maxlength: [100, "username should be under 100 characters"]
     },
     phoneNo: {
         type: String,
-        unique: true,
         maxlength: [10, "it should be exactly 10 digits"]
     },
     role: {

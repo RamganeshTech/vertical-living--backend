@@ -9,6 +9,7 @@ import ClientModel from "../../models/client model/client.model";
 import { getWorkerUtils, removeWorkerUtils } from "../../utils/workerUtils";
 import { generateWorkerInviteLink } from "../../utils/generateInvitationworker";
 import { syncAllMixedRoutes } from "../Modular Units Controllers/modularUnit.controller";
+import { WorkerModel } from "../../models/worker model/worker.model";
 
 
 
@@ -25,13 +26,24 @@ const createOrganziation = async (req: RoleBasedRequest, res: Response) => {
         }
 
         // ✅ Check directly in OrganizationModel
-        const existingOrg = await OrganizationModel.findOne({ userId: user?._id });
-        if (existingOrg) {
-            return res.status(400).json({
-                message: "Owner already has an organization",
-                ok: false,
-            });
+        const existing = await OrganizationModel.findOne({ userId: user?._id });
+
+
+        if (existing) {
+                return res.status(400).json({
+                    message: "Owner already has an organization",
+                    ok: false,
+                });
         }
+
+
+        // if (existingOrg) {
+        //     return res.status(400).json({
+        //         message: "Owner already has an organization",
+        //         ok: false,
+        //     });
+        // }
+
 
 
         // 2. Create Organization
@@ -56,13 +68,13 @@ const createOrganziation = async (req: RoleBasedRequest, res: Response) => {
             return
         }
 
-         res.status(201).json({
+        res.status(201).json({
             message: "Organization successfully",
             data: organization,
             ok: true
         });
 
-        await syncAllMixedRoutes((organization._id as string) )
+        await syncAllMixedRoutes((organization._id as string))
     }
     catch (error) {
         if (error instanceof Error) {
@@ -79,15 +91,15 @@ const getMyOrganizations = async (req: RoleBasedRequest, res: Response) => {
         const user = req.user;
 
         let idToSearch;
-        
-        if(user?.role === "owner"){
+
+        if (user?.role === "owner") {
             // console.log("im i getting inside", user?.role)
             idToSearch = user._id
         }
-        else{
+        else {
             // console.log("im i getting else part", user?.role)
 
-             idToSearch = user?.ownerId
+            idToSearch = user?.ownerId
         }
 
         if (!idToSearch) {
@@ -95,7 +107,7 @@ const getMyOrganizations = async (req: RoleBasedRequest, res: Response) => {
             return
         }
 
-        const organization = await OrganizationModel.findOne({ userId: idToSearch});
+        const organization = await OrganizationModel.findOne({ userId: idToSearch });
 
         if (!organization) {
             res.status(200).json({ message: "No organizations  found", ok: false, data: null });
@@ -168,9 +180,6 @@ const updateOrganizationDetails = async (req: RoleBasedRequest, res: Response) =
             { returnDocument: "after" }
         );
 
-        if (!updatedOrg) {
-            return res.status(404).json({ message: "Organization not found", ok: false });
-        }
 
         return res.status(200).json({ ok: true, message: "Organization field updated", data: updatedOrg });
 
@@ -541,17 +550,18 @@ const getWorkersByProject = async (req: RoleBasedRequest, res: Response): Promis
 // CLIENT CONTROLLERS
 const inviteClient = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { projectId , organizationId} = req.body;
+        const { projectId, organizationId } = req.body;
 
         const user = req.user
 
-        if (!projectId ) {
+        if (!projectId) {
             return res.status(400).json({
                 ok: false,
                 message: "projectId is required",
             });
         }
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
 
         const payload = {
             projectId,

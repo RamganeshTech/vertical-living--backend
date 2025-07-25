@@ -19,7 +19,6 @@ const CTOSchema: Schema<ICTO> = new Schema({
         type: String,
         maxLength: [50, "it shoud be within 50 digits"],
         require: true,
-        unique:true
     },
     password: {
         type: String,
@@ -28,12 +27,10 @@ const CTOSchema: Schema<ICTO> = new Schema({
     },
     CTOName: {
         type: String,
-        unique: true,
         maxlength: [100, "CTO name should be under 100 characters"]
     },
     phoneNo: {
         type: String,
-        unique: true,
         maxlength: [10, "it should be exactly 10 digits"]
     },
     role: {
@@ -63,7 +60,8 @@ const CTOSchema: Schema<ICTO> = new Schema({
 })
 
 
-CTOSchema.index({ email: 1 , ownerId:1}, { unique: true })
+CTOSchema.index({ email: 1 }, { unique: true })
+CTOSchema.index({ phoneNo: 1 }, { unique: true, sparse: true });
 
 
 const CTOModel = mongoose.model<ICTO>("CTOModel", CTOSchema)
