@@ -23,7 +23,7 @@ const generateCostEstimationFromMaterialSelection = async (
     const existing = await CostEstimationModel.findOne({ projectId });
 
     const timer = {
-        startedAt: null,
+        startedAt: new Date(),
         completedAt: null,
         deadLine: null,
         reminderSent: false,
@@ -82,12 +82,7 @@ const generateCostEstimationFromMaterialSelection = async (
             totalLabourCost: 0,
             totalEstimation: 0,
             isEditable: true,
-            timer: {
-                startedAt: null,
-                completedAt: null,
-                deadLine: null,
-                reminderSent: false,
-            },
+            timer: timer,
             status: "pending",
         });
     }

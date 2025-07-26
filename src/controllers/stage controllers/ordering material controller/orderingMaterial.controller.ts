@@ -21,14 +21,14 @@ import { DocUpload } from "../../../types/types";
 export const syncOrderingMaterials = async (projectId: string) => {
 
   const existing = await OrderingMaterialModel.findOne({ projectId });
-
+  const timer: IMaterialOrderingTimer = {
+    startedAt: new Date(),
+    completedAt: null,
+    deadLine: null,
+    reminderSent: false,
+  };
   if (!existing) {
-    const timer: IMaterialOrderingTimer = {
-      startedAt: null,
-      completedAt: null,
-      deadLine: null,
-      reminderSent: false,
-    };
+
 
     await OrderingMaterialModel.create({
       projectId: projectId,
@@ -64,10 +64,7 @@ export const syncOrderingMaterials = async (projectId: string) => {
     });
   }
   else {
-    existing.timer.startedAt = null
-    existing.timer.completedAt = null
-    existing.timer.deadLine = null
-    existing.timer.reminderSent = false
+    existing.timer = timer
 
     existing.save()
   }
@@ -497,19 +494,19 @@ const orderMaterialCompletionStatus = async (req: Request, res: Response): Promi
         url: file.url,
         originalName: file.originalName,
       })) || []
-    
 
 
 
-    await addOrUpdateStageDocumentation({
-      projectId,
-      stageNumber: "8", // ✅ Put correct stage number here
-      description: "Ordering Material Stage is documented",
-      uploadedFiles, // optionally add files here
-    })
+
+      await addOrUpdateStageDocumentation({
+        projectId,
+        stageNumber: "8", // ✅ Put correct stage number here
+        description: "Ordering Material Stage is documented",
+        uploadedFiles, // optionally add files here
+      })
 
 
-  }
+    }
 
     // const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
 
@@ -518,14 +515,14 @@ const orderMaterialCompletionStatus = async (req: Request, res: Response): Promi
     await populateWithAssignedToField({ stageModel: OrderingMaterialModel, projectId, dataToCache: form })
 
 
-  res.status(200).json({ ok: true, message: "order material stage marked as completed", data: form });
+    res.status(200).json({ ok: true, message: "order material stage marked as completed", data: form });
 
-  updateProjectCompletionPercentage(projectId);
+    updateProjectCompletionPercentage(projectId);
 
-} catch (err) {
-  console.error(err);
-  return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
-}
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
+  }
 };
 
 

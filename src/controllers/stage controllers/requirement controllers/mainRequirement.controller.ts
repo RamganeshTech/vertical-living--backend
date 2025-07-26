@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { RequirementFormModel } from "../../../models/Stage Models/requirment model/requirement.model";
+import { Iupload, RequirementFormModel } from "../../../models/Stage Models/requirment model/requirement.model";
 import { validateBedroomInput, validateKitchenInput, validateLivingHallInput, validateWardrobeInput } from "../../../validations/requirement validation/kitchenValidation";
 import { Types } from "mongoose";
 import crypto from 'crypto';
@@ -43,7 +43,8 @@ export const syncRequirmentForm = async (projectId: Types.ObjectId) => {
         kitchenPackage: null,
         graniteCountertop: null,
         numberOfShelves: null,
-        notes: null
+        notes: null,
+        uploads: []
       },
       bedroom: {
         numberOfBedrooms: null,
@@ -54,6 +55,7 @@ export const syncRequirmentForm = async (projectId: Types.ObjectId) => {
         studyTableRequired: null,
         bedroomPackage: null,
         notes: null,
+        uploads: []
       },
       wardrobe: {
         wardrobeType: null,
@@ -64,6 +66,7 @@ export const syncRequirmentForm = async (projectId: Types.ObjectId) => {
         numberOfShelves: null,
         numberOfDrawers: null,
         notes: null,
+        uploads: []
       },
       livingHall: {
         seatingStyle: null,
@@ -74,6 +77,7 @@ export const syncRequirmentForm = async (projectId: Types.ObjectId) => {
         numberOfLights: null,
         livingHallPackage: null,
         notes: null,
+        uploads: []
       },
       additionalNotes: null,
       timer: {
@@ -248,8 +252,24 @@ const getFormFilledDetails = async (req: Request, res: Response,): Promise<any> 
       return;
     }
 
+
+    // const data = await RequirementFormModel.updateOne(
+    //   { projectId },
+    //   {
+    //     $set: {
+    //       "kitchen.uploads": [],
+    //       "livingHall.uploads": [],
+    //       "bedroom.uploads": [],
+    //       "wardrobe.uploads": [],
+    //     },
+    //   }
+    // );
+
+
+    // console.log("data of fuploads", data)
+
     const redisKeyMain = `stage:RequirementFormModel:${projectId}`
-    await redisClient.del(redisKeyMain)
+    // await redisClient.del(redisKeyMain)
     const redisCache = await redisClient.get(redisKeyMain)
 
     if (redisCache) {
@@ -346,7 +366,6 @@ const lockRequirementForm = async (req: Request, res: Response): Promise<any> =>
 const markFormAsCompleted = async (req: Request, res: Response): Promise<any> => {
   try {
     const { formId, projectId } = req.params;
-    console.log("formId", formId)
     const form = await RequirementFormModel.findById(formId);
 
     if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
@@ -426,6 +445,113 @@ const deleteRequirementStageFile = async (req: Request, res: Response): Promise<
   }
 };
 
+
+
+const uploadRequirementSectionFilesController = async (
+  req: RoleBasedRequest,
+  res: Response
+): Promise<any> => {
+  try {
+    const { projectId, sectionName } = req.params;
+    const files = req.files as Express.Multer.File[];
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded", ok: false });
+    }
+
+    const allowedSections = ["bedroom", "kitchen", "livingHall", "wardrobe"];
+    if (!allowedSections.includes(sectionName)) {
+      return res.status(400).json({ message: "Invalid section name" });
+    }
+
+    const doc: any = await RequirementFormModel.findOne({ projectId });
+    if (!doc) return res.status(404).json({ message: "Document not found", ok: false });
+
+
+    // ⚠️ Check if section exists. If not, initialize it with empty uploads
+    if (!doc[sectionName]) {
+      doc[sectionName] = { uploads: [] };
+    }
+
+    if (!Array.isArray(doc[sectionName].uploads)) {
+      doc[sectionName].uploads = [];
+    }
+
+    for (const file of files) {
+      const fileType = file.mimetype.includes("pdf") ? "pdf" : "image";
+      const location =
+        (file as any).transforms?.[0]?.location || (file as any).location;
+
+
+      doc[sectionName].uploads.push({
+        _id: new Types.ObjectId(),
+        type: fileType,
+        url: location,
+        originalName: file.originalname,
+        uploadedAt: new Date(),
+      });
+    }
+
+    await doc.save();
+
+    await populateWithAssignedToField({ stageModel: RequirementFormModel, projectId, dataToCache: doc })
+
+    return res.status(200).json({
+      ok: true,
+      message: "Files uploaded to section",
+      count: files.length,
+    });
+  } catch (err) {
+    console.error("Upload Section Error:", err);
+    return res.status(500).json({ message: "Internal server error", ok: false });
+  }
+};
+
+const deleteRequirementSectionFileController = async (
+  req: RoleBasedRequest,
+  res: Response
+): Promise<any> => {
+  try {
+    const { projectId, sectionName, fileId } = req.params;
+
+    if (!fileId) {
+      return res.status(400).json({ message: "Missing fileId", ok: false });
+    }
+
+
+    console.log("fileId", fileId)
+
+    const allowedSections = ["bedroom", "kitchen", "livingHall", "wardrobe"];
+    if (!allowedSections.includes(sectionName)) {
+      return res.status(400).json({ message: "Invalid section name", ok: false });
+    }
+
+    const doc: any = await RequirementFormModel.findOne({ projectId });
+    if (!doc) return res.status(404).json({ message: "Document not found", ok: false });
+    console.log("documents of uploads", doc[sectionName].uploads)
+    doc[sectionName].uploads = doc[sectionName].uploads.filter(
+      (file: any) =>{
+      // console.log("fileId",fileId, file._id !== fileId)
+       return !file._id.equals(fileId)}
+    );
+
+    await doc.save();
+
+    await populateWithAssignedToField({ stageModel: RequirementFormModel, projectId, dataToCache: doc })
+
+    return res.status(200).json({
+      ok: true,
+      message: "File deleted from section",
+      section: sectionName,
+    });
+  } catch (err) {
+    console.error("Delete Section File Error:", err);
+    return res.status(500).json({ message: "Internal server error", ok: false });
+  }
+};
+
+
+
 export {
   submitRequirementForm,
   delteRequirementForm,
@@ -434,5 +560,11 @@ export {
   lockRequirementForm,
   markFormAsCompleted,
 
-  deleteRequirementStageFile
+  deleteRequirementStageFile,
+
+
+
+  // below is to delete the file in the seciton
+  uploadRequirementSectionFilesController,
+  deleteRequirementSectionFileController
 }

@@ -25,7 +25,7 @@ export interface ICleaningAndSanitation extends Document {
     timer: {
         startedAt: Date | null;
         completedAt: Date | null;
-        deadline: Date | null;
+        deadLine: Date | null;
         reminderSent: boolean
     };
     assignedTo: Types.ObjectId;

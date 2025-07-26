@@ -16,14 +16,17 @@ import { addOrUpdateStageDocumentation } from "../../documentation controller/do
 export const syncCleaningSanitaionStage = async (projectId: string) => {
   let cleaningDoc = await CleaningAndSanitationModel.findOne({ projectId })
 
-  if (!cleaningDoc) {
-    const timer = {
-      startedAt: null,
+
+
+   const timer = {
+      startedAt: new Date(),
       completedAt: null,
       deadLine: null,
       reminderSent: false,
     };
 
+  if (!cleaningDoc) {
+   
 
     await CleaningAndSanitationModel.create({
       projectId,
@@ -41,10 +44,7 @@ export const syncCleaningSanitaionStage = async (projectId: string) => {
       })
     })
   } else {
-    cleaningDoc.timer.startedAt = null
-    cleaningDoc.timer.completedAt = null
-    cleaningDoc.timer.deadline = null
-    cleaningDoc.timer.reminderSent = false
+    cleaningDoc.timer = timer
     await cleaningDoc.save()
   }
 

@@ -96,7 +96,7 @@ export const syncPaymentConfirationModel = async (projectId: string | Types.Obje
 
   const existing = await PaymentConfirmationModel.findOne({ projectId })
   const timer = {
-    startedAt: null,
+    startedAt: new Date(),
     completedAt: null,
     deadLine: null,
     reminderSent: false,

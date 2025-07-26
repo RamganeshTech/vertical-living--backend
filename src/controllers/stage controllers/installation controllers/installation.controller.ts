@@ -14,13 +14,14 @@ export const syncInstallationWork = async (projectId: string) => {
 
   const existing = await InstallationModel.findOne({ projectId });
 
-  if (!existing) {
     const timer = {
-      startedAt: null,
+      startedAt: new Date(),
       completedAt: null,
       deadLine: null,
       reminderSent: false,
     };
+  if (!existing) {
+  
 
 
     await InstallationModel.create({
@@ -46,10 +47,7 @@ export const syncInstallationWork = async (projectId: string) => {
     })
   }
   else {
-    existing.timer.startedAt = null
-    existing.timer.deadLine = null,
-      existing.timer.completedAt = null,
-      existing.timer.reminderSent = false,
+    existing.timer =timer
 
       await existing.save()
   }

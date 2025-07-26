@@ -1,4 +1,16 @@
 import mongoose, { model, Schema, Types } from 'mongoose';
+
+
+
+
+export interface Iupload {
+    type: "image" | "pdf",
+    url: string,
+    uploadedAt: Date,
+    originalName: string,
+}
+
+
 export interface ISiteMeasurement extends Document {
     projectId: Types.ObjectId;
     status: "pending" | "completed";
@@ -13,12 +25,7 @@ export interface ISiteMeasurement extends Document {
     };
     assignedTo: Types.ObjectId;
 
-    uploads: {
-        type: "image" | "pdf";
-        url: string;
-        originalName: string;
-        uploadedAt: Date;
-    }[];
+    uploads: Iupload[];
 
     siteDetails: {
         totalPlotAreaSqFt: number | null;
@@ -35,6 +42,7 @@ export interface ISiteMeasurement extends Document {
         length: number | null;
         breadth: number | null;
         height?: number | null;
+        uploads: Iupload[]
     }[];
 
 }
@@ -87,7 +95,8 @@ const SiteMeasurementSchema = new Schema<ISiteMeasurement>({
             name: { type: String, default: null },
             length: { type: Number, default: null },
             breadth: { type: Number, default: null },
-            height: { type: Number, default: null }
+            height: { type: Number, default: null },
+                uploads: { type: [uploadSchema], default: [] },
         }
     ],
 

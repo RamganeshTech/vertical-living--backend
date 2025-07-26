@@ -1,4 +1,5 @@
 import { Schema } from "mongoose";
+import { Iupload, uploadSchema } from "./requirement.model";
 
 export interface IBedroomRequirement {
   numberOfBedrooms: number;
@@ -8,6 +9,7 @@ export interface IBedroomRequirement {
   tvUnitRequired?: boolean;
   studyTableRequired?: boolean;
   bedroomPackage: "Essentials" | "Premium" | "Luxury" | "Build Your Own Package";
+  uploads: Iupload[]
   notes?: (string | null);
 }
 
@@ -18,7 +20,7 @@ export const BedroomRequirementSchema = new Schema<IBedroomRequirement>({
   },
   bedType: {
     type: String,
-    enum: ["Single", "Double", "Queen", "King", null,  ""],
+    enum: ["Single", "Double", "Queen", "King", null, ""],
     default: null
   },
   wardrobeIncluded: {
@@ -39,18 +41,19 @@ export const BedroomRequirementSchema = new Schema<IBedroomRequirement>({
   },
   bedroomPackage: {
     type: String,
-    enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package", null,  ""],
+    enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package", null, ""],
     default: null
   },
+  uploads: { type: [uploadSchema], default: [] },
   notes: {
     type: String,
     default: null
 
   },
 },
-{
+  {
     timestamps: true
-}
+  }
 );
 
 

@@ -36,7 +36,7 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
       status: "pending",
       isEditable: true,
       timer: {
-        startedAt: null,
+        startedAt: new Date(),
         completedAt: null,
         deadLine: null,
         reminderSent: false
@@ -47,7 +47,7 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
     // console.log("coommign to else condition")
     design.status = "pending";
     design.isEditable = true;
-    design.timer.startedAt = null
+    design.timer.startedAt = new Date()
     design.timer.deadLine = null
     design.timer.completedAt = null
     design.timer.reminderSent = false

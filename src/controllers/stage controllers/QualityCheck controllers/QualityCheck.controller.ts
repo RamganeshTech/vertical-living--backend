@@ -16,14 +16,15 @@ export const syncQualityCheck = async (projectId: string) => {
 
     const existing = await QualityCheckupModel.findOne({ projectId });
 
-    if (!existing) {
-        const timer = {
-            startedAt: null,
-            completedAt: null,
-            deadLine: null,
-            reminderSent: false,
-        };
+    const timer = {
+        startedAt: new Date(),
+        completedAt: null,
+        deadLine: null,
+        reminderSent: false,
+    };
 
+
+    if (!existing) {
 
         await QualityCheckupModel.create({
             projectId,
@@ -48,12 +49,9 @@ export const syncQualityCheck = async (projectId: string) => {
         })
     }
     else {
-        existing.timer.startedAt = null
-        existing.timer.deadLine = null,
-            existing.timer.completedAt = null,
-            existing.timer.reminderSent = false,
+        existing.timer = timer
 
-            await existing.save()
+        await existing.save()
     }
 
 
@@ -236,7 +234,7 @@ const editQualityCheckItem = async (req: RoleBasedRequest, res: Response): Promi
 const deleteQualityCheckItem = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId, roomName, itemId } = req.params;
-        
+
 
         if (!projectId || !roomName || !itemId) {
             return res.status(400).json({ ok: false, message: "Missing required fields." });

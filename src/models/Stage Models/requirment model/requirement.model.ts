@@ -7,6 +7,13 @@ import { BedroomRequirementSchema, IBedroomRequirement } from "./bedroom.model"
 import { ILivingHallRequirement, LivingHallRequirementSchema } from "./livingroom.model"
 
 
+export interface Iupload {
+    type?:"image" |" pdf",
+      url: string,
+      uploadedAt: Date,
+      originalName: string,
+    }
+
 interface IRequirementFormSchema extends Document {
   projectId: Types.ObjectId,
   assignedTo: Types.ObjectId,
@@ -32,18 +39,13 @@ interface IRequirementFormSchema extends Document {
     deadLine: Date | null,
     reminderSent: boolean
   },
-  uploads: {
-    type?:"image" |" pdf",
-      url: string,
-      uploadedAt: Date,
-      originalName: string,
-    }[]
+  uploads: Iupload[]
   
 }
 
 
 
-const uploadSchema = new Schema({
+export const uploadSchema = new Schema({
   type: { type: String, enum: ["image", "pdf"] },
   url: { type: String,  },
   originalName: String,

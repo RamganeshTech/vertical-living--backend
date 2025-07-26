@@ -1,5 +1,5 @@
 import express from 'express';
-import { deleteRequirementStageFile, delteRequirementForm, generateShareableFormLink, getFormFilledDetails, lockRequirementForm, markFormAsCompleted, setRequirementStageDeadline, submitRequirementForm } from '../../../controllers/stage controllers/requirement controllers/mainRequirement.controller';
+import { deleteRequirementSectionFileController, deleteRequirementStageFile, delteRequirementForm, generateShareableFormLink, getFormFilledDetails, lockRequirementForm, markFormAsCompleted, setRequirementStageDeadline, submitRequirementForm, uploadRequirementSectionFilesController } from '../../../controllers/stage controllers/requirement controllers/mainRequirement.controller';
 import ClientAuthMiddleware from '../../../middlewares/clientAuthMiddleware';
 // import { updateBedroomSection, updateKitchenSection, updateLivingHallSection, updateWardrobeSection } from '../../../controllers/client controllers/clientRequirement.controller';
 import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware';
@@ -36,6 +36,21 @@ requirementRoutes.put("/:projectId/updatekitchen", multiRoleAuthMiddleware("owne
 requirementRoutes.put("/:projectId/updatebedroom", multiRoleAuthMiddleware("owner","CTO",  "staff", "client"), notToUpdateIfStageCompleted(RequirementFormModel),checkIfStaffIsAssignedToStage(RequirementFormModel), updateBedroomSection);
 requirementRoutes.put("/:projectId/updatewardrobe", multiRoleAuthMiddleware("owner","CTO", "staff",  "client"),notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), updateWardrobeSection);
 requirementRoutes.put("/:projectId/updatelivinghall", multiRoleAuthMiddleware("owner","CTO", "staff",  "client"),notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), updateLivingHallSection);
+
+requirementRoutes.post(
+  "/:projectId/:sectionName/upload",
+  multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),
+  imageUploadToS3.array("file"),
+  processUploadFiles,
+  uploadRequirementSectionFilesController
+);
+
+requirementRoutes.delete(
+  "/:projectId/:sectionName/:fileId/deletefile",
+  multiRoleAuthMiddleware("owner", "staff", "CTO",),
+  deleteRequirementSectionFileController
+);
+
 
 export default requirementRoutes
 

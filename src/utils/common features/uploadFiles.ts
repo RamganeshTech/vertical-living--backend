@@ -12,13 +12,11 @@ interface UploadEntry {
 
 export const uploadGenericController = (ModelRef: Model<any>) => async (req: Request, res: Response): Promise<any> => {
   try {
-    console.log("enting tnot upload controler")
 
     const { formId , projectId} = req.params;
     const files = req.files as Express.Multer.File[];
 
 
-    console.log("files form the things",files)
     if (!files || files.length === 0) {
       return res.status(400).json({ message: "No files uploaded" });
     }
@@ -33,7 +31,7 @@ export const uploadGenericController = (ModelRef: Model<any>) => async (req: Req
     for (const file of files) {
       const fileType = file.mimetype.includes("pdf") ? "pdf" : "image";
 
-        console.log("✅ After upload:", files.map(f => ({ original: f.originalname, location: (f as any).location , file:f})));
+        // console.log("✅ After upload:", files.map(f => ({ original: f.originalname, location: (f as any).location , file:f})));
 
       (doc as any).uploads.push({
         type: fileType,

@@ -49,7 +49,7 @@ documentationRoutes.put(
 // ✅ Update the description of a stage
 documentationRoutes.get(
   "/getclient/:projectId/byproject",
-  multiRoleAuthMiddleware("owner", "CTO", "staff"),
+  // multiRoleAuthMiddleware("owner", "CTO", "staff"),
   getClientByProjectId
 );
 

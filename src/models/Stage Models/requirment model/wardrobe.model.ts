@@ -1,4 +1,5 @@
 import { Schema } from "mongoose";
+import { Iupload, uploadSchema } from "./requirement.model";
 
 export interface IWardrobeRequirement {
   wardrobeType: "Sliding" | "Openable";
@@ -14,6 +15,7 @@ export interface IWardrobeRequirement {
 //   };
   numberOfShelves?: (number | null);
   numberOfDrawers?: (number | null);
+        uploads: Iupload[]
   notes?: (string | null);
 }
 
@@ -48,6 +50,7 @@ export const WardrobeRequirementSchema = new Schema<IWardrobeRequirement>({
     type: Number,
     default: null
   },
+  uploads:{type : [uploadSchema], default:[]},
   notes: {
     type: String,
     default: null

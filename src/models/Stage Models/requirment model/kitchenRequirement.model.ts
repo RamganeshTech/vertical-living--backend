@@ -1,4 +1,5 @@
 import { Schema } from "mongoose";
+import { Iupload, uploadSchema } from "./requirement.model";
 
 export interface IKitchenRequirement {
     layoutType: "L-shaped" | "Straight" | "U-shaped" | "Parallel";
@@ -10,6 +11,7 @@ export interface IKitchenRequirement {
     kitchenPackage: "Essentials" | "Premium" | "Luxury" | "Build Your Own Package";
     graniteCountertop?: boolean;
     numberOfShelves?: (number | null);
+    uploads: Iupload[]
     notes?: string | null;
 }
 
@@ -38,6 +40,7 @@ export const KitchenRequirementSchema = new Schema<IKitchenRequirement>({
         type: Number,
         default: null
     },
+    uploads: { type: [uploadSchema], default: [] },
     notes: {
         type: String, // for any custom client input
         default: null

@@ -23,7 +23,7 @@ export const syncTechnicalConsultantStage = async (projectId: string) => {
       isEditable: true,
       assignedTo: null,
       timer: {
-        startedAt: null,
+        startedAt: new Date(),
         completedAt: null,
         deadLine: null,
         reminderSent: false
@@ -34,7 +34,7 @@ export const syncTechnicalConsultantStage = async (projectId: string) => {
     techConsultant.status = "pending";
     techConsultant.isEditable = true;
     techConsultant.timer = {
-      startedAt: null,
+      startedAt: new Date(),
       completedAt: null,
       deadLine: null,
       reminderSent: false

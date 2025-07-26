@@ -20,7 +20,7 @@ export const initializeMaterialSelection = async (projectId: string) => {
   const existing = await MaterialRoomConfirmationModel.findOne({ projectId });
 
   const timer = {
-    startedAt: null,
+    startedAt: new Date(),
     completedAt: null,
     deadLine: null,
     reminderSent: false,
@@ -41,12 +41,7 @@ export const initializeMaterialSelection = async (projectId: string) => {
       customRooms: [],
       status: "pending",
       isEditable: true,
-      timer: {
-        startedAt: null,
-        completedAt: null,
-        deadLine: null,
-        reminderSent: false,
-      },
+      timer
     });
   }
   else {

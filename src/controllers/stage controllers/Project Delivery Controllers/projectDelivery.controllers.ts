@@ -38,7 +38,7 @@ export const syncProjectDelivery = async (
             status: "pending",
             isEditable: true,
             timer: {
-                startedAt: null,
+                startedAt: new Date(),
                 completedAt: null,
                 deadLine: null,
                 reminderSent: false,
@@ -49,7 +49,7 @@ export const syncProjectDelivery = async (
             clientAcceptedAt: null,
         });
     } else {
-        doc.timer.startedAt = null
+        doc.timer.startedAt = new Date()
         doc.timer.deadLine = null,
             doc.timer.completedAt = null,
             doc.timer.reminderSent = false,

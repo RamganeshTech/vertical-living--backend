@@ -3,6 +3,7 @@ import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasureme
 import { handleSetStageDeadline } from "../../../utils/common features/timerFuncitonality";
 import { SampleDesignModel } from "../../../models/Stage Models/sampleDesing model/sampleDesign.model";
 import { syncRoomsToMaterialConfirmation } from "../../../utils/syncings/syncRoomsWithMaterialConfimation";
+import { Types } from "mongoose";
 
 import redisClient from './../../../config/redisClient';
 import { Model } from "mongoose";
@@ -12,7 +13,7 @@ import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { initializeSiteRequirement } from "../../../utils/Stage Utils/siteRequirementsInitialize";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
-import { DocUpload } from "../../../types/types";
+import { DocUpload, RoleBasedRequest } from "../../../types/types";
 
 
 export const syncSiteMeasurement = async (projectId: string) => {
@@ -26,7 +27,7 @@ export const syncSiteMeasurement = async (projectId: string) => {
       assignedTo: null,
       isEditable: true,
       timer: {
-        startedAt: null,
+        startedAt: new Date(),
         completedAt: null,
         deadLine: null,
         reminderSent: false
@@ -46,7 +47,7 @@ export const syncSiteMeasurement = async (projectId: string) => {
   } else {
     siteMeasurement.status = "pending";
     siteMeasurement.isEditable = true;
-    siteMeasurement.timer.startedAt = null;
+    siteMeasurement.timer.startedAt = new Date();
     siteMeasurement.timer.reminderSent = false
     siteMeasurement.timer.completedAt = null
     siteMeasurement.timer.deadLine = null
@@ -503,6 +504,101 @@ const deleteSiteMeasurementFile = async (req: Request, res: Response): Promise<a
 
 
 
+const uploadSiteMeasurementRoomImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+    const { projectId, roomId } = req.params;
+    const files = req.files as Express.Multer.File[];
+
+    if (!files?.length) {
+      return res.status(400).json({ message: "No files uploaded", ok: false });
+    }
+
+    // Allow only image files
+    const imageFiles = files.filter(file => file.mimetype.startsWith("image/"));
+    if (imageFiles.length !== files.length) {
+      return res.status(400).json({ message: "Only image files are allowed", ok: false });
+    }
+
+    const uploads = imageFiles.map((file) => ({
+
+      _id: new Types.ObjectId(),
+      type: "image",
+      url: (file as any).location,
+      originalName: file.originalname,
+      uploadedAt: new Date(),
+    }));
+
+    const doc = await SiteMeasurementModel.findOne({ projectId });
+
+    if (!doc) {
+      return res.status(404).json({ message: "Stage not found", ok: false });
+    }
+
+    const room = (doc.rooms as any).id(roomId);
+
+    if (!room) {
+      return res.status(404).json({ message: "Room not found", ok: false });
+    }
+
+    // Ensure uploads array exists
+    if (!room?.uploads) {
+      room.uploads = [];
+    }
+
+    // Add new uploads
+    room.uploads.push(...uploads);
+
+    await doc.save();
+
+    await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: doc })
+
+
+    res.status(200).json({ message: "Images uploaded successfully", data: uploads, ok: true });
+    return
+  } catch (err) {
+    console.error("Upload error:", err);
+    res.status(500).json({ message: "Internal server error", ok: false });
+    return
+  }
+};
+
+
+
+
+
+const deleteSiteMeasurementRoomImage = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+    const { projectId, roomId, uploadId } = req.params;
+
+    const updated = await SiteMeasurementModel.findOneAndUpdate(
+      {
+        _id: projectId,
+        "rooms._id": roomId,
+      },
+      {
+        $pull: {
+          "rooms.$.uploads": { _id: uploadId }
+        }
+      },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: "Project or room not found", ok: false });
+    }
+
+    await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: updated })
+
+    res.status(200).json({ message: "Image deleted successfully", ok: true });
+    return
+  } catch (err) {
+    console.error("Delete error:", err);
+    res.status(500).json({ message: "Internal server error", ok: false });
+    return
+  }
+};
+
+
 export {
   createSiteMeasurement,
   createRoom,
@@ -515,4 +611,10 @@ export {
 
 
   deleteSiteMeasurementFile,
+
+
+
+  uploadSiteMeasurementRoomImages,
+  deleteSiteMeasurementRoomImage
+
 }

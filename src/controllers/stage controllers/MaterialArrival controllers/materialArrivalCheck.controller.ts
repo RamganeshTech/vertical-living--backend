@@ -18,14 +18,14 @@ const allowedRooms = [
 export const syncMaterialArrival = async (projectId: string) => {
 
     const existing = await MaterialArrivalModel.findOne({ projectId });
-
-    if (!existing) {
-        const timer: IMaterialArrivalTimer = {
+ const timer: IMaterialArrivalTimer = {
             startedAt: null,
             completedAt: null,
             deadLine: null,
             reminderSent: false,
         };
+    if (!existing) {
+       
 
         await MaterialArrivalModel.create({
             projectId: projectId,
@@ -61,10 +61,7 @@ export const syncMaterialArrival = async (projectId: string) => {
         });
     }
     else {
-        existing.timer.startedAt = null
-        existing.timer.completedAt = null
-        existing.timer.deadLine = null
-        existing.timer.reminderSent = false
+        existing.timer= timer
 
 
         existing.save()

@@ -44,7 +44,7 @@ export interface IPaymentTransaction {
   paymentGateway: string;
   gatewayOrderId: string;                       // Razorpay Order ID
   gatewayPaymentId: string | null;              // Razorpay Payment ID (transaction ID)
-  status: "created" | "attempted" | "successful" | "failed";
+  status: "created" | "attempted" | "successful" | "failed" | null;
   amount: number;
   currency: string;
   paidAt: Date | null;
@@ -120,7 +120,7 @@ const PaymentTransactionSchema = new Schema<IPaymentTransaction>(
     
     status: {
       type: String,
-      enum: ["created", "attempted", "successful", "failed"],
+      enum: ["created", "attempted", "successful", "failed", null],
       default: null,
     },
     amount: { type: Number },

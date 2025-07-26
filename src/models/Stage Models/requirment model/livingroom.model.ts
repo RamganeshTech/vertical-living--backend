@@ -1,4 +1,5 @@
 import { Schema } from "mongoose";
+import { Iupload, uploadSchema } from "./requirement.model";
 
 export interface ILivingHallRequirement {
   seatingStyle?: "Sofa Set" | "L-Shaped Sofa" | "Recliner Chairs" | "Floor Seating";
@@ -8,6 +9,7 @@ export interface ILivingHallRequirement {
   numberOfFans?: (number | null);
   numberOfLights?: (number | null);
   livingHallPackage: "Essentials" | "Premium" | "Luxury" | "Build Your Own Package";
+      uploads: Iupload[]
   notes?: (string | null);
 }
 
@@ -46,6 +48,7 @@ export const LivingHallRequirementSchema = new Schema<ILivingHallRequirement>({
     enum: ["Essentials", "Premium", "Luxury", "Build Your Own Package", null, ""],
     default: null
   },
+    uploads:{type : [uploadSchema], default:[]},
   notes: {
     type: String,
     default: null
