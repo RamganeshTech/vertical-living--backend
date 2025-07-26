@@ -6,6 +6,10 @@ import { RoleBasedRequest } from "../../../types/types";
 import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
 import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
 import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
+import { generateCostEstimationFromMaterialSelection } from "../../stage controllers/cost estimation controllers/costEstimation.controller";
+import { syncPaymentConfirationModel } from "../../stage controllers/PaymentConfirmation controllers/PaymentMain.controllers";
+import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 
 // ADD A UNIT
 export const addSelectedUnit = async (req: RoleBasedRequest, res: Response): Promise<any> => {
@@ -103,25 +107,33 @@ export const completeModularUnitSelection = async (req: RoleBasedRequest, res: R
     modularSelection.totalCost = recalculatedTotalCost;
     await modularSelection.save();
 
+    const updatedPayment = await syncPaymentConfirationModel(projectId, recalculatedTotalCost) 
+
     // ✅ Update PaymentConfirmationModel (add to totalAmount)
-    const updatedPayment = await PaymentConfirmationModel.findOneAndUpdate(
-      { projectId },
-      { $set: { totalAmount: recalculatedTotalCost } },
-      { new: true }
-    );
+    // const updatedPayment = await PaymentConfirmationModel.findOneAndUpdate(
+    //   { projectId },
+    //   { $set: { totalAmount: recalculatedTotalCost } },
+    //   { new: true }
+    // );
 
     // ✅ Mark MaterialRoomConfirmationModel as completed
-    await MaterialRoomConfirmationModel.findOneAndUpdate(
+   const materialDoc =  await MaterialRoomConfirmationModel.findOneAndUpdate(
       { projectId },
-      { status: "completed" }
-    );
+      { status: "completed" },
+      {returnDocument:"after"}
+    ).populate(assignedTo, selectedFields)
+
+// console.log("mateiraldoc", materialDoc)
+     await generateCostEstimationFromMaterialSelection({}, projectId)
+   
 
     // ✅ Mark CostEstimationModel as completed
     await CostEstimationModel.findOneAndUpdate(
       { projectId },
       { status: "completed" }
     );
-
+    await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: materialDoc })
+     
     return res.status(200).json({
       ok: true,
       message: "Modular unit completion finalized and totals updated.",

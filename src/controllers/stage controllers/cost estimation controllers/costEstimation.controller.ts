@@ -15,7 +15,7 @@ import { DocUpload } from '../../../types/types';
 
 
 const generateCostEstimationFromMaterialSelection = async (
-    materialDoc: IMaterialRoomConfirmation,
+    materialDoc: Partial<IMaterialRoomConfirmation> = {},
     projectId: string
 ): Promise<any> => {
 
@@ -32,8 +32,9 @@ const generateCostEstimationFromMaterialSelection = async (
     if (!existing) {
         const materialEstimation: any[] = [];
 
+        
         // Handle predefined rooms
-        for (const room of materialDoc.rooms || []) {
+        for (const room of materialDoc?.rooms || []) {
             if (room.roomFields) {
                 const materials = Object.keys(room.roomFields).map((fieldKey) => ({
                     key: fieldKey,
@@ -54,7 +55,7 @@ const generateCostEstimationFromMaterialSelection = async (
         }
 
         // Handle custom rooms
-        for (const customRoom of materialDoc.customRooms || []) {
+        for (const customRoom of materialDoc?.customRooms || []) {
             const materials = customRoom.items.map((item) => ({
                 key: item.itemKey,
                 areaSqFt: null,
@@ -72,7 +73,7 @@ const generateCostEstimationFromMaterialSelection = async (
             });
         }
 
-        await CostEstimationModel.create({
+       const cost =  await CostEstimationModel.create({
             projectId,
             materialEstimation,
             assignedTo: null,
@@ -89,7 +90,6 @@ const generateCostEstimationFromMaterialSelection = async (
             },
             status: "pending",
         });
-
     }
     else {
         // Update timer
@@ -97,21 +97,21 @@ const generateCostEstimationFromMaterialSelection = async (
 
         // Get current valid room names from materialDoc
         const validRoomNames = new Set([
-            ...(materialDoc.rooms || []).map(r => r.name),
-            ...(materialDoc.customRooms || []).map(r => r.name)
+            ...(materialDoc?.rooms || []).map(r => r.name),
+            ...(materialDoc?.customRooms || []).map(r => r.name)
         ]);
 
         // Filter out deleted rooms from materialEstimation
-        existing.materialEstimation = existing.materialEstimation.filter((estimation) =>
-            validRoomNames.has(estimation.name)
+        existing.materialEstimation = existing?.materialEstimation?.filter((estimation) =>
+            validRoomNames.has(estimation?.name)
         );
 
 
-        const existingRoomNames = new Set(existing.materialEstimation.map((r) => r.name));
+        const existingRoomNames = new Set(existing.materialEstimation?.map((r) => r.name));
 
-        for (const customRoom of materialDoc.customRooms || []) {
-            if (!existingRoomNames.has(customRoom.name)) {
-                const materials = customRoom.items.map((item) => ({
+        for (const customRoom of materialDoc?.customRooms || []) {
+            if (!existingRoomNames.has(customRoom?.name)) {
+                const materials = customRoom?.items?.map((item) => ({
                     key: item.itemKey,
                     areaSqFt: null,
                     predefinedRate: null,
@@ -120,7 +120,7 @@ const generateCostEstimationFromMaterialSelection = async (
                     totalCost: null,
                 }));
 
-                existing.materialEstimation.push({
+                existing.materialEstimation?.push({
                     name: customRoom.name,
                     materials,
                     totalCost: 0,
@@ -130,6 +130,8 @@ const generateCostEstimationFromMaterialSelection = async (
         }
 
         await existing.save();
+
+        console.log("exisitn cost in if condition, e")
 
     }
 };

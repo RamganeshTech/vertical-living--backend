@@ -20,7 +20,7 @@ export const checkPreviousStageCompleted = (previousStageModel: any): any => {
 
         if (previousStageModel.modelName !== "CostEstimation" && previousStageModel.modelName !== "PaymentConfirmationModel") {
             // Try Redis first
-            // console.log("gettin d")
+            console.log("1111111111111")
             let cachedData = await redisClient.get(redisKey);
 
             // console.log("gettin d", cachedData)
@@ -32,10 +32,11 @@ export const checkPreviousStageCompleted = (previousStageModel: any): any => {
                 }
             }
         }
-
+console.log("22222222222222")
         // If not cached, check DB
         const doc = await previousStageModel.findOne({ projectId });
-
+console.log("33333333333333")
+console.log("oayment docc", doc)
         if (!doc || doc?.status !== "completed") {
             return res.status(400).json({
                 ok: false,

@@ -5,7 +5,7 @@ import { syncOrderingMaterials } from "../ordering material controller/orderingM
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 
-
+import { Types } from "mongoose"
 
 
 
@@ -89,7 +89,7 @@ const defaultConsentContent = `
 
 `;
 
-export const syncPaymentConfirationModel = async (projectId: string, totalAmount: number): Promise<any> => {
+export const syncPaymentConfirationModel = async (projectId: string | Types.ObjectId, totalAmount: number): Promise<any> => {
   if (!projectId) {
     return
   }
@@ -101,7 +101,7 @@ export const syncPaymentConfirationModel = async (projectId: string, totalAmount
     deadLine: null,
     reminderSent: false,
   };
-
+console.log("exisitn payment", existing)
   if (!existing) {
     await PaymentConfirmationModel.create({
       projectId: projectId,
@@ -143,9 +143,9 @@ export const syncPaymentConfirationModel = async (projectId: string, totalAmount
   }
   else {
     existing.timer = timer
-    existing.totalAmount= totalAmount || 0,
-    existing.paymentSchedule.amount = totalAmount
-      
+    existing.totalAmount = totalAmount || 0,
+      existing.paymentSchedule.amount = totalAmount
+
     await existing.save()
   }
 
@@ -218,13 +218,13 @@ const paymentConfirmationCompletionStatus = async (req: Request, res: Response):
     if (form.status === "completed") {
       await syncOrderingMaterials(projectId)
 
-        await addOrUpdateStageDocumentation({
-                projectId,
-                stageNumber: "7", // ✅ Put correct stage number here
-                description: "Payment Stage is documented",
-                uploadedFiles:[], // optionally add files here
-                price: form.totalAmount
-            })
+      await addOrUpdateStageDocumentation({
+        projectId,
+        stageNumber: "7", // ✅ Put correct stage number here
+        description: "Payment Stage is documented",
+        uploadedFiles: [], // optionally add files here
+        price: form.totalAmount
+      })
     }
 
 
