@@ -21,9 +21,9 @@ export const KitchenRequirementSchema = new Schema<IKitchenRequirement>({
         default: null
     },
     measurements: {
-        A: { type: Number, required: false },
-        B: { type: Number, required: false },
-        C: { type: Number, required: false },
+        top: { type: Number, required: false },
+        right: { type: Number, required: false },
+        left: { type: Number, required: false },
     },
     kitchenPackage: {
         type: String,

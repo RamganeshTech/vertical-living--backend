@@ -98,7 +98,6 @@ const getMyOrganizations = async (req: RoleBasedRequest, res: Response) => {
         }
         else {
             // console.log("im i getting else part", user?.role)
-
             idToSearch = user?.ownerId
         }
 
@@ -106,8 +105,8 @@ const getMyOrganizations = async (req: RoleBasedRequest, res: Response) => {
             res.status(404).json({ message: "No organization linked", data: {}, ok: false });
             return
         }
-
         const organization = await OrganizationModel.findOne({ userId: idToSearch });
+        // console.log("getting inside the getmyiorganizitons", organization)
 
         if (!organization) {
             res.status(200).json({ message: "No organizations  found", ok: false, data: null });

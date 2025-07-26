@@ -14,7 +14,6 @@ import { checkIfStaffIsAssignedToStage } from '../../../middlewares/checkIfStaff
 
 
 const requirementRoutes = express.Router()
-console.log("👉 imageUploadToS3:", imageUploadToS3);
 
 // 1 requirement routes
 
@@ -31,12 +30,6 @@ requirementRoutes.delete('/deleteform/:projectId',multiRoleAuthMiddleware("owner
 
 requirementRoutes.post( "/upload/multiple/:projectId/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), imageUploadToS3.array("file"), processUploadFiles, uploadGenericController(RequirementFormModel))
 requirementRoutes.patch("/:projectId/deleteuploadedfile/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",), notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), deleteRequirementStageFile);
-
-// uncommenrt this if the form shoule be updated only by the client 
-// requirementRoutes.put("/:projectId/updatekitchen", ClientAuthMiddleware, updateKitchenSection);
-// requirementRoutes.put("/:projectId/updatebedroom", ClientAuthMiddleware, updateBedroomSection);
-// requirementRoutes.put("/:projectId/updatewardrobe", ClientAuthMiddleware, updateWardrobeSection);
-// requirementRoutes.put("/:projectId/updatelivinghall", ClientAuthMiddleware, updateLivingHallSection);
 
 
 requirementRoutes.put("/:projectId/updatekitchen", multiRoleAuthMiddleware("owner","CTO",  "staff",  "client"),notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), updateKitchenSection);

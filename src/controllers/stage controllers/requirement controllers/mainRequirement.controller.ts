@@ -249,7 +249,7 @@ const getFormFilledDetails = async (req: Request, res: Response,): Promise<any> 
     }
 
     const redisKeyMain = `stage:RequirementFormModel:${projectId}`
-    // await redisClient.del(redisKeyMain)
+    await redisClient.del(redisKeyMain)
     const redisCache = await redisClient.get(redisKeyMain)
 
     if (redisCache) {

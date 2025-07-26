@@ -70,12 +70,13 @@ export const startStageTimer = async (req: Request, res: Response): Promise<any>
                 return res.status(400).json({ ok: false, message: "Invalid startedAt format." });
             }
 
-            const inputUTC = startDate.getTime() + startDate.getTimezoneOffset() * 60 * 1000;
-            const inputIST = new Date(inputUTC + ISTOffset);
+            // THE BELOW ONE IS FOR THE LIMITING THEN NOT TO SELECT THE PAST TIME 
+            // const inputUTC = startDate.getTime() + startDate.getTimezoneOffset() * 60 * 1000;
+            // const inputIST = new Date(inputUTC + ISTOffset);
 
-            if (inputIST < istNow) {
-                return res.status(400).json({ ok: false, message: "Started date & time cannot be in the past (IST)." });
-            }
+            // if (inputIST < istNow) {
+            //     return res.status(400).json({ ok: false, message: "Started date & time cannot be in the past (IST)." });
+            // }
         } else {
             // No time provided → use today IST at 00:00:00
             const istTodayMidnight = new Date(

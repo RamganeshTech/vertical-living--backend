@@ -40,6 +40,10 @@ import { NextFunction, Request, Response } from "express";
 // ------------------------
 export const imageUploadToS3 = multer({
   storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 50 MB per file (adjust as needed)
+    files: 100, // Limit number of files per request
+  },
   fileFilter: (_req, file, cb) => {
     const allowed = ["image/jpeg", "image/png", "application/pdf"];
     if (allowed.includes(file.mimetype)) {
