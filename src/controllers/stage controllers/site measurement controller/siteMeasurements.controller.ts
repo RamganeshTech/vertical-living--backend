@@ -83,25 +83,18 @@ const createSiteMeasurement = async (req: Request, res: Response): Promise<any> 
       additionalNotes
     } = siteDetails;
 
-    if (totalPlotAreaSqFt !== null && typeof totalPlotAreaSqFt !== "number" && totalPlotAreaSqFt < 0) {
+    if ( totalPlotAreaSqFt && totalPlotAreaSqFt < 0) {
       return res.status(400).json({ ok: false, message: "totalPlotAreaSqFt must be a number or null." });
     }
-    if (builtUpAreaSqFt !== null && typeof builtUpAreaSqFt !== "number" && builtUpAreaSqFt < 0) {
+    if (builtUpAreaSqFt && builtUpAreaSqFt < 0) {
       return res.status(400).json({ ok: false, message: "builtUpAreaSqFt must be a number or null." });
     }
-    if (roadFacing !== null && typeof roadFacing !== "boolean") {
-      return res.status(400).json({ ok: false, message: "roadFacing must be a boolean or null." });
-    }
-    if (numberOfFloors !== null && typeof numberOfFloors !== "number" && numberOfFloors < 0) {
+   
+    if (numberOfFloors && numberOfFloors < 0) {
       return res.status(400).json({ ok: false, message: "numberOfFloors must be a number or null." });
     }
-    if (hasSlope !== null && typeof hasSlope !== "boolean") {
-      return res.status(400).json({ ok: false, message: "hasSlope must be a boolean or null." });
-    }
-    if (boundaryWallExists !== null && typeof boundaryWallExists !== "boolean") {
-      return res.status(400).json({ ok: false, message: "boundaryWallExists must be a boolean or null." });
-    }
-    if (additionalNotes !== null && typeof additionalNotes !== "string") {
+    
+    if (additionalNotes && typeof additionalNotes !== "string") {
       return res.status(400).json({ ok: false, message: "additionalNotes must be a string or null." });
     }
 
@@ -110,9 +103,22 @@ const createSiteMeasurement = async (req: Request, res: Response): Promise<any> 
     let form = await SiteMeasurementModel.findOne({ projectId });
 
     if (!form) {
-      form = new SiteMeasurementModel({ projectId, siteDetails, rooms: [] });
+      form = new SiteMeasurementModel({ projectId, siteDetails, rooms: initializeSiteRequirement });
     } else {
+
+      if(siteDetails){
+        siteDetails.totalPlotAreaSqFt = totalPlotAreaSqFt || 0,
+        siteDetails.builtUpAreaSqFt = builtUpAreaSqFt || 0 ,
+        siteDetails.roadFacing = roadFacing,
+        siteDetails.numberOfFloors = numberOfFloors || 0,
+        siteDetails.hasSlope = hasSlope,
+        siteDetails.boundaryWallExists = boundaryWallExists,
+        siteDetails.additionalNotes = additionalNotes || ""
+      }
+      // console.log("gettiing isndeht esit3crete else condiiton")
       form.siteDetails = siteDetails;
+      form.rooms = initializeSiteRequirement
+      // form.set('rooms', initializeSiteRequirement);
     }
 
     await form.save();
@@ -194,6 +200,39 @@ const getTheSiteMeasurements = async (req: Request, res: Response): Promise<any>
 
     // await redisClient.del(`stage:SiteMeasurementModel:${projectId}`)
 
+
+
+  // const forme = await SiteMeasurementModel.findOne({ projectId: "6878a3782bdbe069a1a71920" });
+
+  // if (!forme) {
+  //   console.log("Project not found");
+  //   return;
+  // }
+
+  // console.log("form ", forme)
+  // let updated = false;
+
+  // forme.rooms = forme.rooms.map((room:any) => {
+  //   console.log("single room", room)
+  //   if (!("uploads" in room)) {
+  //     updated = true;
+  //     return {
+  //       ...room.toObject(), // convert Mongoose subdocument to plain object
+  //       uploads: []
+  //     };
+  //   }
+  //   return room;
+  // });
+
+  // if (updated) {
+  //   forme.markModified('rooms');
+  //   await forme.save();
+  //   console.log("Rooms updated with uploads field.");
+  // } else {
+  //   console.log("All rooms already have uploads field.");
+  // }
+
+
     const cacheKey = `stage:SiteMeasurementModel:${projectId}`;
     const cachedForm = await redisClient.get(cacheKey);
 
@@ -271,6 +310,8 @@ const updateCommonSiteMeasurements = async (req: Request, res: Response): Promis
     if (additionalNotes !== undefined || additionalNotes !== null) siteDoc.siteDetails.additionalNotes = additionalNotes;
 
     await siteDoc.save();
+
+    console.log("siteDocc", siteDoc)
 
     // await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(siteDoc.toObject()), { EX: 60 * 15 }); // 15min
 
@@ -357,7 +398,7 @@ const DeleteRooms = async (req: Request, res: Response): Promise<any> => {
     const roomIndex = siteDoc.rooms.findIndex((r: any) => r._id.toString() === roomId);
     if (roomIndex === -1) return res.status(404).json({ ok: false, message: "Room not found" });
 
-    let cacheRoom = siteDoc.rooms[roomIndex]
+    // let cacheRoom = siteDoc.rooms[roomIndex]
     siteDoc.rooms.splice(roomIndex, 1);
     await siteDoc.save();
 
