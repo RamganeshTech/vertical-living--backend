@@ -55,6 +55,7 @@ import modularUnitRoutes from './routers/Modular Unit routes/modularUnit.routes'
 import stageSelectetionRoutes from './routers/Modular Unit routes/SelectionStage Routes/selectionStage.routes';
 import SelectedModularUnitRoutes from './routers/Modular Unit routes/SelectedModularUnit Routes/selectedModularUnit.routes';
 import documentaitonRoutes from './routers/Documentation Routes/documentation.routes';
+import shortlistedDesignRoutes from './routers/Stage routes/sample desing routes/shortListed.routes';
 
 dotenv.config();
 
@@ -128,8 +129,25 @@ app.use('/api/qualitycheck', qualityCheckRoutes)
 app.use('/api/cleaning', cleaningRoutes)
 app.use('/api/projectdelivery', projectDeliveryRoutes)
 
+// SOP
 app.use('/api/adminwall', adminWallroutes)
 app.use('/api/workerwall', workerWallRoutes)
+
+// SHORTLIST API
+app.use('/api/shortlisteddesign', shortlistedDesignRoutes)
+
+
+
+// SHORTLIST API
+// app.use('/api/shortlist', shortlistedDesignRoutes)
+// shortlistedDesignRoutes.post(
+//   "/upload/:projectId/:roomName",
+//   multiRoleAuthMiddleware("owner", "staff", "CTO",),
+//   imageUploadToS3.array("file"),
+//   processUploadFiles,
+//   uploadShortlistedRoomImages
+// );
+
 
 // RESET STAGE
 app.use('/api', resetRouter)

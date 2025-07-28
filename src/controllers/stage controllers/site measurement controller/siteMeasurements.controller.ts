@@ -14,6 +14,7 @@ import { initializeSiteRequirement } from "../../../utils/Stage Utils/siteRequir
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 import { DocUpload, RoleBasedRequest } from "../../../types/types";
+import { syncShortList } from "../sampledesign contorllers/shortList.controller";
 
 
 export const syncSiteMeasurement = async (projectId: string) => {
@@ -485,6 +486,7 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
     if (siteDoc.status === "completed") {
       const siteRooms = siteDoc.rooms || [];
       await syncSampleDesignModel(projectId, siteRooms)
+      await syncShortList(projectId)
 
       const uploadedFiles: DocUpload[] = siteDoc.uploads.map((upload) => ({ type: upload.type, originalName: upload.originalName, url: upload.url }))
       await addOrUpdateStageDocumentation({

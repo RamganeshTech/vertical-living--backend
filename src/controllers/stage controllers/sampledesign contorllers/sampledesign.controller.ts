@@ -9,7 +9,8 @@ import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { syncTechnicalConsultantStage } from "../technicalConsultant controllers/technicalConsultant.controller";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
-import { DocUpload } from "../../../types/types";
+import { DocUpload, RoleBasedRequest } from "../../../types/types";
+import { syncShortList } from "./shortList.controller";
 
 
 
@@ -164,6 +165,7 @@ const getFilesFromRoom = async (req: Request, res: Response): Promise<any> => {
     if (!projectId) {
       return res.status(400).json({ message: "projectId is mandatory", ok: false })
     }
+      // await syncShortList("6881a9134a56bad430507bd1")
 
 
     const redisMainKey = `stage:SampleDesignModel:${projectId}`
@@ -281,8 +283,8 @@ const sampleDesignCompletionStatus = async (req: Request, res: Response): Promis
       await syncTechnicalConsultantStage(projectId)
 
 
-      const uploadedFiles:DocUpload[] = design.rooms.flatMap((room) =>
-        room.files.map((file:any) => ({
+      const uploadedFiles: DocUpload[] = design.rooms.flatMap((room) =>
+        room.files.map((file: any) => ({
           type: file.type,
           url: file.url,
           originalName: file.originalName,
@@ -321,6 +323,57 @@ const setSampleDesignStageDeadline = (req: Request, res: Response): Promise<any>
   });
 };
 
+
+
+
+// COMPARISION CONTROLLERS
+
+
+
+// const getSampleDesignRooms = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+//   try {
+//     const { projectId } = req.params;
+
+//     if (!projectId) return res.status(400).json({ ok: false, message: "Project ID is required" });
+
+//     const redisMainKey = `stage:SampleDesignModel:${projectId}`
+
+//     const redisCachedData = await redisClient.get(redisMainKey)
+
+//     if (redisCachedData) {
+//       return res.json({ message: "data fetched from the cache", data: JSON.parse(redisCachedData), ok: true })
+//     }
+
+
+//     const design = await SampleDesignModel.findOne({ projectId });
+//     if (!design) return res.status(404).json({ ok: false, message: "Sample design not found" });
+
+//     if (Array.isArray(design.rooms) && design.rooms.length <= 0) {
+//       return res.status(404).json({ message: "rooms not created", ok: true, data: [] })
+//     }
+
+
+//     const roomNames = design.rooms.map(room => ({ roomName: room.roomName, _id: room._id }))
+
+
+//     const redisKey = `stage:SampleDesignModel:${projectId}`
+//     // await redisClient.set(redisKey, JSON.stringify(design.toObject()), { EX: 60 * 10 });
+
+//     await populateWithAssignedToField({ stageModel: SampleDesignModel, projectId, dataToCache: design })
+
+
+//     return res.status(200).json({ ok: true, message: "Sample design available rooms", data: roomNames });
+
+//   } catch (err) {
+//     console.error("Sample design get rooms Error:", err);
+//     return res.status(500).json({ message: "Internal server error", ok: false });
+//   }
+// };
+
+
+
+
+
 export {
   addRoom,
   uploadFilesToRoom,
@@ -330,4 +383,7 @@ export {
 
   sampleDesignCompletionStatus,
   setSampleDesignStageDeadline,
+
+
+  // getSampleDesignRooms,
 };

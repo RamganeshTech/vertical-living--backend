@@ -14,7 +14,7 @@ import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 // ADD A UNIT
 export const addSelectedUnit = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
-    const { projectId, unitId, category, quantity, singleUnitCost , image, customId} = req.body;
+    const { projectId, unitId, category, quantity, singleUnitCost, image, customId } = req.body;
 
     const singleUnitTotal = singleUnitCost * quantity;
 
@@ -24,20 +24,48 @@ export const addSelectedUnit = async (req: RoleBasedRequest, res: Response): Pro
       // First entry for this project
       record = await SelectedModularUnitModel.create({
         projectId,
-        selectedUnits: [{ unitId, category, quantity, singleUnitCost , image, customId}],
+        selectedUnits: [{ unitId, category, quantity, singleUnitCost, image, customId }],
         totalCost: singleUnitTotal,
       });
-    } else {
-      // Add new unit to existing project
-      record.selectedUnits.push({ unitId, category, quantity, singleUnitCost, image, customId });
-      record.totalCost = record.selectedUnits.reduce(
-        (acc, unit) => acc + unit.singleUnitCost * unit.quantity,
-        0
-      );
-      await record.save();
+    }
+    else {
+      const unit = record.selectedUnits.find((unit) => unit.unitId.toString() === unitId.toString());
+
+      if (!unit) {
+        record.selectedUnits.push({ unitId, category, quantity, singleUnitCost, image, customId });
+        record.totalCost = record.selectedUnits.reduce(
+          (acc, unit) => acc + unit.singleUnitCost * unit.quantity,
+          0
+        );
+        await record.save()
+        return res.status(201).json({ ok: true, data: record, message: "Product Added successfully" });
+      }
+      else {
+        unit.quantity = quantity
+        record.totalCost = record.selectedUnits.reduce(
+          (acc, unit) => acc + unit.singleUnitCost * unit.quantity,
+          0
+        );
+        await record.save()
+        return res.status(200).json({ ok: true, data: record, message: "Quantity updated successfully" });
+      }
+
+
+
+
     }
 
-    return res.status(200).json({ ok: true, data: record });
+    //   else {
+    // // Add new unit to existing project
+    // record.selectedUnits.push({ unitId, category, quantity, singleUnitCost, image, customId });
+    // record.totalCost = record.selectedUnits.reduce(
+    //   (acc, unit) => acc + unit.singleUnitCost * unit.quantity,
+    //   0
+    // );
+    // await record.save();
+    // }
+
+    return res.status(201).json({ ok: true, data: record });
   } catch (error: any) {
     return res.status(500).json({ ok: false, error: error.message });
   }
@@ -107,7 +135,7 @@ export const completeModularUnitSelection = async (req: RoleBasedRequest, res: R
     modularSelection.totalCost = recalculatedTotalCost;
     await modularSelection.save();
 
-    const updatedPayment = await syncPaymentConfirationModel(projectId, recalculatedTotalCost) 
+    const updatedPayment = await syncPaymentConfirationModel(projectId, recalculatedTotalCost)
 
     // ✅ Update PaymentConfirmationModel (add to totalAmount)
     // const updatedPayment = await PaymentConfirmationModel.findOneAndUpdate(
@@ -117,15 +145,15 @@ export const completeModularUnitSelection = async (req: RoleBasedRequest, res: R
     // );
 
     // ✅ Mark MaterialRoomConfirmationModel as completed
-   const materialDoc =  await MaterialRoomConfirmationModel.findOneAndUpdate(
+    const materialDoc = await MaterialRoomConfirmationModel.findOneAndUpdate(
       { projectId },
       { status: "completed" },
-      {returnDocument:"after"}
+      { returnDocument: "after" }
     ).populate(assignedTo, selectedFields)
 
-// console.log("mateiraldoc", materialDoc)
-     await generateCostEstimationFromMaterialSelection({}, projectId)
-   
+    // console.log("mateiraldoc", materialDoc)
+    await generateCostEstimationFromMaterialSelection({}, projectId)
+
 
     // ✅ Mark CostEstimationModel as completed
     await CostEstimationModel.findOneAndUpdate(
@@ -133,7 +161,7 @@ export const completeModularUnitSelection = async (req: RoleBasedRequest, res: R
       { status: "completed" }
     );
     await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: materialDoc })
-     
+
     return res.status(200).json({
       ok: true,
       message: "Modular unit completion finalized and totals updated.",
