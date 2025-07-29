@@ -7,11 +7,13 @@ dotenv.config()
 export const sendShortlistedDesignsEmail = async ({
     clientName,
   clientEmail,
+  categoryName,
   roomName,
   images,
 }: {
     clientName:string
   clientEmail: string;
+  categoryName: string;
   roomName: string;
   images: string[];
 }) => {
@@ -56,7 +58,7 @@ export const sendShortlistedDesignsEmail = async ({
     <h2 style="color: #2c3e50; text-align: center;">Hello ${clientName},</h2>
     
     <p style="font-size: 16px; color: #333; line-height: 1.6;">
-      We're delighted to share a curated selection of design samples tailored for your project. These selections reflect thoughtful design aesthetics and functional layouts to inspire your vision.
+      We're delighted to share a curated selection of design samples tailored for your project for category ${categoryName}. These selections reflect thoughtful design aesthetics and functional layouts to inspire your vision.
     </p>
 
     <p style="font-size: 16px; color: #333; line-height: 1.6;">

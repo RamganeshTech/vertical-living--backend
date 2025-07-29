@@ -12,6 +12,7 @@ import { updateProjectCompletionPercentage } from "../../../utils/updateProjectC
 import { syncAdminWall, syncWorkerWall } from "../../Wall Painting controllers/adminWallPainting.controller";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 import { DocUpload, RoleBasedRequest } from "../../../types/types";
+import { syncMaterialArrivalNew } from "../MaterialArrival controllers/materialArrivalCheckNew.controller";
 
 
 
@@ -267,6 +268,7 @@ const getFormFilledDetails = async (req: Request, res: Response,): Promise<any> 
 
 
     // console.log("data of fuploads", data)
+      // await syncMaterialArrivalNew(projectId)
 
     const redisKeyMain = `stage:RequirementFormModel:${projectId}`
     // await redisClient.del(redisKeyMain)

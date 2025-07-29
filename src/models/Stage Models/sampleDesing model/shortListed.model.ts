@@ -1,6 +1,6 @@
 // models/shortListed.model.ts
 
-import mongoose, { Schema, Document , Types} from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 
 interface ShortlistedDesign {
   url: string;
@@ -9,11 +9,20 @@ interface ShortlistedDesign {
   imageId: Types.ObjectId | null,
   uploadedAt: Date;
 }
+export interface CategoryType {
+  categoryName: string,
+  designs: ShortlistedDesign[]
+}
+
+
 
 interface RoomShortlist {
   roomName: string;
-  designs: ShortlistedDesign[];
+  categories: CategoryType[];
 }
+
+
+
 
 export interface ShortlistedDesignDocument extends Document {
   projectId: mongoose.Types.ObjectId;
@@ -26,17 +35,23 @@ const ShortlistUploadSchema = new Schema<ShortlistedDesign>({
   type: { type: String, enum: ["image"] },
   url: { type: String, },
   originalName: String,
-  imageId: {type: Schema.Types.ObjectId, requried:false, default:null},
+  imageId: { type: Schema.Types.ObjectId, requried: false, default: null },
   uploadedAt: { type: Date, default: new Date() }
-}, {_id: true});
+}, { _id: true });
+
+
+const CategoryTypes = new Schema<CategoryType>({
+  categoryName: { type: String, default: null },
+  designs: { type: [ShortlistUploadSchema], default: [] }
+})
 
 const ShortlistedDesignSchema = new Schema<ShortlistedDesignDocument>(
   {
     projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", required: true, unique: true },
     shortlistedRooms: [
       {
-        roomName: { type: String,},
-        designs: {type:[ShortlistUploadSchema], default:[]}
+        roomName: { type: String, },
+        categories: { type: [CategoryTypes], default:[]}
       },
     ],
   },

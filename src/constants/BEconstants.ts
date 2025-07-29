@@ -7,12 +7,13 @@ import { SiteMeasurementModel } from "../models/Stage Models/siteMeasurement mod
 import { TechnicalConsultationModel } from "../models/Stage Models/technical consulatation/technicalconsultation.model";
 import PaymentConfirmationModel from "../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
 import OrderingMaterialModel from "../models/Stage Models/Ordering Material Model/orderingMaterial.model";
-import MaterialArrivalModel from "../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheck.model";
+// import MaterialArrivalModel from "../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheck.model";
 import WorkMainStageScheduleModel from "../models/Stage Models/WorkTask Model/WorkTask.model";
 import InstallationModel from "../models/Stage Models/installation model/Installation.model";
 import { QualityCheckupModel } from "../models/Stage Models/QualityCheck Model/QualityCheck.model";
 import { CleaningAndSanitationModel } from "../models/Stage Models/Cleaning Model/cleaning.model";
 import { ProjectDeliveryModel } from "../models/Stage Models/ProjectDelivery Model/ProjectDelivery.model";
+import MaterialArrivalModel from "../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
 
 
 export const SUBSCRIPTION_PLANS = {

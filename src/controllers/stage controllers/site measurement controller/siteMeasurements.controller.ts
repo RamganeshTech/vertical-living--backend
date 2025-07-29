@@ -84,17 +84,17 @@ const createSiteMeasurement = async (req: Request, res: Response): Promise<any> 
       additionalNotes
     } = siteDetails;
 
-    if ( totalPlotAreaSqFt && totalPlotAreaSqFt < 0) {
+    if (totalPlotAreaSqFt && totalPlotAreaSqFt < 0) {
       return res.status(400).json({ ok: false, message: "totalPlotAreaSqFt must be a number or null." });
     }
     if (builtUpAreaSqFt && builtUpAreaSqFt < 0) {
       return res.status(400).json({ ok: false, message: "builtUpAreaSqFt must be a number or null." });
     }
-   
+
     if (numberOfFloors && numberOfFloors < 0) {
       return res.status(400).json({ ok: false, message: "numberOfFloors must be a number or null." });
     }
-    
+
     if (additionalNotes && typeof additionalNotes !== "string") {
       return res.status(400).json({ ok: false, message: "additionalNotes must be a string or null." });
     }
@@ -107,14 +107,14 @@ const createSiteMeasurement = async (req: Request, res: Response): Promise<any> 
       form = new SiteMeasurementModel({ projectId, siteDetails, rooms: initializeSiteRequirement });
     } else {
 
-      if(siteDetails){
+      if (siteDetails) {
         siteDetails.totalPlotAreaSqFt = totalPlotAreaSqFt || 0,
-        siteDetails.builtUpAreaSqFt = builtUpAreaSqFt || 0 ,
-        siteDetails.roadFacing = roadFacing,
-        siteDetails.numberOfFloors = numberOfFloors || 0,
-        siteDetails.hasSlope = hasSlope,
-        siteDetails.boundaryWallExists = boundaryWallExists,
-        siteDetails.additionalNotes = additionalNotes || ""
+          siteDetails.builtUpAreaSqFt = builtUpAreaSqFt || 0,
+          siteDetails.roadFacing = roadFacing,
+          siteDetails.numberOfFloors = numberOfFloors || 0,
+          siteDetails.hasSlope = hasSlope,
+          siteDetails.boundaryWallExists = boundaryWallExists,
+          siteDetails.additionalNotes = additionalNotes || ""
       }
       // console.log("gettiing isndeht esit3crete else condiiton")
       form.siteDetails = siteDetails;
@@ -203,35 +203,35 @@ const getTheSiteMeasurements = async (req: Request, res: Response): Promise<any>
 
 
 
-  // const forme = await SiteMeasurementModel.findOne({ projectId: "6878a3782bdbe069a1a71920" });
+    // const forme = await SiteMeasurementModel.findOne({ projectId: "6878a3782bdbe069a1a71920" });
 
-  // if (!forme) {
-  //   console.log("Project not found");
-  //   return;
-  // }
+    // if (!forme) {
+    //   console.log("Project not found");
+    //   return;
+    // }
 
-  // console.log("form ", forme)
-  // let updated = false;
+    // console.log("form ", forme)
+    // let updated = false;
 
-  // forme.rooms = forme.rooms.map((room:any) => {
-  //   console.log("single room", room)
-  //   if (!("uploads" in room)) {
-  //     updated = true;
-  //     return {
-  //       ...room.toObject(), // convert Mongoose subdocument to plain object
-  //       uploads: []
-  //     };
-  //   }
-  //   return room;
-  // });
+    // forme.rooms = forme.rooms.map((room:any) => {
+    //   console.log("single room", room)
+    //   if (!("uploads" in room)) {
+    //     updated = true;
+    //     return {
+    //       ...room.toObject(), // convert Mongoose subdocument to plain object
+    //       uploads: []
+    //     };
+    //   }
+    //   return room;
+    // });
 
-  // if (updated) {
-  //   forme.markModified('rooms');
-  //   await forme.save();
-  //   console.log("Rooms updated with uploads field.");
-  // } else {
-  //   console.log("All rooms already have uploads field.");
-  // }
+    // if (updated) {
+    //   forme.markModified('rooms');
+    //   await forme.save();
+    //   console.log("Rooms updated with uploads field.");
+    // } else {
+    //   console.log("All rooms already have uploads field.");
+    // }
 
 
     const cacheKey = `stage:SiteMeasurementModel:${projectId}`;
@@ -486,7 +486,6 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
     if (siteDoc.status === "completed") {
       const siteRooms = siteDoc.rooms || [];
       await syncSampleDesignModel(projectId, siteRooms)
-      await syncShortList(projectId)
 
       const uploadedFiles: DocUpload[] = siteDoc.uploads.map((upload) => ({ type: upload.type, originalName: upload.originalName, url: upload.url }))
       await addOrUpdateStageDocumentation({
@@ -615,7 +614,7 @@ const deleteSiteMeasurementRoomImage = async (req: RoleBasedRequest, res: Respon
 
     const updated = await SiteMeasurementModel.findOneAndUpdate(
       {
-        _id: projectId,
+        projectId: projectId,
         "rooms._id": roomId,
       },
       {
@@ -642,6 +641,60 @@ const deleteSiteMeasurementRoomImage = async (req: RoleBasedRequest, res: Respon
 };
 
 
+const updateRoomImageName = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+
+    const { projectId, roomId, uploadId } = req.params
+    const { categoryName } = req.body;
+
+    if (!projectId || !roomId || !uploadId) {
+      return res.status(400).json({ message: "Missing required fields", ok: false });
+    }
+
+
+    if (!categoryName.trim()) {
+      return res.status(400).json({ message: "Missing required fields", ok: false });
+
+    }
+
+    const measurement = await SiteMeasurementModel.findOne({ projectId });
+
+    if (!measurement) {
+      return res.status(404).json({ message: "Project not found", ok: false });
+    }
+
+    const room = (measurement.rooms as any).id(roomId);
+
+    if (!room) {
+      return res.status(404).json({ message: "Room not found", ok: false });
+    }
+
+    const upload = room.uploads.id(uploadId);
+
+    if (!upload) {
+      return res.status(404).json({ message: "Upload not found", ok: false });
+    }
+
+    // Set categoryName (adds it even if previously missing)
+    upload.categoryName = categoryName;
+
+    await measurement.save();
+
+
+    await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: measurement })
+
+
+    return res.status(200).json({
+      message: "Category name updated successfully",
+      data: upload,
+      ok: true
+    });
+  } catch (error) {
+    console.error("Error updating category name:", error);
+    return res.status(500).json({ message: "Server error", ok: false });
+  }
+};
+
 export {
   createSiteMeasurement,
   createRoom,
@@ -652,12 +705,10 @@ export {
   DeleteRooms,
   deleteSiteMeasurement,
 
-
   deleteSiteMeasurementFile,
 
-
-
   uploadSiteMeasurementRoomImages,
-  deleteSiteMeasurementRoomImage
+  deleteSiteMeasurementRoomImage,
+  updateRoomImageName
 
 }

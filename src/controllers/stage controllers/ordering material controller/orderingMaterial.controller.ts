@@ -11,12 +11,13 @@ import { IMaterialOrderingTimer } from './../../../models/Stage Models/Ordering 
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import { generateOrderingToken } from "../../../utils/generateToken";
 import { s3 } from "../../../config/awssdk";
-import { syncMaterialArrival } from "../MaterialArrival controllers/materialArrivalCheck.controller";
+// import { syncMaterialArrival } from "../MaterialArrival controllers/materialArrivalCheck.controller";
 import redisClient from "../../../config/redisClient";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 import { DocUpload } from "../../../types/types";
+import { syncMaterialArrivalNew } from "../MaterialArrival controllers/materialArrivalCheckNew.controller";
 
 export const syncOrderingMaterials = async (projectId: string) => {
 
@@ -484,26 +485,27 @@ const orderMaterialCompletionStatus = async (req: Request, res: Response): Promi
     await form.save();
 
     if (form.status === "completed") {
+      await syncMaterialArrivalNew(projectId)
       // await autoCreateCostEstimationRooms(req, res, projectId)
-      await syncMaterialArrival(projectId)
+      // await syncMaterialArrival(projectId)
+
+
+// NEED TO MAKE THE CHANGES
+      // let uploadedFiles: DocUpload[] = form.uploads?.map((file: any) => ({
+      //   type: file.type,
+      //   url: file.url,
+      //   originalName: file.originalName,
+      // })) || []
 
 
 
-      let uploadedFiles: DocUpload[] = form.uploads?.map((file: any) => ({
-        type: file.type,
-        url: file.url,
-        originalName: file.originalName,
-      })) || []
 
-
-
-
-      await addOrUpdateStageDocumentation({
-        projectId,
-        stageNumber: "8", // ✅ Put correct stage number here
-        description: "Ordering Material Stage is documented",
-        uploadedFiles, // optionally add files here
-      })
+      // await addOrUpdateStageDocumentation({
+      //   projectId,
+      //   stageNumber: "8", // ✅ Put correct stage number here
+      //   description: "Ordering Material Stage is documented",
+      //   uploadedFiles, // optionally add files here
+      // })
 
 
     }

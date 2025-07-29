@@ -1,32 +1,32 @@
 import express from "express";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
-import { addSelectedDesignsToShortlist, getShortlistedRoomDesigns, removeShortlistedDesign, uploadShortlistedRoomImages } from "../../../controllers/stage controllers/sampledesign contorllers/shortList.controller";
+import { addSelectedDesignsToShortlist, deleteShortlistedDesign, getShortlistedRoomDesigns, uploadShortlistedDesignImages } from "../../../controllers/stage controllers/sampledesign contorllers/shortList.controller";
 
 
 const shortlistedDesignRoutes = express.Router();
 
 shortlistedDesignRoutes.post(
-  "/upload/:projectId/:roomName",
+  "/upload/:projectId/:roomName/:categoryName",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   imageUploadToS3.array("file"),
   processUploadFiles,
-  uploadShortlistedRoomImages
+  uploadShortlistedDesignImages
 );
 
 
 
 shortlistedDesignRoutes.post(
-  "/addexising/:projectId/:roomName",
+  "/addexising/:projectId/:roomName/:categoryName",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   addSelectedDesignsToShortlist
 );
 
 
 shortlistedDesignRoutes.delete(
- "/remove/:projectId/:_id/:roomName",
+ "/remove/:projectId/:roomName/:imageId/:categoryName",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
-  removeShortlistedDesign
+  deleteShortlistedDesign
 );
 
 

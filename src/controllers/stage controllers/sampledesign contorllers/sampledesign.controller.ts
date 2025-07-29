@@ -44,6 +44,9 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
       },
       additionalNotes: null,
     })
+
+          await syncShortList(projectId)
+    
   } else {
     // console.log("coommign to else condition")
     design.status = "pending";

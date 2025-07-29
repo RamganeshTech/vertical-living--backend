@@ -8,6 +8,7 @@ export interface Iupload {
     url: string,
     uploadedAt: Date,
     originalName: string,
+    categoryName: string,
 }
 
 
@@ -54,6 +55,7 @@ const uploadSchema = new Schema({
     type: { type: String, enum: ["image", "pdf"] },
     url: { type: String, },
     originalName: String,
+    categoryName: {type:String, default:null},
     uploadedAt: { type: Date, default: new Date() }
 }, { _id: true });
 
