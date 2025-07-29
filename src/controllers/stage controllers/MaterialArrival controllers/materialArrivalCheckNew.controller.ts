@@ -289,31 +289,31 @@ const materialArrivalCompletionStatus = async (req: Request, res: Response): Pro
         if (form.status === "completed") {
             await syncWorkSchedule(projectId)
 
-            let uploadedFiles: DocUpload[] = [];
+            // let uploadedFiles: DocUpload[] = [];
 
-            const categories = Object.keys(form.materialArrivalList || {});
+            // const categories = Object.keys(form.materialArrivalList || {});
 
-            for (const category of categories) {
-                const items = (form.materialArrivalList as any)[category] || [];
+            // for (const category of categories) {
+            //     const items = (form.materialArrivalList as any)[category] || [];
 
-                items.forEach((item: any) => {
-                    if (item.upload && item.upload.url) {
-                        uploadedFiles.push({
-                            type: item.upload.type,
-                            url: item.upload.url,
-                            originalName: item.upload.originalName,
-                        });
-                    }
-                });
-            }
+            //     items.forEach((item: any) => {
+            //         if (item.upload && item.upload.url) {
+            //             uploadedFiles.push({
+            //                 type: item.upload.type,
+            //                 url: item.upload.url,
+            //                 originalName: item.upload.originalName,
+            //             });
+            //         }
+            //     });
+            // }
 
 
-            await addOrUpdateStageDocumentation({
-                projectId,
-                stageNumber: "9", // Material Arrival stage number
-                description: "Material Arrival Stage is documented",
-                uploadedFiles,
-            });
+            // await addOrUpdateStageDocumentation({
+            //     projectId,
+            //     stageNumber: "9", // Material Arrival stage number
+            //     description: "Material Arrival Stage is documented",
+            //     uploadedFiles,
+            // });
 
         }
         // const redisMainKey = `stage:MaterialArrivalModel:${projectId}}`
