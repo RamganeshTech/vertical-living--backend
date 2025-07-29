@@ -9,13 +9,14 @@ import MaterialRoomConfirmationModel from "../../../models/Stage Models/Material
 import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
 import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
 import OrderingMaterialModel from "../../../models/Stage Models/Ordering Material Model/orderingMaterial.model";
-import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheck.model";
+// import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheck.model";
 import { CleaningAndSanitationModel } from "../../../models/Stage Models/Cleaning Model/cleaning.model";
 import { ProjectDeliveryModel } from "../../../models/Stage Models/ProjectDelivery Model/ProjectDelivery.model";
 import { QualityCheckupModel } from "../../../models/Stage Models/QualityCheck Model/QualityCheck.model";
 import InstallationModel from "../../../models/Stage Models/installation model/Installation.model";
 import WorkMainStageScheduleModel from "../../../models/Stage Models/WorkTask Model/WorkTask.model";
 import redisClient from "../../../config/redisClient";
+import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
 
 
 const stageModelMap = new Map<string, Model<Document>>([
