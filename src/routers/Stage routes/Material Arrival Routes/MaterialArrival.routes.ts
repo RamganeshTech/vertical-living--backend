@@ -32,7 +32,7 @@ materialArrivalRoutes.put('/updateverification/:projectId/:fieldId', multiRoleAu
 materialArrivalRoutes.put('/updateImage/:projectId/:fieldId',checkPreviousStageCompleted(OrderingMaterialModel), notToUpdateIfStageCompleted(MaterialArrivalModel),  imageUploadToS3.single("upload"), processUploadFiles, updateMaterialArrivalItem)
 
 materialArrivalRoutes.put('/verifyall/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderingMaterialModel),notToUpdateIfStageCompleted(MaterialArrivalModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel), bulkToggleAllVerification)
-materialArrivalRoutes.get('/getalldetails/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderingMaterialModel), notToUpdateIfStageCompleted(MaterialArrivalModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel),getAllMaterialArrivalDetails)
+materialArrivalRoutes.get('/getalldetails/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), getAllMaterialArrivalDetails)
 
 materialArrivalRoutes.post("/:projectId/generate-link", multiRoleAuthMiddleware("owner", "staff", "CTO"),checkPreviousStageCompleted(OrderingMaterialModel),notToUpdateIfStageCompleted(MaterialArrivalModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel), generateMaterialArrivalLink);
 materialArrivalRoutes.get("/public/:projectId/:token", checkPreviousStageCompleted(OrderingMaterialModel),getMaterialArrivalPublicDetails);
