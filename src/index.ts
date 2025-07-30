@@ -28,7 +28,7 @@ import technicalConsultRoutes from './routers/Stage routes/technicalConsultation
 import materialConfirmationRoutes from './routers/Stage routes/MaterialRoomConfirmation routes/materialRoomConfirmation.routes';
 import resetRouter from './routers/resetStage Routes/resetStage.routes';
 import costEstimationRoutes from './routers/Stage routes/cost estimation routes/costEstimation.routes';
-import orderMaterialRoutes from './routers/Stage routes/order Material routes/orderMaterial.routes';
+// import orderMaterialRoutes from './routers/Stage routes/order Material routes/orderMaterial.routes';
 import materialArrivalRoutes from './routers/Stage routes/Material Arrival Routes/MaterialArrival.routes';
 import workTaskRoutes from './routers/Stage routes/workTask routes/workmaintasks.routes';
 import installationRoutes from './routers/Stage routes/installation routes/installation.routes';
@@ -56,6 +56,7 @@ import stageSelectetionRoutes from './routers/Modular Unit routes/SelectionStage
 import SelectedModularUnitRoutes from './routers/Modular Unit routes/SelectedModularUnit Routes/selectedModularUnit.routes';
 import documentaitonRoutes from './routers/Documentation Routes/documentation.routes';
 import shortlistedDesignRoutes from './routers/Stage routes/sample desing routes/shortListed.routes';
+import orderMaterialHistoryRoutes from './routers/Stage routes/order Material routes/orderMaterialHistory.routes';
 
 dotenv.config();
 
@@ -121,7 +122,7 @@ app.use('/api/technicalconsultation', technicalConsultRoutes)
 app.use('/api/materialconfirmation', materialConfirmationRoutes)
 app.use('/api/costestimation', costEstimationRoutes)
 app.use('/api/paymentconfirmation', paymentConsentRoutes)
-app.use('/api/orderingmaterial', orderMaterialRoutes)
+app.use('/api/orderingmaterial', orderMaterialHistoryRoutes)
 app.use('/api/materialarrivalcheck', materialArrivalRoutes)
 app.use('/api/worktasks', workTaskRoutes)
 app.use('/api/installation', installationRoutes)

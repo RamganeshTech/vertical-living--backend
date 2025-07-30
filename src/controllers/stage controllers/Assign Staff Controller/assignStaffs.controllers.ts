@@ -9,7 +9,7 @@ import { SampleDesignModel } from "../../../models/Stage Models/sampleDesing mod
 import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
 import { TechnicalConsultationModel } from "../../../models/Stage Models/technical consulatation/technicalconsultation.model";
 import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
-import OrderingMaterialModel from "../../../models/Stage Models/Ordering Material Model/orderingMaterial.model";
+// import OrderingMaterialModel from "../../../models/Stage Models/Ordering Material Model/orderingMaterial.model";
 // import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheck.model";
 import WorkMainStageScheduleModel from "../../../models/Stage Models/WorkTask Model/WorkTask.model";
 import InstallationModel from "../../../models/Stage Models/installation model/Installation.model";
@@ -19,6 +19,7 @@ import { ProjectDeliveryModel } from "../../../models/Stage Models/ProjectDelive
 import redisClient from "../../../config/redisClient";
 import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
+import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 
 
 export const stageModelMap = new Map<string, Model<Document>>([
@@ -29,7 +30,7 @@ export const stageModelMap = new Map<string, Model<Document>>([
   ["MaterialRoomConfirmationModel", MaterialRoomConfirmationModel as unknown as Model<Document>],
   ["CostEstimation", CostEstimationModel as unknown as Model<Document>],
   ["PaymentConfirmationModel", PaymentConfirmationModel as unknown as Model<Document>],
-  ["OrderingMaterialModel", OrderingMaterialModel as unknown as Model<Document>],
+  ["OrderMaterialHistoryModel", OrderMaterialHistoryModel as unknown as Model<Document>],
   ["MaterialArrivalModel", MaterialArrivalModel as unknown as Model<Document>],
   ["WorkMainStageScheduleModel", WorkMainStageScheduleModel as unknown as Model<Document>],
   ["InstallationModel", InstallationModel as unknown as Model<Document>],
@@ -43,7 +44,7 @@ const assignStageStaffByName = async (req: Request, res: Response): Promise<any>
     const { stageName, projectId, staffId } = req.params;
 
     
-    console.log("staff", staffId)
+    // console.log("staff", staffId)
 
     if (!stageName || !projectId) {
       return res.status(400).json({ message: "stageName and projectId required", ok: false });

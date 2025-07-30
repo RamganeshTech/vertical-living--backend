@@ -52,14 +52,17 @@ export const resetStages = async (projectId: string, upToStageNumber: number) =>
         // };
 
 
-        if(i === 6){
+        if(i === 7){
             doc.paymentTransaction.status = null
         }
 
 
         await doc.save();
 
-        await populateWithAssignedToField({ stageModel: model, dataToCache: doc, projectId })
+        if(model.modelName !== "SelectedModularUnitModel"){
+            console.log("model name", model.modelName)
+            await populateWithAssignedToField({ stageModel: model, dataToCache: doc, projectId })
+        }
        
         await ProjectModel.updateOne(
             { _id: projectId },

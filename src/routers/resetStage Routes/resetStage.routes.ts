@@ -8,7 +8,7 @@ import { SampleDesignModel } from '../../models/Stage Models/sampleDesing model/
 import { TechnicalConsultationModel } from '../../models/Stage Models/technical consulatation/technicalconsultation.model';
 import MaterialRoomConfirmationModel from '../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model';
 import PaymentConfirmationModel from '../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model';
-import OrderingMaterialModel from '../../models/Stage Models/Ordering Material Model/orderingMaterial.model';
+// import OrderingMaterialModel from '../../models/Stage Models/Ordering Material Model/orderingMaterial.model';
 // import MaterialArrivalModel from '../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheck.model';
 import WorkMainStageScheduleModel from '../../models/Stage Models/WorkTask Model/WorkTask.model';
 import InstallationModel from '../../models/Stage Models/installation model/Installation.model';
@@ -18,6 +18,7 @@ import { CostEstimationModel } from '../../models/Stage Models/Cost Estimation M
 import { ProjectDeliveryModel } from '../../models/Stage Models/ProjectDelivery Model/ProjectDelivery.model';
 import { checkPreviousStageCompleted } from '../../middlewares/checkPreviousStageMiddleware';
 import MaterialArrivalModel from '../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model';
+import { OrderMaterialHistoryModel } from '../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
 
 
 const resetRouter = express.Router()
@@ -30,7 +31,7 @@ resetRouter.put('/stage5/materialconfirmation/:projectId', multiRoleAuthMiddlewa
 resetRouter.put('/stage6/costestimation/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"),  checkPreviousStageCompleted(MaterialRoomConfirmationModel), resetStage6)
 resetRouter.put('/stage7/paymentconfirmation/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(CostEstimationModel),  resetStage7)
 resetRouter.put('/stage8/orderingmaterial/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(PaymentConfirmationModel),  resetStage8)
-resetRouter.put('/stage9/materialarrivalcheck/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(OrderingMaterialModel),  resetStage9)
+resetRouter.put('/stage9/materialarrivalcheck/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(OrderMaterialHistoryModel),  resetStage9)
 resetRouter.put('/stage10/worktasks/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(MaterialArrivalModel),  resetStage10)
 resetRouter.put('/stage11/installation/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(WorkMainStageScheduleModel),  resetStage11)
 resetRouter.put('/stage12/qualitycheck/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(InstallationModel),  resetStage12)

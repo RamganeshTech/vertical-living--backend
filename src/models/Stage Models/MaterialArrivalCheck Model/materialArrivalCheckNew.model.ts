@@ -1,7 +1,4 @@
 import mongoose, { model, Schema, Types } from "mongoose";
-import { CarpentryMaterialArrivalSchema, CeramicSanitarywareMaterialArrivalSchema, ElectricalFittingMaterialArrivalSchema, FalseCeilingMaterialArrivalSchema, GlassMirrorMaterialArrivalSchema, HardwareMaterialArrivalSchema, ICarpentryItem, ICeramicSanitarywareItem, IElectricalFittingItem, IFalseCeilingItem, IGlassMirrorItem, IHardwareItem, ILightFixtureItem, IPaintItem, ITileItem, IUpholsteryCurtainItem, LightFixtureMaterialArrivalSchema, PaintMaterialArrivalSchema, TileMaterialArrivalSchema, UpholsteryCurtainMaterialArrivalSchema } from "./subMaterialArrivalSchema";
-
-
 
 
 export interface IMaterialArrivalTimer {

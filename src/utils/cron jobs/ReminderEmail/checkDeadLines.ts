@@ -8,7 +8,7 @@ import { TechnicalConsultationModel } from '../../../models/Stage Models/technic
 import MaterialRoomConfirmationModel from '../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model';
 import { CostEstimationModel } from '../../../models/Stage Models/Cost Estimation Model/costEstimation.model';
 import PaymentConfirmationModel from '../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model';
-import OrderingMaterialModel from '../../../models/Stage Models/Ordering Material Model/orderingMaterial.model';
+// import OrderingMaterialModel from '../../../models/Stage Models/Ordering Material Model/orderingMaterial.model';
 // import MaterialArrivalModel from '../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheck.model';
 import WorkMainStageScheduleModel from '../../../models/Stage Models/WorkTask Model/WorkTask.model';
 import InstallationModel from '../../../models/Stage Models/installation model/Installation.model';
@@ -16,6 +16,7 @@ import { QualityCheckupModel } from '../../../models/Stage Models/QualityCheck M
 import { CleaningAndSanitationModel } from '../../../models/Stage Models/Cleaning Model/cleaning.model';
 import { ProjectDeliveryModel } from '../../../models/Stage Models/ProjectDelivery Model/ProjectDelivery.model';
 import MaterialArrivalModel from '../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model';
+import { OrderMaterialHistoryModel } from '../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
 // Add more models as needed
 
 cron.schedule('0 * * * *', async () => {
@@ -26,7 +27,7 @@ cron.schedule('0 * * * *', async () => {
   await checkStageDeadlines(MaterialRoomConfirmationModel, 'Mateiral Selection Stage');
   await checkStageDeadlines(CostEstimationModel, 'Cost Estimation Stage');
   await checkStageDeadlines(PaymentConfirmationModel, 'Payment Stage');
-  await checkStageDeadlines(OrderingMaterialModel, 'Ordering Material Stage');
+  await checkStageDeadlines(OrderMaterialHistoryModel, 'Ordering Material Stage');
   await checkStageDeadlines(MaterialArrivalModel, 'Check Material Arrival Stage');
   await checkStageDeadlines(WorkMainStageScheduleModel, 'Work Schedule Stage');
   await checkStageDeadlines(InstallationModel, 'Installation Stage');

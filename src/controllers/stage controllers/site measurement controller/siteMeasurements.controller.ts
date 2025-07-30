@@ -15,6 +15,8 @@ import { updateProjectCompletionPercentage } from "../../../utils/updateProjectC
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 import { DocUpload, RoleBasedRequest } from "../../../types/types";
 import { syncShortList } from "../sampledesign contorllers/shortList.controller";
+import { ShortlistedDesignModel } from "../../../models/Stage Models/sampleDesing model/shortListed.model";
+import { syncOrderingMaterialsHistory } from "../ordering material controller/orderMaterialHistory.controller";
 
 
 export const syncSiteMeasurement = async (projectId: string) => {
@@ -198,6 +200,10 @@ const getTheSiteMeasurements = async (req: Request, res: Response): Promise<any>
     if (!projectId) {
       return res.status(400).json({ ok: false, message: "projectId is required" });
     }
+
+
+
+    // await syncOrderingMaterialsHistory(projectId)
 
     // await redisClient.del(`stage:SiteMeasurementModel:${projectId}`)
 
@@ -680,6 +686,36 @@ const updateRoomImageName = async (req: RoleBasedRequest, res: Response): Promis
 
     await measurement.save();
 
+
+    const shortlisting = await ShortlistedDesignModel.findOne({ projectId })
+
+    if (shortlisting) {
+      if (shortlisting?.shortlistedRooms?.length) {
+        const isRooomAvailble = shortlisting.shortlistedRooms.find(shortlistroom => {
+          console.log("room form site", room.name)
+          console.log("shortlisign roomName", shortlistroom.roomName)
+
+          return shortlistroom.roomName === room.name
+        })
+        // console.log("isRoomAvailabel", isRooomAvailble)
+
+        if (isRooomAvailble) {
+          const isCategoryAvailable = isRooomAvailble.categories.find(category => {
+            console.log("category availen in shorit", category.categoryId)
+            console.log("category availen in site upload", uploadId)
+            return category.categoryId === uploadId
+          })
+
+          // console.log("isCategoryAvailable", isCategoryAvailable)
+
+
+          if (isCategoryAvailable) {
+            isCategoryAvailable.categoryName = categoryName
+            await shortlisting.save()
+          }
+        }
+      }
+    }
 
     await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: measurement })
 

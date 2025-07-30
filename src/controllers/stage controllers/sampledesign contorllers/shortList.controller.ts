@@ -88,10 +88,10 @@ const sendShortListMailUtil = async (projectId: Types.ObjectId | string, roomNam
 
 export const uploadShortlistedDesignImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { projectId, roomName, categoryName } = req.params;
+        const { projectId, roomName, categoryName , categoryId} = req.params;
         const files = req.files as Express.Multer.File[];
 
-        if (!projectId || !roomName || !categoryName) {
+        if (!projectId || !roomName || !categoryName || !categoryId) {
             return res.status(400).json({ message: "Missing projectId, roomName or categoryName", ok: false });
         }
 
@@ -123,6 +123,7 @@ export const uploadShortlistedDesignImages = async (req: RoleBasedRequest, res: 
                         categories: [
                             {
                                 categoryName,
+                                categoryId,
                                 designs: uploads,
                             },
                         ],
@@ -135,13 +136,13 @@ export const uploadShortlistedDesignImages = async (req: RoleBasedRequest, res: 
             if (!room) {
                 doc.shortlistedRooms.push({
                     roomName,
-                    categories: [{ categoryName, designs: uploads }],
+                    categories: [{ categoryName, categoryId, designs: uploads }],
                 });
             } else {
                 // Check or insert category
-                let category = room.categories.find((c) => c.categoryName === categoryName);
+                let category = room.categories.find((c) => c.categoryId.toString() === categoryId.toString());
                 if (!category) {
-                    room.categories.push({ categoryName, designs: uploads });
+                    room.categories.push({ categoryName, categoryId, designs: uploads });
                 } else {
                     // Push new designs into existing
                     category.designs.push(...uploads);
@@ -154,7 +155,7 @@ export const uploadShortlistedDesignImages = async (req: RoleBasedRequest, res: 
         // ✅ Refetch updated designs for email
         const updated = await ShortlistedDesignModel.findOne({ projectId });
         const selectedRoom = updated?.shortlistedRooms.find((r) => r.roomName === roomName);
-        const selectedCategory = selectedRoom?.categories.find((c) => c.categoryName === categoryName);
+        const selectedCategory = selectedRoom?.categories.find((c) => c.categoryId.toString() === categoryId.toString());
         const allImageUrls = selectedCategory?.designs.map((d) => d.url) || [];
 
         if (allImageUrls.length) {
@@ -251,7 +252,7 @@ export const uploadShortlistedDesignImages = async (req: RoleBasedRequest, res: 
 
 export const addSelectedDesignsToShortlist = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { projectId, roomName, categoryName } = req.params;
+        const { projectId, roomName, categoryName, categoryId } = req.params;
         const { selectedImages } = req.body;
 
         if (!roomName || !categoryName || !Array.isArray(selectedImages) || !selectedImages.length) {
@@ -279,13 +280,17 @@ export const addSelectedDesignsToShortlist = async (req: RoleBasedRequest, res: 
         if (!room) {
             shortlist.shortlistedRooms.push({
                 roomName,
-                categories: [{ categoryName, designs: newDesigns }],
+                categories: [{ categoryName, categoryId, designs: newDesigns }],
             });
         } else {
             // Step 2: Find category or create it
-            let category = room.categories.find((c) => c.categoryName === categoryName);
+            let category = room.categories.find((c) => {
+                console.log("c", c.categoryId)
+                console.log("categoryd", categoryId)
+                return c?.categoryId?.toString() === categoryId?.toString()
+            });
             if (!category) {
-                room.categories.push({ categoryName, designs: newDesigns });
+                room.categories.push({ categoryName, categoryId, designs: newDesigns });
             } else {
                 // Step 3: Append new designs to existing
                 // Step 3: Append only non-duplicate designs
@@ -305,7 +310,7 @@ export const addSelectedDesignsToShortlist = async (req: RoleBasedRequest, res: 
         // ✅ Refetch updated designs for email
         const updated = await ShortlistedDesignModel.findOne({ projectId });
         const selectedRoom = updated?.shortlistedRooms.find((r) => r.roomName === roomName);
-        const selectedCategory = selectedRoom?.categories.find((c) => c.categoryName === categoryName);
+        const selectedCategory = selectedRoom?.categories.find((c) => c.categoryId.toString() === categoryId.toString());
         const allImageUrls = selectedCategory?.designs.map((d) => d.url) || [];
 
         if (allImageUrls.length) {
@@ -375,9 +380,9 @@ export const syncShortList = async (projectId: string | Types.ObjectId) => {
 
 export const deleteShortlistedDesign = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { projectId, roomName, categoryName, imageId } = req.params;
+        const { projectId, roomName, categoryId, imageId } = req.params;
 
-        if (!projectId || !roomName || !categoryName || !imageId) {
+        if (!projectId || !roomName || !categoryId || !imageId) {
             return res.status(400).json({ message: "Missing required data", ok: false });
         }
 
@@ -394,7 +399,7 @@ export const deleteShortlistedDesign = async (req: RoleBasedRequest, res: Respon
             return res.status(404).json({ message: "Room not found", ok: false });
         }
 
-        const category = room.categories.find(c => c.categoryName === categoryName);
+        const category = room.categories.find(c => c.categoryId === categoryId);
         if (!category) {
             return res.status(404).json({ message: "Category not found", ok: false });
         }

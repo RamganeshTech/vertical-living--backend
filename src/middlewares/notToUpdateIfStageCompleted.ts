@@ -18,7 +18,9 @@ export const notToUpdateIfStageCompleted = (currentStage: any): any => {
         // console.log(currentStage.modelName)
         const redisKey = `stage:${currentStage.modelName}:${projectId}`
 
-        if (currentStage.modelName !== "CostEstimation" && currentStage.modelName !== "PaymentConfirmationModel") {
+
+
+        if (currentStage.modelName !== "CostEstimation" && currentStage.modelName !== "PaymentConfirmationModel" && currentStage.modelName !== "SelectedModularUnitModel") {
             // Try Redis first
             // console.log("gettin d")
             let cachedData = await redisClient.get(redisKey);
@@ -47,12 +49,17 @@ export const notToUpdateIfStageCompleted = (currentStage: any): any => {
 
         if (!doc || doc?.status === "completed") {
 
-
-
-            if (currentStage.modelName !== "CostEstimation" && currentStage.modelName !== "PaymentConfirmationModel") {
+            if (currentStage.modelName !== "CostEstimation" && currentStage.modelName !== "PaymentConfirmationModel" && currentStage.modelName !== "SelectedModularUnitModel") {
                 await redisClient.set(redisKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 });
             }
 
+            if (currentStage.modelName === "SelectedModularUnitModel") {
+                return res.status(400).json({
+                    ok: false,
+                    message:
+                        "Cannot update: Already Generated Bill. Please go to previous stage and reset it.",
+                });
+            }
             return res.status(400).json({
                 ok: false,
                 message:
@@ -60,7 +67,7 @@ export const notToUpdateIfStageCompleted = (currentStage: any): any => {
             });
         }
 
-        if (currentStage.modelName !== "CostEstimation" && currentStage.modelName !== "PaymentConfirmationModel") {
+        if (currentStage.modelName !== "CostEstimation" && currentStage.modelName !== "PaymentConfirmationModel" && currentStage.modelName !== "SelectedModularUnitModel") {
             await redisClient.set(redisKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 });
         }
         next();

@@ -11,6 +11,7 @@ interface ShortlistedDesign {
 }
 export interface CategoryType {
   categoryName: string,
+  categoryId:string,
   designs: ShortlistedDesign[]
 }
 
@@ -42,6 +43,7 @@ const ShortlistUploadSchema = new Schema<ShortlistedDesign>({
 
 const CategoryTypes = new Schema<CategoryType>({
   categoryName: { type: String, default: null },
+  categoryId: {type: String},
   designs: { type: [ShortlistUploadSchema], default: [] }
 })
 

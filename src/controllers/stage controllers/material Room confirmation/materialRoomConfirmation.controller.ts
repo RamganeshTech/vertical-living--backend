@@ -5,10 +5,7 @@ import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common
 
 import { predefinedRooms } from "../../../utils/Stage Utils/initalizeMaterialSelectionStage";
 import { generateCostEstimationFromMaterialSelection } from "../cost estimation controllers/costEstimation.controller";
-import { syncOrderingMaterials } from "../ordering material controller/orderingMaterial.controller";
-import { syncWorkSchedule } from "../workTasksmain controllers/workMain.controller";
 import redisClient from "../../../config/redisClient";
-import { json } from "stream/consumers";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { DocUpload, RoleBasedRequest } from "../../../types/types";

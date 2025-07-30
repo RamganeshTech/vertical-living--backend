@@ -119,21 +119,26 @@ export const completeModularUnitSelection = async (req: RoleBasedRequest, res: R
 
     const modularSelection = await SelectedModularUnitModel.findOne({ projectId });
 
-    if (!modularSelection || modularSelection.selectedUnits.length === 0) {
+
+    if (!modularSelection) {
       return res.status(400).json({
         ok: false,
-        message: "No modular unit selected for this project.",
+        message: "No modular unit section available.",
       });
     }
 
-    // ✅ Recalculate totalCost in case it's outdated
-    const recalculatedTotalCost = modularSelection.selectedUnits.reduce((sum, unit) => {
-      return sum + (unit.singleUnitCost * unit.quantity);
-    }, 0);
+    let recalculatedTotalCost = 0;
+    if (modularSelection.selectedUnits.length) {
+      // ✅ Recalculate totalCost in case it's outdated
+      recalculatedTotalCost = modularSelection.selectedUnits.reduce((sum, unit) => {
+        return sum + (unit.singleUnitCost * unit.quantity);
+      }, 0);
 
-    // ✅ Update total cost in the modular unit record
-    modularSelection.totalCost = recalculatedTotalCost;
-    await modularSelection.save();
+      // ✅ Update total cost in the modular unit record
+      modularSelection.totalCost = recalculatedTotalCost;
+      modularSelection.status = "completed"
+      await modularSelection.save();
+    }
 
     const updatedPayment = await syncPaymentConfirationModel(projectId, recalculatedTotalCost)
 

@@ -7,7 +7,7 @@ import { addSelectedDesignsToShortlist, deleteShortlistedDesign, getShortlistedR
 const shortlistedDesignRoutes = express.Router();
 
 shortlistedDesignRoutes.post(
-  "/upload/:projectId/:roomName/:categoryName",
+  "/upload/:projectId/:roomName/:categoryName/:categoryId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   imageUploadToS3.array("file"),
   processUploadFiles,
@@ -17,14 +17,14 @@ shortlistedDesignRoutes.post(
 
 
 shortlistedDesignRoutes.post(
-  "/addexising/:projectId/:roomName/:categoryName",
+  "/addexising/:projectId/:roomName/:categoryName/:categoryId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   addSelectedDesignsToShortlist
 );
 
 
 shortlistedDesignRoutes.delete(
- "/remove/:projectId/:roomName/:imageId/:categoryName",
+ "/remove/:projectId/:roomName/:imageId/:categoryId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   deleteShortlistedDesign
 );

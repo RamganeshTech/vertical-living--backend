@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
+import MaterialArrivalModel, { IMaterialArrival, MaterialArrivalSingle } from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
 import { DocUpload, RoleBasedRequest } from "../../../types/types";
 import redisClient from "../../../config/redisClient";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
@@ -10,58 +10,213 @@ import { addOrUpdateStageDocumentation } from "../../documentation controller/do
 import { generateOrderingToken } from "../../../utils/generateToken";
 import { Types } from "mongoose"
 import { SelectedModularUnitModel } from "../../../models/Modular Units Models/All Unit Model/SelectedModularUnit Model/selectedUnit.model";
+import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
+import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
+import { getStageSelectionUtil } from "../../Modular Units Controllers/StageSelection Controller/stageSelection.controller";
+import { IRoomItemEntry } from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomTypes";
+import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 
 
 
-export const syncMaterialArrivalNew = async (projectId: string | Types.ObjectId) => {
-    const materialArrival = await MaterialArrivalModel.findOne({ projectId })
-    const selected = await SelectedModularUnitModel.findOne({ projectId });
+// export const syncMaterialArrivalNew = async (projectId: string | Types.ObjectId) => {
+//     const materialArrival = await MaterialArrivalModel.findOne({ projectId })
+//     const selected = await SelectedModularUnitModel.findOne({ projectId });
 
-    if (!selected) {
-        console.log("selected units not created")
-        return;
-    }
+//     if (!selected) {
+//         console.log("selected units not created")
+//         // return;
+//     }
 
-    const timer = {
+
+//     console.log("selete units", selected)
+
+//     const timer = {
+//         startedAt: new Date(),
+//         completedAt: null,
+//         deadLine: null,
+//         reminderSent: false,
+//     };
+//     // Prepare new items with default structure
+
+//     let newItems:any[] = []
+//     if (selected?.selectedUnits?.length) {
+//         newItems = selected.selectedUnits.map((unit: any) => ({
+//             customId: unit.customId,
+//             quantity: 0,
+//             image: null,
+//             isVerified: false,
+//         }));
+
+//     }
+
+//     if (!materialArrival) {
+//         // ⬇️ Create new document if not exists
+//         await MaterialArrivalModel.create({
+//             projectId,
+//             status: "pending",
+//             isEditable: true,
+//             assignedTo: null,
+//             materialArrivalList: newItems,
+//             timer,
+//             generatedLink: null,
+//         });
+//     } else {
+//         // ⬇️ Append only new items by filtering duplicates (by customId)
+//         const existingIds = new Set(
+//             (materialArrival.materialArrivalList as any || []).map((item: any) => item.customId)
+//         );
+
+//         const uniqueNewItems = newItems.filter(item => !existingIds.has(item.customId));
+
+//         if (uniqueNewItems.length > 0) {
+//             (materialArrival.materialArrivalList as any).push(...uniqueNewItems);
+//             await materialArrival.save();
+//         }
+//     }
+
+// }
+
+
+
+export const syncMaterialArrivalNew = async (projectId: string) => {
+    const timer: any = {
         startedAt: new Date(),
         completedAt: null,
         deadLine: null,
         reminderSent: false,
     };
-    // Prepare new items with default structure
-    const newItems = selected.selectedUnits.map((unit: any) => ({
-        customId: unit.customId,
-        quantity: 0,
-        image: null,
-        isVerified: false,
-    }));
 
-    if (!materialArrival) {
-        // ⬇️ Create new document if not exists
-        await MaterialArrivalModel.create({
-            projectId,
-            status: "pending",
-            isEditable: true,
-            assignedTo: null,
-            materialArrivalList: newItems,
-            timer,
-            generatedLink: null,
-        });
-    } else {
-        // ⬇️ Append only new items by filtering duplicates (by customId)
-        const existingIds = new Set(
-            (materialArrival.materialArrivalList as any || []).map((item: any) => item.customId)
-        );
+    const stageSelection = await getStageSelectionUtil(projectId);
+    const mode = stageSelection?.mode || "Manual Flow";
 
-        const uniqueNewItems = newItems.filter(item => !existingIds.has(item.customId));
+    // let existing = await MaterialArrivalModel.findOne({ projectId });
 
-        if (uniqueNewItems.length > 0) {
-            (materialArrival.materialArrivalList as any).push(...uniqueNewItems);
-            await materialArrival.save();
+    // // Map existing entries by customId for preserving image & isVerified
+    // const existingMap = new Map<string, MaterialArrivalSingle>();
+    // ((existing?.materialArrivalList as any) || []).forEach((item: MaterialArrivalSingle) => {
+    //     if (item?.customId) {
+    //         existingMap.set(item.customId, item);
+    //     }
+    // });
+
+    const newList: MaterialArrivalSingle[] = [];
+
+    if (mode === "Modular Units") {
+
+        const materialArrival = await MaterialArrivalModel.findOne({ projectId })
+        const selected = await SelectedModularUnitModel.findOne({ projectId });
+
+        let newItems: any[] = []
+        if (selected?.selectedUnits?.length) {
+            newItems = selected.selectedUnits.map((unit: any) => ({
+                customId: unit.customId,
+                quantity: 0,
+                image: null,
+                isVerified: false,
+            }));
+        }
+        if (!materialArrival) {
+            // ⬇️ Create new document if not exists
+            await MaterialArrivalModel.create({
+                projectId,
+                status: "pending",
+                isEditable: true,
+                assignedTo: null,
+                materialArrivalList: newItems,
+                timer,
+                generatedLink: null,
+            });
+        } else {
+            // ⬇️ Append only new items by filtering duplicates (by customId)
+            const existingIds = new Set(
+                (materialArrival.materialArrivalList as any || []).map((item: any) => item.customId)
+            );
+            const uniqueNewItems = newItems.filter(item => !existingIds.has(item.customId));
+            if (uniqueNewItems.length > 0) {
+                (materialArrival.materialArrivalList as any).push(...uniqueNewItems);
+                await materialArrival.save();
+
+            }
+
+        }
+    }
+    else if (mode === "Manual Flow") {
+        const materialArrival = await MaterialArrivalModel.findOne({ projectId });
+        const orderHistory = await OrderMaterialHistoryModel.findOne({ projectId });
+
+        let newItems:any = []
+
+        if (orderHistory?.selectedUnits.length) {
+             newItems = orderHistory?.selectedUnits?.map((unit: any) => ({
+                customId: unit.customId,
+                quantity: 0,
+                image: null,
+                isVerified: false, // will override below if already verified
+            }));
+        }
+
+
+        if (!materialArrival) {
+            await MaterialArrivalModel.create({
+                projectId,
+                status: "pending",
+                isEditable: true,
+                assignedTo: null,
+                materialArrivalList: newItems,
+                timer,
+                generatedLink: null,
+            });
+        } else {
+            // 🔍 Preserve already verified items
+            const existingList = materialArrival.materialArrivalList || [];
+            const existingMap = new Map(
+                (existingList as any)?.map((item: any) => [item.customId, item])
+            );
+
+            const finalItemsToAdd: any[] = [];
+
+            for (const item of newItems) {
+                if (existingMap.has(item.customId)) {
+                    const existingItem: any = existingMap.get(item.customId);
+                    if (existingItem.isVerified) {
+                        // Preserve entire object if already verified
+                        continue;
+                    }
+                } else {
+                    finalItemsToAdd.push(item);
+                }
+            }
+
+            if (finalItemsToAdd.length > 0) {
+                (materialArrival.materialArrivalList as any)?.push(...finalItemsToAdd);
+                await materialArrival.save();
+            }
         }
     }
 
-}
+    const redisMainkey = `stage:MaterialArrivalModel:${projectId}`
+    await redisClient.del(redisMainkey)
+
+    // // Save or update the MaterialArrivalModel
+    // if (!existing) {
+    //     existing = new MaterialArrivalModel({
+    //         projectId,
+    //         materialArrivalList: newList,
+    //         timer,
+    //         status: "pending",
+    //         isEditable: true,
+    //         assignedTo: null,
+    //         generatedLink: null
+    //     });
+    // } else {
+    //     existing.materialArrivalList = newList;
+    //     existing.timer = timer;
+    // }
+
+    // await existing.save();
+};
+
+
 
 export const updateMaterialArrivalItem = async (
     req: Request,
@@ -190,7 +345,7 @@ export const getAllMaterialArrivalDetails = async (req: RoleBasedRequest, res: R
 
 
         const redisMainKey = `stage:MaterialArrivalModel:${projectId}`
-        await redisClient.del(redisMainKey);
+        // await redisClient.del(redisMainKey);
 
         const cachedData = await redisClient.get(redisMainKey)
 

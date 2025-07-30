@@ -1,36 +1,12 @@
 import { Request, Response } from "express";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
-import { syncOrderingMaterials } from "../ordering material controller/orderingMaterial.controller";
+// import { syncOrderingMaterials } from "../ordering material controller/orderingMaterial.controller";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 
 import { Types } from "mongoose"
-
-
-
-// <h3 style="color: #1f2937; font-size: 20px; margin-top: 20px; margin-bottom: 8px;">
-//   4. Client Responsibilities
-// </h3>
-// <ul style="margin-bottom: 16px; padding-left: 20px;">
-//   <li>
-//     The client shall provide necessary approvals, information, and access in a timely manner to avoid project delays.
-//   </li>
-// </ul>
-
-// <h3 style="color: #1f2937; font-size: 20px; margin-top: 20px; margin-bottom: 8px;">
-//   5. Dispute Resolution
-// </h3>
-// <ul style="margin-bottom: 16px; padding-left: 20px;">
-//   <li style="margin-bottom: 6px;">
-//     In case of any disputes, both parties agree to resolve the matter amicably through mutual discussion.
-//   </li>
-//   <li>
-//     All legal matters will be governed by the jurisdiction of [Your City/State, India].
-//   </li>
-// </ul>
-
-
+import { syncOrderingMaterialsHistory } from "../ordering material controller/orderMaterialHistory.controller";
 
 // 📌 This is your reusable default HTML Terms
 const defaultConsentContent = `
@@ -216,7 +192,8 @@ const paymentConfirmationCompletionStatus = async (req: Request, res: Response):
     await form.save();
 
     if (form.status === "completed") {
-      await syncOrderingMaterials(projectId)
+      // await syncOrderingMaterials(projectId)
+      await syncOrderingMaterialsHistory(projectId)
 
       await addOrUpdateStageDocumentation({
         projectId,

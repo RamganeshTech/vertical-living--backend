@@ -8,7 +8,7 @@ import { TechnicalConsultationModel } from "../../../models/Stage Models/technic
 import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
 import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
 import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
-import OrderingMaterialModel from "../../../models/Stage Models/Ordering Material Model/orderingMaterial.model";
+// import OrderingMaterialModel from "../../../models/Stage Models/Ordering Material Model/orderingMaterial.model";
 // import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheck.model";
 import { CleaningAndSanitationModel } from "../../../models/Stage Models/Cleaning Model/cleaning.model";
 import { ProjectDeliveryModel } from "../../../models/Stage Models/ProjectDelivery Model/ProjectDelivery.model";
@@ -17,6 +17,7 @@ import InstallationModel from "../../../models/Stage Models/installation model/I
 import WorkMainStageScheduleModel from "../../../models/Stage Models/WorkTask Model/WorkTask.model";
 import redisClient from "../../../config/redisClient";
 import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
+import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 
 
 const stageModelMap = new Map<string, Model<Document>>([
@@ -27,7 +28,7 @@ const stageModelMap = new Map<string, Model<Document>>([
     ["materialconfirmation", MaterialRoomConfirmationModel as unknown as Model<Document>],
     ["costestimation", CostEstimationModel as unknown as Model<Document>],
     ["paymentconfirmation", PaymentConfirmationModel as unknown as Model<Document>],
-    ["orderingmaterial", OrderingMaterialModel as unknown as Model<Document>],
+    ["orderingmaterial", OrderMaterialHistoryModel as unknown as Model<Document>],
     ["materialarrivalcheck", MaterialArrivalModel as unknown as Model<Document>],
     ["worktasks", WorkMainStageScheduleModel as unknown as Model<Document>],
     ["installation", InstallationModel as unknown as Model<Document>],

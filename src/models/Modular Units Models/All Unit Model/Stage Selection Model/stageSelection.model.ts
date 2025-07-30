@@ -2,11 +2,11 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IStageSelection extends Document {
   projectId: mongoose.Types.ObjectId;
-  mode: "modular-units" | "material-flow";
+  mode: "Modular Units" | "Manual Flow";
 
 }
 
-const StageSelectionSchema: Schema = new Schema({
+const StageSelectionSchema: Schema = new Schema<IStageSelection>({
   projectId: {
     type: Schema.Types.ObjectId,
     ref: "ProjectModel",
