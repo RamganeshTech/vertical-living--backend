@@ -10,6 +10,7 @@ import { generateCostEstimationFromMaterialSelection } from "../../stage control
 import { syncPaymentConfirationModel } from "../../stage controllers/PaymentConfirmation controllers/PaymentMain.controllers";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { assignedTo, selectedFields } from "../../../constants/BEconstants";
+import { syncOrderingMaterialsHistory } from "../../stage controllers/ordering material controller/orderMaterialHistory.controller";
 
 // ADD A UNIT
 export const addSelectedUnit = async (req: RoleBasedRequest, res: Response): Promise<any> => {
@@ -77,6 +78,7 @@ export const getSelectedUnitsByProject = async (req: RoleBasedRequest, res: Resp
     const { projectId } = req.params;
 
     const data = await SelectedModularUnitModel.findOne({ projectId });
+
 
     return res.status(200).json({ ok: true, data, message: "fetched all the selcted units" });
   } catch (error: any) {

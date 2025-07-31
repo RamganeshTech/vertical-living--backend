@@ -57,6 +57,7 @@ import SelectedModularUnitRoutes from './routers/Modular Unit routes/SelectedMod
 import documentaitonRoutes from './routers/Documentation Routes/documentation.routes';
 import shortlistedDesignRoutes from './routers/Stage routes/sample desing routes/shortListed.routes';
 import orderMaterialHistoryRoutes from './routers/Stage routes/order Material routes/orderMaterialHistory.routes';
+import currentActiveStage from './routers/CurrentActiveStage Routes/currentActiveStage.route';
 
 dotenv.config();
 
@@ -136,6 +137,7 @@ app.use('/api/workerwall', workerWallRoutes)
 
 // SHORTLIST API
 app.use('/api/shortlisteddesign', shortlistedDesignRoutes)
+app.use('/api/currentactivestage', currentActiveStage)
 
 
 

@@ -10,6 +10,14 @@ import { syncRequirmentForm } from "../stage controllers/requirement controllers
 import { syncPreRequireties } from "../PreRequireties Controllers/preRequireties.controllers";
 import { syncSelectStage } from "../Modular Units Controllers/StageSelection Controller/stageSelection.controller";
 import { syncDocumentationModel } from "../documentation controller/documentation.controller";
+import { stageModels } from "../../constants/BEconstants";
+import { AdminWallPaintingModel } from "../../models/Wall Painting model/AdminSideWallPainting.model";
+import { WorkerWallPaintingModel } from "../../models/Wall Painting model/workerSideWallPainting.model";
+import { SelectedModularUnitModel } from "../../models/Modular Units Models/All Unit Model/SelectedModularUnit Model/selectedUnit.model";
+import { Model } from "mongoose";
+import { PreRequiretiesModel } from "../../models/PreRequisites/preRequireties.model";
+import { StageDocumentationModel } from "../../models/Documentation Model/documentation.model";
+import { ShortlistedDesignModel } from "../../models/Stage Models/sampleDesing model/shortListed.model";
 
 const createProject = async (req: RoleBasedRequest, res: Response) => {
     try {
@@ -58,8 +66,10 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
         );
 
 
-        const project = await ProjectModel.findOne({ projectName, 
-            userId: user?.role === "owner" ? user?._id : user?.ownerId })
+        const project = await ProjectModel.findOne({
+            projectName,
+            userId: user?.role === "owner" ? user?._id : user?.ownerId
+        })
 
 
         if (!project) {
@@ -106,7 +116,7 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
                         $addToSet: { projectId: projectNew._id },
                     }
                 ),
-                
+
                 syncRequirmentForm(projectNew._id),
                 syncPreRequireties(projectNew._id),
                 syncSelectStage(projectNew._id),
@@ -216,6 +226,31 @@ const deleteProject = async (req: RoleBasedRequest, res: Response): Promise<void
             ),
         ]);
 
+         const allModels: Model<any>[] = [
+            ...stageModels,
+            PreRequiretiesModel,
+            ShortlistedDesignModel,
+            StageDocumentationModel,
+            AdminWallPaintingModel,
+            WorkerWallPaintingModel,
+            SelectedModularUnitModel,
+        ];
+
+
+        // for (let model of allModels) {
+        //     const doc = await model.findOne({ projectId });
+        //     if (!doc) {
+        //         continue;
+        //     }
+        //     else{
+        //         await model.findOneAndDelete({projectId})
+        //     }
+        // }
+
+
+         for (const model of allModels) {
+            await model.deleteMany({ projectId }); // Efficient and deletes all matching
+        }
 
         const cacheKey = `projects:${data.organizationId}`;
 

@@ -82,7 +82,7 @@ cleaningRoutes.put(
 );
 
 cleaningRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(QualityCheckupModel), notToUpdateIfStageCompleted(CleaningAndSanitationModel), setCleaningStageDeadline)
-cleaningRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(QualityCheckupModel), notToUpdateIfStageCompleted(CleaningAndSanitationModel), cleaningStageCompletionStatus)
+cleaningRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(QualityCheckupModel),  cleaningStageCompletionStatus)
 
 
 export default cleaningRoutes;

@@ -52,22 +52,31 @@ export const resetStages = async (projectId: string, upToStageNumber: number) =>
         // };
 
 
-        if(i === 7){
+        if (i === 7) {
             doc.paymentTransaction.status = null
         }
 
 
         await doc.save();
 
-        if(model.modelName !== "SelectedModularUnitModel"){
+        if (model.modelName !== "SelectedModularUnitModel") {
             console.log("model name", model.modelName)
             await populateWithAssignedToField({ stageModel: model, dataToCache: doc, projectId })
         }
-       
-        await ProjectModel.updateOne(
+
+        const updatedProject = await ProjectModel.findOneAndUpdate(
             { _id: projectId },
-            { $set: { completionPercentage: 0 } }
+            { $set: { completionPercentage: 0 } },
+            { new: true }
         );
+
+        if (!updatedProject) {
+            console.error(`❌ Project with ID ${projectId} not found. Skipping cache invalidation.`);
+            return;
+        }
+
+        await redisClient.del(`projects:${updatedProject.organizationId}`);
+
     }
 
 

@@ -52,7 +52,7 @@ export const stageModels: Model<any>[] = [
   TechnicalConsultationModel,      // Stage 4
   SelectedModularUnitModel, //stage 5
   MaterialRoomConfirmationModel,      // Stage 5
-  CostEstimationModel,                // Stage 6
+  CostEstimationModel,                // Stage 6    
   PaymentConfirmationModel,    //stage 7
   // OrderingMaterialModel,  
   OrderMaterialHistoryModel, //stage 8

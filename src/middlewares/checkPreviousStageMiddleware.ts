@@ -15,7 +15,7 @@ export const checkPreviousStageCompleted = (previousStageModel: any): any => {
             return res.status(400).json({ message: "Project ID is required.", ok: false, });
         }
 
-        console.log("previous stage",previousStageModel)
+        // console.log("previous stage",previousStageModel)
         const redisKey = `stage:${previousStageModel.modelName}:${projectId}`
 
         if (previousStageModel.modelName !== "CostEstimation" && previousStageModel.modelName !== "PaymentConfirmationModel") {
