@@ -567,14 +567,7 @@ const uploadSiteMeasurementRoomImages = async (req: RoleBasedRequest, res: Respo
       return res.status(400).json({ message: "Only image files are allowed", ok: false });
     }
 
-    const uploads = imageFiles.map((file) => ({
 
-      _id: new Types.ObjectId(),
-      type: "image",
-      url: (file as any).location,
-      originalName: file.originalname,
-      uploadedAt: new Date(),
-    }));
 
     const doc = await SiteMeasurementModel.findOne({ projectId });
 
@@ -587,6 +580,21 @@ const uploadSiteMeasurementRoomImages = async (req: RoleBasedRequest, res: Respo
     if (!room) {
       return res.status(404).json({ message: "Room not found", ok: false });
     }
+
+    
+    let uploadedLength = room?.uploads?.length || 0
+    const uploads = imageFiles.map((file,) => {
+      uploadedLength += 1
+      return {
+      _id: new Types.ObjectId(),
+      type: "image",
+      url: (file as any).location,
+      originalName: file.originalname,
+      categoryName: `general-${uploadedLength}`,
+      uploadedAt: new Date(),
+    }
+  } 
+  );
 
     // Ensure uploads array exists
     if (!room?.uploads) {
