@@ -58,6 +58,7 @@ import documentaitonRoutes from './routers/Documentation Routes/documentation.ro
 import shortlistedDesignRoutes from './routers/Stage routes/sample desing routes/shortListed.routes';
 import orderMaterialHistoryRoutes from './routers/Stage routes/order Material routes/orderMaterialHistory.routes';
 import currentActiveStage from './routers/CurrentActiveStage Routes/currentActiveStage.route';
+import externalUnitRoutes from './routers/ExternalUnit Routes/externalUnit.routes';
 
 dotenv.config();
 
@@ -106,6 +107,7 @@ app.use('/api/starttimer', stageTimerRoutes)
 // PREREQUIRETIES APIS
 app.use('/api/prerequireties', preRequiretiesRoutes)
 
+app.use('/api/externalunits', externalUnitRoutes)
 
 // MODULAR UNITS APIS
 app.use('/api/modularunit', modularUnitRoutes)
@@ -140,7 +142,6 @@ app.use('/api/shortlisteddesign', shortlistedDesignRoutes)
 app.use('/api/currentactivestage', currentActiveStage)
 
 
-
 // SHORTLIST API
 // app.use('/api/shortlist', shortlistedDesignRoutes)
 // shortlistedDesignRoutes.post(
@@ -160,8 +161,10 @@ app.use(downloadRouter)
 // ASSIGN STAFF 
 app.use('/api/assignstafftostage', assignRoutes)
 
+// SUBSCRIPTION API
 app.use("/api/subscriptionpayment", subscriptionRoutes);
 
+// PROFILE API
 app.use('/api/profile', profileRoutes)
 
 

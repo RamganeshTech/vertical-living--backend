@@ -13,6 +13,7 @@ import { syncAdminWall, syncWorkerWall } from "../../Wall Painting controllers/a
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 import { DocUpload, RoleBasedRequest } from "../../../types/types";
 import { syncMaterialArrivalNew } from "../MaterialArrival controllers/materialArrivalCheckNew.controller";
+import { createWardrobeUnittemp } from "../../ExternalUnit Controller/externalUnit.controller";
 
 
 
@@ -253,6 +254,7 @@ const getFormFilledDetails = async (req: Request, res: Response,): Promise<any> 
       return;
     }
 
+    // await createWardrobeUnittemp("wardrobe steel", "wardrobe", 150, )
 
     // const data = await RequirementFormModel.updateOne(
     //   { projectId },
