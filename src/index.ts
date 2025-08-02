@@ -59,6 +59,7 @@ import shortlistedDesignRoutes from './routers/Stage routes/sample desing routes
 import orderMaterialHistoryRoutes from './routers/Stage routes/order Material routes/orderMaterialHistory.routes';
 import currentActiveStage from './routers/CurrentActiveStage Routes/currentActiveStage.route';
 import externalUnitRoutes from './routers/ExternalUnit Routes/externalUnit.routes';
+import selectedExternalRoutes from './routers/ExternalUnit Routes/selectedExternalUnit.routes';
 
 dotenv.config();
 
@@ -108,6 +109,7 @@ app.use('/api/starttimer', stageTimerRoutes)
 app.use('/api/prerequireties', preRequiretiesRoutes)
 
 app.use('/api/externalunits', externalUnitRoutes)
+app.use('/api/selectedexternal', selectedExternalRoutes)
 
 // MODULAR UNITS APIS
 app.use('/api/modularunit', modularUnitRoutes)

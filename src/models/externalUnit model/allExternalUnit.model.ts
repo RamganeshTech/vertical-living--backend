@@ -15,6 +15,8 @@ interface ExternalAllUnit extends Document {
 const AllExternalUnitSchema = new Schema<ExternalAllUnit>({
     wardrobe: {type: Schema.Types.ObjectId, ref:""},
     
+}, {
+    timestamps:true
 })
 
 
