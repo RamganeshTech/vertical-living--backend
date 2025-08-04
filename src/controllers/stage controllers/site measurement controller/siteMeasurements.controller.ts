@@ -16,7 +16,6 @@ import { addOrUpdateStageDocumentation } from "../../documentation controller/do
 import { DocUpload, RoleBasedRequest } from "../../../types/types";
 import { syncShortList } from "../sampledesign contorllers/shortList.controller";
 import { ShortlistedDesignModel } from "../../../models/Stage Models/sampleDesing model/shortListed.model";
-import { syncOrderingMaterialsHistory } from "../ordering material controller/orderMaterialHistory.controller";
 
 
 export const syncSiteMeasurement = async (projectId: string) => {

@@ -1,12 +1,12 @@
 // routes/selectedExternal.routes.ts
 import express from "express";
-import { addSelectedExternal, deleteSelectedExternalUnit, getSelectedExternal, updateSelectedExternalStatus } from "../../controllers/ExternalUnit Controller/SelectedExternalUnits.controller";
+import { addToSelectedExternal, deleteSelectedExternalUnit, getSelectedExternal, updateSelectedExternalStatus } from "../../controllers/ExternalUnit Controller/SelectedExternalUnits.controller";
 import { multiRoleAuthMiddleware } from "../../middlewares/multiRoleAuthMiddleware";
 
 const selectedExternalRoutes = express.Router();
 
 // 🔁 Add a selected unit (single object) to a project
-selectedExternalRoutes.post("/:projectId/addtoselected", multiRoleAuthMiddleware("staff", "owner", "CTO"), addSelectedExternal);
+selectedExternalRoutes.post("/:projectId/addtoselected", multiRoleAuthMiddleware("staff", "owner", "CTO"), addToSelectedExternal);
 
 // 🔎 Get all selected units for a project
 selectedExternalRoutes.get("/:projectId/getselected",  getSelectedExternal);

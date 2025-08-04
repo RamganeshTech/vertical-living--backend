@@ -3,11 +3,16 @@ import { Response } from "express";
 import { Types } from "mongoose";
 import { SelectedExternalModel } from "../../models/externalUnit model/SelectedExternalUnit model/selectedExternalUnit.model";
 import { RoleBasedRequest } from "../../types/types";
+import { SelectedModularUnitModel } from "../../models/Modular Units Models/All Unit Model/SelectedModularUnit Model/selectedUnit.model";
+import { syncPaymentConfirationModel } from "../stage controllers/PaymentConfirmation controllers/PaymentMain.controllers";
+import { generateCostEstimationFromMaterialSelection } from "../stage controllers/cost estimation controllers/costEstimation.controller";
+import MaterialRoomConfirmationModel from "../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
+import { assignedTo, selectedFields } from "../../constants/BEconstants";
+import { CostEstimationModel } from "../../models/Stage Models/Cost Estimation Model/costEstimation.model";
+import { populateWithAssignedToField } from "../../utils/populateWithRedis";
 
-/**
- * Create or update selected external units for a project
- */
-export const addSelectedExternal = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+
+export const addToSelectedExternal = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
         const { selectedUnit } = req.body;
@@ -63,9 +68,6 @@ export const deleteSelectedExternalUnit = async (req: RoleBasedRequest, res: Res
     try {
         const { projectId, unitId } = req.params;
 
-
-        console.log("unitId", unitId)
-
         const result = await SelectedExternalModel.findOneAndUpdate(
             { projectId },
             [
@@ -107,19 +109,54 @@ export const deleteSelectedExternalUnit = async (req: RoleBasedRequest, res: Res
 
 
 // controllers/ExternalUnit Controller/updateSelectedExternalStatus.ts
-export const updateSelectedExternalStatus = async (req: RoleBasedRequest, res: Response):Promise<any> => {
+export const updateSelectedExternalStatus = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
-      
+
         const updated = await SelectedExternalModel.findOneAndUpdate(
             { projectId },
-            { status:"completed" },
+            { status: "completed" },
             { new: true }
         );
+
+
+
 
         if (!updated) {
             return res.status(404).json({ ok: false, message: "Project not found" });
         }
+
+        const selectedModular = await SelectedModularUnitModel.findOne({ projectId });
+        let recalculatedTotalCost = 0;
+        recalculatedTotalCost += selectedModular?.totalCost || 0
+        recalculatedTotalCost += updated?.totalCost
+        await syncPaymentConfirationModel(projectId, recalculatedTotalCost)
+
+        // ✅ Update PaymentConfirmationModel (add to totalAmount)
+        // const updatedPayment = await PaymentConfirmationModel.findOneAndUpdate(
+        //   { projectId },
+        //   { $set: { totalAmount: recalculatedTotalCost } },
+        //   { new: true }
+        // );
+
+        // ✅ Mark MaterialRoomConfirmationModel as completed
+        const materialDoc = await MaterialRoomConfirmationModel.findOneAndUpdate(
+            { projectId },
+            { status: "completed" },
+            { returnDocument: "after" }
+        ).populate(assignedTo, selectedFields)
+
+        // console.log("mateiraldoc", materialDoc)
+        await generateCostEstimationFromMaterialSelection({}, projectId)
+
+
+        // ✅ Mark CostEstimationModel as completed
+        await CostEstimationModel.findOneAndUpdate(
+            { projectId },
+            { status: "completed" }
+        );
+        await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: materialDoc })
+
 
         return res.status(200).json({ ok: true, data: updated });
     } catch (error) {

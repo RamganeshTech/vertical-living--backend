@@ -15,6 +15,7 @@ import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimatio
 import { getStageSelectionUtil } from "../../Modular Units Controllers/StageSelection Controller/stageSelection.controller";
 import { IRoomItemEntry } from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomTypes";
 import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
+import { SelectedExternalModel } from "../../../models/externalUnit model/SelectedExternalUnit model/selectedExternalUnit.model";
 
 
 
@@ -99,21 +100,34 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
     //     }
     // });
 
-    const newList: MaterialArrivalSingle[] = [];
+    // const newList: MaterialArrivalSingle[] = [];
 
     if (mode === "Modular Units") {
 
         const materialArrival = await MaterialArrivalModel.findOne({ projectId })
         const selected = await SelectedModularUnitModel.findOne({ projectId });
+        const isExternalExists = await SelectedExternalModel.findOne({ projectId })
 
+        
+        
         let newItems: any[] = []
+        if (isExternalExists?.selectedUnits?.length) {
+           const externalUnits = isExternalExists.selectedUnits.map((unit: any) => ({
+               customId: unit.unitCode,
+               quantity: 0,
+               image: null,
+               isVerified: false,
+           }));
+          newItems =  newItems.concat(externalUnits)
+       }
         if (selected?.selectedUnits?.length) {
-            newItems = selected.selectedUnits.map((unit: any) => ({
+            const externalUnits  = selected.selectedUnits.map((unit: any) => ({
                 customId: unit.customId,
                 quantity: 0,
                 image: null,
                 isVerified: false,
             }));
+           newItems = newItems.concat(externalUnits)
         }
         if (!materialArrival) {
             // ⬇️ Create new document if not exists

@@ -10,6 +10,7 @@ import MaterialRoomConfirmationModel from "../../../models/Stage Models/Material
 import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
 import { getStageSelectionUtil } from "../../Modular Units Controllers/StageSelection Controller/stageSelection.controller";
 import { IRoomItemEntry } from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomTypes";
+import { SelectedExternalModel } from './../../../models/externalUnit model/SelectedExternalUnit model/selectedExternalUnit.model';
 
 // export const syncOrderingMaterialsHistory = async (projectId: string) => {
 
@@ -89,12 +90,63 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
     if (mode === "Modular Units") {
         const units = await SelectedModularUnitModel.findOne({ projectId });
 
+        const isExternalExists = await SelectedExternalModel.findOne({ projectId })
+
+        if (isExternalExists && isExternalExists?.selectedUnits?.length) {
+            let selectedUnits = isExternalExists.selectedUnits
+
+            const findSingleQuantityPrice = (height: number, width: number, depth: number, unitPrice: number) => {
+                const h = Number(height);
+                const w = Number(width);
+                const d = Number(depth);
+
+                const heightFt = h / 304.8;
+                const widthFt = w / 304.8;
+                const depthFt = d / 304.8;
+
+                const cubicFeet = heightFt * widthFt * depthFt;
+                // console.log("cal cubic feet", cubicFeet)
+                // const price = cubicFeet * unitPrice * quantity;
+                // console.log("cal price before ceilt", price)
+                // return Math.floor(price); // No decimals, always rounded up
+
+
+                const pricePerUnit = Math.ceil(cubicFeet * unitPrice); // ⬅️ round per unit
+                return pricePerUnit
+
+            }
+            // console.log("Geetting inside of selected Units in the external block")
+
+            for (let unit of selectedUnits) {
+                // const { _id, ...res } = (unit as any).toObject()
+                const { unitCode, unitName, price, category, dimention, quantity, image } = unit
+                const { height = 0, width = 0, depth = 0 } = dimention as any || {}
+
+                const singleUnitCost = findSingleQuantityPrice(height, width, depth, price)
+
+                let externalUnits: any = {
+                    customId: unitCode,
+                    name: unitName,
+                    category: category,
+                    singleUnitCost: singleUnitCost,
+                    quantity: quantity,
+                    unitId: (unit as any)._id,
+                    image: image?.url
+                }
+
+                selected.push(externalUnits)
+                // console.log("selected Units in the external block", selected)
+            }
+            totalCost += isExternalExists?.totalCost || 0
+        }
         if (units) {
-            totalCost = units.totalCost || 0;
-            selected = units.selectedUnits.map((doc: any) => {
+            totalCost += units.totalCost || 0;
+            const modularUnits = units.selectedUnits.map((doc: any) => {
                 const { _id, ...rest } = doc.toObject();
                 return { ...rest };
             });
+
+            selected = selected.concat(modularUnits);
         }
     } else if (mode === "Manual Flow") {
         const [materials, estimation] = await Promise.all([
@@ -167,10 +219,14 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
             );
 
             if (existingUnit) {
-                //                 // ✅ If exists, increase quantity
-                existingUnit.quantity += newUnit.quantity || 0;
+                // ✅ Only update quantity if the new unit is modular
+                if (newUnit.customId.toLowerCase().includes("modular")) {
+                    existingUnit.quantity += newUnit.quantity || 0;
+                }else{
+                    existing?.selectedUnits.push(newUnit);
+                }
             } else {
-                //                 // ✅ If not exists, push new (with new _id auto-generated)
+                // ✅ If not found, push new unit
                 existing?.selectedUnits.push(newUnit);
             }
         });

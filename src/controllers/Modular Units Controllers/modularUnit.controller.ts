@@ -46,7 +46,6 @@ const createUnit = async (req: RoleBasedRequest, res: Response): Promise<any> =>
         if (!allowed) {
             return res.status(400).json({ ok: false, message: "No allowed fields defined for this unit type." });
         }
-console.log("req.bdoy", req.body)
 
         const bodyKeys = Object.keys(req.body);
         const invalidKeys = bodyKeys.filter((key) => !allowed.includes(key));
@@ -89,7 +88,7 @@ console.log("req.bdoy", req.body)
         }
 
 
-        const customId = `${unitType.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${unitCount + 1}`;
+        const customId = `${unitType.toLowerCase().replace(/[^a-z0-9]/g, '-')}-modular-${unitCount + 1}`;
 
 
         const newUnit = new Model({
@@ -197,7 +196,7 @@ const deleteUnit = async (req: RoleBasedRequest, res: Response): Promise<any> =>
     try {
         const { unitId, unitType, organizationId } = req.params; // The _id of the unit you want to update
 
-        console.log("unittype", unitType, "unitId",unitId)
+        console.log("unittype", unitType, "unitId", unitId)
         const Model = unitModels[unitType];
 
         console.log("model", Model)
@@ -228,28 +227,28 @@ const deleteUnit = async (req: RoleBasedRequest, res: Response): Promise<any> =>
     }
 };
 function parseBudgetRange(range: string): Record<string, number> {
-  // Remove ₹ and spaces
-  console.log("range",range)
-  const cleaned = range.replace(/[₹,\s]/g, "");
+    // Remove ₹ and spaces
+    console.log("range", range)
+    const cleaned = range.replace(/[₹,\s]/g, "");
 
-  console.log("cleaned",cleaned)
-  if (cleaned.endsWith("+")) {
-    const min = parseInt(cleaned.slice(0, -1), 10); // "25000+"
-    console.log("+ ends with", min)
-    return { $gte: min };
-  }
+    console.log("cleaned", cleaned)
+    if (cleaned.endsWith("+")) {
+        const min = parseInt(cleaned.slice(0, -1), 10); // "25000+"
+        console.log("+ ends with", min)
+        return { $gte: min };
+    }
 
-  const [minStr, maxStr] = cleaned.split(/[-–]/); // or "-"
+    const [minStr, maxStr] = cleaned.split(/[-–]/); // or "-"
 
-  console.log("minStr", minStr)
-  console.log("maxStr", maxStr)
-  if (maxStr && maxStr) {
-    const min = parseInt(minStr, 10);
-    const max = parseInt(maxStr, 10);
-    return { $gte: min, $lte: max };
-  }
+    console.log("minStr", minStr)
+    console.log("maxStr", maxStr)
+    if (maxStr && maxStr) {
+        const min = parseInt(minStr, 10);
+        const max = parseInt(maxStr, 10);
+        return { $gte: min, $lte: max };
+    }
 
-  return {};
+    return {};
 }
 
 
@@ -269,26 +268,26 @@ const getUnits = async (req: RoleBasedRequest, res: Response): Promise<any> => {
         };
 
 
-        console.log("rawFilters",rawFilters)
+        console.log("rawFilters", rawFilters)
 
-       // Handle filters
-    for (const key in rawFilters) {
-     
+        // Handle filters
+        for (const key in rawFilters) {
 
-     const rawValue = rawFilters[key];
 
-    if (key === "budgetRange" || key === "priceRange") {
-    const priceFilter = parseBudgetRange(String(rawValue || ""));
-      if (Object.keys(priceFilter).length > 0) {
-        filterQuery.price = priceFilter;
-      }
-    } else {
-         const values = String(rawFilters[key]).split(",").map((v) => v.trim());
-        console.log("values",values)
-        // 🔁 Regular field filters
-        filterQuery[key] = { $in: values };
-      }
-    }
+            const rawValue = rawFilters[key];
+
+            if (key === "budgetRange" || key === "priceRange") {
+                const priceFilter = parseBudgetRange(String(rawValue || ""));
+                if (Object.keys(priceFilter).length > 0) {
+                    filterQuery.price = priceFilter;
+                }
+            } else {
+                const values = String(rawFilters[key]).split(",").map((v) => v.trim());
+                console.log("values", values)
+                // 🔁 Regular field filters
+                filterQuery[key] = { $in: values };
+            }
+        }
 
         console.log("filterQuery", filterQuery)
         // Optional search text (case-insensitive search over string fields)
@@ -302,7 +301,7 @@ const getUnits = async (req: RoleBasedRequest, res: Response): Promise<any> => {
 
         const units = await Model.find(filterQuery).sort({ createdAt: -1 });
 
-    
+
         res.status(200).json({ ok: true, data: units, message: `fetched products from ${unitType} category` });
     } catch (err: any) {
         console.error(err);
