@@ -58,7 +58,7 @@ import externalUnitRoutes from './routers/ExternalUnit Routes/externalUnit.route
 import selectedExternalRoutes from './routers/ExternalUnit Routes/selectedExternalUnit.routes';
 
 // CRON JOBs
-import '../src/utils/cronJobs/ReminderEmail/checkDeadLines'
+import './utils/cronJobs/ReminderEmail/checkDeadLines'
 
 dotenv.config();
 
