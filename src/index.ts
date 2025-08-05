@@ -39,12 +39,8 @@ import assignRoutes from './routers/Stage routes/Assign routes/assignStaffs.rout
 import projectDeliveryRoutes from './routers/Stage routes/ProjectDelivery Routes/ProjectDelivery.routes';
 import stageTimerRoutes from './routers/Stage routes/Timer routes/timer.routes';
 import paymentConsentRoutes from './routers/Stage routes/PaymentConfirmation Routes/PaymentConfirmation.routes';
-import path from 'path';
-import { s3 } from './config/awssdk';
 // import checkRedisConnection from './config/redisClient';
-import fs from 'fs';
 import subscriptionRoutes from './routers/SubscriptionPayment Routes/subscriptionPayment.routes';
-import AWS from "aws-sdk";
 import adminWallroutes from './routers/WallPainting routes/adminWallPainting.routes';
 import workerWallRoutes from './routers/WallPainting routes/workerWallPainting.routes';
 import downloadRouter from './routers/Download Routes/download.routes';
@@ -60,6 +56,9 @@ import orderMaterialHistoryRoutes from './routers/Stage routes/order Material ro
 import currentActiveStage from './routers/CurrentActiveStage Routes/currentActiveStage.route';
 import externalUnitRoutes from './routers/ExternalUnit Routes/externalUnit.routes';
 import selectedExternalRoutes from './routers/ExternalUnit Routes/selectedExternalUnit.routes';
+
+// CRON JOBs
+import '../src/utils/cron jobs/ReminderEmail/checkDeadLines'
 
 dotenv.config();
 

@@ -19,7 +19,7 @@ import MaterialArrivalModel from '../../../models/Stage Models/MaterialArrivalCh
 import { OrderMaterialHistoryModel } from '../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
 // Add more models as needed
 
-cron.schedule('0 * * * *', async () => {
+const job = cron.schedule('0 * * * *', async () => {
   await checkStageDeadlines(RequirementFormModel, 'Requirement Form Stage');
   await checkStageDeadlines(SiteMeasurementModel, 'Site Measurement Stage');
   await checkStageDeadlines(SampleDesignModel, 'Sample Design Stage');
@@ -27,11 +27,14 @@ cron.schedule('0 * * * *', async () => {
   await checkStageDeadlines(MaterialRoomConfirmationModel, 'Mateiral Selection Stage');
   await checkStageDeadlines(CostEstimationModel, 'Cost Estimation Stage');
   await checkStageDeadlines(PaymentConfirmationModel, 'Payment Stage');
-  await checkStageDeadlines(OrderMaterialHistoryModel, 'Ordering Material Stage');
-  await checkStageDeadlines(MaterialArrivalModel, 'Check Material Arrival Stage');
+  await checkStageDeadlines(OrderMaterialHistoryModel, 'Order History Stage');
+  await checkStageDeadlines(MaterialArrivalModel, 'Material Arrival Checking Stage');
   await checkStageDeadlines(WorkMainStageScheduleModel, 'Work Schedule Stage');
   await checkStageDeadlines(InstallationModel, 'Installation Stage');
   await checkStageDeadlines(QualityCheckupModel, 'Quality Checkup');
   await checkStageDeadlines(CleaningAndSanitationModel, 'Cleaning Stage');
   await checkStageDeadlines(ProjectDeliveryModel, 'Project Delivery Stage');
 });
+
+
+console.log("🟢 Cron job for deadline check scheduled:", job.getStatus?.());

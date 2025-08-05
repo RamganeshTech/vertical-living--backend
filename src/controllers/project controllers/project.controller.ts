@@ -161,7 +161,7 @@ const getProjects = async (req: RoleBasedRequest, res: Response) => {
             res.status(400).json({ message: "organization Id is required", ok: false })
             return
         }
-
+console.log("organizationId", organizationId)
         const cacheKey = `projects:${organizationId}`;
 
         // await redisClient.del(`projects:${organizationId}`);

@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import OrganizationModel from "../../models/organization models/organization.model";
 import Razorpay from "razorpay";
 import { SUBSCRIPTION_PLANS } from "../../constants/BEconstants";
+import redisClient from "../../config/redisClient";
 
 
 const razorpayInstance = new Razorpay({
@@ -54,6 +55,8 @@ const startPlanChange = async (req: AuthenticatedUserRequest, res: Response): Pr
       amount: newPlan.price,
     });
 
+   
+
     return res.status(200).json({
       ok: true,
       message: "Plan payment initiated",
@@ -100,6 +103,7 @@ const verifySubscriptionPayment = async (req: Request, res: Response):Promise<an
     payment.paidAt = new Date();
     await payment.save();
 
+
     const org = payment.organizationId as any;
 
     const newPlan = (SUBSCRIPTION_PLANS as any)[payment.planType.toUpperCase()];
@@ -107,6 +111,17 @@ const verifySubscriptionPayment = async (req: Request, res: Response):Promise<an
     org.planStatus = "active";
     org.planValidTill = new Date(Date.now() + newPlan.durationInDays * 24 * 60 * 60 * 1000);
     await org.save();
+
+    
+     await redisClient.setEx(
+      `org:plan:${org.userId}`,   
+      86400, // 1 day TTL, or longer
+      JSON.stringify({
+        planType: org.planType,
+        planValidTill: org.planValidTill,
+        planStatus: org.planStatus,
+      })
+    );
 
     return res.status(200).json({
       ok: true,
