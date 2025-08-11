@@ -1,3 +1,0 @@
-interface UnitModel extends Document {
-    
-}

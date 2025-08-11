@@ -40,7 +40,6 @@ modularUnitRoutes.get(
 );
 
 
-
 modularUnitRoutes.get(
   "/getallunits/:organizationId",
   multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),

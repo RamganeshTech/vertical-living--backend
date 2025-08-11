@@ -25,7 +25,7 @@ export const notToUpdateIfStageCompleted = (currentStage: any): any => {
             // console.log("gettin d")
             let cachedData = await redisClient.get(redisKey);
 
-            // console.log("gettin d", cachedData)
+            console.log("gettin d", cachedData)
 
             if (cachedData) {
 
@@ -47,7 +47,7 @@ export const notToUpdateIfStageCompleted = (currentStage: any): any => {
         // If not cached, check DB
         const doc = await currentStage.findOne({ projectId });
 
-        if (!doc || doc?.status === "completed") {
+        if (doc && doc?.status === "completed") {
 
             if (currentStage.modelName !== "CostEstimation" && currentStage.modelName !== "PaymentConfirmationModel" && currentStage.modelName !== "SelectedModularUnitModel") {
                 await redisClient.set(redisKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 });
