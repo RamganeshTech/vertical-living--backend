@@ -11,7 +11,7 @@ export const checkActivePlan = () =>
     const userIdToCheck = role === "owner" ? _id : ownerId;
 
      const redisKey = `org:plan:${userIdToCheck}`;
-     await redisClient.del(redisKey)
+    //  await redisClient.del(redisKey)
       let planData = await redisClient.get(redisKey);
 
      if (!planData) {
@@ -37,12 +37,12 @@ export const checkActivePlan = () =>
 
     if (!isPlanValid) {
       if (role === "owner") {
-        return res.status(403).json({
+        return res.status(400).json({
           ok: false,
           message: "Your subscription has expired. Please renew to continue using the service.",
         });
       } else {
-        return res.status(403).json({
+        return res.status(400).json({
           ok: false,
           message: "Plan expired. Please contact your owner to renew the subscription.",
         });

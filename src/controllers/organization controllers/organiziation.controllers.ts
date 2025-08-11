@@ -1,7 +1,6 @@
-import { Request, Response } from "express";
-import { AuthenticatedCTORequest, AuthenticatedUserRequest, RoleBasedRequest } from "../../types/types";
+import { Response } from "express";
+import { RoleBasedRequest } from "../../types/types";
 import UserModel from "../../models/usermodel/user.model";
-import bcrypt from 'bcrypt';
 import OrganizationModel from "../../models/organization models/organization.model";
 import StaffModel from "../../models/staff model/staff.model";
 import CTOModel from "../../models/CTO model/CTO.model";
@@ -9,8 +8,6 @@ import ClientModel from "../../models/client model/client.model";
 import { getWorkerUtils, removeWorkerUtils } from "../../utils/workerUtils";
 import { generateWorkerInviteLink } from "../../utils/generateInvitationworker";
 import { syncAllMixedRoutes } from "../Modular Units Controllers/modularUnit.controller";
-import { WorkerModel } from "../../models/worker model/worker.model";
-
 
 
 const createOrganziation = async (req: RoleBasedRequest, res: Response) => {

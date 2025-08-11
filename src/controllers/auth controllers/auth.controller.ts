@@ -12,11 +12,11 @@ const userlogin = async (req: Request, res: Response) => {
     try {
         let { email, password } = req.body
 
-        let isTokenExists = req.cookies.useraccesstoken
+        // let isTokenExists = req.cookies.useraccesstoken
 
-        if (isTokenExists) {
-            return res.status(403).json({ error: true, message: "Already logged in", ok: false });
-        }
+        // if (isTokenExists) {
+        //     return res.status(403).json({ error: true, message: "Already logged in", ok: false });
+        // }
 
         if (!email || !password) {
             res.status(404).json({ message: "please provide the input properly", error: true, ok: false })
