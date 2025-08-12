@@ -365,53 +365,47 @@ const qualityCheckCompletionStatus = async (req: Request, res: Response): Promis
             await syncCleaningSanitaionStage(projectId)
 
 
-            let uploadedFiles: DocUpload[] = [];
+            // let uploadedFiles: DocUpload[] = [];
 
 
-            // const roomKeys = Object.keys(form.toObject() || {}).filter(
-            //     (key) =>
-            //         Array.isArray(form[key]) &&
-            //         form[key]?.length &&
-            //         typeof form[key][0] === "object" &&
-            //         form[key][0]?.upload
-            // );
+         
 
-            const roomKeys = validRoomKeys.filter((key) => {
-                const roomItems = form?.[key];
-                return (
-                    Array.isArray(roomItems) &&
-                    roomItems.some((item: any) => item?.upload?.url) // has at least one upload
-                );
-            });
+            // const roomKeys = validRoomKeys.filter((key) => {
+            //     const roomItems = form?.[key];
+            //     return (
+            //         Array.isArray(roomItems) &&
+            //         roomItems.some((item: any) => item?.upload?.url) // has at least one upload
+            //     );
+            // });
 
 
 
-            for (const room of roomKeys) {
-                const items = form[room] || [];
+            // for (const room of roomKeys) {
+            //     const items = form[room] || [];
 
-                items.forEach((item: any) => {
-                    if (item.upload?.url) {
-                        uploadedFiles.push({
-                            type: item.upload.type,
-                            url: item.upload.url,
-                            originalName: item.upload.originalName,
-                        });
-                    }
-                });
+            //     items.forEach((item: any) => {
+            //         if (item.upload?.url) {
+            //             uploadedFiles.push({
+            //                 type: item.upload.type,
+            //                 url: item.upload.url,
+            //                 originalName: item.upload.originalName,
+            //             });
+            //         }
+            //     });
 
 
-            }
+            // }
 
-            if (!uploadedFiles.length) {
-                uploadedFiles = []
-            }
+            // if (!uploadedFiles.length) {
+            //     uploadedFiles = []
+            // }
 
-            await addOrUpdateStageDocumentation({
-                projectId,
-                stageNumber: "12", // Assuming 12 is for Quality Check
-                description: "Quality Checkup documentation completed",
-                uploadedFiles,
-            });
+            // await addOrUpdateStageDocumentation({
+            //     projectId,
+            //     stageNumber: "12", // Assuming 12 is for Quality Check
+            //     description: "Quality Checkup documentation completed",
+            //     uploadedFiles,
+            // });
         }
 
         // const redisMainKey = `stage:QualityCheckupModel:${projectId}`

@@ -21,7 +21,7 @@ export const syncCleaningSanitaionStage = async (projectId: string) => {
    const timer = {
       startedAt: new Date(),
       completedAt: null,
-      deadLine: null,
+      deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
       reminderSent: false,
     };
 
@@ -367,26 +367,26 @@ export const cleaningStageCompletionStatus = async (req: Request, res: Response)
       await syncProjectDelivery(projectId)
 
 
-      let uploadedFiles: DocUpload[] = [];
+      // let uploadedFiles: DocUpload[] = [];
 
-      for (const room of form.rooms || []) {
-        for (const upload of room.uploads || []) {
-          if (upload.url && upload.type) {
-            uploadedFiles.push({
-              type: upload.type,
-              url: upload.url,
-              originalName: upload.originalName,
-            });
-          }
-        }
-      }
+      // for (const room of form.rooms || []) {
+      //   for (const upload of room.uploads || []) {
+      //     if (upload.url && upload.type) {
+      //       uploadedFiles.push({
+      //         type: upload.type,
+      //         url: upload.url,
+      //         originalName: upload.originalName,
+      //       });
+      //     }
+      //   }
+      // }
 
-      await addOrUpdateStageDocumentation({
-        projectId,
-        stageNumber: "13", // or whatever number corresponds to Cleaning/Sanitation
-        description: "Cleaning & Sanitation stage documented",
-        uploadedFiles,
-      });
+      // await addOrUpdateStageDocumentation({
+      //   projectId,
+      //   stageNumber: "13", // or whatever number corresponds to Cleaning/Sanitation
+      //   description: "Cleaning & Sanitation stage documented",
+      //   uploadedFiles,
+      // });
 
 
     }

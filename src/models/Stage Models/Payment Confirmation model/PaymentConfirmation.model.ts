@@ -1,4 +1,5 @@
 import { model, Schema, Types } from "mongoose";
+import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 
 
@@ -149,6 +150,7 @@ const PaymentConfirmationSchema = new Schema<IPaymentConfirmation>({
 
 
 PaymentConfirmationSchema.index({ projectId: 1 })
+PaymentConfirmationSchema.plugin(procurementLogger)
 
 const PaymentConfirmationModel = model("PaymentConfirmationModel", PaymentConfirmationSchema)
 

@@ -1,4 +1,5 @@
 import { model, Schema, Types } from "mongoose";
+import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 
 
@@ -29,6 +30,7 @@ export interface IOrderedMaterialHistory {
      assignedTo: Types.ObjectId;
     
       timer: IOrderHistorytimer;
+      generatedLink:string
 }
 
 
@@ -64,8 +66,12 @@ const OrderHistorySchema = new Schema<IOrderedMaterialHistory>({
     },
     timer: { type: TimerSchema, required: true },
    selectedUnits: { type: [orderedUnits], default: [] },
-    totalCost: { type: Number, required: true },
+    totalCost: { type: Number, },
+    generatedLink: {type: String,}
 }, { timestamps: true });
 
+OrderHistorySchema.index({projectId:1})
+
+OrderHistorySchema.plugin(procurementLogger);
 
 export const OrderMaterialHistoryModel = model("OrderMaterialHistoryModel", OrderHistorySchema);

@@ -39,7 +39,7 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
       timer: {
         startedAt: new Date(),
         completedAt: null,
-        deadLine: null,
+        deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
         reminderSent: false
       },
       additionalNotes: null,
@@ -52,7 +52,7 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
     design.status = "pending";
     design.isEditable = true;
     design.timer.startedAt = new Date()
-    design.timer.deadLine = null
+    design.timer.deadLine = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
     design.timer.completedAt = null
     design.timer.reminderSent = false
     // design.timer.startedAt = new Date();
@@ -286,19 +286,19 @@ const sampleDesignCompletionStatus = async (req: Request, res: Response): Promis
       await syncTechnicalConsultantStage(projectId)
 
 
-      const uploadedFiles: DocUpload[] = design.rooms.flatMap((room) =>
-        room.files.map((file: any) => ({
-          type: file.type,
-          url: file.url,
-          originalName: file.originalName,
-        }))
-      );
-      await addOrUpdateStageDocumentation({
-        projectId,
-        stageNumber: "3", // ✅ Put correct stage number here
-        description: "Sample Design Stage marked is documented",
-        uploadedFiles, // optionally add files here
-      })
+      // const uploadedFiles: DocUpload[] = design.rooms.flatMap((room) =>
+      //   room.files.map((file: any) => ({
+      //     type: file.type,
+      //     url: file.url,
+      //     originalName: file.originalName,
+      //   }))
+      // );
+      // await addOrUpdateStageDocumentation({
+      //   projectId,
+      //   stageNumber: "3", // ✅ Put correct stage number here
+      //   description: "Sample Design Stage marked is documented",
+      //   uploadedFiles, // optionally add files here
+      // })
     }
 
     await design.save();

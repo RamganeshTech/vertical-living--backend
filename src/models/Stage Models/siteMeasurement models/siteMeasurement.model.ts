@@ -1,4 +1,5 @@
 import mongoose, { model, Schema, Types } from 'mongoose';
+import procurementLogger from '../../../Plugins/ProcurementDeptPluggin';
 
 
 
@@ -109,6 +110,7 @@ const SiteMeasurementSchema = new Schema<ISiteMeasurement>({
 
 
 SiteMeasurementSchema.index({ projectId: 1 })
+SiteMeasurementSchema.plugin(procurementLogger)
 
 
 export const SiteMeasurementModel = model<ISiteMeasurement>("SiteMeasurementModel", SiteMeasurementSchema)

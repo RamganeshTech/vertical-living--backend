@@ -1,6 +1,7 @@
 // models/DailySchedule.model.ts
 import mongoose, { Schema, Document } from "mongoose";
 import { IDailyTask, IDailySchedule, uploadSchema } from './WorkTask.model';
+import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 interface DailyScheduleDocument extends IDailySchedule, Document { }
 
@@ -32,5 +33,10 @@ const DailyScheduleSchema = new Schema<DailyScheduleDocument>({
     },
     remarks: { type: String },
 }, { timestamps: true });
+
+
+
+DailyScheduleSchema.plugin(procurementLogger)
+
 
 export const DailyScheduleModel =  mongoose.model<DailyScheduleDocument>("DailyScheduleModel", DailyScheduleSchema);

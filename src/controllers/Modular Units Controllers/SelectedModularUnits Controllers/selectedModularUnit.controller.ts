@@ -6,7 +6,7 @@ import { RoleBasedRequest } from "../../../types/types";
 import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
 import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
 import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
-import { generateCostEstimationFromMaterialSelection } from "../../stage controllers/cost estimation controllers/costEstimation.controller";
+// import { generateCostEstimationFromMaterialSelection } from "../../stage controllers/cost estimation controllers/costEstimation.controller";
 import { syncPaymentConfirationModel } from "../../stage controllers/PaymentConfirmation controllers/PaymentMain.controllers";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { assignedTo, selectedFields } from "../../../constants/BEconstants";
@@ -152,6 +152,7 @@ export const completeModularUnitSelection = async (req: RoleBasedRequest, res: R
 
     // // console.log("mateiraldoc", materialDoc)
     // await generateCostEstimationFromMaterialSelection({}, projectId)
+    // await syncCostEstimation({}, projectId)   // use this newly crated right now
 
 
     // // ✅ Mark CostEstimationModel as completed

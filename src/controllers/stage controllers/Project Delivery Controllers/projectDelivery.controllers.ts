@@ -6,7 +6,6 @@ import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 import { DocUpload } from "../../../types/types";
-
 export const syncProjectDelivery = async (
     projectId: string
 ): Promise<any> => {
@@ -40,7 +39,7 @@ export const syncProjectDelivery = async (
             timer: {
                 startedAt: new Date(),
                 completedAt: null,
-                deadLine: null,
+                deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
                 reminderSent: false,
             },
             uploads: [],
@@ -50,7 +49,7 @@ export const syncProjectDelivery = async (
         });
     } else {
         doc.timer.startedAt = new Date()
-        doc.timer.deadLine = null,
+        doc.timer.deadLine =  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
             doc.timer.completedAt = null,
             doc.timer.reminderSent = false,
 
@@ -298,18 +297,18 @@ const projectDeliveryCompletionStatus = async (req: Request, res: Response): Pro
         await form.save();
 
 
-        const uploadedFiles:DocUpload[] = (form.uploads || []).map((upload:any) => ({
-            type: upload.type,
-            url: upload.url,
-            originalName: upload.originalName,
-        }));
+        // const uploadedFiles:DocUpload[] = (form.uploads || []).map((upload:any) => ({
+        //     type: upload.type,
+        //     url: upload.url,
+        //     originalName: upload.originalName,
+        // }));
 
-        await addOrUpdateStageDocumentation({
-            projectId,
-            stageNumber: "14", // Project Delivery Stage Number
-            description: "Project delivery documentation generated",
-            uploadedFiles,
-        });
+        // await addOrUpdateStageDocumentation({
+        //     projectId,
+        //     stageNumber: "14", // Project Delivery Stage Number
+        //     description: "Project delivery documentation generated",
+        //     uploadedFiles,
+        // });
 
         // const cacheKey = `stage:ProjectDeliveryModel:${projectId}`;
 

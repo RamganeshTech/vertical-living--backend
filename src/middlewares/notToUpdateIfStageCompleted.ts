@@ -25,7 +25,7 @@ export const notToUpdateIfStageCompleted = (currentStage: any): any => {
             // console.log("gettin d")
             let cachedData = await redisClient.get(redisKey);
 
-            console.log("gettin d", cachedData)
+            // console.log("gettin d", cachedData)
 
             if (cachedData) {
 

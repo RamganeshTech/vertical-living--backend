@@ -72,6 +72,7 @@ export interface IWorkPlan {
 
 // models/ProjectStageSchedule.model.ts
 import mongoose, { Schema, Document } from "mongoose";
+import procurementLogger from '../../../Plugins/ProcurementDeptPluggin';
 
 
 export const uploadSchema = new Schema<IUploadFile>({
@@ -113,6 +114,7 @@ const WorkMainStageScheduleSchema = new Schema<WorkMainStageScheduleDocument>({
 }, { timestamps: true });
 
 WorkMainStageScheduleSchema.index({projectId:1})
+WorkMainStageScheduleSchema.plugin(procurementLogger)
 
 const WorkMainStageScheduleModel = mongoose.model<WorkMainStageScheduleDocument>("WorkMainStageScheduleModel", WorkMainStageScheduleSchema);
 

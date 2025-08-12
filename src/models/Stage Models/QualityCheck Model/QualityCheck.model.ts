@@ -43,6 +43,7 @@ export interface IQualityCheckup extends Document {
 
 
 import { Schema, model, Types, Document } from "mongoose";
+import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 const UploadSchema = new Schema<QualityCheckUpload>({
   type: { type: String, enum: ["image"],  },
@@ -93,6 +94,7 @@ const QualityCheckupSchema = new Schema<IQualityCheckup>({
 });
 
 QualityCheckupSchema.index({projectId:1})
+QualityCheckupSchema.plugin(procurementLogger)
 
 
 export const QualityCheckupModel = model("QualityCheckupModel", QualityCheckupSchema);

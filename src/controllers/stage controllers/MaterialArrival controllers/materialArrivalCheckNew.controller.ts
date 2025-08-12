@@ -83,7 +83,7 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
     const timer: any = {
         startedAt: new Date(),
         completedAt: null,
-        deadLine: null,
+        deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
         reminderSent: false,
     };
 

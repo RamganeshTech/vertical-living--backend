@@ -31,7 +31,7 @@ export const syncSiteMeasurement = async (projectId: string) => {
       timer: {
         startedAt: new Date(),
         completedAt: null,
-        deadLine: null,
+        deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
         reminderSent: false
       },
       uploads: [],
@@ -52,7 +52,7 @@ export const syncSiteMeasurement = async (projectId: string) => {
     siteMeasurement.timer.startedAt = new Date();
     siteMeasurement.timer.reminderSent = false
     siteMeasurement.timer.completedAt = null
-    siteMeasurement.timer.deadLine = null
+    siteMeasurement.timer.deadLine = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
   }
   await siteMeasurement.save()
 
@@ -492,13 +492,13 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
       const siteRooms = siteDoc.rooms || [];
       await syncSampleDesignModel(projectId, siteRooms)
 
-      const uploadedFiles: DocUpload[] = siteDoc.uploads.map((upload) => ({ type: upload.type, originalName: upload.originalName, url: upload.url }))
-      await addOrUpdateStageDocumentation({
-        projectId,
-        stageNumber: "2", // ✅ Put correct stage number here
-        description: "Site Measurement Stage marked is documented",
-        uploadedFiles, // optionally add files here
-      })
+      // const uploadedFiles: DocUpload[] = siteDoc.uploads.map((upload) => ({ type: upload.type, originalName: upload.originalName, url: upload.url }))
+      // await addOrUpdateStageDocumentation({
+      //   projectId,
+      //   stageNumber: "2", // ✅ Put correct stage number here
+      //   description: "Site Measurement Stage marked is documented",
+      //   uploadedFiles, // optionally add files here
+      // })
     }
 
     await siteDoc.save();

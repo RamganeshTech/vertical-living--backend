@@ -1,6 +1,7 @@
 // models/shortListed.model.ts
 
 import mongoose, { Schema, Document, Types } from "mongoose";
+import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 interface ShortlistedDesign {
   url: string;
@@ -59,6 +60,10 @@ const ShortlistedDesignSchema = new Schema<ShortlistedDesignDocument>(
   },
   { timestamps: true }
 );
+
+
+ShortlistedDesignSchema.plugin(procurementLogger)
+
 
 export const ShortlistedDesignModel = mongoose.model<ShortlistedDesignDocument>(
   "ShortlistedDesignModel",

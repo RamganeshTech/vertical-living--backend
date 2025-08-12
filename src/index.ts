@@ -59,6 +59,9 @@ import selectedExternalRoutes from './routers/ExternalUnit Routes/selectedExtern
 
 // CRON JOBs
 import './utils/cronJobs/ReminderEmail/checkDeadLines'
+import mongoose from 'mongoose';
+import procurementLogger from './Plugins/ProcurementDeptPluggin';
+import procurementRoutes from './routers/procurement routes/procurement.route';
 
 dotenv.config();
 
@@ -66,7 +69,8 @@ const app = express()
 
 
 
-console.log("env file", process.env.FRONTEND_URL)
+// console.log("env file", process.env.FRONTEND_URL)
+
 app.use(cors({
   origin: process.env.FRONTEND_URL,
   credentials: true
@@ -75,8 +79,10 @@ app.use(cookieParser())
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 
-// checkRedisConnection() //for redis
+mongoose.plugin(procurementLogger); // Apply to ALL schemas
 
+
+// checkRedisConnection() //for redis
 app.use('/api/auth', authRoutes)
 app.use('/api/auth/client', clientRoutes)
 app.use('/api/auth/clientapproval', clientApprovalRoutes)
@@ -141,6 +147,11 @@ app.use('/api/workerwall', workerWallRoutes)
 // SHORTLIST API
 app.use('/api/shortlisteddesign', shortlistedDesignRoutes)
 app.use('/api/currentactivestage', currentActiveStage)
+
+
+// PROCUREMENT API
+
+app.use('/api/procurement', procurementRoutes)
 
 
 // SHORTLIST API

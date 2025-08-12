@@ -31,7 +31,7 @@ export const syncWorkSchedule = async (projectId: string) => {
       timer: {
         startedAt: new Date(),
         completedAt: null,
-        deadLine: null,
+        deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
         reminderSent: false
       },
       isEditable: false
@@ -67,7 +67,7 @@ export const syncWorkSchedule = async (projectId: string) => {
     console.log("im gettin involde the else part")
     docs.timer.startedAt = new Date()
     docs.timer.completedAt = null
-    docs.timer.deadLine = null
+    docs.timer.deadLine =  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
     docs.timer.reminderSent = false
 
 

@@ -17,7 +17,7 @@ export const syncInstallationWork = async (projectId: string) => {
     const timer = {
       startedAt: new Date(),
       completedAt: null,
-      deadLine: null,
+      deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
       reminderSent: false,
     };
   if (!existing) {
@@ -316,45 +316,41 @@ const installationCompletionStatus = async (req: Request, res: Response): Promis
     if (form.status === "completed") {
       await syncQualityCheck(projectId)
 
-      let uploadedFiles: DocUpload[] = [];
-      // const roomKeys = Object.keys(form || {}).filter(
-      //   (key) =>
-      //     Array.isArray(form[key]) && // it's an array of installation items
-      //     form[key]?.length
-      // );
+      // let uploadedFiles: DocUpload[] = [];
+     
 
 
-      const roomKeys = validRoomKeys.filter((key) => {
-        const roomItems = form?.[key];
-        return (
-          Array.isArray(roomItems) &&
-          roomItems.some((item: any) => item?.upload?.url) // has at least one upload
-        );
-      });
+      // const roomKeys = validRoomKeys.filter((key) => {
+      //   const roomItems = form?.[key];
+      //   return (
+      //     Array.isArray(roomItems) &&
+      //     roomItems.some((item: any) => item?.upload?.url) // has at least one upload
+      //   );
+      // });
 
      
 
-      console.log("roomKeys", roomKeys)
-      for (const room of roomKeys) {
-        const items = form[room] || [];
+      // console.log("roomKeys", roomKeys)
+      // for (const room of roomKeys) {
+      //   const items = form[room] || [];
 
-        items.forEach((item: any) => {
-          if (item.upload?.url) {
-            uploadedFiles.push({
-              type: item.upload.type,
-              url: item.upload.url,
-              originalName: item.upload.originalName,
-            });
-          }
-        });
-      }
+      //   items.forEach((item: any) => {
+      //     if (item.upload?.url) {
+      //       uploadedFiles.push({
+      //         type: item.upload.type,
+      //         url: item.upload.url,
+      //         originalName: item.upload.originalName,
+      //       });
+      //     }
+      //   });
+      // }
 
-      await addOrUpdateStageDocumentation({
-        projectId,
-        stageNumber: "11", // Installation Stage
-        description: "Installation Stage is documented",
-        uploadedFiles,
-      });
+      // await addOrUpdateStageDocumentation({
+      //   projectId,
+      //   stageNumber: "11", // Installation Stage
+      //   description: "Installation Stage is documented",
+      //   uploadedFiles,
+      // });
 
     }
 

@@ -5,11 +5,12 @@ import { uploadGenericController } from '../../../utils/common features/uploadFi
 // import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader'; 
 import { createRoom, createSiteMeasurement, DeleteRooms, deleteSiteMeasurement, deleteSiteMeasurementFile, deleteSiteMeasurementRoomImage, getTheSiteMeasurements, setSiteMeasurementStageDeadline, siteMeasurementCompletionStatus, updateCommonSiteMeasurements, updateRoomImageName, updateRoomSiteMeasurements, uploadSiteMeasurementRoomImages } from '../../../controllers/stage controllers/site measurement controller/siteMeasurements.controller';
 import { SiteMeasurementModel } from '../../../models/Stage Models/siteMeasurement models/siteMeasurement.model';
-import { RequirementFormModel } from '../../../models/Stage Models/requirment model/requirement.model';
+// import { RequirementFormModel } from '../../../models/Stage Models/requirment model/requirement.model';
 import { checkPreviousStageCompleted } from '../../../middlewares/checkPreviousStageMiddleware';
 import { imageUploadToS3, processUploadFiles } from '../../../utils/s3Uploads/s3upload';
 import { notToUpdateIfStageCompleted } from '../../../middlewares/notToUpdateIfStageCompleted';
 import { checkIfStaffIsAssignedToStage } from '../../../middlewares/checkIfStaffIsAssignedToStage';
+import { RequirementFormModel } from '../../../models/Stage Models/requirment model/mainRequirementNew.model';
 
 const siteMeasurementRoutes = express.Router()
 

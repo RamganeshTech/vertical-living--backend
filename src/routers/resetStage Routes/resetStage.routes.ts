@@ -1,7 +1,7 @@
 import express  from 'express';
 import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
 import { resetStage1, resetStage10, resetStage11, resetStage12, resetStage13, resetStage14, resetStage2, resetStage3, resetStage4, resetStage5, resetStage6, resetStage7, resetStage8, resetStage9 } from '../../controllers/stage controllers/resetStage Controller/resetStage.controller';
-import { RequirementFormModel } from '../../models/Stage Models/requirment model/requirement.model';
+// import { RequirementFormModel } from '../../models/Stage Models/requirment model/requirement.model';
 import { notToUpdateIfStageCompleted } from '../../middlewares/notToUpdateIfStageCompleted';
 import { SiteMeasurementModel } from '../../models/Stage Models/siteMeasurement models/siteMeasurement.model';
 import { SampleDesignModel } from '../../models/Stage Models/sampleDesing model/sampleDesign.model';
@@ -19,6 +19,7 @@ import { ProjectDeliveryModel } from '../../models/Stage Models/ProjectDelivery 
 import { checkPreviousStageCompleted } from '../../middlewares/checkPreviousStageMiddleware';
 import MaterialArrivalModel from '../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model';
 import { OrderMaterialHistoryModel } from '../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
+import { RequirementFormModel } from '../../models/Stage Models/requirment model/mainRequirementNew.model';
 
 
 const resetRouter = express.Router()

@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 
 
@@ -82,6 +83,7 @@ const CleaningAndSanitationSchema = new Schema<ICleaningAndSanitation>(
 
 CleaningAndSanitationSchema.index({ projectId: 1 })
 
+CleaningAndSanitationSchema.plugin(procurementLogger);
 
 export const CleaningAndSanitationModel = mongoose.model<ICleaningAndSanitation>(
     "CleaningAndSanitationModel",

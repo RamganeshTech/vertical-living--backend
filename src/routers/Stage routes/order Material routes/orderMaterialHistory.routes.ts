@@ -6,7 +6,7 @@ import PaymentConfirmationModel from '../../../models/Stage Models/Payment Confi
 import { notToUpdateIfStageCompleted } from '../../../middlewares/notToUpdateIfStageCompleted';
 import { checkIfStaffIsAssignedToStage } from '../../../middlewares/checkIfStaffIsAssignedToStage';
 import { OrderMaterialHistoryModel } from '../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
-import { getOrderHistoryMaterial, orderMaterialHistoryCompletionStatus, setOrderMaterialHistoryStageDeadline } from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
+import { generateOrderingMaterialLink, getOrderHistoryMaterial, getPublicDetails, orderMaterialHistoryCompletionStatus, setOrderMaterialHistoryStageDeadline } from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
 
 
 const orderMaterialHistoryRoutes = express.Router()
@@ -14,6 +14,9 @@ const orderMaterialHistoryRoutes = express.Router()
 orderMaterialHistoryRoutes.get('/getalldetails/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "client"), checkPreviousStageCompleted(PaymentConfirmationModel), getOrderHistoryMaterial )
 orderMaterialHistoryRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(PaymentConfirmationModel), notToUpdateIfStageCompleted(OrderMaterialHistoryModel), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel),setOrderMaterialHistoryStageDeadline)
 orderMaterialHistoryRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(PaymentConfirmationModel), notToUpdateIfStageCompleted(OrderMaterialHistoryModel), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), orderMaterialHistoryCompletionStatus)
+orderMaterialHistoryRoutes.patch('/generatelink/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(PaymentConfirmationModel), notToUpdateIfStageCompleted(OrderMaterialHistoryModel), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), generateOrderingMaterialLink)
+orderMaterialHistoryRoutes.get('/getpublic/:projectId', getPublicDetails)
+
 
 
 

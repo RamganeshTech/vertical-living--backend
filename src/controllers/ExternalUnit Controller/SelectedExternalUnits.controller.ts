@@ -5,11 +5,13 @@ import { SelectedExternalModel } from "../../models/externalUnit model/SelectedE
 import { RoleBasedRequest } from "../../types/types";
 import { SelectedModularUnitModel } from "../../models/Modular Units Models/All Unit Model/SelectedModularUnit Model/selectedUnit.model";
 import { syncPaymentConfirationModel } from "../stage controllers/PaymentConfirmation controllers/PaymentMain.controllers";
-import { generateCostEstimationFromMaterialSelection } from "../stage controllers/cost estimation controllers/costEstimation.controller";
+// import { generateCostEstimationFromMaterialSelection } from "../stage controllers/cost estimation controllers/costEstimation.controller";
+
 import MaterialRoomConfirmationModel from "../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
 import { assignedTo, selectedFields } from "../../constants/BEconstants";
 import { CostEstimationModel } from "../../models/Stage Models/Cost Estimation Model/costEstimation.model";
 import { populateWithAssignedToField } from "../../utils/populateWithRedis";
+import { syncCostEstimation } from "../stage controllers/cost estimation controllers/costEstimation.controller";
 
 
 export const addToSelectedExternal = async (req: RoleBasedRequest, res: Response): Promise<any> => {
@@ -147,7 +149,8 @@ export const updateSelectedExternalStatus = async (req: RoleBasedRequest, res: R
         ).populate(assignedTo, selectedFields)
 
         // console.log("mateiraldoc", materialDoc)
-        await generateCostEstimationFromMaterialSelection({}, projectId)
+        // await generateCostEstimationFromMaterialSelection({}, projectId)
+        await syncCostEstimation({}, projectId)
 
 
         // ✅ Mark CostEstimationModel as completed

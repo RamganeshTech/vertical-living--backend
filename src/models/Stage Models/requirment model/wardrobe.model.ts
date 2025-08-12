@@ -1,5 +1,6 @@
 import { Schema } from "mongoose";
-import { Iupload, uploadSchema } from "./requirement.model";
+import { Iupload, uploadSchema } from "./mainRequirementNew.model";
+// import { Iupload, uploadSchema } from "./requirement.model";
 
 export interface IWardrobeRequirement {
   wardrobeType: "Sliding" | "Openable";

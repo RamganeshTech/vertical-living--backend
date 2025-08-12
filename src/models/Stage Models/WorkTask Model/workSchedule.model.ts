@@ -1,6 +1,7 @@
 // models/WorkSchedule.model.ts
 import mongoose, { Schema, Document, Types } from "mongoose";
 import { IWorkPlan, IWorkSchedule, uploadSchema } from './WorkTask.model';
+import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 // interface WorkScheduleDocument extends Omit<IWorkSchedule, "_id">, Document {
 //   _id: Types.ObjectId;
@@ -34,5 +35,7 @@ const WorkScheduleSchema = new Schema<WorkScheduleDocument>({
   },
   remarks: { type: String },
 }, { timestamps: true });
+
+WorkScheduleSchema.plugin(procurementLogger)
 
 export const WorkScheduleModel = mongoose.model<WorkScheduleDocument>("WorkScheduleModel", WorkScheduleSchema);

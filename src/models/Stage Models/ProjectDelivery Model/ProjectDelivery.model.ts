@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Schema, Types, Document } from "mongoose";
+import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 
 
@@ -98,6 +99,7 @@ const ProjectDeleiverySchema = new Schema<IProjectDelivery>(
 )
 
 ProjectDeleiverySchema.index({projectId:1})
+ProjectDeleiverySchema.plugin(procurementLogger)
 
 
 export const ProjectDeliveryModel = mongoose.model(

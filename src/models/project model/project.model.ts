@@ -1,4 +1,5 @@
 import mongoose, { Schema, Types } from "mongoose"
+import procurementLogger from "../../Plugins/ProcurementDeptPluggin"
 
 interface projectInformation {
     owner: string
@@ -167,6 +168,9 @@ const ProjectSchema: Schema<IProject> = new Schema({
 })
 
 ProjectSchema.index({ projectName: 1, userId: 1 });
+
+ProjectSchema.plugin(procurementLogger);
+
 
 const ProjectModel = mongoose.model<IProject>("ProjectModel", ProjectSchema)
 

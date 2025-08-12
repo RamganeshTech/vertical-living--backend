@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { TechnicalConsultationModel } from "../../../models/Stage Models/technical consulatation/technicalconsultation.model";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
-import { initializeMaterialSelection } from "../material Room confirmation/materialRoomConfirmation.controller";
+import { syncMaterialRoomSelectionStage } from "../material Room confirmation/materialRoomConfirmation.controller";
 import redisClient from "../../../config/redisClient";
 import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
@@ -25,7 +25,7 @@ export const syncTechnicalConsultantStage = async (projectId: string) => {
       timer: {
         startedAt: new Date(),
         completedAt: null,
-        deadLine: null,
+        deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
         reminderSent: false
       },
       messages: []
@@ -36,7 +36,7 @@ export const syncTechnicalConsultantStage = async (projectId: string) => {
     techConsultant.timer = {
       startedAt: new Date(),
       completedAt: null,
-      deadLine: null,
+      deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
       reminderSent: false
     }
   }
@@ -307,35 +307,36 @@ const tehnicalConsultantCompletionStatus = async (req: Request, res: Response): 
     const techDoc = await TechnicalConsultationModel.findOne({ projectId });
     if (!techDoc) return res.status(404).json({ ok: false, message: "Technical consultant not found" });
 
-    if (techDoc.status === "completed") return res.status(400).json({ ok: false, message: "Already completed" });
+    // if (techDoc.status === "completed") return res.status(400).json({ ok: false, message: "Already completed" });
 
     techDoc.status = "completed";
     timerFunctionlity(techDoc, "completedAt")
     techDoc.isEditable = false;
 
     if (techDoc.status === "completed") {
-      await initializeMaterialSelection(projectId)
+      // await initializeMaterialSelection(projectId)
+      await syncMaterialRoomSelectionStage(projectId)
 
 
-      const uploadedFiles: DocUpload[] = techDoc.messages.flatMap(msgSection => {
-        if (msgSection.attachments?.length) {
-          return msgSection.attachments.map((file: any) => {
-            return {
-              type: file.type,
-              url: file.url,
-              originalName: file.originalName,
-            }
-          });
-        }
-        return []; // ⚠️ Always return an array from flatMap
-      })
+      // const uploadedFiles: DocUpload[] = techDoc.messages.flatMap(msgSection => {
+      //   if (msgSection.attachments?.length) {
+      //     return msgSection.attachments.map((file: any) => {
+      //       return {
+      //         type: file.type,
+      //         url: file.url,
+      //         originalName: file.originalName,
+      //       }
+      //     });
+      //   }
+      //   return []; // ⚠️ Always return an array from flatMap
+      // })
 
-      await addOrUpdateStageDocumentation({
-        projectId,
-        stageNumber: "4", // ✅ Put correct stage number here
-        description: "Technical consultation Stage is documented",
-        uploadedFiles, // optionally add files here
-      })
+      // await addOrUpdateStageDocumentation({
+      //   projectId,
+      //   stageNumber: "4", // ✅ Put correct stage number here
+      //   description: "Technical consultation Stage is documented",
+      //   uploadedFiles, // optionally add files here
+      // })
 
     }
 

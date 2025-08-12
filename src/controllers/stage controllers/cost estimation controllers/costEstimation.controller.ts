@@ -12,124 +12,230 @@ import { assignedTo, selectedFields } from '../../../constants/BEconstants';
 import { updateProjectCompletionPercentage } from '../../../utils/updateProjectCompletionPercentage ';
 import { addOrUpdateStageDocumentation } from '../../documentation controller/documentation.controller';
 import { DocUpload } from '../../../types/types';
+import redisClient from '../../../config/redisClient';
 
 
-const generateCostEstimationFromMaterialSelection = async (
+// const generateCostEstimationFromMaterialSelection = async (
+//     materialDoc: Partial<IMaterialRoomConfirmation> = {},
+//     projectId: string
+// ): Promise<any> => {
+
+//     // Check if cost estimation already exists
+//     const existing = await CostEstimationModel.findOne({ projectId });
+
+//     const timer = {
+//         startedAt: new Date(),
+//         completedAt: null,
+//         deadLine: null,
+//         reminderSent: false,
+//     };
+
+//     if (!existing) {
+//         const materialEstimation: any[] = [];
+
+
+//         // Handle predefined rooms
+//         for (const room of materialDoc?.rooms || []) {
+//             if (room.roomFields) {
+//                 const materials = Object.keys(room.roomFields).map((fieldKey) => ({
+//                     key: fieldKey,
+//                     areaSqFt: null,
+//                     predefinedRate: null,
+//                     overriddenRate: null,
+//                     finalRate: null,
+//                     totalCost: null,
+//                 }));
+
+//                 materialEstimation.push({
+//                     name: room.name,
+//                     materials,
+//                     totalCost: null,
+//                     uploads: [],
+//                 });
+//             }
+//         }
+
+//         // Handle custom rooms
+//         for (const customRoom of materialDoc?.customRooms || []) {
+//             const materials = customRoom.items.map((item) => ({
+//                 key: item.itemKey,
+//                 areaSqFt: null,
+//                 predefinedRate: null,
+//                 overriddenRate: null,
+//                 finalRate: null,
+//                 totalCost: null,
+//             }));
+
+//             materialEstimation.push({
+//                 name: customRoom.name,
+//                 materials,
+//                 totalCost: null,
+//                 uploads: [],
+//             });
+//         }
+
+//        const cost =  await CostEstimationModel.create({
+//             projectId,
+//             materialEstimation,
+//             assignedTo: null,
+//             labourEstimations: [],
+//             totalMaterialCost: 0,
+//             totalLabourCost: 0,
+//             totalEstimation: 0,
+//             isEditable: true,
+//             timer: timer,
+//             status: "pending",
+//         });
+//     }
+//     else {
+//         // Update timer
+//         existing.timer = timer;
+
+//         // Get current valid room names from materialDoc
+//         const validRoomNames = new Set([
+//             ...(materialDoc?.rooms || []).map(r => r.name),
+//             ...(materialDoc?.customRooms || []).map(r => r.name)
+//         ]);
+
+//         // Filter out deleted rooms from materialEstimation
+//         existing.materialEstimation = existing?.materialEstimation?.filter((estimation) =>
+//             validRoomNames.has(estimation?.name)
+//         );
+
+
+//         const existingRoomNames = new Set(existing.materialEstimation?.map((r) => r.name));
+
+//         for (const customRoom of materialDoc?.customRooms || []) {
+//             if (!existingRoomNames.has(customRoom?.name)) {
+//                 const materials = customRoom?.items?.map((item) => ({
+//                     key: item.itemKey,
+//                     areaSqFt: null,
+//                     predefinedRate: null,
+//                     overriddenRate: null,
+//                     finalRate: null,
+//                     totalCost: null,
+//                 }));
+
+//                 existing.materialEstimation?.push({
+//                     name: customRoom.name,
+//                     materials,
+//                     totalCost: 0,
+//                     uploads: [],
+//                 });
+//             }
+//         }
+
+//         await existing.save();
+
+//         console.log("exisitn cost in if condition, e")
+
+//     }
+// };
+
+
+export const syncCostEstimation = async (
     materialDoc: Partial<IMaterialRoomConfirmation> = {},
     projectId: string
-): Promise<any> => {
+) => {
 
-    // Check if cost estimation already exists
-    const existing = await CostEstimationModel.findOne({ projectId });
+    // 1. If no materialDoc passed, fetch from DB
+    if (!materialDoc || !materialDoc.rooms) {
+        materialDoc = await MaterialRoomConfirmationModel.findOne({ projectId }) as any;
+        if (!materialDoc) return;
+    }
 
     const timer = {
         startedAt: new Date(),
         completedAt: null,
-        deadLine: null,
+        deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
         reminderSent: false,
     };
 
-    if (!existing) {
-        const materialEstimation: any[] = [];
+    // 2. Map rooms → cost estimation format
+    const materialEstimation = (materialDoc.rooms || []).map((room: any) => ({
+        _id: new mongoose.Types.ObjectId(), // fresh room id
+        name: room.name,
+        totalCost: 0,
+        materials: (room.roomFields || []).map((item: any) => ({
+            key: item.itemName, // can store as key
+            areaSqFt: null,
+            predefinedRate: null,
+            overriddenRate: null,
+            profitMargin: null,
+            finalRate: null,
+            totalCost: null,
+        })),
+        uploads: [],
+    }));
 
-        
-        // Handle predefined rooms
-        for (const room of materialDoc?.rooms || []) {
-            if (room.roomFields) {
-                const materials = Object.keys(room.roomFields).map((fieldKey) => ({
-                    key: fieldKey,
-                    areaSqFt: null,
-                    predefinedRate: null,
-                    overriddenRate: null,
-                    finalRate: null,
-                    totalCost: null,
-                }));
+    // 3. Check if cost estimation already exists
+    let costDoc = await CostEstimationModel.findOne({ projectId });
 
-                materialEstimation.push({
-                    name: room.name,
-                    materials,
-                    totalCost: null,
-                    uploads: [],
-                });
-            }
-        }
-
-        // Handle custom rooms
-        for (const customRoom of materialDoc?.customRooms || []) {
-            const materials = customRoom.items.map((item) => ({
-                key: item.itemKey,
-                areaSqFt: null,
-                predefinedRate: null,
-                overriddenRate: null,
-                finalRate: null,
-                totalCost: null,
-            }));
-
-            materialEstimation.push({
-                name: customRoom.name,
-                materials,
-                totalCost: null,
-                uploads: [],
-            });
-        }
-
-       const cost =  await CostEstimationModel.create({
+    if (!costDoc) {
+        // Create fresh
+        costDoc = await CostEstimationModel.create({
             projectId,
             materialEstimation,
-            assignedTo: null,
             labourEstimations: [],
             totalMaterialCost: 0,
             totalLabourCost: 0,
             totalEstimation: 0,
             isEditable: true,
-            timer: timer,
+            timer,
             status: "pending",
         });
-    }
-    else {
-        // Update timer
-        existing.timer = timer;
+    } else {
+        // Merge new rooms into existing
+        // const existingRoomNames = new Set(
+        //     costDoc.materialEstimation.map((r) => r.name.toLowerCase())
+        // );
 
-        // Get current valid room names from materialDoc
-        const validRoomNames = new Set([
-            ...(materialDoc?.rooms || []).map(r => r.name),
-            ...(materialDoc?.customRooms || []).map(r => r.name)
-        ]);
-
-        // Filter out deleted rooms from materialEstimation
-        existing.materialEstimation = existing?.materialEstimation?.filter((estimation) =>
-            validRoomNames.has(estimation?.name)
-        );
+        // materialEstimation.forEach((room) => {
+        //     if (!existingRoomNames.has(room.name.toLowerCase())) {
+        //         costDoc!.materialEstimation.push(room);
+        //     }
+        // });
 
 
-        const existingRoomNames = new Set(existing.materialEstimation?.map((r) => r.name));
 
-        for (const customRoom of materialDoc?.customRooms || []) {
-            if (!existingRoomNames.has(customRoom?.name)) {
-                const materials = customRoom?.items?.map((item) => ({
-                    key: item.itemKey,
-                    areaSqFt: null,
-                    predefinedRate: null,
-                    overriddenRate: null,
-                    finalRate: null,
-                    totalCost: null,
-                }));
+        materialEstimation.forEach((newRoom: any) => {
+            const existingRoom = costDoc!.materialEstimation.find(
+                (r) => r.name.toLowerCase() === newRoom.name.toLowerCase()
+            );
 
-                existing.materialEstimation?.push({
-                    name: customRoom.name,
-                    materials,
-                    totalCost: 0,
-                    uploads: [],
+            if (!existingRoom) {
+                // New room → push whole room
+                costDoc!.materialEstimation.push(newRoom);
+            } else {
+                // Room exists → merge materials
+                // Convert materials to array safely (handle object or array)
+                const existingMaterialsArray = Array.isArray(existingRoom.materials)
+                    ? existingRoom.materials
+                    : Object.values(existingRoom.materials || {});
+
+                const existingMaterialKeys = new Set(
+                    existingMaterialsArray.map((m: any) => (m.key || "").toLowerCase())
+                );
+
+                newRoom.materials.forEach((newMaterial: any) => {
+                    if (!existingMaterialKeys.has(newMaterial.key.toLowerCase())) {
+                        if (Array.isArray(existingRoom.materials)) {
+                            existingRoom.materials.push(newMaterial);
+                        } else {
+                            existingRoom.materials = [newMaterial];
+                        }
+                    }
                 });
+
             }
-        }
+        });
 
-        await existing.save();
+        costDoc.timer = timer;
 
-        console.log("exisitn cost in if condition, e")
-
+        await costDoc.save();
     }
-};
+
+}
 
 
 const getCostEstimationByProject = async (req: Request, res: Response): Promise<any> => {
@@ -192,11 +298,96 @@ const getSingleRoomEstimation = async (req: Request, res: Response): Promise<any
 
 const updateMaterialEstimationItem = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { projectId, materialKey } = req.params;
-        const { areaSqFt, predefinedRate, overriddenRate } = req.body;
+        // const { projectId, roomId, materialKey } = req.params;
+        // const { areaSqFt, predefinedRate, overriddenRate } = req.body;
 
-        if (!projectId || !materialKey) {
-            return res.status(400).json({ ok: false, message: "Project ID and material key are required" });
+        // if (!projectId || !materialKey) {
+        //     return res.status(400).json({ ok: false, message: "Project ID and material key are required" });
+        // }
+
+        // const costEstimation = await CostEstimationModel.findOne({ projectId });
+        // if (!costEstimation) {
+        //     return res.status(404).json({ ok: false, message: "Cost estimation not found" });
+        // }
+
+        // let foundItem = null;
+        // let foundRoomIndex = -1;
+        // let foundMaterialIndex = -1;
+
+        // for (let i = 0; i < costEstimation.materialEstimation.length; i++) {
+        //     const room = costEstimation.materialEstimation[i];
+        //     const index = room.materials.findIndex(
+        //         (m) => m.key?.toLowerCase() === materialKey.toLowerCase()
+        //     );
+
+        //     if (index !== -1) {
+        //         foundItem = room.materials[index];
+        //         foundRoomIndex = i;
+        //         foundMaterialIndex = index;
+        //         break;
+        //     }
+        // }
+
+        // if (!foundItem) {
+        //     return res.status(404).json({ ok: false, message: "Material item not found" });
+        // }
+
+        // // Update only allowed fields
+        // if (typeof areaSqFt === "number" && areaSqFt >= 0) {
+        //     foundItem.areaSqFt = areaSqFt;
+        // }
+
+        // if (typeof predefinedRate === "number" && predefinedRate >= 0) {
+        //     foundItem.predefinedRate = predefinedRate;
+        // }
+
+        // foundItem.overriddenRate = typeof overriddenRate === "number" ? overriddenRate : null;
+
+        // // Compute finalRate and totalCost
+        // const finalRate =
+        //     foundItem.overriddenRate && foundItem.overriddenRate > 0
+        //         ? foundItem.overriddenRate
+        //         : foundItem.predefinedRate ?? 0;
+
+        // foundItem.finalRate = finalRate;
+        // foundItem.totalCost =
+        //     typeof foundItem.areaSqFt === "number" && typeof finalRate === "number"
+        //         ? foundItem.areaSqFt * finalRate
+        //         : 0;
+
+        // // Update the room totalCost
+        // const updatedRoom = costEstimation.materialEstimation[foundRoomIndex];
+        // updatedRoom.totalCost = updatedRoom.materials.reduce((acc, material) => acc + (material.totalCost || 0), 0);
+
+        // costEstimation.materialEstimation[foundRoomIndex] = updatedRoom;
+
+        // // ✅ Recalculate project-level total material cost
+        // costEstimation.totalMaterialCost = costEstimation.materialEstimation.reduce(
+        //     (sum, room) => sum + (room.totalCost || 0),
+        //     0
+        // );
+
+        // // ✅ Recalculate grand total estimation
+        // costEstimation.totalEstimation = (costEstimation.totalMaterialCost || 0) + (costEstimation.totalLabourCost || 0);
+
+
+        // await costEstimation.save();
+
+        //  return res.status(200).json({
+        //     ok: true,
+        //     message: "Material estimation item updated successfully",
+        //     data: foundItem,
+        // });
+
+
+        const { projectId, roomId, materialKey } = req.params;
+        const { areaSqFt, predefinedRate, overriddenRate, profitMargin } = req.body;
+
+
+
+
+        if (!projectId || !roomId || !materialKey) {
+            return res.status(400).json({ ok: false, message: "Project ID, Room ID, and material key are required" });
         }
 
         const costEstimation = await CostEstimationModel.findOne({ projectId });
@@ -204,27 +395,47 @@ const updateMaterialEstimationItem = async (req: Request, res: Response): Promis
             return res.status(404).json({ ok: false, message: "Cost estimation not found" });
         }
 
-        let foundItem = null;
-        let foundRoomIndex = -1;
-        let foundMaterialIndex = -1;
+        // 1️⃣ Find the correct room
 
-        for (let i = 0; i < costEstimation.materialEstimation.length; i++) {
-            const room = costEstimation.materialEstimation[i];
-            const index = room.materials.findIndex(
-                (m) => m.key?.toLowerCase() === materialKey.toLowerCase()
-            );
 
-            if (index !== -1) {
-                foundItem = room.materials[index];
-                foundRoomIndex = i;
-                foundMaterialIndex = index;
-                break;
-            }
+        console.log("wardrbe", materialKey)
+        const foundRoomIndex = costEstimation.materialEstimation.findIndex(
+            (room) => String((room as any)._id) === String(roomId)
+        );
+
+        if (foundRoomIndex === -1) {
+            return res.status(404).json({ ok: false, message: "Room not found" });
         }
 
-        if (!foundItem) {
-            return res.status(404).json({ ok: false, message: "Material item not found" });
+        const foundRoom = costEstimation.materialEstimation[foundRoomIndex];
+
+        console.log("foundRoom", foundRoom)
+        // 2️⃣ Find the correct material inside that room
+        const foundMaterialIndex = foundRoom.materials.findIndex((m) => {
+
+            // console.log("m.key", m.key.toLowerCase())
+            // console.log("material key", materialKey.toLowerCase())
+
+            // console.log("invisible spaces")
+
+
+            // console.log("m.key", JSON.stringify(m.key));
+            // console.log("material key", JSON.stringify(materialKey));
+
+
+            return m.key?.trim().toLowerCase() === materialKey.trim().toLowerCase();
         }
+        );
+
+
+        console.log("materialindex", foundMaterialIndex)
+
+        if (foundMaterialIndex === -1) {
+            return res.status(404).json({ ok: false, message: "Material item not found in this room" });
+        }
+
+        const foundItem = foundRoom.materials[foundMaterialIndex];
+
 
         // Update only allowed fields
         if (typeof areaSqFt === "number" && areaSqFt >= 0) {
@@ -235,25 +446,45 @@ const updateMaterialEstimationItem = async (req: Request, res: Response): Promis
             foundItem.predefinedRate = predefinedRate;
         }
 
-        foundItem.overriddenRate = typeof overriddenRate === "number" ? overriddenRate : null;
+        if (typeof overriddenRate === "number" && overriddenRate >= 0) {
+            foundItem.overriddenRate = overriddenRate;
+        } else {
+            foundItem.overriddenRate = 0;
+        }
 
-        // Compute finalRate and totalCost
-        const finalRate =
-            foundItem.overriddenRate && foundItem.overriddenRate > 0
-                ? foundItem.overriddenRate
-                : foundItem.predefinedRate ?? 0;
+        if (typeof profitMargin === "number" && profitMargin >= 0) {
+            foundItem.profitMargin = profitMargin;
+        } else if (typeof foundItem.profitMargin !== "number") {
+            foundItem.profitMargin = 0; // default if not set yet
+        }
 
-        foundItem.finalRate = finalRate;
+        // --- 💡 New Calculation ---
+        const predefined = foundItem?.predefinedRate || 0;
+        const overridden = foundItem?.overriddenRate || 0;
+        const marginPercent = foundItem?.profitMargin || 0;
+
+        // Profit margin is % of predefinedRate
+        const profitAmount = marginPercent > 0 ? (predefined * marginPercent / 100) : 0;
+
+        // Final rate is sum of parts
+        foundItem.finalRate = predefined + overridden + profitAmount;
+
+        // Calculate total cost
         foundItem.totalCost =
-            typeof foundItem.areaSqFt === "number" && typeof finalRate === "number"
-                ? foundItem.areaSqFt * finalRate
+            typeof foundItem.areaSqFt === "number" && foundItem.areaSqFt > 0
+                ? foundItem.areaSqFt * foundItem.finalRate
                 : 0;
 
+
+
+        console.log("foudn total tcoat", foundItem.totalCost)
         // Update the room totalCost
         const updatedRoom = costEstimation.materialEstimation[foundRoomIndex];
         updatedRoom.totalCost = updatedRoom.materials.reduce((acc, material) => acc + (material.totalCost || 0), 0);
 
         costEstimation.materialEstimation[foundRoomIndex] = updatedRoom;
+
+        costEstimation.markModified(`materialEstimation`);
 
         // ✅ Recalculate project-level total material cost
         costEstimation.totalMaterialCost = costEstimation.materialEstimation.reduce(
@@ -262,7 +493,13 @@ const updateMaterialEstimationItem = async (req: Request, res: Response): Promis
         );
 
         // ✅ Recalculate grand total estimation
-        costEstimation.totalEstimation = (costEstimation.totalMaterialCost || 0) + (costEstimation.totalLabourCost || 0);
+        costEstimation.totalEstimation =
+            (costEstimation.totalMaterialCost || 0) + (costEstimation.totalLabourCost || 0);
+
+
+        // console.log("modifiedPaths before save:", costEstimation.modifiedPaths());
+        // console.log("isModified materialEstimation:", costEstimation.isModified("materialEstimation"));
+        // console.log("room (after update) snapshot:", JSON.stringify(costEstimation.materialEstimation[foundRoomIndex], null, 2));
 
 
         await costEstimation.save();
@@ -493,26 +730,26 @@ const costEstimationCompletionStatus = async (req: Request, res: Response): Prom
         if (form.status === "completed") {
             await syncPaymentConfirationModel(projectId, form.totalEstimation)
 
-            let uploadedFiles: DocUpload[] = [];
+            // let uploadedFiles: DocUpload[] = [];
 
-            const extractUploads = (room: any): DocUpload[] => {
-                return room.uploads?.map((file: any) => ({
-                    type: file.type,
-                    url: file.url,
-                    originalName: file.originalName,
-                })) || []
+            // const extractUploads = (room: any): DocUpload[] => {
+            //     return room.uploads?.map((file: any) => ({
+            //         type: file.type,
+            //         url: file.url,
+            //         originalName: file.originalName,
+            //     })) || []
 
-            };
+            // };
 
-            uploadedFiles = form.materialEstimation.flatMap(extractUploads);
+            // uploadedFiles = form.materialEstimation.flatMap(extractUploads);
 
-            await addOrUpdateStageDocumentation({
-                projectId,
-                stageNumber: "6", // ✅ Put correct stage number here
-                description: "Cost Estimation Stage is documented",
-                uploadedFiles, // optionally add files here
-                price: form.totalEstimation
-            })
+            // await addOrUpdateStageDocumentation({
+            //     projectId,
+            //     stageNumber: "6", // ✅ Put correct stage number here
+            //     description: "Cost Estimation Stage is documented",
+            //     uploadedFiles, // optionally add files here
+            //     price: form.totalEstimation
+            // })
         }
 
         res.status(200).json({ ok: true, message: "cost estimation stage marked as completed", data: form });
@@ -600,7 +837,7 @@ const deleteCostEstimationFile = async (req: Request, res: Response): Promise<an
 
 
 export {
-    generateCostEstimationFromMaterialSelection,
+    // generateCostEstimationFromMaterialSelection,
     getCostEstimationByProject,
     getSingleRoomEstimation,
     updateMaterialEstimationItem,

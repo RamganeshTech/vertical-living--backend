@@ -1,23 +1,8 @@
-// import { Request, Response } from "express";
-// import mongoose from "mongoose";
-// import MaterialRoomConfirmationModel, {
-//   IMaterialRoomConfirmation,
-//   IPredefinedRoom,
-//   ICustomRoom,
-// } from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
-// import OrderingMaterialModel, { IUploadFile } from "../../../models/Stage Models/Ordering Material Model/orderingMaterial.model";
-// import PaymentConfirmationModel from './../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model';
-// import { IMaterialOrderingTimer } from './../../../models/Stage Models/Ordering Material Model/orderingMaterial.model';
-// import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
-// import { generateOrderingToken } from "../../../utils/generateToken";
-// import { s3 } from "../../../config/awssdk";
-// // import { syncMaterialArrival } from "../MaterialArrival controllers/materialArrivalCheck.controller";
-// import redisClient from "../../../config/redisClient";
-// import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
-// import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
-// import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
-// import { DocUpload } from "../../../types/types";
-// import { syncMaterialArrivalNew } from "../MaterialArrival controllers/materialArrivalCheckNew.controller";
+import { Request, Response } from "express";
+import { generateOrderingToken } from "../../../utils/generateToken";
+import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
+import { SelectedModularUnitModel } from "../../../models/Modular Units Models/All Unit Model/SelectedModularUnit Model/selectedUnit.model";
+import { SelectedExternalModel } from "../../../models/externalUnit model/SelectedExternalUnit model/selectedExternalUnit.model";
 
 // export const syncOrderingMaterials = async (projectId: string) => {
 
@@ -406,7 +391,7 @@
 //   try {
 //     const { projectId } = req.params;
 
-//     const form = await OrderingMaterialModel.findOne({ projectId });
+   
 //     if (!form) return res.status(404).json({ ok: false, message: "Ordering Material Form not found" });
 
 //     if (form.generatedLink) {
@@ -437,7 +422,9 @@
 //   try {
 //     const { projectId, token } = req.params;
 
-//     const form = await OrderingMaterialModel.findOne({ projectId });
+//      const modularUnits = await SelectedModularUnitModel.findOne({ projectId });
+//     const externalUnits = await SelectedExternalModel.findOne({ projectId });
+//     const form = await OrderMaterialHistoryModel.findOne({ projectId });
 //     if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
 //     // if (form.generatedLink !== token) {

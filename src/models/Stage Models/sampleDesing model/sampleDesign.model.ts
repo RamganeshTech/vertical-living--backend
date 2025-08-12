@@ -1,5 +1,6 @@
 import mongoose, { Types, Schema } from "mongoose";
 import { type } from "os";
+import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 
 export interface IFileItem {
@@ -65,6 +66,9 @@ const sampleDesignSchema = new Schema<ISampleDesign>({
 
 
 sampleDesignSchema.index({projectId:1})
+
+
+sampleDesignSchema.plugin(procurementLogger)
 
 
 export const SampleDesignModel = mongoose.model("SampleDesignModel", sampleDesignSchema);

@@ -1,4 +1,5 @@
 import mongoose, { Schema, Types } from "mongoose";
+import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 
 export interface IConsultationAttachment {
@@ -86,5 +87,6 @@ const technicalConsultationSchema = new Schema<ITechnicalConsultation>({
 
 technicalConsultationSchema.index({projectId:1})
 
+technicalConsultationSchema.plugin(procurementLogger)
 
 export const TechnicalConsultationModel = mongoose.model("TechnicalConsultationModel", technicalConsultationSchema);

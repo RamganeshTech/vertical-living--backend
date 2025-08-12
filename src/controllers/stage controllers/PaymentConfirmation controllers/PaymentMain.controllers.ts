@@ -74,7 +74,7 @@ export const syncPaymentConfirationModel = async (projectId: string | Types.Obje
   const timer = {
     startedAt: new Date(),
     completedAt: null,
-    deadLine: null,
+    deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
     reminderSent: false,
   };
 console.log("exisitn payment", existing)
@@ -195,13 +195,13 @@ const paymentConfirmationCompletionStatus = async (req: Request, res: Response):
       // await syncOrderingMaterials(projectId)
       await syncOrderingMaterialsHistory(projectId)
 
-      await addOrUpdateStageDocumentation({
-        projectId,
-        stageNumber: "7", // ✅ Put correct stage number here
-        description: "Payment Stage is documented",
-        uploadedFiles: [], // optionally add files here
-        price: form.totalAmount
-      })
+      // await addOrUpdateStageDocumentation({
+      //   projectId,
+      //   stageNumber: "7", // ✅ Put correct stage number here
+      //   description: "Payment Stage is documented",
+      //   uploadedFiles: [], // optionally add files here
+      //   price: form.totalAmount
+      // })
     }
 
 

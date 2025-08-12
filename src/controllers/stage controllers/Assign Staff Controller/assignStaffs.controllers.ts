@@ -4,7 +4,6 @@ import { Model, Types } from "mongoose";
 
 import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
 import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
-import { RequirementFormModel } from "../../../models/Stage Models/requirment model/requirement.model";
 import { SampleDesignModel } from "../../../models/Stage Models/sampleDesing model/sampleDesign.model";
 import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
 import { TechnicalConsultationModel } from "../../../models/Stage Models/technical consulatation/technicalconsultation.model";
@@ -20,6 +19,7 @@ import redisClient from "../../../config/redisClient";
 import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
 import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
+import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
 
 
 export const stageModelMap = new Map<string, Model<Document>>([

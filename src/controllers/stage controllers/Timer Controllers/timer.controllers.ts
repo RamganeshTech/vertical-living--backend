@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import mongoose, { Model } from "mongoose";
 
-import { RequirementFormModel } from "../../../models/Stage Models/requirment model/requirement.model";
+// import { RequirementFormModel } from "../../../models/Stage Models/requirment model/requirement.model";
 import { SampleDesignModel } from "../../../models/Stage Models/sampleDesing model/sampleDesign.model";
 import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
 import { TechnicalConsultationModel } from "../../../models/Stage Models/technical consulatation/technicalconsultation.model";
@@ -18,6 +18,7 @@ import WorkMainStageScheduleModel from "../../../models/Stage Models/WorkTask Mo
 import redisClient from "../../../config/redisClient";
 import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
 import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
+import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
 
 
 const stageModelMap = new Map<string, Model<Document>>([

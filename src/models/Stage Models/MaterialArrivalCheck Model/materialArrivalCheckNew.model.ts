@@ -1,4 +1,5 @@
 import mongoose, { model, Schema, Types } from "mongoose";
+import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 
 export interface IMaterialArrivalTimer {
@@ -82,6 +83,7 @@ const MaterialArrivalSchema = new Schema<IMaterialArrival>({
 
 MaterialArrivalSchema.index({projectId:1})
 
+MaterialArrivalSchema.plugin(procurementLogger);
 
 const MaterialArrivalModel = model("MaterialArrivalModel", MaterialArrivalSchema)
 

@@ -11,6 +11,8 @@ import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimatio
 import { getStageSelectionUtil } from "../../Modular Units Controllers/StageSelection Controller/stageSelection.controller";
 import { IRoomItemEntry } from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomTypes";
 import { SelectedExternalModel } from './../../../models/externalUnit model/SelectedExternalUnit model/selectedExternalUnit.model';
+import { RoleBasedRequest } from "../../../types/types";
+import { generateOrderingToken } from "../../../utils/generateToken";
 
 // export const syncOrderingMaterialsHistory = async (projectId: string) => {
 
@@ -195,7 +197,7 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
     const timer: IOrderHistorytimer = {
         startedAt: new Date(),
         completedAt: null,
-        deadLine: null,
+        deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
         reminderSent: false,
     };
 
@@ -222,7 +224,7 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
                 // ✅ Only update quantity if the new unit is modular
                 if (newUnit.customId.toLowerCase().includes("modular")) {
                     existingUnit.quantity += newUnit.quantity || 0;
-                }else{
+                } else {
                     existing?.selectedUnits.push(newUnit);
                 }
             } else {
@@ -338,3 +340,104 @@ export const orderMaterialHistoryCompletionStatus = async (req: Request, res: Re
         return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
     }
 };
+
+
+
+
+
+
+
+// WHATSAPP LINK API
+
+export const generateOrderingMaterialLink = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params;
+
+        const form = await OrderMaterialHistoryModel.findOne({ projectId })
+
+        if (!form) return res.status(404).json({ ok: false, message: "Ordering Material Form not found" });
+
+        if (form.generatedLink) {
+            return res.status(400).json({ ok: false, message: "Link already generated" });
+        }
+
+        const token = generateOrderingToken();
+
+        form.generatedLink = `${process.env.FRONTEND_URL}/ordermaterial/public/${projectId}/${token}`;
+        await form.save();
+
+        return res.status(200).json({
+            ok: true,
+            message: "Link generated successfully",
+            data: {
+                token,
+                shareableUrl: form.generatedLink,
+            },
+        });
+    }
+    catch (error) {
+        return res.status(500).json({ ok: false, message: "server error" });
+    }
+};
+
+
+
+export const getPublicDetails = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params;
+
+        const modularUnits = await SelectedModularUnitModel.findOne({ projectId });
+        const externalUnits = await SelectedExternalModel.findOne({ projectId });
+
+        let finalData: any = []
+
+
+        if (modularUnits && modularUnits.selectedUnits) {
+            let units = modularUnits.selectedUnits
+
+            let onlyUnits = units.map(ele => {
+                return {
+                    "unitName": "N/A",
+                    "image": ele?.image,
+                    "customId": ele?.customId,
+                    "category": ele?.category,
+                    "quantity": ele?.quantity,
+                    "height": 0,
+                    "width": 0,
+                    "depth": 0
+                }
+            })
+
+
+            finalData = finalData.concat(onlyUnits)
+        }
+
+
+        if (externalUnits && externalUnits.selectedUnits) {
+
+            let units = externalUnits.selectedUnits
+
+            let onlyUnits = units.map(ele => {
+                return {
+                    "unitName": ele.unitName,
+                    "image": ele?.image || "No Image",
+                    "customId": ele.unitCode,
+                    "category": ele?.category,
+                    "quantity": ele?.quantity,
+                    "height": ele.dimention?.height ?? "N/A",
+                    "width": ele.dimention?.width ?? "N/A",
+                    "depth": ele.dimention?.depth ?? "N/A",
+                }
+            })
+
+            finalData = finalData.concat(onlyUnits)
+        }
+
+        return res.status(200).json({ message: "got the data", data: finalData, ok: true })
+    }
+    catch (error) {
+        console.log(error)
+        return res.status(500).json({ ok: false, message: "Server error, try again after some time" });
+
+    }
+}

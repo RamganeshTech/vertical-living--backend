@@ -6,7 +6,7 @@ import redisClient from '../../config/redisClient'
 import ClientModel from "../../models/client model/client.model";
 import CTOModel from "../../models/CTO model/CTO.model";
 import UserModel from "../../models/usermodel/user.model";
-import { syncRequirmentForm } from "../stage controllers/requirement controllers/mainRequirement.controller";
+// import { syncRequirmentForm } from "../stage controllers/requirement controllers/mainRequirement.controller";
 import { syncPreRequireties } from "../PreRequireties Controllers/preRequireties.controllers";
 import { syncSelectStage } from "../Modular Units Controllers/StageSelection Controller/stageSelection.controller";
 import { syncDocumentationModel } from "../documentation controller/documentation.controller";
@@ -18,6 +18,7 @@ import { Model } from "mongoose";
 import { PreRequiretiesModel } from "../../models/PreRequisites/preRequireties.model";
 import { StageDocumentationModel } from "../../models/Documentation Model/documentation.model";
 import { ShortlistedDesignModel } from "../../models/Stage Models/sampleDesing model/shortListed.model";
+import { syncRequirmentForm } from "../stage controllers/requirement controllers/mainRequirementNew.controller";
 
 const createProject = async (req: RoleBasedRequest, res: Response) => {
     try {
