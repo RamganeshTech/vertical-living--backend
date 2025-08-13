@@ -52,5 +52,6 @@ paymentConsentRoutes.get("/gettransaction/:projectId", multiRoleAuthMiddleware("
 // COMMON ROUTES
 paymentConsentRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(CostEstimationModel), notToUpdateIfStageCompleted(PaymentConfirmationModel), checkIfStaffIsAssignedToStage(PaymentConfirmationModel), setPayementConfirmationStageDeadline)
 paymentConsentRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(CostEstimationModel), notToUpdateIfStageCompleted(PaymentConfirmationModel), checkIfStaffIsAssignedToStage(PaymentConfirmationModel), paymentConfirmationCompletionStatus)
+// paymentConsentRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(PaymentConfirmationModel), paymentConfirmationCompletionStatus)
 
 export default paymentConsentRoutes;

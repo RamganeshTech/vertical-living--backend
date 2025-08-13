@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose"
 import redisClient from "../../../config/redisClient";
 import { SelectedModularUnitModel } from "../../../models/Modular Units Models/All Unit Model/SelectedModularUnit Model/selectedUnit.model";
-import { IOrderHistorytimer, OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
+import { IOrderHistorytimer, OrderMaterialHistoryModel, OrderSubItems } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import { syncMaterialArrivalNew } from "../MaterialArrival controllers/materialArrivalCheckNew.controller";
@@ -97,49 +98,51 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
         if (isExternalExists && isExternalExists?.selectedUnits?.length) {
             let selectedUnits = isExternalExists.selectedUnits
 
-            const findSingleQuantityPrice = (height: number, width: number, depth: number, unitPrice: number) => {
-                const h = Number(height);
-                const w = Number(width);
-                const d = Number(depth);
+            // const findSingleQuantityPrice = (height: number, width: number, depth: number, unitPrice: number) => {
+            //     const h = Number(height);
+            //     const w = Number(width);
+            //     const d = Number(depth);
 
-                const heightFt = h / 304.8;
-                const widthFt = w / 304.8;
-                const depthFt = d / 304.8;
+            //     const heightFt = h / 304.8;
+            //     const widthFt = w / 304.8;
+            //     const depthFt = d / 304.8;
 
-                const cubicFeet = heightFt * widthFt * depthFt;
-                // console.log("cal cubic feet", cubicFeet)
-                // const price = cubicFeet * unitPrice * quantity;
-                // console.log("cal price before ceilt", price)
-                // return Math.floor(price); // No decimals, always rounded up
+            //     const cubicFeet = heightFt * widthFt * depthFt;
+            //     // console.log("cal cubic feet", cubicFeet)
+            //     // const price = cubicFeet * unitPrice * quantity;
+            //     // console.log("cal price before ceilt", price)
+            //     // return Math.floor(price); // No decimals, always rounded up
 
 
-                const pricePerUnit = Math.ceil(cubicFeet * unitPrice); // ⬅️ round per unit
-                return pricePerUnit
+            //     const pricePerUnit = Math.ceil(cubicFeet * unitPrice); // ⬅️ round per unit
+            //     return pricePerUnit
 
-            }
+            // }
             // console.log("Geetting inside of selected Units in the external block")
 
             for (let unit of selectedUnits) {
                 // const { _id, ...res } = (unit as any).toObject()
-                const { unitCode, unitName, price, category, dimention, quantity, image } = unit
+                const { unitCode, unitName, price, category, dimention, quantity, image, totalPrice } = unit
                 const { height = 0, width = 0, depth = 0 } = dimention as any || {}
 
-                const singleUnitCost = findSingleQuantityPrice(height, width, depth, price)
+                // const singleUnitCost = findSingleQuantityPrice(height, width, depth, price)
 
                 let externalUnits: any = {
                     customId: unitCode,
-                    name: unitName,
+                    // name: unitName,
+                    unitName,
                     category: category,
-                    singleUnitCost: singleUnitCost,
+                    singleUnitCost: totalPrice,
                     quantity: quantity,
                     unitId: (unit as any)._id,
-                    image: image?.url
+                    image: image?.url,
+                    subItems: []
                 }
 
                 selected.push(externalUnits)
                 // console.log("selected Units in the external block", selected)
             }
-            totalCost += isExternalExists?.totalCost || 0
+            totalCost = isExternalExists?.totalCost || 0
         }
         if (units) {
             totalCost += units.totalCost || 0;
@@ -151,53 +154,132 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
             selected = selected.concat(modularUnits);
         }
     } else if (mode === "Manual Flow") {
-        const [materials, estimation] = await Promise.all([
-            MaterialRoomConfirmationModel.findOne({ projectId }),
-            CostEstimationModel.findOne({ projectId }),
-        ]);
+        // const [materials, estimation] = await Promise.all([
+        //     MaterialRoomConfirmationModel.findOne({ projectId }),
+        //     CostEstimationModel.findOne({ projectId }),
+        // ]);
 
-        const materialMap = new Map<string, number>(); // key → quantity
+        // const materialMap = new Map<string, number>(); // key → quantity
 
-        // collect quantities from roomFields
-        materials?.rooms?.forEach(room => {
-            const roomFields = room.roomFields || {};
-            for (const key in roomFields) {
-                const entry = roomFields[key] as IRoomItemEntry;
-                const qty = entry?.quantity || 0;
-                materialMap.set(key, (materialMap.get(key) || 0) + qty);
-            }
-        });
+        // // collect quantities from roomFields
+        // materials?.rooms?.forEach(room => {
+        //     const roomFields = room.roomFields || {};
+        //     for (const key in roomFields) {
+        //         const entry = roomFields[key] as IRoomItemEntry;
+        //         const qty = entry?.quantity || 0;
+        //         materialMap.set(key, (materialMap.get(key) || 0) + qty);
+        //     }
+        // });
 
 
-        estimation?.materialEstimation?.forEach(room => {
-            room.materials?.forEach(item => {
-                // Skip if no finalRate (i.e., not estimated)
-                if (typeof item.finalRate !== "number") return;
+        // estimation?.materialEstimation?.forEach(room => {
+        //     room.materials?.forEach(item => {
+        //         // Skip if no finalRate (i.e., not estimated)
+        //         if (typeof item.finalRate !== "number") return;
 
-                // Skip if no matching material in the confirmation
-                const quantity = materialMap.get(item.key);
-                if (!quantity) return;
+        //         // Skip if no matching material in the confirmation
+        //         const quantity = materialMap.get(item.key);
+        //         if (!quantity) return;
 
-                const unit = {
-                    category: item.key,
-                    quantity,
-                    singleUnitCost: item.finalRate,
-                    unitId: null,
-                    customId: item.key,
-                    image: null,
-                };
+        //         const unit = {
+        //             category: item.key,
+        //             quantity,
+        //             singleUnitCost: item.finalRate,
+        //             unitId: null,
+        //             customId: item.key,
+        //             image: null,
+        //         };
 
-                selected.push(unit);
-                totalCost += item.finalRate * quantity;
+        //         selected.push(unit);
+        //         totalCost += item.finalRate * quantity;
+        //     });
+        // });
+
+        const materialRoomData = await MaterialRoomConfirmationModel.findOne({ projectId }).lean();
+        if (!materialRoomData) {
+            console.log("mteiral room stage not found")
+            return
+        }
+        const rooms = materialRoomData.rooms || [];
+
+        // 2. Get cost estimation data
+        const costEstimationData = await CostEstimationModel.findOne({ projectId }).lean();
+        if (!costEstimationData) {
+            console.log("cost estimation stage not found")
+            return
+        }
+
+        const materialEstimationRooms = costEstimationData.materialEstimation || [];
+
+        // 3. Build cost lookup map by room name and key
+        const costMap: Record<string, Record<string, number>> = {};
+        materialEstimationRooms.forEach(room => {
+            costMap[room.name] = {};
+            (room.materials || []).forEach(material => {
+                costMap[room.name][material.key] = material.totalCost || 0;
             });
         });
+
+        // 4. Build selectedUnits array for OrderMaterialHistory
+
+
+        rooms.forEach(room => {
+            const materialsCostMap = costMap[room.name] || {};
+
+            ((room.roomFields as any) || []).forEach((item: any) => {
+                const unitName = item.itemName;
+                const quantity = item.quantity || 0;
+                const unitCost = materialsCostMap[unitName] || 0;
+
+                if (quantity <= 0) return; // skip zero quantity
+
+                selected.push({
+                    unitId: null, // If you can resolve unitId from somewhere, set here
+                    category: unitName, // Set category if you have it, else null
+                    image: null, // Set image if you have it, else null
+                    customId: null, // Set customId if available
+                    unitName,
+                    quantity,
+                    singleUnitCost: unitCost,
+                    subItems: [],
+                });
+            });
+        });
+
+        // 5. Calculate total cost
+        totalCost = selected.reduce(
+            (acc, item) => acc + item.quantity * item.singleUnitCost,
+            0
+        );
+
+        // 6. Upsert OrderMaterialHistoryModel document
+        // const orderHistoryDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
+        //     { projectId },
+        //     {
+        //         projectId,
+        //         selectedUnits:selected,
+        //         totalCost,
+        //         status: "pending",
+        //         isEditable: true,
+        //         timer: {
+        //             startedAt: null,
+        //             completedAt: null,
+        //             deadLine: null,
+        //             reminderSent: false,
+        //         },
+        //         assignedTo: null,
+        //         generatedLink: "",
+        //     },
+        //     { new: true }
+        // );
+
     }
 
     // Build timer
     const timer: IOrderHistorytimer = {
         startedAt: new Date(),
         completedAt: null,
-        deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+        deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
         reminderSent: false,
     };
 
@@ -212,24 +294,55 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
             totalCost,
         });
     } else {
+        // existing.timer = timer;
+        // existing.totalCost += totalCost;
+
+        // selected.forEach((newUnit: any) => {
+        //     const existingUnit = existing?.selectedUnits?.find(
+        //         (unit: any) => unit.customId === newUnit.customId
+        //     );
+
+        //     if (existingUnit) {
+        //         // ✅ Only update quantity if the new unit is modular
+        //         if (newUnit.customId.toLowerCase().includes("modular")) {
+        //             existingUnit.quantity += newUnit.quantity || 0;
+        //         } else {
+        //             existing?.selectedUnits.push(newUnit);
+        //         }
+        //     } else {
+        //         // ✅ If not found, push new unit
+        //         existing?.selectedUnits.push(newUnit);
+        //     }
+        // });
+
         existing.timer = timer;
-        existing.totalCost += totalCost;
+        existing.totalCost = totalCost;
 
         selected.forEach((newUnit: any) => {
             const existingUnit = existing?.selectedUnits?.find(
-                (unit: any) => unit.customId === newUnit.customId
+                (unit: any) => unit.unitName === newUnit.unitName
             );
 
-            if (existingUnit) {
+            if (!existingUnit) {
                 // ✅ Only update quantity if the new unit is modular
-                if (newUnit.customId.toLowerCase().includes("modular")) {
-                    existingUnit.quantity += newUnit.quantity || 0;
-                } else {
-                    existing?.selectedUnits.push(newUnit);
-                }
-            } else {
-                // ✅ If not found, push new unit
                 existing?.selectedUnits.push(newUnit);
+            } else {
+                // Exists — update quantity only if changed
+                if (existingUnit.quantity !== newUnit.quantity) {
+                    existingUnit.quantity = newUnit.quantity;
+                    // Optional: update cost if it might have changed
+
+                    // // Also update other fields if you want:
+                    // existingUnit.category = newUnit.category;
+                    // existingUnit.image = newUnit.image;
+                    // existingUnit.customId = newUnit.customId;
+                    // existingUnit.subItems = newUnit.subItems || [];
+                }
+
+                if (existingUnit.singleUnitCost !== newUnit.singleUnitCost) {
+                    existingUnit.singleUnitCost = newUnit.singleUnitCost;
+                }
+
             }
         });
     }
@@ -243,12 +356,141 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
 };
 
 
+
+
+
+export const addSubItemToUnit = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, unitId } = req.params;
+        const { subItemName, quantity, unit } = req.body;
+
+        if (!projectId || !unitId) {
+            return res.status(400).json({ ok: false, message: "Invalid projectId or unitId" });
+        }
+
+        if (!subItemName || quantity == null || !unit) {
+            return res.status(400).json({ ok: false, message: "Missing subItemName, quantity or unit" });
+        }
+
+        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+        if (!orderDoc) {
+            return res.status(404).json({ ok: false, message: "Order history not found" });
+        }
+
+        // Find the unit inside selectedUnits by _id
+        const unitObj = (orderDoc.selectedUnits as any).id(unitId);
+        if (!unitObj) {
+            return res.status(404).json({ ok: false, message: "Unit not found in order history" });
+        }
+
+
+
+        const isExists = unitObj.subItems.find((unit: OrderSubItems) => {
+           return unit?.subItemName?.toLowerCase() === subItemName?.toLowerCase()
+        })
+
+
+        if (isExists) {
+            return res.status(400).json({ message: "item already exists", ok: false })
+        }
+
+        // Add new subItem
+        unitObj.subItems.push({ subItemName, quantity, unit });
+
+        await orderDoc.save();
+
+        return res.json({ ok: true, message: "SubItem added", subItems: unitObj.subItems });
+    } catch (error: any) {
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+
+
+export const updateSubItemInUnit = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, unitId, subItemId } = req.params;
+        const { subItemName, quantity, unit } = req.body;
+
+        if (!projectId ||
+            !unitId ||
+            !subItemId) {
+            return res.status(400).json({ ok: false, message: "Invalid IDs" });
+        }
+
+        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+        if (!orderDoc) {
+            return res.status(404).json({ ok: false, message: "Order history not found" });
+        }
+
+        const unitObj = (orderDoc.selectedUnits as any).id(unitId);
+        if (!unitObj) {
+            return res.status(404).json({ ok: false, message: "Unit not found" });
+        }
+
+        const subItemObj = unitObj.subItems.id(subItemId);
+        if (!subItemObj) {
+            return res.status(404).json({ ok: false, message: "SubItem not found" });
+        }
+
+        if (!subItemName) subItemObj.subItemName = subItemName;
+        if (quantity !== null) subItemObj.quantity = quantity;
+        if (!unit !== undefined) subItemObj.unit = unit;
+
+        await orderDoc.save();
+
+        return res.json({ ok: true, message: "SubItem updated", subItem: subItemObj });
+    } catch (error: any) {
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+
+
+export const deleteSubItemFromUnit = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, unitId, subItemId } = req.params;
+
+        if (!projectId ||
+            !unitId ||
+            !subItemId) {
+            return res.status(400).json({ ok: false, message: "Invalid IDs" });
+        }
+
+        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+        if (!orderDoc) {
+            return res.status(404).json({ ok: false, message: "Order history not found" });
+        }
+
+        const unitObj = (orderDoc.selectedUnits as any).id(unitId);
+        if (!unitObj) {
+            return res.status(404).json({ ok: false, message: "Unit not found" });
+        }
+
+        const subItemObj = unitObj.subItems.id(subItemId);
+        if (!subItemObj) {
+            return res.status(404).json({ ok: false, message: "SubItem not found" });
+        }
+
+        unitObj.subItems.pull({ _id: subItemId });
+        await orderDoc.save();
+
+        return res.json({ ok: true, message: "SubItem deleted", subItems: unitObj.subItems });
+    } catch (error: any) {
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+
+
+
+
 export const getOrderHistoryMaterial = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
 
         const redisMainKey = `stage:OrderMaterialHistoryModel:${projectId}`
-        // await redisClient.del(redisMainKey)
+        await redisClient.del(redisMainKey)
         const cachedData = await redisClient.get(redisMainKey)
 
         if (cachedData) {
@@ -386,54 +628,79 @@ export const getPublicDetails = async (req: Request, res: Response): Promise<any
     try {
         const { projectId } = req.params;
 
-        const modularUnits = await SelectedModularUnitModel.findOne({ projectId });
-        const externalUnits = await SelectedExternalModel.findOne({ projectId });
-
-        let finalData: any = []
+        const stageSelection = await getStageSelectionUtil(projectId);
+        const mode = stageSelection?.mode || "Manual Flow";
 
 
-        if (modularUnits && modularUnits.selectedUnits) {
-            let units = modularUnits.selectedUnits
 
-            let onlyUnits = units.map(ele => {
-                return {
-                    "unitName": "N/A",
-                    "image": ele?.image,
-                    "customId": ele?.customId,
-                    "category": ele?.category,
-                    "quantity": ele?.quantity,
-                    "height": 0,
-                    "width": 0,
-                    "depth": 0
-                }
-            })
+        if (mode === "Modular Units") {
 
 
-            finalData = finalData.concat(onlyUnits)
+            // const modularUnits = await SelectedModularUnitModel.findOne({ projectId });
+            // const externalUnits = await SelectedExternalModel.findOne({ projectId });
+
+            // let finalData: any = []
+
+
+            // if (modularUnits && modularUnits.selectedUnits) {
+            //     let units = modularUnits.selectedUnits
+
+            //     let onlyUnits = units.map(ele => {
+            //         return {
+            //             "unitName": "N/A",
+            //             "image": ele?.image,
+            //             "customId": ele?.customId,
+            //             "category": ele?.category,
+            //             "quantity": ele?.quantity,
+            //             "height": 0,
+            //             "width": 0,
+            //             "depth": 0
+            //         }
+            //     })
+
+
+            //     finalData = finalData.concat(onlyUnits)
+            // }
+
+
+            // if (externalUnits && externalUnits.selectedUnits) {
+
+            //     let units = externalUnits.selectedUnits
+
+            //     let onlyUnits = units.map(ele => {
+            //         return {
+            //             "unitName": ele.unitName,
+            //             "image": ele?.image || "No Image",
+            //             "customId": ele.unitCode,
+            //             "category": ele?.category,
+            //             "quantity": ele?.quantity,
+            //             "height": ele.dimention?.height ?? "N/A",
+            //             "width": ele.dimention?.width ?? "N/A",
+            //             "depth": ele.dimention?.depth ?? "N/A",
+            //         }
+            //     })
+
+            //     finalData = finalData.concat(onlyUnits)
+            // }
+
+            // return res.status(200).json({ message: "got the data", data: finalData, ok: true })
+
+
+              let existing = await OrderMaterialHistoryModel.findOne({ projectId });
+
+            if (!existing) {
+                return res.status(200).json({ message: "got the data", data: [], ok: true })
+            }
+            return res.status(200).json({ message: "got the data", data: existing, ok: true })
         }
+        else if (mode === "Manual Flow") {
+            let existing = await OrderMaterialHistoryModel.findOne({ projectId });
 
-
-        if (externalUnits && externalUnits.selectedUnits) {
-
-            let units = externalUnits.selectedUnits
-
-            let onlyUnits = units.map(ele => {
-                return {
-                    "unitName": ele.unitName,
-                    "image": ele?.image || "No Image",
-                    "customId": ele.unitCode,
-                    "category": ele?.category,
-                    "quantity": ele?.quantity,
-                    "height": ele.dimention?.height ?? "N/A",
-                    "width": ele.dimention?.width ?? "N/A",
-                    "depth": ele.dimention?.depth ?? "N/A",
-                }
-            })
-
-            finalData = finalData.concat(onlyUnits)
+            if (!existing) {
+                return res.status(200).json({ message: "got the data", data: [], ok: true })
+            }
+            return res.status(200).json({ message: "got the data", data: existing, ok: true })
         }
-
-        return res.status(200).json({ message: "got the data", data: finalData, ok: true })
     }
     catch (error) {
         console.log(error)

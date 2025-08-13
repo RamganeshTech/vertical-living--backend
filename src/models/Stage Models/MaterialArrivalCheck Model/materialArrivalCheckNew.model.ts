@@ -21,7 +21,8 @@ export interface IUploadFile {
 export interface MaterialArrivalSingle{
      image: IUploadFile | null,
     quantity: number,
-    customId: string,
+    // customId: string,
+    unitName: string,
     isVerified: boolean
 }
 
@@ -58,7 +59,8 @@ const UploadSchema = new Schema<IUploadFile>({
 const MaterialSchema = new Schema<MaterialArrivalSingle>({
     image: {type: UploadSchema, default:null},
     quantity: {type: Number, default: 0},
-    customId: {type: String, default: null},
+    // customId: {type: String, default: null},
+    unitName: {type: String, default: null},
     isVerified: {type: Boolean, default:false}
 })
 

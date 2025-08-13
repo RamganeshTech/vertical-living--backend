@@ -14,7 +14,7 @@ import MaterialRoomConfirmationModel from "../../../models/Stage Models/Material
 import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
 import { getStageSelectionUtil } from "../../Modular Units Controllers/StageSelection Controller/stageSelection.controller";
 import { IRoomItemEntry } from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomTypes";
-import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
+import { OrderMaterialHistoryModel, OrderSubItems } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 import { SelectedExternalModel } from "../../../models/externalUnit model/SelectedExternalUnit model/selectedExternalUnit.model";
 
 
@@ -83,7 +83,7 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
     const timer: any = {
         startedAt: new Date(),
         completedAt: null,
-        deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+        deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
         reminderSent: false,
     };
 
@@ -104,69 +104,72 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
 
     if (mode === "Modular Units") {
 
-        const materialArrival = await MaterialArrivalModel.findOne({ projectId })
-        const selected = await SelectedModularUnitModel.findOne({ projectId });
-        const isExternalExists = await SelectedExternalModel.findOne({ projectId })
+        // const materialArrival = await MaterialArrivalModel.findOne({ projectId })
+        // const selected = await SelectedModularUnitModel.findOne({ projectId });
+        // const isExternalExists = await SelectedExternalModel.findOne({ projectId })
 
-        
-        
-        let newItems: any[] = []
-        if (isExternalExists?.selectedUnits?.length) {
-           const externalUnits = isExternalExists.selectedUnits.map((unit: any) => ({
-               customId: unit.unitCode,
-               quantity: 0,
-               image: null,
-               isVerified: false,
-           }));
-          newItems =  newItems.concat(externalUnits)
-       }
-        if (selected?.selectedUnits?.length) {
-            const externalUnits  = selected.selectedUnits.map((unit: any) => ({
-                customId: unit.customId,
-                quantity: 0,
-                image: null,
-                isVerified: false,
-            }));
-           newItems = newItems.concat(externalUnits)
-        }
-        if (!materialArrival) {
-            // ⬇️ Create new document if not exists
-            await MaterialArrivalModel.create({
-                projectId,
-                status: "pending",
-                isEditable: true,
-                assignedTo: null,
-                materialArrivalList: newItems,
-                timer,
-                generatedLink: null,
-            });
-        } else {
-            // ⬇️ Append only new items by filtering duplicates (by customId)
-            const existingIds = new Set(
-                (materialArrival.materialArrivalList as any || []).map((item: any) => item.customId)
-            );
-            const uniqueNewItems = newItems.filter(item => !existingIds.has(item.customId));
-            if (uniqueNewItems.length > 0) {
-                (materialArrival.materialArrivalList as any).push(...uniqueNewItems);
-                await materialArrival.save();
 
-            }
 
-        }
-    }
-    else if (mode === "Manual Flow") {
+        // let newItems: any[] = []
+        // if (isExternalExists?.selectedUnits?.length) {
+        //     const externalUnits = isExternalExists.selectedUnits.map((unit: any) => ({
+        //         unitName: unit.unitCode,
+        //         quantity: 0,
+        //         image: null,
+        //         isVerified: false,
+        //     }));
+        //     newItems = newItems.concat(externalUnits)
+        // }
+        // if (selected?.selectedUnits?.length) {
+        //     const externalUnits = selected.selectedUnits.map((unit: any) => ({
+        //         unitName: unit.customId,
+        //         quantity: 0,
+        //         image: null,
+        //         isVerified: false,
+        //     }));
+        //     newItems = newItems.concat(externalUnits)
+        // }
+        // if (!materialArrival) {
+        //     // ⬇️ Create new document if not exists
+        //     await MaterialArrivalModel.create({
+        //         projectId,
+        //         status: "pending",
+        //         isEditable: true,
+        //         assignedTo: null,
+        //         materialArrivalList: newItems,
+        //         timer,
+        //         generatedLink: null,
+        //     });
+        // } else {
+        //     // ⬇️ Append only new items by filtering duplicates (by customId)
+        //     const existingIds = new Set(
+        //         (materialArrival.materialArrivalList as any || []).map((item: any) => item.unitName)
+        //     );
+        //     const uniqueNewItems = newItems.filter(item => !existingIds.has(item.unitName));
+        //     if (uniqueNewItems.length > 0) {
+        //         (materialArrival.materialArrivalList as any).push(...uniqueNewItems);
+        //         await materialArrival.save();
+
+        //     }
+
+        // }
+
+
+
         const materialArrival = await MaterialArrivalModel.findOne({ projectId });
         const orderHistory = await OrderMaterialHistoryModel.findOne({ projectId });
 
-        let newItems:any = []
+        let newItems: any[] = [];
 
-        if (orderHistory?.selectedUnits.length) {
-             newItems = orderHistory?.selectedUnits?.map((unit: any) => ({
-                customId: unit.customId,
-                quantity: 0,
-                image: null,
-                isVerified: false, // will override below if already verified
-            }));
+        if (orderHistory?.selectedUnits?.length) {
+            newItems = orderHistory.selectedUnits.flatMap((unit: any) =>
+                unit.subItems.map((subItem: OrderSubItems) => ({
+                    unitName: subItem.subItemName,
+                    quantity: 0,          // will be updated by site staff
+                    image: null,          // staff will upload
+                    isVerified: false,    // verification pending
+                }))
+            );
         }
 
 
@@ -184,14 +187,69 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
             // 🔍 Preserve already verified items
             const existingList = materialArrival.materialArrivalList || [];
             const existingMap = new Map(
-                (existingList as any)?.map((item: any) => [item.customId, item])
+                (existingList as any)?.map((item: any) => [item.unitName, item])
             );
 
             const finalItemsToAdd: any[] = [];
 
             for (const item of newItems) {
-                if (existingMap.has(item.customId)) {
-                    const existingItem: any = existingMap.get(item.customId);
+                if (existingMap.has(item.unitName)) {
+                    const existingItem: any = existingMap.get(item.unitName);
+                    if (existingItem.isVerified) {
+                        // Preserve entire object if already verified
+                        continue;
+                    }
+                } else {
+                    finalItemsToAdd.push(item);
+                }
+            }
+
+            if (finalItemsToAdd.length > 0) {
+                (materialArrival.materialArrivalList as any)?.push(...finalItemsToAdd);
+                await materialArrival.save();
+            }
+        }
+    }
+    else if (mode === "Manual Flow") {
+        const materialArrival = await MaterialArrivalModel.findOne({ projectId });
+        const orderHistory = await OrderMaterialHistoryModel.findOne({ projectId });
+
+        let newItems: any[] = [];
+
+        if (orderHistory?.selectedUnits?.length) {
+            newItems = orderHistory.selectedUnits.flatMap((unit: any) =>
+                unit.subItems.map((subItem: OrderSubItems) => ({
+                    unitName: subItem.subItemName,
+                    quantity: 0,          // will be updated by site staff
+                    image: null,          // staff will upload
+                    isVerified: false,    // verification pending
+                }))
+            );
+        }
+
+
+        if (!materialArrival) {
+            await MaterialArrivalModel.create({
+                projectId,
+                status: "pending",
+                isEditable: true,
+                assignedTo: null,
+                materialArrivalList: newItems,
+                timer,
+                generatedLink: null,
+            });
+        } else {
+            // 🔍 Preserve already verified items
+            const existingList = materialArrival.materialArrivalList || [];
+            const existingMap = new Map(
+                (existingList as any)?.map((item: any) => [item.unitName, item])
+            );
+
+            const finalItemsToAdd: any[] = [];
+
+            for (const item of newItems) {
+                if (existingMap.has(item.unitName)) {
+                    const existingItem: any = existingMap.get(item.unitName);
                     if (existingItem.isVerified) {
                         // Preserve entire object if already verified
                         continue;
@@ -232,13 +290,10 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
 
 
 
-export const updateMaterialArrivalItem = async (
-    req: Request,
-    res: Response
-): Promise<any> => {
+export const updateMaterialArrivalItem = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId, fieldId } = req.params;
-        const { quantity, } = req.body;
+        const { quantity } = req.body;
         const file = req.file as Express.Multer.File & { location: string };
 
         if (!projectId || !fieldId) {
@@ -273,7 +328,7 @@ export const updateMaterialArrivalItem = async (
         }
 
 
-        console.log("file is working", doc.materialArrivalList[index])
+        // console.log("file is working", doc.materialArrivalList[index])
 
         await doc.save();
 
@@ -302,13 +357,13 @@ export const updateMaterialArrivalItem = async (
 
 export const toggleMaterialVerification = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { projectId, fieldId } = req.params;
+        const { projectId, unitName } = req.params;
         const { isVerified } = req.body;
 
         const doc: any = await MaterialArrivalModel.findOne({ projectId });
         if (!doc) return res.status(404).json({ message: "Project not found", ok: false });
-        console.log("customId", fieldId)
-        const item = doc.materialArrivalList.find((mat: any) => mat.customId === fieldId);
+        console.log("unitName", unitName)
+        const item = doc.materialArrivalList.find((mat: any) => mat.unitName === unitName);
         if (!item) return res.status(404).json({ message: "Material not found", ok: false });
 
         item.isVerified = isVerified;
@@ -359,7 +414,7 @@ export const getAllMaterialArrivalDetails = async (req: RoleBasedRequest, res: R
 
 
         const redisMainKey = `stage:MaterialArrivalModel:${projectId}`
-        // await redisClient.del(redisMainKey);
+        await redisClient.del(redisMainKey);
 
         const cachedData = await redisClient.get(redisMainKey)
 

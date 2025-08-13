@@ -64,6 +64,20 @@ const createUnit = async (req: RoleBasedRequest, res: Response): Promise<any> =>
             return res.status(400).json({ ok: false, message: "Validation failed.", errors });
         }
 
+
+        // ✅ Check if name already exists for this unitType and organization
+        const existing = await Model.findOne({
+            organizationId,
+            name: { $regex: `^${req.body.name}$`, $options: "i" }, // case-insensitive match
+        });
+
+        if (existing) {
+            return res.status(400).json({
+                ok: false,
+                message: `A ${unitType} with the name "${req.body.name}" already exists.`,
+            });
+        }
+
         // ✅ Images handled by processUploadFiles
         let uploads: CommonUpload[] = [];
         if (req.files && Array.isArray(req.files)) {
@@ -89,7 +103,7 @@ const createUnit = async (req: RoleBasedRequest, res: Response): Promise<any> =>
 
 
         const customId = `${unitType.toLowerCase().replace(/[^a-z0-9]/g, '-')}-modular-${unitCount + 1}`;
-
+        console.log("req.body", req.body.name)
 
         const newUnit = new Model({
             ...req.body,

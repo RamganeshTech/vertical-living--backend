@@ -218,9 +218,9 @@ export const syncCostEstimation = async (
                 );
 
                 newRoom.materials.forEach((newMaterial: any) => {
-                    if (!existingMaterialKeys.has(newMaterial.key.toLowerCase())) {
-                        if (Array.isArray(existingRoom.materials)) {
-                            existingRoom.materials.push(newMaterial);
+                    if (!existingMaterialKeys.has(newMaterial?.key?.toLowerCase())) {
+                        if (Array.isArray(existingRoom?.materials)) {
+                            existingRoom?.materials?.push(newMaterial);
                         } else {
                             existingRoom.materials = [newMaterial];
                         }
@@ -398,7 +398,7 @@ const updateMaterialEstimationItem = async (req: Request, res: Response): Promis
         // 1️⃣ Find the correct room
 
 
-        console.log("wardrbe", materialKey)
+        // console.log("wardrbe", materialKey)
         const foundRoomIndex = costEstimation.materialEstimation.findIndex(
             (room) => String((room as any)._id) === String(roomId)
         );
@@ -409,7 +409,7 @@ const updateMaterialEstimationItem = async (req: Request, res: Response): Promis
 
         const foundRoom = costEstimation.materialEstimation[foundRoomIndex];
 
-        console.log("foundRoom", foundRoom)
+        // console.log("foundRoom", foundRoom)
         // 2️⃣ Find the correct material inside that room
         const foundMaterialIndex = foundRoom.materials.findIndex((m) => {
 
@@ -428,7 +428,7 @@ const updateMaterialEstimationItem = async (req: Request, res: Response): Promis
         );
 
 
-        console.log("materialindex", foundMaterialIndex)
+        // console.log("materialindex", foundMaterialIndex)
 
         if (foundMaterialIndex === -1) {
             return res.status(404).json({ ok: false, message: "Material item not found in this room" });

@@ -6,6 +6,7 @@ export interface ISelectedUnit {
   category: string; // e.g., "bedCot", "tv", etc.
   customId: string; // e.g., "bedCot", "tv", etc.
   quantity: number;
+  unitName:string;
   image: string;
   singleUnitCost: number;
 }
@@ -28,6 +29,7 @@ const selectedUnits = new Schema<ISelectedUnit>({
     type: String,
     // enum: ["bedCot", "crockery", "tv", "wardrobe", "studyTable", "kitchenCabinet", "showcase", "falseCeiling", "shoeRack"],
   },
+  unitName:{type:String, default:null},
   image: { type: String, default: null },
   customId: { type: String, default: null },
   quantity: { type: Number, default: 1 },

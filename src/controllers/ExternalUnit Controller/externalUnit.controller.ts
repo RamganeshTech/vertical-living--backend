@@ -35,6 +35,18 @@ export const createWardrobeUnit = async (req: RoleBasedRequest, res: Response): 
 
         // Generate next available unitCode based on existing items in this category
         const existingCodes = await WardrobeExternalModel.find({ category }).select("unitCode");
+
+        const existing = await WardrobeExternalModel.findOne({
+            unitName: { $regex: `^${unitName}$`, $options: "i" }, // case-insensitive match
+        });
+
+        if (existing) {
+            return res.status(400).json({
+                ok: false,
+                message: `A External Unit with "${unitName}" already exists.`,
+            });
+        }
+
         const codeNumbers = existingCodes
             ?.map((doc) => {
                 const match = doc.unitCode?.match(new RegExp(`^${category}-(\\d+)$`)); // trying to extract the number part

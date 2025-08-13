@@ -29,7 +29,7 @@ const materialArrivalRoutes = express.Router();
 // materialArrivalRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderingMaterialModel), notToUpdateIfStageCompleted(MaterialArrivalModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel),materialArrivalCompletionStatus)
 
 
-materialArrivalRoutes.put('/updateverification/:projectId/:fieldId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderMaterialHistoryModel),notToUpdateIfStageCompleted(MaterialArrivalModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel), toggleMaterialVerification)
+materialArrivalRoutes.put('/updateverification/:projectId/:unitName', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderMaterialHistoryModel),notToUpdateIfStageCompleted(MaterialArrivalModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel), toggleMaterialVerification)
 materialArrivalRoutes.put('/updateImage/:projectId/:fieldId',checkPreviousStageCompleted(OrderMaterialHistoryModel), notToUpdateIfStageCompleted(MaterialArrivalModel),  imageUploadToS3.single("upload"), processUploadFiles, updateMaterialArrivalItem)
 
 materialArrivalRoutes.put('/verifyall/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderMaterialHistoryModel),notToUpdateIfStageCompleted(MaterialArrivalModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel), bulkToggleAllVerification)

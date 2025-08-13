@@ -14,7 +14,7 @@ import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 // ADD A UNIT
 export const addSelectedUnit = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
-    const { projectId, unitId, category, quantity, singleUnitCost, image, customId } = req.body;
+    const { projectId, unitId, category, quantity, singleUnitCost, image, unitName, customId } = req.body;
 
     const singleUnitTotal = singleUnitCost * quantity;
 
@@ -24,7 +24,7 @@ export const addSelectedUnit = async (req: RoleBasedRequest, res: Response): Pro
       // First entry for this project
       record = await SelectedModularUnitModel.create({
         projectId,
-        selectedUnits: [{ unitId, category, quantity, singleUnitCost, image, customId }],
+        selectedUnits: [{ unitId, category, quantity, singleUnitCost, unitName, image, customId }],
         totalCost: singleUnitTotal,
       });
     }
@@ -32,7 +32,7 @@ export const addSelectedUnit = async (req: RoleBasedRequest, res: Response): Pro
       const unit = record.selectedUnits.find((unit) => unit.unitId.toString() === unitId.toString());
 
       if (!unit) {
-        record.selectedUnits.push({ unitId, category, quantity, singleUnitCost, image, customId });
+        record.selectedUnits.push({ unitId, category, quantity, singleUnitCost, unitName, image, customId });
         record.totalCost = record.selectedUnits.reduce(
           (acc, unit) => acc + unit.singleUnitCost * unit.quantity,
           0
