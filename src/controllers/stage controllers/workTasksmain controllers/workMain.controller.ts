@@ -217,9 +217,9 @@ const mdApprovalAction = async (req: Request, res: Response): Promise<any> => {
       return res.status(404).json({ ok: false, message: "DailySchedule or WorkSchedule not found." });
     }
 
-    if (daily.status !== "completed" || work.status !== "completed") {
-      return res.status(400).json({ ok: false, message: "Cannot approve/reject. Sub stages are not completed yet." });
-    }
+    // if (daily.status !== "completed" || work.status !== "completed") {
+    //   return res.status(400).json({ ok: false, message: "Cannot approve/reject. Sub stages are not completed yet." });
+    // }
 
     if (action === "approved") {
       // ✅ Approve: update mdApproval & main stage status
@@ -231,7 +231,7 @@ const mdApprovalAction = async (req: Request, res: Response): Promise<any> => {
       mainStage.mdApproval.remarks = remarks || "";
 
       // Reset sub-model statuses to pending
-      daily.status = "pending";
+      // daily.status = "pending";
       work.status = "pending";
 
       await daily.save();
@@ -301,9 +301,9 @@ const workScheduleCompletionStatus = async (req: Request, res: Response): Promis
 
     if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
-    if(form.mdApproval.status !== "approved"){
-      return res.status(400).json({message:"MD has not approved yet, please update MD approval as approved" , ok:false})
-    }
+    // if(form.mdApproval.status !== "approved"){
+    //   return res.status(400).json({message:"MD has not approved yet, please update MD approval as approved" , ok:false})
+    // }
 
     form.status = "completed";
     form.isEditable = false

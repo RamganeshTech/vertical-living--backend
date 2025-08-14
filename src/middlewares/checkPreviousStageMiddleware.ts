@@ -44,7 +44,7 @@ export const checkPreviousStageCompleted = (previousStageModel: any): any => {
 
         // Store in Redis for next time (e.g. 15 min TTL)
        if(previousStageModel.modelName !== "CostEstimation" || previousStageModel.modelName !== "PaymentConfirmationModel"){
-         await redisClient.set(redisKey, JSON.stringify(doc.toObject()), { EX: 60 * 15 });
+         await redisClient.set(redisKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 });
        }
         next();
     };

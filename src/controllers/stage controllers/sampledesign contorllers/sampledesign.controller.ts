@@ -11,6 +11,7 @@ import { updateProjectCompletionPercentage } from "../../../utils/updateProjectC
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 import { DocUpload, RoleBasedRequest } from "../../../types/types";
 import { syncShortList } from "./shortList.controller";
+import { syncWorkSchedule } from "../workTasksmain controllers/workMain.controller";
 
 
 
@@ -45,8 +46,8 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
       additionalNotes: null,
     })
 
-          await syncShortList(projectId)
-    
+    await syncShortList(projectId)
+
   } else {
     // console.log("coommign to else condition")
     design.status = "pending";
@@ -168,7 +169,7 @@ const getFilesFromRoom = async (req: Request, res: Response): Promise<any> => {
     if (!projectId) {
       return res.status(400).json({ message: "projectId is mandatory", ok: false })
     }
-      // await syncShortList("6881a9134a56bad430507bd1")
+    // await syncShortList("6881a9134a56bad430507bd1")
 
 
     const redisMainKey = `stage:SampleDesignModel:${projectId}`
@@ -285,6 +286,7 @@ const sampleDesignCompletionStatus = async (req: Request, res: Response): Promis
     if (design.status === "completed") {
       await syncTechnicalConsultantStage(projectId)
 
+      await syncWorkSchedule(projectId)
 
       // const uploadedFiles: DocUpload[] = design.rooms.flatMap((room) =>
       //   room.files.map((file: any) => ({

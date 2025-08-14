@@ -8,52 +8,145 @@ import { updateProjectCompletionPercentage } from "../../../utils/updateProjectC
 import { DocUpload } from "../../../types/types";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 import { validRoomKeys } from "../../../constants/BEconstants";
+import { DailyScheduleModel } from "../../../models/Stage Models/WorkTask Model/dailySchedule.model";
+import mongoose from "mongoose"
+
+// export const syncInstallationWork = async (projectId: string) => {
+
+//   const existing = await InstallationModel.findOne({ projectId });
+
+//     const timer = {
+//       startedAt: new Date(),
+//       completedAt: null,
+//       deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+//       reminderSent: false,
+//     };
+//   if (!existing) {
+
+
+
+//     await InstallationModel.create({
+//       projectId,
+//       isEditable: true,
+//       status: "pending",
+//       timer,
+//       assignedTo: null,
+
+//       LivingRoom: [],
+//       Bedroom: [],
+//       Kitchen: [],
+//       DiningRoom: [],
+//       Balcony: [],
+//       FoyerArea: [],
+//       Terrace: [],
+//       StudyRoom: [],
+//       CarParking: [],
+//       Garden: [],
+//       StorageRoom: [],
+//       EntertainmentRoom: [],
+//       HomeGym: [],
+//     })
+//   }
+//   else {
+//     existing.timer =timer
+
+//       await existing.save()
+//   }
+//   const redisKey = `stage:InstallationModel:${projectId}`;
+//   await redisClient.del(redisKey);
+// }
 
 
 export const syncInstallationWork = async (projectId: string) => {
 
+  const dailySchedule = await DailyScheduleModel.findOne({ projectId });
+
+  if (!dailySchedule) {
+    console.log("work schedule is not created")
+    return
+  }
+
+  // 2. Group uploads by taskName
+  const taskUploadsMap: Record<string, { url: string }[]> = {};
+
+  dailySchedule.tasks.forEach(task => {
+    const allImages: { url: string }[] = [];
+
+    task?.dates?.forEach(dateEntry => {
+      dateEntry?.uploads?.forEach(upload => {
+        if (upload.fileType === "image" && upload?.url) {
+          allImages.push({ url: upload?.url });
+        }
+      });
+    });
+
+    if (!taskUploadsMap[task.taskName]) {
+      taskUploadsMap[task.taskName] = [];
+    }
+    taskUploadsMap[task.taskName].push(...allImages);
+  });
+
+
   const existing = await InstallationModel.findOne({ projectId });
 
-    const timer = {
-      startedAt: new Date(),
-      completedAt: null,
-      deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-      reminderSent: false,
-    };
+
+  const timer = {
+    startedAt: new Date(),
+    completedAt: null,
+    deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+    reminderSent: false,
+  };
+
   if (!existing) {
-  
-
-
-    await InstallationModel.create({
+    // Create fresh Installation document
+    let installationDoc = new InstallationModel({
       projectId,
       isEditable: true,
       status: "pending",
       timer,
       assignedTo: null,
 
-      LivingRoom: [],
-      Bedroom: [],
-      Kitchen: [],
-      DiningRoom: [],
-      Balcony: [],
-      FoyerArea: [],
-      Terrace: [],
-      StudyRoom: [],
-      CarParking: [],
-      Garden: [],
-      StorageRoom: [],
-      EntertainmentRoom: [],
-      HomeGym: [],
-    })
-  }
-  else {
-    existing.timer =timer
+      tasks: Object.entries(taskUploadsMap).map(([workName, images]) => ({
+        workName,
+        images,
+        status: "pending"
+      }))
+    });
 
-      await existing.save()
+    await installationDoc.save()
+  } else {
+    // Update existing Installation document
+    Object.entries(taskUploadsMap).forEach(([workName, images]) => {
+      let existingTask = existing.tasks.find(t => t.workName === workName);
+      if (!existingTask) {
+        // Add new task if it doesn't exist
+        existing.tasks.push({
+          workName,
+          images,
+          status: "pending"
+        });
+      } else {
+        // Merge new images (avoid duplicates)
+        const existingUrls = new Set(existingTask.images.map(img => img.url));
+        images.forEach(img => {
+          if (!existingUrls.has(img.url)) {
+            existingTask.images.push(img);
+          }
+        });
+      }
+    });
+
+    // 4. Save to DB
+    await existing.save();
   }
+
+
   const redisKey = `stage:InstallationModel:${projectId}`;
   await redisClient.del(redisKey);
 }
+
+
+
 
 export const validRooms = [
   "LivingRoom",
@@ -72,165 +165,201 @@ export const validRooms = [
 ];
 
 
-const createInstallationItem = async (req: Request, res: Response): Promise<any> => {
+
+export const updateInstallationTaskStatus = async (req: Request, res: Response): Promise<any> => {
   try {
-
-    const { projectId, roomName } = req.params
-
-    const { workName, descritpion, completedDate } = req.body;
-
-    if (!projectId || !roomName || !workName) {
-      return res.status(400).json({ ok: false, message: "projectId, roomName, workName are required." });
-    }
-
-    if (!validRooms.includes(roomName)) {
-      return res.status(400).json({ ok: false, message: "Invalid room name." });
-    }
-
-    let validatedUpload = null;
-    if (req.file) {
-      const { mimetype, location, originalname } = req.file as any;
-      if (!mimetype.startsWith("image/")) {
-        return res.status(400).json({ ok: false, message: "Only image uploads are allowed." });
-      }
-      validatedUpload = {
-        type: "image",
-        url: location,
-        originalName: originalname,
-        uploadedAt: new Date(),
-      };
-    }
-
-    const newItem = {
-      workName,
-      descritpion: descritpion || "",
-      completedDate: completedDate ? new Date(completedDate) : null,
-      upload: validatedUpload,
-    };
-
-    const doc: any = await InstallationModel.findOneAndUpdate(
-      { projectId },
-      { $push: { [roomName]: newItem } },
+    const { projectId, taskId } = req.params;
+    const { status } = req.body;
+    console.log("tasks id", taskId)
+    console.log("projectId", projectId)
+    // Find and update the task
+    const updatedSchedule = await InstallationModel.findOneAndUpdate(
+      {
+        projectId: new mongoose.Types.ObjectId(projectId),
+        "tasks._id": new mongoose.Types.ObjectId(taskId)
+      },
+      { $set: { "tasks.$.status": status } },
       { new: true }
     );
 
-    if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
-
-    // const redisMainKey = `stage:InstallationModel:${projectId}`
-    const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
-
-    const updatedRoom = doc[roomName]
-    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
-    await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
-
-    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
-
-    return res.json({ ok: true, data: doc[roomName] });
-  } catch (err: any) {
-    console.error(err);
-    return res.status(500).json({ ok: false, message: err.message });
-  }
-};
-
-
-const editInstallationItem = async (req: Request, res: Response): Promise<any> => {
-  try {
-
-
-    const { projectId, roomName } = req.params
-
-
-    const { itemId, workName, descritpion, completedDate, } = req.body;
-
-    if (!projectId || !roomName || !itemId) {
-      return res.status(400).json({ ok: false, message: "projectId, roomName, and itemId are required." });
+    if (!updatedSchedule) {
+      return res.status(404).json({ message: "Task not found", ok: false });
     }
 
-    if (!validRooms.includes(roomName)) {
-      return res.status(400).json({ ok: false, message: "Invalid room name." });
-    }
-
-    const doc: any = await InstallationModel.findOne({ projectId });
-    if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
-
-    const item = doc[roomName].id(itemId);
-    if (!item) return res.status(404).json({ ok: false, message: "Item not found." });
-
-    if (workName) item.workName = workName;
-    if (descritpion !== undefined) item.descritpion = descritpion;
-    if (completedDate) item.completedDate = new Date(completedDate);
-
-    if (req.file) {
-      const { mimetype, location, originalname } = req.file as any;
-
-      if (!mimetype.startsWith("image/")) {
-        return res.status(400).json({ ok: false, message: "Only image uploads are allowed." });
-      }
-
-      item.upload = {
-        type: "image",
-        url: location,
-        originalName: originalname,
-        uploadedAt: new Date(),
-      };
-    }
-
-    await doc.save();
+    await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: updatedSchedule })
 
 
-    // const redisMainKey = `stage:InstallationModel:${projectId}`
-    const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
-
-    const updatedRoom = doc[roomName]
-    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
-    await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
-
-    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
-
-    return res.json({ ok: true, data: item, message: "updated successull" });
+    res.status(200).json({
+      message: "Task status updated successfully",
+      updatedSchedule,
+      ok:true
+    });
   } catch (error) {
-    console.error("Error editing installation item:", error);
-    return res.status(500).json({ ok: false, message: "Server error." });
+    console.error("Error updating task status:", error);
+    res.status(500).json({ message: "Internal server error", ok: false });
   }
 };
 
-const deleteInstallationItem = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { roomName, itemId } = req.body;
-    const { projectId } = req.params
-    if (!projectId || !roomName || !itemId) {
-      return res.status(400).json({ ok: false, message: "projectId, roomName, and itemId are required." });
-    }
 
-    if (!validRooms.includes(roomName)) {
-      return res.status(400).json({ ok: false, message: "Invalid room name." });
-    }
+// const createInstallationItem = async (req: Request, res: Response): Promise<any> => {
+//   try {
 
-    const doc = await InstallationModel.findOneAndUpdate(
-      { projectId },
-      { $pull: { [roomName]: { _id: itemId } } },
-      { new: true }
-    );
+//     const { projectId, roomName } = req.params
 
-    if (!doc) {
-      return res.status(404).json({ ok: false, message: "Installation record not found." });
-    }
+//     const { workName, descritpion, completedDate } = req.body;
 
-    // const redisMainKey = `stage:InstallationModel:${projectId}`
-    const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
+//     if (!projectId || !roomName || !workName) {
+//       return res.status(400).json({ ok: false, message: "projectId, roomName, workName are required." });
+//     }
 
-    const updatedRoom = (doc as any)[roomName]
-    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
-    await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
+//     if (!validRooms.includes(roomName)) {
+//       return res.status(400).json({ ok: false, message: "Invalid room name." });
+//     }
 
-    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+//     let validatedUpload = null;
+//     if (req.file) {
+//       const { mimetype, location, originalname } = req.file as any;
+//       if (!mimetype.startsWith("image/")) {
+//         return res.status(400).json({ ok: false, message: "Only image uploads are allowed." });
+//       }
+//       validatedUpload = {
+//         type: "image",
+//         url: location,
+//         originalName: originalname,
+//         uploadedAt: new Date(),
+//       };
+//     }
 
-    return res.json({ ok: true, success: true, message: "Item deleted successfully." });
-  } catch (error) {
-    console.error("Error deleting installation item:", error);
-    return res.status(500).json({ ok: false, message: "Server error." });
-  }
-};
+//     const newItem = {
+//       workName,
+//       descritpion: descritpion || "",
+//       completedDate: completedDate ? new Date(completedDate) : null,
+//       upload: validatedUpload,
+//     };
+
+//     const doc: any = await InstallationModel.findOneAndUpdate(
+//       { projectId },
+//       { $push: { [roomName]: newItem } },
+//       { new: true }
+//     );
+
+//     if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
+
+//     // const redisMainKey = `stage:InstallationModel:${projectId}`
+//     const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
+
+//     const updatedRoom = doc[roomName]
+//     // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+//     await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
+
+//     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+
+//     return res.json({ ok: true, data: doc[roomName] });
+//   } catch (err: any) {
+//     console.error(err);
+//     return res.status(500).json({ ok: false, message: err.message });
+//   }
+// };
+
+
+// const editInstallationItem = async (req: Request, res: Response): Promise<any> => {
+//   try {
+
+
+//     const { projectId, roomName } = req.params
+
+
+//     const { itemId, workName, descritpion, completedDate, } = req.body;
+
+//     if (!projectId || !roomName || !itemId) {
+//       return res.status(400).json({ ok: false, message: "projectId, roomName, and itemId are required." });
+//     }
+
+//     if (!validRooms.includes(roomName)) {
+//       return res.status(400).json({ ok: false, message: "Invalid room name." });
+//     }
+
+//     const doc: any = await InstallationModel.findOne({ projectId });
+//     if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
+
+//     const item = doc[roomName].id(itemId);
+//     if (!item) return res.status(404).json({ ok: false, message: "Item not found." });
+
+//     if (workName) item.workName = workName;
+//     if (descritpion !== undefined) item.descritpion = descritpion;
+//     if (completedDate) item.completedDate = new Date(completedDate);
+
+//     if (req.file) {
+//       const { mimetype, location, originalname } = req.file as any;
+
+//       if (!mimetype.startsWith("image/")) {
+//         return res.status(400).json({ ok: false, message: "Only image uploads are allowed." });
+//       }
+
+//       item.upload = {
+//         type: "image",
+//         url: location,
+//         originalName: originalname,
+//         uploadedAt: new Date(),
+//       };
+//     }
+
+//     await doc.save();
+
+
+//     // const redisMainKey = `stage:InstallationModel:${projectId}`
+//     const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
+
+//     const updatedRoom = doc[roomName]
+//     // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+//     await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
+
+//     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+
+//     return res.json({ ok: true, data: item, message: "updated successull" });
+//   } catch (error) {
+//     console.error("Error editing installation item:", error);
+//     return res.status(500).json({ ok: false, message: "Server error." });
+//   }
+// };
+
+// const deleteInstallationItem = async (req: Request, res: Response): Promise<any> => {
+//   try {
+//     const { roomName, itemId } = req.body;
+//     const { projectId } = req.params
+//     if (!projectId || !roomName || !itemId) {
+//       return res.status(400).json({ ok: false, message: "projectId, roomName, and itemId are required." });
+//     }
+
+//     if (!validRooms.includes(roomName)) {
+//       return res.status(400).json({ ok: false, message: "Invalid room name." });
+//     }
+
+//     const doc = await InstallationModel.findOneAndUpdate(
+//       { projectId },
+//       { $pull: { [roomName]: { _id: itemId } } },
+//       { new: true }
+//     );
+
+//     if (!doc) {
+//       return res.status(404).json({ ok: false, message: "Installation record not found." });
+//     }
+
+//     // const redisMainKey = `stage:InstallationModel:${projectId}`
+//     const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
+
+//     const updatedRoom = (doc as any)[roomName]
+//     // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+//     await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
+
+//     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+
+//     return res.json({ ok: true, success: true, message: "Item deleted successfully." });
+//   } catch (error) {
+//     console.error("Error deleting installation item:", error);
+//     return res.status(500).json({ ok: false, message: "Server error." });
+//   }
+// };
 
 const getInstallationDetails = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -257,35 +386,35 @@ const getInstallationDetails = async (req: Request, res: Response): Promise<any>
   }
 };
 
-const getInstallationRoomDetails = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { projectId, roomName } = req.params;
+// const getInstallationRoomDetails = async (req: Request, res: Response): Promise<any> => {
+//   try {
+//     const { projectId, roomName } = req.params;
 
-    if (!validRooms.includes(roomName)) {
-      return res.status(400).json({ ok: false, message: "Invalid room name." });
-    }
+//     if (!validRooms.includes(roomName)) {
+//       return res.status(400).json({ ok: false, message: "Invalid room name." });
+//     }
 
-    const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
+//     const redisRoomKey = `stage:InstallationModel:${projectId}:room:${roomName}`
 
-    const cachedData = await redisClient.get(redisRoomKey)
+//     const cachedData = await redisClient.get(redisRoomKey)
 
-    if (cachedData) {
-      return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
-    }
-
-
-    const doc: any = await InstallationModel.findOne({ projectId });
-    if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
-
-    await redisClient.set(redisRoomKey, JSON.stringify(doc[roomName]), { EX: 60 * 10 })
+//     if (cachedData) {
+//       return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+//     }
 
 
-    return res.json({ ok: true, success: true, data: doc[roomName] });
-  } catch (error) {
-    console.error("Error fetching room details:", error);
-    return res.status(500).json({ ok: false, message: "Server error." });
-  }
-};
+//     const doc: any = await InstallationModel.findOne({ projectId });
+//     if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
+
+//     await redisClient.set(redisRoomKey, JSON.stringify(doc[roomName]), { EX: 60 * 10 })
+
+
+//     return res.json({ ok: true, success: true, data: doc[roomName] });
+//   } catch (error) {
+//     console.error("Error fetching room details:", error);
+//     return res.status(500).json({ ok: false, message: "Server error." });
+//   }
+// };
 
 
 
@@ -317,7 +446,7 @@ const installationCompletionStatus = async (req: Request, res: Response): Promis
       await syncQualityCheck(projectId)
 
       // let uploadedFiles: DocUpload[] = [];
-     
+
 
 
       // const roomKeys = validRoomKeys.filter((key) => {
@@ -328,7 +457,7 @@ const installationCompletionStatus = async (req: Request, res: Response): Promis
       //   );
       // });
 
-     
+
 
       // console.log("roomKeys", roomKeys)
       // for (const room of roomKeys) {
@@ -369,11 +498,11 @@ const installationCompletionStatus = async (req: Request, res: Response): Promis
 };
 
 export {
-  createInstallationItem,
-  editInstallationItem,
-  deleteInstallationItem,
+  // createInstallationItem,
+  // editInstallationItem,
+  // deleteInstallationItem,
   getInstallationDetails,
-  getInstallationRoomDetails,
+  // getInstallationRoomDetails,
 
 
   setInstallationStageDeadline,

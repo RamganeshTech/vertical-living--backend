@@ -33,7 +33,7 @@ resetRouter.put('/stage6/costestimation/:projectId', multiRoleAuthMiddleware("ow
 resetRouter.put('/stage7/paymentconfirmation/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(CostEstimationModel),  resetStage7)
 resetRouter.put('/stage8/orderingmaterial/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(PaymentConfirmationModel),  resetStage8)
 resetRouter.put('/stage9/materialarrivalcheck/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(OrderMaterialHistoryModel),  resetStage9)
-resetRouter.put('/stage10/worktasks/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(MaterialArrivalModel),  resetStage10)
+// resetRouter.put('/stage10/worktasks/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(MaterialArrivalModel),  resetStage10)
 resetRouter.put('/stage11/installation/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(WorkMainStageScheduleModel),  resetStage11)
 resetRouter.put('/stage12/qualitycheck/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(InstallationModel),  resetStage12)
 resetRouter.put('/stage13/cleaning/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(QualityCheckupModel),  resetStage13)

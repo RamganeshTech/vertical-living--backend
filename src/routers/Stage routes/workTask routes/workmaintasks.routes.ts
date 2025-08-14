@@ -1,6 +1,15 @@
 import { Router } from "express";
 // import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader"; // your S3 uploader
-import { addDailyTask, deleteDailyTask, updateDailyScheduleStatus, updateDailyTask } from "../../../controllers/stage controllers/workTasksmain controllers/dailyschedule.controller";
+import { 
+  createWork,
+  deleteDailyScheduleImage,
+  deleteWork,
+  // addDailyTask, deleteDailyTask,
+   updateDailyScheduleStatus,
+   updateWork,
+   uploadDailyScheduleImages,
+    // updateDailyTask
+   } from "../../../controllers/stage controllers/workTasksmain controllers/dailyschedule.controller";
 import { addWorkPlan, deleteWorkPlan, updateWorkPlan, updateWorkScheduleStatus } from "../../../controllers/stage controllers/workTasksmain controllers/workSchedule.contorller";
 import { multiRoleAuthMiddleware } from './../../../middlewares/multiRoleAuthMiddleware';
 import { getAllDailySchedules, getAllWorkMainStageDetails, getAllWorkSchedules, getProjectWorkers, mdApprovalAction, setWorkScheduleStageDeadline, workScheduleCompletionStatus } from "../../../controllers/stage controllers/workTasksmain controllers/workMain.controller";
@@ -17,39 +26,39 @@ const workTaskRoutes = Router();
 // getting the detials of main and sub models
 workTaskRoutes.get("/getworktaksmain/:projectId",
   multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "staff"),
-  checkPreviousStageCompleted(MaterialArrivalModel),
+  // checkPreviousStageCompleted(MaterialArrivalModel),
   getAllWorkMainStageDetails
 );
 
 workTaskRoutes.get("/getworkschedule/:projectId",
   multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "staff"),
-  checkPreviousStageCompleted(MaterialArrivalModel),
+  // checkPreviousStageCompleted(MaterialArrivalModel),
 
   getAllWorkSchedules
 );
 
 workTaskRoutes.get("/getdailyschedule/:projectId",
   multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "staff"),
-  checkPreviousStageCompleted(MaterialArrivalModel),
+  // checkPreviousStageCompleted(MaterialArrivalModel),
   getAllDailySchedules
 );
 
 // creating the tasks inside the sub models
-workTaskRoutes.post("/:projectId/daily-task/:dailyScheduleId",
-  multiRoleAuthMiddleware("owner", "staff", "CTO"),
-  checkPreviousStageCompleted(MaterialArrivalModel),
-  notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
-checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
-  imageUploadToS3.single("file"), // single file!
-  processUploadFiles,
-  addDailyTask
-);
+// workTaskRoutes.post("/:projectId/daily-task/:dailyScheduleId",
+//   multiRoleAuthMiddleware("owner", "staff", "CTO"),
+//   // checkPreviousStageCompleted(MaterialArrivalModel),
+//   // notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
+//   checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
+//   imageUploadToS3.single("file"), // single file!
+//   processUploadFiles,
+//   addDailyTask
+// );
 
 workTaskRoutes.post("/:projectId/work-plan/:workScheduleId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
-  checkPreviousStageCompleted(MaterialArrivalModel),
-  notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
-checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
+  // checkPreviousStageCompleted(MaterialArrivalModel),
+  // notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
+  checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
 
   imageUploadToS3.single("file"),
   processUploadFiles,
@@ -58,24 +67,24 @@ checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
 );
 
 // updating the single item
-workTaskRoutes.put(
-  "/:projectId/daily-task/:dailyScheduleId/:taskId",
-  multiRoleAuthMiddleware("owner", "staff", "CTO"),
-  checkPreviousStageCompleted(MaterialArrivalModel),
-  notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
-checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
+// workTaskRoutes.put(
+//   "/:projectId/daily-task/:dailyScheduleId/:taskId",
+//   multiRoleAuthMiddleware("owner", "staff", "CTO"),
+//   // checkPreviousStageCompleted(MaterialArrivalModel),
+//   // notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
+//   checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
 
-  imageUploadToS3.single("file"),
-  processUploadFiles,
-  updateDailyTask
-);
+//   imageUploadToS3.single("file"),
+//   processUploadFiles,
+//   updateDailyTask
+// );
 
 workTaskRoutes.put(
   "/:projectId/work-plan/:workScheduleId/:planId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
-  checkPreviousStageCompleted(MaterialArrivalModel),
-  notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
-checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
+  // checkPreviousStageCompleted(MaterialArrivalModel),
+  // notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
+  checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
 
   imageUploadToS3.single("file"),
   processUploadFiles,
@@ -85,56 +94,77 @@ checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
 
 // deleteing the single item
 
-workTaskRoutes.delete(
-  "/:projectId/daily-task/:dailyScheduleId/:taskId",
-  multiRoleAuthMiddleware("owner", "staff", "CTO"),
-  checkPreviousStageCompleted(MaterialArrivalModel),
-  notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
-checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
+// workTaskRoutes.delete(
+//   "/:projectId/daily-task/:dailyScheduleId/:taskId",
+//   multiRoleAuthMiddleware("owner", "staff", "CTO"),
+//   // checkPreviousStageCompleted(MaterialArrivalModel),
+//   // notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
+//   checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
 
-  deleteDailyTask
-);
+//   deleteDailyTask
+// );
 
 workTaskRoutes.delete(
   "/:projectId/work-plan/:workScheduleId/:planId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
-  checkPreviousStageCompleted(MaterialArrivalModel),
-  notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
-checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
+  // checkPreviousStageCompleted(MaterialArrivalModel),
+  // notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
+  checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
 
   deleteWorkPlan
 );
 
 // status of three stages
+// workTaskRoutes.post(
+//   "/:projectId/md-approval/:mainStageId",
+//   multiRoleAuthMiddleware("owner"), // your MD role!
+//   // checkPreviousStageCompleted(MaterialArrivalModel),
+//   // notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
+
+//   mdApprovalAction
+// );
+
+
+// workTaskRoutes.patch(
+//   "/:projectId/daily-schedule/:dailyScheduleId/status",
+//   multiRoleAuthMiddleware("owner", "staff", "CTO"),
+//   checkPreviousStageCompleted(MaterialArrivalModel),
+//   // notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
+//   // checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
+
+//   updateDailyScheduleStatus
+// );
+
+// workTaskRoutes.patch(
+//   "/:projectId/work-schedule/:workScheduleId/status",
+//   multiRoleAuthMiddleware("owner", "staff", "CTO"),
+//   checkPreviousStageCompleted(MaterialArrivalModel),
+//   // notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
+//   // checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
+
+//   updateWorkScheduleStatus
+// );
+
+
+workTaskRoutes.post("/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO"), createWork);
+
+workTaskRoutes.put("/:projectId/update/:taskId", multiRoleAuthMiddleware("owner", "staff", "CTO"), updateWork);
+
+workTaskRoutes.delete("/:projectId/:taskId", multiRoleAuthMiddleware("owner", "staff", "CTO"), deleteWork);
+
 workTaskRoutes.post(
-  "/:projectId/md-approval/:mainStageId",
-  multiRoleAuthMiddleware("owner"), // your MD role!
-  checkPreviousStageCompleted(MaterialArrivalModel),
-  notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
-
-  mdApprovalAction
+  "/:projectId/:taskId/uploads/:dateId",
+  imageUploadToS3.array("files"), // already filters multiple
+  processUploadFiles,
+  uploadDailyScheduleImages
 );
 
 
-workTaskRoutes.patch(
-  "/:projectId/daily-schedule/:dailyScheduleId/status",
-  multiRoleAuthMiddleware("owner", "staff", "CTO"),
-  checkPreviousStageCompleted(MaterialArrivalModel),
-  notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
-checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
-
-  updateDailyScheduleStatus
+workTaskRoutes.delete(
+  "/:projectId/:taskId/uploads/:dateId/:imageId",
+  deleteDailyScheduleImage
 );
 
-workTaskRoutes.patch(
-  "/:projectId/work-schedule/:workScheduleId/status",
-  multiRoleAuthMiddleware("owner", "staff", "CTO"),
-  checkPreviousStageCompleted(MaterialArrivalModel),
-  notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
-checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
-
-  updateWorkScheduleStatus
-);
 
 // get workers based on project
 workTaskRoutes.get("/:projectId/getworkers",
@@ -143,9 +173,15 @@ workTaskRoutes.get("/:projectId/getworkers",
 
 
 
-  // COMMON TASKS
+// COMMON TASKS
 
-  workTaskRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),   checkPreviousStageCompleted(MaterialArrivalModel), notToUpdateIfStageCompleted(WorkMainStageScheduleModel), setWorkScheduleStageDeadline)
-  workTaskRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),   checkPreviousStageCompleted(MaterialArrivalModel), notToUpdateIfStageCompleted(WorkMainStageScheduleModel), workScheduleCompletionStatus)
-  
+workTaskRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),
+//  checkPreviousStageCompleted(MaterialArrivalModel), notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
+  setWorkScheduleStageDeadline)
+
+workTaskRoutes.put('/completionstatus/:projectId', 
+  // multiRoleAuthMiddleware("owner", "staff", "CTO",),
+//  checkPreviousStageCompleted(MaterialArrivalModel), notToUpdateIfStageCompleted(WorkMainStageScheduleModel), 
+ workScheduleCompletionStatus)
+
 export default workTaskRoutes;

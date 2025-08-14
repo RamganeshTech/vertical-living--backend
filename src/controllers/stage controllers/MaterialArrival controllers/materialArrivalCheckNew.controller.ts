@@ -16,6 +16,7 @@ import { getStageSelectionUtil } from "../../Modular Units Controllers/StageSele
 import { IRoomItemEntry } from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomTypes";
 import { OrderMaterialHistoryModel, OrderSubItems } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 import { SelectedExternalModel } from "../../../models/externalUnit model/SelectedExternalUnit model/selectedExternalUnit.model";
+import { syncInstallationWork } from "../installation controllers/installation.controller";
 
 
 
@@ -511,7 +512,8 @@ const materialArrivalCompletionStatus = async (req: Request, res: Response): Pro
         await form.save();
 
         if (form.status === "completed") {
-            await syncWorkSchedule(projectId)
+            // await syncInstallationWork(projectId)
+            
 
             // let uploadedFiles: DocUpload[] = [];
 

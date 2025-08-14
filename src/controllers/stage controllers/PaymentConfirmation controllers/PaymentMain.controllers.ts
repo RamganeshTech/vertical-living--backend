@@ -77,7 +77,7 @@ export const syncPaymentConfirationModel = async (projectId: string | Types.Obje
     deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
     reminderSent: false,
   };
-console.log("exisitn payment", existing)
+// console.log("exisitn payment", existing)
   if (!existing) {
     await PaymentConfirmationModel.create({
       projectId: projectId,

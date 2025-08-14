@@ -23,7 +23,7 @@ const workerSchema = new Schema<IWorker>({
     phoneNo: { type: String },
     password: { type: String, required: true },
     role: { type: String, required: true },
-    specificRole: { type: String, required: true },
+    specificRole: { type: String,  },
     projectId: { type: [Schema.Types.ObjectId], ref: "ProjectModel", required: true, default: [] },
     organizationId: { type: [Schema.Types.ObjectId], ref: "OrganizationModel", required: true, default: [] },
     invitedBy: {
