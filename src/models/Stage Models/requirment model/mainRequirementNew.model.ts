@@ -33,8 +33,9 @@ export interface IMainRequirementFormSchema extends Document {
     uploads: Iupload[]
 }
 
-interface Items {
-    [key: string]: string
+export interface Items {
+    itemName: string,
+    quantity:number
 }
 
 export interface RequirementRooms {
@@ -51,7 +52,7 @@ export const uploadSchema = new Schema({
     uploadedAt: { type: Date, default: new Date() }
 }, { _id: true });
 
-export const ItemSchema = new Schema({
+export const ItemSchema = new Schema<Items>({
     itemName: { type: String, default: null },
     quantity: { type: Number, default: 0 }
 }, { _id: true });

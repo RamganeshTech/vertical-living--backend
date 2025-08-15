@@ -224,12 +224,16 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
 
 
         rooms.forEach(room => {
-            const materialsCostMap = costMap[room.name] || {};
-
+            // let materialsCostMap: any;
+            // if (Array.isArray(room.roomFields)) {
+            //     room.roomFields.forEach(ele => {
+            //         materialsCostMap = costMap?.[room.name]?.[ele.itemName] ?? {};
+            //     });
+            // }
             ((room.roomFields as any) || []).forEach((item: any) => {
-                const unitName = item.itemName;
+                const unitName = item.itemName;    /// room name 
                 const quantity = item.quantity || 0;
-                const unitCost = materialsCostMap[unitName] || 0;
+                const unitCost = costMap?.[room.name]?.[item.itemName] || 0;
 
                 if (quantity <= 0) return; // skip zero quantity
 
@@ -368,8 +372,17 @@ export const addSubItemToUnit = async (req: Request, res: Response): Promise<any
             return res.status(400).json({ ok: false, message: "Invalid projectId or unitId" });
         }
 
-        if (!subItemName || quantity == null || !unit) {
-            return res.status(400).json({ ok: false, message: "Missing subItemName, quantity or unit" });
+        if (!subItemName) {
+            return res.status(400).json({ ok: false, message: "Mateial Item is mandatory" });
+        }
+
+
+        if (quantity === null) {
+            return res.status(400).json({ ok: false, message: "Missing Quantity" });
+        }
+
+        if (!unit) {
+            return res.status(400).json({ ok: false, message: "Missing Unit" });
         }
 
         const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
@@ -386,12 +399,13 @@ export const addSubItemToUnit = async (req: Request, res: Response): Promise<any
 
 
         const isExists = unitObj.subItems.find((unit: OrderSubItems) => {
-           return unit?.subItemName?.toLowerCase() === subItemName?.toLowerCase()
+            console.log("unit", unit.subItemName)
+            return unit?.subItemName?.toLowerCase() === subItemName?.toLowerCase()
         })
 
 
         if (isExists) {
-            return res.status(400).json({ message: "item already exists", ok: false })
+            return res.status(400).json({ message: "Material item already exists with the same name", ok: false })
         }
 
         // Add new subItem
@@ -411,11 +425,15 @@ export const updateSubItemInUnit = async (req: Request, res: Response): Promise<
     try {
         const { projectId, unitId, subItemId } = req.params;
         const { subItemName, quantity, unit } = req.body;
-
+        console.log("subitem name", subItemName)
         if (!projectId ||
             !unitId ||
             !subItemId) {
             return res.status(400).json({ ok: false, message: "Invalid IDs" });
+        }
+
+        if (!subItemName) {
+            return res.status(400).json({ message: "material name is requried", ok: false })
         }
 
         const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
@@ -433,7 +451,18 @@ export const updateSubItemInUnit = async (req: Request, res: Response): Promise<
             return res.status(404).json({ ok: false, message: "SubItem not found" });
         }
 
-        if (!subItemName) subItemObj.subItemName = subItemName;
+
+        // const isExists = unitObj.subItems.find((unit: OrderSubItems) => {
+        //     console.log("unit", unit.subItemName)
+        //     return unit?.subItemName?.toLowerCase() === subItemName?.toLowerCase()
+        // })
+
+
+        // if (isExists) {
+        //     return res.status(400).json({ message: "item already exists", ok: false })
+        // }
+
+        subItemObj.subItemName = subItemName;
         if (quantity !== null) subItemObj.quantity = quantity;
         if (!unit !== undefined) subItemObj.unit = unit;
 
@@ -482,6 +511,44 @@ export const deleteSubItemFromUnit = async (req: Request, res: Response): Promis
 };
 
 
+
+export const updateDeliveryLocationDetails = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params;
+        const { siteName, address, siteSupervisor, phoneNumber } = req.body;
+
+        if (!siteName || !address || !siteSupervisor || !phoneNumber) {
+            return res.status(400).json({ ok: false, message: "All delivery location details are required." });
+        }
+
+        const orderingDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
+            { projectId },
+
+            {
+                $set: {
+                    deliveryLocationDetails: { siteName, address, siteSupervisor, phoneNumber },
+                },
+            },
+            { new: true, upsert: true }
+        );
+
+        if (!orderingDoc) {
+            return res.status(400).json({ ok: false, message: "Failed to update delivery details." });
+        }
+
+        // const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
+        // await redisClient.set(redisMainKey, JSON.stringify(orderingDoc.toObject()), { EX: 60 * 10 })
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderingDoc })
+
+
+        res.status(200).json({ ok: true, message: "Delivery location updated", data: orderingDoc.deliveryLocationDetails });
+    }
+    catch (error: any) {
+        console.error("Error updatinthe delivery details form ordering room", error);
+        return res.status(500).json({ message: "Server error", ok: false });
+    }
+};
 
 
 
@@ -686,7 +753,7 @@ export const getPublicDetails = async (req: Request, res: Response): Promise<any
             // return res.status(200).json({ message: "got the data", data: finalData, ok: true })
 
 
-              let existing = await OrderMaterialHistoryModel.findOne({ projectId });
+            let existing = await OrderMaterialHistoryModel.findOne({ projectId });
 
             if (!existing) {
                 return res.status(200).json({ message: "got the data", data: [], ok: true })

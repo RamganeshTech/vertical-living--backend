@@ -93,6 +93,14 @@ export interface IOrderHistorytimer {
 }
 
 
+export interface OrderMaterialSiteDetail {
+  siteName: String,
+  address: String,
+  siteSupervisor: String,
+  phoneNumber: String,
+}
+
+
 export interface OrderSubItems {
     subItemName: string,
     quantity: number,
@@ -114,6 +122,7 @@ export interface IOrderedMaterialHistory {
     _id?: Types.ObjectId;
     projectId: Types.ObjectId;
     status: "pending" | "completed";
+    deliveryLocationDetails: OrderMaterialSiteDetail,
     isEditable: boolean;
     selectedUnits: OrderedMaterialSingle[];
     totalCost: number;
@@ -130,6 +139,14 @@ const OrderSubItemSchema = new Schema<OrderSubItems>({
     quantity: { type: Number, default: null },
     unit: { type: String, default: null },
 }, { _id: true })
+
+
+const DeliveryLocationDetailsSchema = new Schema<OrderMaterialSiteDetail>({
+  siteName: String,
+  address: String,
+  siteSupervisor: String,
+  phoneNumber: String,
+}, { _id: false });
 
 // Timer schema
 const TimerSchema = new Schema<IOrderHistorytimer>({
@@ -160,6 +177,7 @@ const OrderHistorySchema = new Schema<IOrderedMaterialHistory>({
         ref: "StaffModel",
         default: null,
     },
+    deliveryLocationDetails: DeliveryLocationDetailsSchema,
     timer: { type: TimerSchema, required: true },
     selectedUnits: { type: [orderedUnits], default: [] },
     totalCost: { type: Number, },
