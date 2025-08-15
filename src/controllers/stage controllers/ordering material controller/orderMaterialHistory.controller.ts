@@ -14,6 +14,7 @@ import { IRoomItemEntry } from "../../../models/Stage Models/MaterialRoom Confir
 import { SelectedExternalModel } from './../../../models/externalUnit model/SelectedExternalUnit model/selectedExternalUnit.model';
 import { RoleBasedRequest } from "../../../types/types";
 import { generateOrderingToken } from "../../../utils/generateToken";
+import { generateOrderHistoryPDF } from "./pdfOrderHistory.controller";
 
 // export const syncOrderingMaterialsHistory = async (projectId: string) => {
 
@@ -360,9 +361,6 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
 };
 
 
-
-
-
 export const addSubItemToUnit = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId, unitId } = req.params;
@@ -412,6 +410,8 @@ export const addSubItemToUnit = async (req: Request, res: Response): Promise<any
         unitObj.subItems.push({ subItemName, quantity, unit });
 
         await orderDoc.save();
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
 
         return res.json({ ok: true, message: "SubItem added", subItems: unitObj.subItems });
     } catch (error: any) {
@@ -468,6 +468,8 @@ export const updateSubItemInUnit = async (req: Request, res: Response): Promise<
 
         await orderDoc.save();
 
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+
         return res.json({ ok: true, message: "SubItem updated", subItem: subItemObj });
     } catch (error: any) {
         return res.status(500).json({ ok: false, message: error.message });
@@ -503,6 +505,9 @@ export const deleteSubItemFromUnit = async (req: Request, res: Response): Promis
 
         unitObj.subItems.pull({ _id: subItemId });
         await orderDoc.save();
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+
 
         return res.json({ ok: true, message: "SubItem deleted", subItems: unitObj.subItems });
     } catch (error: any) {
@@ -557,7 +562,7 @@ export const getOrderHistoryMaterial = async (req: Request, res: Response): Prom
         const { projectId } = req.params;
 
         const redisMainKey = `stage:OrderMaterialHistoryModel:${projectId}`
-        await redisClient.del(redisMainKey)
+        // await redisClient.del(redisMainKey)
         const cachedData = await redisClient.get(redisMainKey)
 
         if (cachedData) {
@@ -658,37 +663,67 @@ export const orderMaterialHistoryCompletionStatus = async (req: Request, res: Re
 
 // WHATSAPP LINK API
 
-export const generateOrderingMaterialLink = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+// export const generateOrderingMaterialLink = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+//     try {
+//         const { projectId } = req.params;
+
+//         const form = await OrderMaterialHistoryModel.findOne({ projectId })
+
+//         if (!form) return res.status(404).json({ ok: false, message: "Ordering Material Form not found" });
+
+//         if (form.generatedLink) {
+//             return res.status(400).json({ ok: false, message: "Link already generated" });
+//         }
+
+//         const token = generateOrderingToken();
+
+//         form.generatedLink = `${process.env.FRONTEND_URL}/ordermaterial/public/${projectId}/${token}`;
+//         await form.save();
+
+//         return res.status(200).json({
+//             ok: true,
+//             message: "Link generated successfully",
+//             data: {
+//                 token,
+//                 shareableUrl: form.generatedLink,
+//             },
+//         });
+//     }
+//     catch (error) {
+//         return res.status(500).json({ ok: false, message: "server error" });
+//     }
+// };
+
+
+
+
+// Controller function
+export const generateOrderHistoryPDFController = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
 
-        const form = await OrderMaterialHistoryModel.findOne({ projectId })
-
-        if (!form) return res.status(404).json({ ok: false, message: "Ordering Material Form not found" });
-
-        if (form.generatedLink) {
-            return res.status(400).json({ ok: false, message: "Link already generated" });
+        if (!projectId) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Project ID is required'
+            });
         }
 
-        const token = generateOrderingToken();
+        const result = await generateOrderHistoryPDF(projectId);
 
-        form.generatedLink = `${process.env.FRONTEND_URL}/ordermaterial/public/${projectId}/${token}`;
-        await form.save();
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: result.data })
 
-        return res.status(200).json({
-            ok: true,
-            message: "Link generated successfully",
-            data: {
-                token,
-                shareableUrl: form.generatedLink,
-            },
+
+        res.status(200).json(result);
+
+    } catch (error: any) {
+        console.error('PDF generation controller error:', error);
+        res.status(500).json({
+            ok: false,
+            message: error.message || 'Internal server error'
         });
     }
-    catch (error) {
-        return res.status(500).json({ ok: false, message: "server error" });
-    }
 };
-
 
 
 export const getPublicDetails = async (req: Request, res: Response): Promise<any> => {

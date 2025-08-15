@@ -6,8 +6,8 @@ import PaymentConfirmationModel from '../../../models/Stage Models/Payment Confi
 import { notToUpdateIfStageCompleted } from '../../../middlewares/notToUpdateIfStageCompleted';
 import { checkIfStaffIsAssignedToStage } from '../../../middlewares/checkIfStaffIsAssignedToStage';
 import { OrderMaterialHistoryModel } from '../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
-import { addSubItemToUnit, deleteSubItemFromUnit, generateOrderingMaterialLink, getOrderHistoryMaterial, getPublicDetails, orderMaterialHistoryCompletionStatus, setOrderMaterialHistoryStageDeadline, updateDeliveryLocationDetails, updateSubItemInUnit } from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
-import { generateOrderHistoryPDFController } from '../../../controllers/stage controllers/ordering material controller/pdfOrderHistory.controller';
+import { addSubItemToUnit, deleteSubItemFromUnit, generateOrderHistoryPDFController, getOrderHistoryMaterial, getPublicDetails, orderMaterialHistoryCompletionStatus, setOrderMaterialHistoryStageDeadline, updateDeliveryLocationDetails, updateSubItemInUnit } from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
+// import { generateOrderHistoryPDFController } from '../../../controllers/stage controllers/ordering material controller/pdfOrderHistory.controller';
 
 const orderMaterialHistoryRoutes = express.Router()
 

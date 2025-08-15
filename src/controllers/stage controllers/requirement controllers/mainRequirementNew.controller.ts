@@ -10,6 +10,7 @@ import { addOrUpdateStageDocumentation } from '../../documentation controller/do
 import { updateProjectCompletionPercentage } from '../../../utils/updateProjectCompletionPercentage ';
 import { syncAdminWall, syncWorkerWall } from '../../Wall Painting controllers/adminWallPainting.controller';
 import redisClient from '../../../config/redisClient';
+import { syncMaterialRoomSelectionStage } from '../material Room confirmation/materialRoomConfirmation.controller';
 
 
 
@@ -210,7 +211,7 @@ export const updateRoomItem = async (req: RoleBasedRequest, res: Response): Prom
         }
 
 
-        if(!itemName){
+        if (!itemName) {
             return res.status(400).json({ message: "item name is required required" });
         }
 
@@ -271,43 +272,43 @@ export const updateRoomItem = async (req: RoleBasedRequest, res: Response): Prom
 
 
 export const deleteRoomItemController = async (req: RoleBasedRequest, res: Response): Promise<any> => {
-  try {
-    const { projectId, roomId, itemId } = req.params;
+    try {
+        const { projectId, roomId, itemId } = req.params;
 
-    if (!projectId || !roomId || !itemId) {
-      return res.status(400).json({ ok: false, message: "Missing required parameters" });
+        if (!projectId || !roomId || !itemId) {
+            return res.status(400).json({ ok: false, message: "Missing required parameters" });
+        }
+
+        // Find the document for this project
+        const doc = await RequirementFormModel.findOne({ projectId });
+        if (!doc) {
+            return res.status(404).json({ ok: false, message: "Requirement form not found" });
+        }
+
+        // Find the specific room
+        const room = (doc.rooms as any).id(roomId);
+        if (!room) {
+            return res.status(404).json({ ok: false, message: "Room not found" });
+        }
+
+        // Remove the item from the room's items array
+        room.items = room.items.filter((item: any) => item._id.toString() !== itemId);
+
+        // Save changes
+        await doc.save();
+
+        // Update cache if needed
+        await populateWithAssignedToField({
+            stageModel: RequirementFormModel,
+            projectId,
+            dataToCache: doc
+        });
+
+        return res.status(200).json({ ok: true, message: "Item deleted successfully", data: room });
+    } catch (error) {
+        console.error("Delete Room Item Error:", error);
+        return res.status(500).json({ ok: false, message: "Server error" });
     }
-
-    // Find the document for this project
-    const doc = await RequirementFormModel.findOne({ projectId });
-    if (!doc) {
-      return res.status(404).json({ ok: false, message: "Requirement form not found" });
-    }
-
-    // Find the specific room
-    const room = (doc.rooms as any).id(roomId);
-    if (!room) {
-      return res.status(404).json({ ok: false, message: "Room not found" });
-    }
-
-    // Remove the item from the room's items array
-    room.items = room.items.filter((item: any) => item._id.toString() !== itemId);
-
-    // Save changes
-    await doc.save();
-
-    // Update cache if needed
-    await populateWithAssignedToField({ 
-      stageModel: RequirementFormModel, 
-      projectId, 
-      dataToCache: doc 
-    });
-
-    return res.status(200).json({ ok: true, message: "Item deleted successfully", data: room });
-  } catch (error) {
-    console.error("Delete Room Item Error:", error);
-    return res.status(500).json({ ok: false, message: "Server error" });
-  }
 };
 
 
@@ -455,6 +456,8 @@ export const markFormAsCompleted = async (req: RoleBasedRequest, res: Response):
 
         if (form.status === "completed") {
             await syncSiteMeasurement(projectId)
+            await syncMaterialRoomSelectionStage(projectId)
+
             // const uploadedFiles: DocUpload[] = form.uploads.map((upload: any) => ({ type: upload.type, originalName: upload.originalName, url: upload.url }))
             // await addOrUpdateStageDocumentation({
             //     projectId,

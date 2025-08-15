@@ -457,7 +457,7 @@ const generateOrderHistoryPDF = async (projectId: string) => {
         return {
             ok: true,
             pdfUrl: uploadResult.Location,
-            fileName: fileName,
+            data: orderHistory,
             message: 'PDF generated successfully'
         };
 
@@ -467,34 +467,10 @@ const generateOrderHistoryPDF = async (projectId: string) => {
     }
 };
 
-// Controller function
-const generateOrderHistoryPDFController = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { projectId } = req.params;
-
-        if (!projectId) {
-            return res.status(400).json({
-                ok: false,
-                message: 'Project ID is required'
-            });
-        }
-
-        const result = await generateOrderHistoryPDF(projectId);
-
-        res.status(200).json(result);
-
-    } catch (error: any) {
-        console.error('PDF generation controller error:', error);
-        res.status(500).json({
-            ok: false,
-            message: error.message || 'Internal server error'
-        });
-    }
-};
 
 export {
     generateOrderHistoryPDF,
-    generateOrderHistoryPDFController,
+    // generateOrderHistoryPDFController,
     uploadToS3
 };
 

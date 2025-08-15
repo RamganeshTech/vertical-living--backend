@@ -249,7 +249,7 @@ const getCostEstimationByProject = async (req: Request, res: Response): Promise<
         const costEstimation = await CostEstimationModel.findOne({ projectId }).populate(assignedTo, selectedFields);
 
         if (!costEstimation) {
-            return res.status(404).json({ ok: false, message: "Cost estimation not found" });
+            return res.status(404).json({ ok: false, message: "Cost Estimation stage not created please complete the last stage", data:null });
         }
 
         return res.status(200).json({

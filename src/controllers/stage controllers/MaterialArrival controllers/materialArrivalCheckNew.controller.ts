@@ -415,7 +415,7 @@ export const getAllMaterialArrivalDetails = async (req: RoleBasedRequest, res: R
 
 
         const redisMainKey = `stage:MaterialArrivalModel:${projectId}`
-        await redisClient.del(redisMainKey);
+        // await redisClient.del(redisMainKey);
 
         const cachedData = await redisClient.get(redisMainKey)
 
@@ -454,6 +454,10 @@ export const generateMaterialArrivalLink = async (req: Request, res: Response): 
         const token = generateOrderingToken(); // or use your custom function like generateMaterialArrivalToken()
         doc.generatedLink = `${process.env.FRONTEND_URL}/materialarrival/public/${projectId}/${token}`;
         await doc.save();
+
+
+        await populateWithAssignedToField({ stageModel: MaterialArrivalModel, projectId, dataToCache: doc })
+
 
         return res.status(200).json({
             ok: true,

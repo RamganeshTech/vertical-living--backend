@@ -15,11 +15,11 @@ const materialConfirmationRoutes = express.Router();
 
 
 // 📌 Get full material room confirmation stage for a project
-materialConfirmationRoutes.get("/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO", "client", "worker"), checkPreviousStageCompleted(TechnicalConsultationModel), getMaterialRoomConfirmationByProject);
+materialConfirmationRoutes.get("/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO", "client", "worker"),  getMaterialRoomConfirmationByProject);
 
 // 📌 Get a single predefined room by roomId
 // materialConfirmationRoutes.get("/:projectId/predefinedroom/:roomId/:roomType", multiRoleAuthMiddleware("owner", "staff", "CTO", "client", "worker"), checkPreviousStageCompleted(TechnicalConsultationModel), getSinglePredefinedRoom);
-materialConfirmationRoutes.get("/:projectId/singleroom/:roomId", multiRoleAuthMiddleware("owner", "staff", "CTO", "client", "worker"), checkPreviousStageCompleted(TechnicalConsultationModel), getMaterialRoomConfirmationSingleRoom);
+materialConfirmationRoutes.get("/:projectId/singleroom/:roomId", multiRoleAuthMiddleware("owner", "staff", "CTO", "client", "worker"),  getMaterialRoomConfirmationSingleRoom);
 
 // 📌 Update quantity, unit, and remarks of a predefined room field
 // materialConfirmationRoutes.put("/:projectId/predefinedroom/:roomId/field/:fieldKey", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(TechnicalConsultationModel), notToUpdateIfStageCompleted(MaterialRoomConfirmationModel), updatePredefinedRoomField);
@@ -27,7 +27,7 @@ materialConfirmationRoutes.get("/:projectId/singleroom/:roomId", multiRoleAuthMi
 // 📌 Create a new custom room with name
 // materialConfirmationRoutes.post("/:projectId/customroom", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(TechnicalConsultationModel), notToUpdateIfStageCompleted(MaterialRoomConfirmationModel),  createCustomRoom);
 
-materialConfirmationRoutes.patch("/:projectId/:roomId/deleteroom", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(TechnicalConsultationModel), notToUpdateIfStageCompleted(MaterialRoomConfirmationModel),  deleteRoom);
+materialConfirmationRoutes.patch("/:projectId/:roomId/deleteroom", multiRoleAuthMiddleware("owner", "staff", "CTO"),  deleteRoom);
 
 // 📌 Add a new item/field to an existing custom room
 // materialConfirmationRoutes.post("/:projectId/customroom/:roomId/field", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(TechnicalConsultationModel),  notToUpdateIfStageCompleted(MaterialRoomConfirmationModel), addItemToCustomRoom);
@@ -36,11 +36,11 @@ materialConfirmationRoutes.patch("/:projectId/:roomId/deleteroom", multiRoleAuth
 // materialConfirmationRoutes.delete("/:projectId/customroom/:roomId/field/:fieldKey", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(TechnicalConsultationModel),  notToUpdateIfStageCompleted(MaterialRoomConfirmationModel), deleteCustomRoomField);
 
 
-materialConfirmationRoutes.post("/:projectId/uploads/:roomId",  multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(TechnicalConsultationModel), notToUpdateIfStageCompleted(MaterialRoomConfirmationModel),  imageUploadToS3.array("files"), processUploadFiles, uploadMaterialRoomFiles);
-materialConfirmationRoutes.patch("/:projectId/deleteuploadedfile/:roomId/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(TechnicalConsultationModel), notToUpdateIfStageCompleted(MaterialRoomConfirmationModel),  deleteMaterialRoomFile);
+materialConfirmationRoutes.post("/:projectId/uploads/:roomId",  multiRoleAuthMiddleware("owner", "staff", "CTO",), imageUploadToS3.array("files"), processUploadFiles, uploadMaterialRoomFiles);
+materialConfirmationRoutes.patch("/:projectId/deleteuploadedfile/:roomId/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",), deleteMaterialRoomFile);
 
-materialConfirmationRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkPreviousStageCompleted(TechnicalConsultationModel), notToUpdateIfStageCompleted(MaterialRoomConfirmationModel), setMaterialConfirmationStageDeadline)
-materialConfirmationRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(TechnicalConsultationModel), notToUpdateIfStageCompleted(MaterialRoomConfirmationModel),  materialSelectionCompletionStatus)
+materialConfirmationRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  setMaterialConfirmationStageDeadline)
+materialConfirmationRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  materialSelectionCompletionStatus)
 
 
 export default materialConfirmationRoutes;

@@ -315,7 +315,7 @@ const tehnicalConsultantCompletionStatus = async (req: Request, res: Response): 
 
     if (techDoc.status === "completed") {
       // await initializeMaterialSelection(projectId)
-      await syncMaterialRoomSelectionStage(projectId)
+      // await syncMaterialRoomSelectionStage(projectId)
 
 
       // const uploadedFiles: DocUpload[] = techDoc.messages.flatMap(msgSection => {
