@@ -33,7 +33,7 @@ export const syncRoomsToMaterialConfirmation = async (projectId: string, siteRoo
         materialDoc!.rooms.push({
           name: room.roomName,
           uploads: [],
-          roomFields: {}
+          roomFields: []
         });
       }
     });
