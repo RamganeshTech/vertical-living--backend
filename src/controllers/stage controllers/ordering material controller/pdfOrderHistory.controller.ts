@@ -1,9 +1,10 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, PDFName, rgb, StandardFonts } from 'pdf-lib';
 // import fetch from 'node-fetch';
 import { s3, S3_BUCKET } from "../../../utils/s3Uploads/s3Client";
-import { OrderMaterialHistoryModel } from '../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
+import { IPdfGenerator, OrderMaterialHistoryModel } from '../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
 import { Request, Response } from 'express';
 import { ok } from 'assert';
+import mongoose from 'mongoose';
 
 const COMPANY_LOGO = "https://th.bing.com/th/id/OIP.Uparc9uI63RDb82OupdPvwAAAA?w=80&h=80&c=1&bgcl=c77779&r=0&o=6&dpr=1.3&pid=ImgRC";
 const COMPANY_NAME = "Vertical Living";
@@ -38,6 +39,25 @@ const generateOrderHistoryPDF = async (projectId: string) => {
         if (!orderHistory) {
             throw new Error('Order history not found for the given project ID');
         }
+
+
+        const isNewPdf = Array.isArray(orderHistory.generatedLink) && orderHistory.generatedLink.length > 0;
+        let nextNumber = 1;
+
+        if (isNewPdf) {
+            // Extract all numbers from refUniquePdf (format: projectName-<number>-pdf)
+            const numbers = orderHistory.generatedLink.map(ele => {
+                const match = ele.refUniquePdf?.match(/-(\d+)-pdf$/);
+                return match ? parseInt(match[1], 10) : 0; // Extract the number part
+            });
+
+            // Find the max number and increment
+            nextNumber = Math.max(...numbers, 0) + 1;
+        }
+
+        // Construct the new refUniquePdf
+        const refUniquePdf = `${(orderHistory.projectId as any).projectName}-${nextNumber}-pdf`;
+
 
         // Create a new PDF document
         const pdfDoc = await PDFDocument.create();
@@ -142,16 +162,55 @@ const generateOrderHistoryPDF = async (projectId: string) => {
             console.error("Failed to load company logo:", err);
         }
 
-        // Material Order heading
+        // // Material Order heading
+        // const heading = "MATERIAL ORDER";
+        // page.drawText(heading, {
+        //     x: 50,
+        //     y: yPosition,
+        //     size: 18,
+        //     font: boldFont,
+        //     color: rgb(0.0, 0.2, 0.4),
+        // });
+        // yPosition -= 20;
+
         const heading = "MATERIAL ORDER";
+
+        const referenceId = `Pdf Reference Id: ${refUniquePdf}`; // e.g. projectName-01-pdf
+
+        // Measure text widths
+        const headingWidth = boldFont.widthOfTextAtSize(heading, 18);
+        const refWidth = boldFont.widthOfTextAtSize(referenceId, 12);
+
+        // Set margins
+        const leftMargin = 50;
+        const rightMargin = 50;
+
+        // Page width
+        const pageWidth = page.getWidth();
+
+        // X positions
+        const headingX = leftMargin;
+        const refX = pageWidth - rightMargin - refWidth;
+
+        // Draw heading (left)
         page.drawText(heading, {
-            x: 50,
+            x: headingX,
             y: yPosition,
             size: 18,
             font: boldFont,
             color: rgb(0.0, 0.2, 0.4),
         });
-        yPosition -= 20;
+
+        // Draw reference id (right, same y)
+        page.drawText(referenceId, {
+            x: refX,
+            y: yPosition,
+            size: 12,
+            font: boldFont,
+            color: rgb(0.0, 0.2, 0.4),
+        });
+
+        yPosition -= 30; // move down for next content
 
         // Project details
         if (orderHistory.projectId) {
@@ -167,111 +226,206 @@ const generateOrderHistoryPDF = async (projectId: string) => {
         }
 
 
-        function drawWrappedDetail(label: string, value: string) {
-            const labelX = 60;               // Label starting X
-            const valueX = labelX + 120;     // Space after label (adjust if needed)
-            const fontSize = 12;
-            const maxWidth = width - valueX - 50; // Remaining space for value text
+        // CHAGT GPT SITE DETAIL
+        // function drawWrappedDetail(label: string, value: string) {
+        //     const labelX = 60;               // Label starting X
+        //     const valueX = labelX + 120;     // Space after label (adjust if needed)
+        //     const fontSize = 12;
+        //     const maxWidth = width - valueX - 50; // Remaining space for value text
 
-            // Draw label
-            page.drawText(`${label}:`, {
-                x: labelX,
+        //     // Draw label
+        //     page.drawText(`${label}:`, {
+        //         x: labelX,
+        //         y: yPosition,
+        //         size: fontSize,
+        //         font: boldFont,
+        //         color: rgb(0, 0, 0),
+        //     });
+
+        //     // Split value into multiple lines if needed
+        //     const words = value.split(' ');
+        //     let line = '';
+        //     let lines: string[] = [];
+
+        //     for (let word of words) {
+        //         const testLine = line + word + ' ';
+        //         const testWidth = regularFont.widthOfTextAtSize(testLine, fontSize);
+
+        //         if (testWidth > maxWidth && line !== '') {
+        //             lines.push(line.trim());
+        //             line = word + ' ';
+        //         } else {
+        //             line = testLine;
+        //         }
+        //     }
+        //     if (line) lines.push(line.trim());
+
+        //     // Draw each wrapped line of the value
+        //     lines.forEach((lineText, index) => {
+        //         page.drawText(lineText, {
+        //             x: valueX,
+        //             y: yPosition - index * (fontSize + 4), // 4px gap between wrapped lines
+        //             size: fontSize,
+        //             font: regularFont,
+        //             color: rgb(0, 0, 0),
+        //         });
+        //     });
+
+        //     // Reduce yPosition by total height of wrapped text + some extra gap
+        //     yPosition -= lines.length * (fontSize + 4) + 4;
+        // }
+
+        // // Usage
+        // const deliveryDetails = orderHistory?.deliveryLocationDetails || {};
+
+        // const siteName = deliveryDetails?.siteName?.trim() || "Not Mentioned";
+        // const address = deliveryDetails?.address?.trim() || "Not Mentioned";
+        // const supervisor = deliveryDetails?.siteSupervisor?.trim() || "Not Mentioned";
+        // const phone = deliveryDetails?.phoneNumber?.trim() || "Not Mentioned";
+
+        // // Heading
+        // page.drawText("Delivery Location", {
+        //     x: 50,
+        //     y: yPosition,
+        //     size: 16,
+        //     font: boldFont,
+        //     color: rgb(0.0, 0.3, 0.6),
+        // });
+        // yPosition -= 20;
+
+        // // Draw details with wrapping
+        // drawWrappedDetail("Site Name", siteName);
+        // drawWrappedDetail("Address", address);
+        // drawWrappedDetail("Site Supervisor", supervisor);
+        // drawWrappedDetail("Phone", phone);
+
+        // // Divider line
+        // yPosition -= 10;
+        // page.drawLine({
+        //     start: { x: 50, y: yPosition },
+        //     end: { x: width - 50, y: yPosition },
+        //     thickness: 0.5,
+        //     color: rgb(0.6, 0.6, 0.6),
+        // });
+        // yPosition -= 20;
+
+
+
+
+        // Shop Details Section
+        if (orderHistory.shopDetails) {
+            page.drawText("Shop Details:", {
+                x: 50,
                 y: yPosition,
-                size: fontSize,
+                size: 14,
                 font: boldFont,
-                color: rgb(0, 0, 0),
+                color: rgb(0.2, 0.2, 0.2),
             });
+            yPosition -= 20;
 
-            // Split value into multiple lines if needed
-            const words = value.split(' ');
-            let line = '';
-            let lines: string[] = [];
-
-            for (let word of words) {
-                const testLine = line + word + ' ';
-                const testWidth = regularFont.widthOfTextAtSize(testLine, fontSize);
-
-                if (testWidth > maxWidth && line !== '') {
-                    lines.push(line.trim());
-                    line = word + ' ';
-                } else {
-                    line = testLine;
-                }
-            }
-            if (line) lines.push(line.trim());
-
-            // Draw each wrapped line of the value
-            lines.forEach((lineText, index) => {
-                page.drawText(lineText, {
-                    x: valueX,
-                    y: yPosition - index * (fontSize + 4), // 4px gap between wrapped lines
-                    size: fontSize,
+            if (orderHistory.shopDetails.shopName) {
+                page.drawText(`Shop Name: ${orderHistory.shopDetails.shopName}`, {
+                    x: 50,
+                    y: yPosition,
+                    size: 10,
                     font: regularFont,
-                    color: rgb(0, 0, 0),
+                    color: rgb(0.3, 0.3, 0.3),
                 });
-            });
+                yPosition -= 15;
+            }
 
-            // Reduce yPosition by total height of wrapped text + some extra gap
-            yPosition -= lines.length * (fontSize + 4) + 4;
+            if (orderHistory.shopDetails.address) {
+                page.drawText(`Address: ${orderHistory.shopDetails.address}`, {
+                    x: 50,
+                    y: yPosition,
+                    size: 10,
+                    font: regularFont,
+                    color: rgb(0.3, 0.3, 0.3),
+                });
+                yPosition -= 15;
+            }
+
+            if (orderHistory.shopDetails.contactPerson) {
+                page.drawText(`Contact Person: ${orderHistory.shopDetails.contactPerson}`, {
+                    x: 50,
+                    y: yPosition,
+                    size: 10,
+                    font: regularFont,
+                    color: rgb(0.3, 0.3, 0.3),
+                });
+                yPosition -= 15;
+            }
+
+            if (orderHistory.shopDetails.phoneNumber) {
+                page.drawText(`Phone: ${orderHistory.shopDetails.phoneNumber}`, {
+                    x: 50,
+                    y: yPosition,
+                    size: 10,
+                    font: regularFont,
+                    color: rgb(0.3, 0.3, 0.3),
+                });
+                yPosition -= 15;
+            }
+            yPosition -= 10;
         }
 
-        // Usage
-        const deliveryDetails = orderHistory?.deliveryLocationDetails || {};
+        // Delivery Location Details Section
+        if (orderHistory.deliveryLocationDetails) {
+            page.drawText("Delivery Location:", {
+                x: 50,
+                y: yPosition,
+                size: 14,
+                font: boldFont,
+                color: rgb(0.2, 0.2, 0.2),
+            });
+            yPosition -= 20;
 
-        const siteName = deliveryDetails?.siteName?.trim() || "Not Mentioned";
-        const address = deliveryDetails?.address?.trim() || "Not Mentioned";
-        const supervisor = deliveryDetails?.siteSupervisor?.trim() || "Not Mentioned";
-        const phone = deliveryDetails?.phoneNumber?.trim() || "Not Mentioned";
+            if (orderHistory.deliveryLocationDetails.siteName) {
+                page.drawText(`Site Name: ${orderHistory.deliveryLocationDetails.siteName}`, {
+                    x: 50,
+                    y: yPosition,
+                    size: 10,
+                    font: regularFont,
+                    color: rgb(0.3, 0.3, 0.3),
+                });
+                yPosition -= 15;
+            }
 
-        // Heading
-        page.drawText("Delivery Location", {
-            x: 50,
-            y: yPosition,
-            size: 16,
-            font: boldFont,
-            color: rgb(0.0, 0.3, 0.6),
-        });
-        yPosition -= 20;
+            if (orderHistory.deliveryLocationDetails.address) {
+                page.drawText(`Site Address: ${orderHistory.deliveryLocationDetails.address}`, {
+                    x: 50,
+                    y: yPosition,
+                    size: 10,
+                    font: regularFont,
+                    color: rgb(0.3, 0.3, 0.3),
+                });
+                yPosition -= 15;
+            }
 
-        // Draw details with wrapping
-        drawWrappedDetail("Site Name", siteName);
-        drawWrappedDetail("Address", address);
-        drawWrappedDetail("Site Supervisor", supervisor);
-        drawWrappedDetail("Phone", phone);
+            if (orderHistory.deliveryLocationDetails.siteSupervisor) {
+                page.drawText(`Site Supervisor: ${orderHistory.deliveryLocationDetails.siteSupervisor}`, {
+                    x: 50,
+                    y: yPosition,
+                    size: 10,
+                    font: regularFont,
+                    color: rgb(0.3, 0.3, 0.3),
+                });
+                yPosition -= 15;
+            }
 
-        // Divider line
-        yPosition -= 10;
-        page.drawLine({
-            start: { x: 50, y: yPosition },
-            end: { x: width - 50, y: yPosition },
-            thickness: 0.5,
-            color: rgb(0.6, 0.6, 0.6),
-        });
-        yPosition -= 20;
+            if (orderHistory.deliveryLocationDetails.phoneNumber) {
+                page.drawText(`Contact: ${orderHistory.deliveryLocationDetails.phoneNumber}`, {
+                    x: 50,
+                    y: yPosition,
+                    size: 10,
+                    font: regularFont,
+                    color: rgb(0.3, 0.3, 0.3),
+                });
+                yPosition -= 15;
+            }
+            yPosition -= 20;
+        }
 
-
-
-        // Order date
-        // const orderDate = `Order Date: ${new Date(orderHistory.createdAt).toLocaleDateString()}`;
-        // page.drawText(orderDate, {
-        //     x: 50,
-        //     y: yPosition,
-        //     size: 12,
-        //     font: regularFont,
-        //     color: rgb(0.3, 0.3, 0.3),
-        // });
-        // yPosition -= 30;
-
-        // Status
-        // const statusText = `Status: ${orderHistory.status.toUpperCase()}`;
-        // page.drawText(statusText, {
-        //     x: 50,
-        //     y: yPosition,
-        //     size: 12,
-        //     font: boldFont,
-        //     color: orderHistory.status === 'completed' ? rgb(0, 0.6, 0) : rgb(0.8, 0.6, 0),
-        // });
-        // yPosition -= 40;
 
         // Process each unit and its sub-items
         let serialNumber = 1;
@@ -305,9 +459,17 @@ const generateOrderHistoryPDF = async (projectId: string) => {
             // Table headers
             const tableStartY = yPosition;
             const rowHeight = 25;
-            const columnWidths = [60, 300, 80, 80]; // S.No, Material Item, Quantity, Unit
-            const columnPositions = [50, 110, 410, 490];
+            // const columnWidths = [60, , 300, 80, 80]; // S.No, Material Item, Quantity, Unit
+            // const columnPositions = [50, 110, 410, 490];
 
+            const columnWidths = [50, 100, 200, 80, 50];
+            const columnPositions = [
+                50,  // S.No
+                100, // Ref ID
+                180, // Material Item
+                420, // Quantity
+                500  // Unit
+            ];
             // Draw table header background
             page.drawRectangle({
                 x: 45,
@@ -318,7 +480,7 @@ const generateOrderHistoryPDF = async (projectId: string) => {
             });
 
             // Table headers
-            const headers = ['S.No', 'Material Item', 'Quantity', 'Unit'];
+            const headers = ['S.No', 'Ref ID', 'Material Item', 'Quantity', 'Unit'];
             headers.forEach((header, index) => {
                 page.drawText(header, {
                     x: columnPositions[index],
@@ -357,6 +519,7 @@ const generateOrderHistoryPDF = async (projectId: string) => {
 
                     const rowData = [
                         serialNumber.toString(),
+                        subItem.refId || "N/A",
                         subItem.subItemName || 'N/A',
                         (subItem.quantity || 0).toString(),
                         subItem.unit || 'N/A'
@@ -424,16 +587,6 @@ const generateOrderHistoryPDF = async (projectId: string) => {
         //     color: rgb(0.6, 0.6, 0.6),
         // });
 
-        // if (orderHistory.assignedTo && orderHistory.assignedTo.name) {
-        //     page.drawText(`Assigned to: ${orderHistory.assignedTo.name}`, {
-        //         x: width - 150,
-        //         y: footerY,
-        //         size: 8,
-        //         font: regularFont,
-        //         color: rgb(0.6, 0.6, 0.6),
-        //     });
-        // }
-
         // Save PDF
         const pdfBytes = await pdfDoc.save();
 
@@ -447,10 +600,18 @@ const generateOrderHistoryPDF = async (projectId: string) => {
         // });
 
         // console.log("generateld dat", uploadResult.Location)
-        orderHistory.generatedLink = uploadResult.Location
 
-        await orderHistory.save()
 
+        const pdfData = {
+            url: uploadResult.Location,
+            refUniquePdf, // <-- now has projectName-uniquenumber-pdf
+            pdfName: "Order Material",
+            _id: new mongoose.Types.ObjectId()
+        };
+
+        orderHistory.generatedLink.push(pdfData as IPdfGenerator);
+        console.log("orderHistory.generatedLink", orderHistory.generatedLink)
+        await orderHistory.save();
 
         // console.log("orderhisoty", orderHistory)
 

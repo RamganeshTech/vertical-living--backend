@@ -142,7 +142,6 @@ const getAllWorkSchedules = async (req: Request, res: Response): Promise<any> =>
 
     await redisClient.set(redisWorkScheduleKey, JSON.stringify(docs.toObject()), { EX: 60 * 10 })
 
-    console.log("dovch", docs)
     res.status(200).json({ ok: true, data: docs });
   } catch (err: any) {
     res.status(500).json({ ok: false, message: err.message });

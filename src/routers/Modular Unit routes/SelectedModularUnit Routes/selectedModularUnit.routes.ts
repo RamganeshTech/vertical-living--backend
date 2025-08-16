@@ -14,9 +14,9 @@ import { SelectedModularUnitModel } from "../../../models/Modular Units Models/A
 
 const SelectedModularUnitRoutes = express.Router();
 
-SelectedModularUnitRoutes.post("/:projectId/add", multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(TechnicalConsultationModel), notToUpdateIfStageCompleted(SelectedModularUnitModel), addSelectedUnit); // POST: { projectId,  unitId,  category,  quantity,  singleUnitCost }
+SelectedModularUnitRoutes.post("/:projectId/add", multiRoleAuthMiddleware("owner", "CTO", "staff"),  addSelectedUnit); // POST: { projectId,  unitId,  category,  quantity,  singleUnitCost }
 SelectedModularUnitRoutes.get("/get/:projectId", multiRoleAuthMiddleware("owner", "CTO", "staff", "client", "worker"), getSelectedUnitsByProject); // GET: projectId from param
-SelectedModularUnitRoutes.delete("/delete/:projectId/:unitId", multiRoleAuthMiddleware("owner", "CTO", "staff"), checkPreviousStageCompleted(TechnicalConsultationModel), notToUpdateIfStageCompleted(SelectedModularUnitModel), deleteSelectedUnit); // DELETE: projectId + unitId
-SelectedModularUnitRoutes.post("/projects/:projectId/modular-unit/complete",multiRoleAuthMiddleware("owner", "CTO", "staff"),checkPreviousStageCompleted(TechnicalConsultationModel), notToUpdateIfStageCompleted(SelectedModularUnitModel),completeModularUnitSelection);
+SelectedModularUnitRoutes.delete("/delete/:projectId/:unitId", multiRoleAuthMiddleware("owner", "CTO", "staff"),  deleteSelectedUnit); // DELETE: projectId + unitId
+SelectedModularUnitRoutes.post("/projects/:projectId/modular-unit/complete",multiRoleAuthMiddleware("owner", "CTO", "staff"),completeModularUnitSelection);
 
 export default SelectedModularUnitRoutes;

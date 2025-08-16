@@ -6,7 +6,7 @@ import PaymentConfirmationModel from '../../../models/Stage Models/Payment Confi
 import { notToUpdateIfStageCompleted } from '../../../middlewares/notToUpdateIfStageCompleted';
 import { checkIfStaffIsAssignedToStage } from '../../../middlewares/checkIfStaffIsAssignedToStage';
 import { OrderMaterialHistoryModel } from '../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
-import { addSubItemToUnit, deleteSubItemFromUnit, generateOrderHistoryPDFController, getOrderHistoryMaterial, getPublicDetails, orderMaterialHistoryCompletionStatus, setOrderMaterialHistoryStageDeadline, updateDeliveryLocationDetails, updateSubItemInUnit } from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
+import { addSubItemToUnit, deleteOrderMaterialPdf, deleteSubItemFromUnit, generateOrderHistoryPDFController, getOrderHistoryMaterial, getPublicDetails, orderMaterialHistoryCompletionStatus, setOrderMaterialHistoryStageDeadline, updateDeliveryLocationDetails, updateShopDetails, updateSubItemInUnit } from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
 // import { generateOrderHistoryPDFController } from '../../../controllers/stage controllers/ordering material controller/pdfOrderHistory.controller';
 
 const orderMaterialHistoryRoutes = express.Router()
@@ -14,8 +14,12 @@ const orderMaterialHistoryRoutes = express.Router()
 orderMaterialHistoryRoutes.get('/getalldetails/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "client"),  getOrderHistoryMaterial)
 // orderMaterialHistoryRoutes.patch('/generatelink/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), generateOrderingMaterialLink)
 orderMaterialHistoryRoutes.patch('/generatelink/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), generateOrderHistoryPDFController)
+orderMaterialHistoryRoutes.delete('/delete/:projectId/:pdfId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), deleteOrderMaterialPdf)
+
+
 orderMaterialHistoryRoutes.get('/getpublic/:projectId', getPublicDetails)
 orderMaterialHistoryRoutes.put("/:projectId/delivery-location", multiRoleAuthMiddleware("owner", "staff", "CTO",) , checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel),updateDeliveryLocationDetails);
+orderMaterialHistoryRoutes.put("/:projectId/shop", multiRoleAuthMiddleware("owner", "staff", "CTO",) ,checkPreviousStageCompleted(PaymentConfirmationModel), updateShopDetails);
 
 // Add a subItem to a specific unit of a project
 orderMaterialHistoryRoutes.post("/:projectId/unit/:unitId/addsubitem", multiRoleAuthMiddleware("owner", "staff", "CTO",),checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), addSubItemToUnit);

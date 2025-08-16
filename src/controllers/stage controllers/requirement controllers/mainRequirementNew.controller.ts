@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { DocUpload, RoleBasedRequest } from '../../../types/types';
-import { RequirementFormModel } from '../../../models/Stage Models/requirment model/mainRequirementNew.model';
+import { Items, RequirementFormModel } from '../../../models/Stage Models/requirment model/mainRequirementNew.model';
 import { Types } from "mongoose"
 import { populateWithAssignedToField } from '../../../utils/populateWithRedis';
 import crypto from "crypto"
@@ -234,7 +234,7 @@ export const updateRoomItem = async (req: RoleBasedRequest, res: Response): Prom
 
             // Update the field
 
-            item.itemName = itemName;
+            item.itemName = itemName.trim();
 
             item.quantity = quantity;
 
@@ -249,7 +249,18 @@ export const updateRoomItem = async (req: RoleBasedRequest, res: Response): Prom
             // Add new item to items array
             const newItem: any = {};
 
-            newItem.itemName = itemName;
+
+            const isExists = room.items.find((item:Items)=> {
+                // console.log("itmem", item.itemName.trim().toLowerCase())
+                // console.log("itmem from input", itemName.toLowerCase())
+               return item.itemName.toLowerCase().trim() === itemName.toLowerCase().trim()
+        })
+
+            if(isExists){
+                return res.status(409).json({message:"Room Item already exists", ok:false})
+            }
+
+            newItem.itemName = itemName.trim();
             newItem.quantity = quantity; // default quantity
 
             room.items.push(newItem);
@@ -445,9 +456,9 @@ export const markFormAsCompleted = async (req: RoleBasedRequest, res: Response):
 
         if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
-        if (form.status === "completed") {
-            return res.status(400).json({ ok: false, message: "Stage already completed" });
-        }
+        // if (form.status === "completed") {
+        //     return res.status(400).json({ ok: false, message: "Stage already completed" });
+        // }
 
         form.status = "completed";
         form.isEditable = false

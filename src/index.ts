@@ -79,7 +79,7 @@ app.use(cookieParser())
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 
-mongoose.plugin(procurementLogger); // Apply to ALL schemas
+// mongoose.plugin(procurementLogger); // Apply to ALL schemas
 
 
 // checkRedisConnection() //for redis

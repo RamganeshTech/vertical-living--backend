@@ -17,6 +17,7 @@ export const notToUpdateIfStageCompleted = (currentStage: any): any => {
 
         // console.log(currentStage.modelName)
         const redisKey = `stage:${currentStage.modelName}:${projectId}`
+            // await redisClient.del(redisKey)
 
 
 

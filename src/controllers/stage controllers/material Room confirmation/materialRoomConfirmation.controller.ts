@@ -10,7 +10,7 @@ import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { DocUpload, RoleBasedRequest } from "../../../types/types";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
-import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
+import { Items, RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
 import { syncCostEstimation } from "../cost estimation controllers/costEstimation.controller";
 import { IRoomItemEntry } from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomTypes";
 
@@ -73,7 +73,7 @@ export const syncMaterialRoomSelectionStage = async (projectId: mongoose.Types.O
   const newRooms = (requirementDoc.rooms || []).map((room: any) => ({
     _id: new mongoose.Types.ObjectId(), // fresh room id
     name: room.roomName,
-    roomFields: (room.items || []).map((item: any) => ({
+    roomFields: (room.items || []).map((item: Items) => ({
       _id: new mongoose.Types.ObjectId(), // fresh item id
       itemName: item.itemName,
       quantity: item.quantity
@@ -112,28 +112,36 @@ export const syncMaterialRoomSelectionStage = async (projectId: mongoose.Types.O
 
 
     newRooms.forEach(room => {
-      const existingRoom = materialDoc!.rooms.find(r => r.name.toLowerCase() === room.name.toLowerCase());
+      const existingRoom = materialDoc!.rooms.find(r => r?.name?.toLowerCase() === room?.name?.toLowerCase());
 
       if (!existingRoom) {
         // New room → push entire room
-        materialDoc!.rooms.push(room);
+        materialDoc!.rooms?.push(room);
       } else {
-        const roomFieldsArray: any[] = Array.isArray(existingRoom.roomFields)
-          ? existingRoom.roomFields
+
+
+        // if (!Array.isArray(existingRoom.roomFields)) {
+        //   existingRoom.roomFields = [];
+        // }
+
+
+        const roomFieldsArray: any[] = Array.isArray(existingRoom?.roomFields)
+          ? existingRoom?.roomFields
           : Object.values(existingRoom.roomFields || {});
 
         const existingItemNames = new Set(
-          roomFieldsArray.map(f => f.itemName.toLowerCase())
+          roomFieldsArray?.map(f => f?.itemName?.toLowerCase())
         );
 
-        room.roomFields.forEach((field: any) => {
-          if (!existingItemNames.has(field.itemName.toLowerCase())) {
-            if (Array.isArray(existingRoom.roomFields)) {
+        room.roomFields.forEach((field: Items) => {
+          if (!existingItemNames.has(field?.itemName?.toLowerCase())) {
+            if (Array.isArray(existingRoom?.roomFields)) {
               existingRoom.roomFields.push(field);
-            } else {
-              // if roomFields is an object, assign with a new key (use field.itemName as key or generate unique id)
-              existingRoom.roomFields[field.itemName] = field;
             }
+            //  else {
+            //   // if roomFields is an object, assign with a new key (use field.itemName as key or generate unique id)
+            //   existingRoom.roomFields[field?.itemName] = field;
+            // }
           }
         });
       }

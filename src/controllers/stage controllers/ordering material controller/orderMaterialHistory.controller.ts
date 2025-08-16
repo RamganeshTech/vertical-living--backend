@@ -96,6 +96,7 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
 
         const isExternalExists = await SelectedExternalModel.findOne({ projectId })
 
+        // external units condition
         if (isExternalExists && isExternalExists?.selectedUnits?.length) {
             let selectedUnits = isExternalExists.selectedUnits
 
@@ -135,6 +136,7 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
                     category: category,
                     singleUnitCost: totalPrice,
                     quantity: quantity,
+                    dimention,
                     unitId: (unit as any)._id,
                     image: image?.url,
                     subItems: []
@@ -145,15 +147,20 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
             }
             totalCost = isExternalExists?.totalCost || 0
         }
+
+
+        // moudlar units condiiton
         if (units) {
             totalCost += units.totalCost || 0;
             const modularUnits = units.selectedUnits.map((doc: any) => {
                 const { _id, ...rest } = doc.toObject();
-                return { ...rest };
+                return { ...rest, dimention: null };
             });
 
             selected = selected.concat(modularUnits);
         }
+
+
     } else if (mode === "Manual Flow") {
         // const [materials, estimation] = await Promise.all([
         //     MaterialRoomConfirmationModel.findOne({ projectId }),
@@ -244,6 +251,7 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
                     image: null, // Set image if you have it, else null
                     customId: null, // Set customId if available
                     unitName,
+                    dimention: null,
                     quantity,
                     singleUnitCost: unitCost,
                     subItems: [],
@@ -323,6 +331,8 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
         existing.timer = timer;
         existing.totalCost = totalCost;
 
+
+
         selected.forEach((newUnit: any) => {
             const existingUnit = existing?.selectedUnits?.find(
                 (unit: any) => unit.unitName === newUnit.unitName
@@ -370,7 +380,7 @@ export const addSubItemToUnit = async (req: Request, res: Response): Promise<any
             return res.status(400).json({ ok: false, message: "Invalid projectId or unitId" });
         }
 
-        if (!subItemName) {
+        if (!subItemName?.trim()) {
             return res.status(400).json({ ok: false, message: "Mateial Item is mandatory" });
         }
 
@@ -398,7 +408,7 @@ export const addSubItemToUnit = async (req: Request, res: Response): Promise<any
 
         const isExists = unitObj.subItems.find((unit: OrderSubItems) => {
             console.log("unit", unit.subItemName)
-            return unit?.subItemName?.toLowerCase() === subItemName?.toLowerCase()
+            return unit?.subItemName?.toLowerCase()?.trim() === subItemName?.toLowerCase()?.trim()
         })
 
 
@@ -406,8 +416,37 @@ export const addSubItemToUnit = async (req: Request, res: Response): Promise<any
             return res.status(400).json({ message: "Material item already exists with the same name", ok: false })
         }
 
+      // 🔹 Find max number used across ALL units' subItems
+        let maxNumber = 0;
+        orderDoc.selectedUnits.forEach((u: any) => {
+            u.subItems.forEach((sub: any) => {
+                if (sub.refId) {
+                    const num = parseInt(sub.refId.replace(/^\D+/, ""), 10); // remove prefix, take number
+                    if (!isNaN(num)) {
+                        maxNumber = Math.max(maxNumber, num);
+                    }
+                }
+            });
+        });
+
+        // New refId = prefix + (maxNumber + 1)
+        let prefix = unitObj?.unitName.substring(0, 3).toUpperCase();
+        if (prefix.length < 3) {
+            prefix = prefix.padEnd(3, "A"); // e.g., "TV" -> "TVA"
+        }
+        const refId = `${prefix}-${maxNumber + 1}`;
+
         // Add new subItem
-        unitObj.subItems.push({ subItemName, quantity, unit });
+        unitObj.subItems.push({
+            subItemName: subItemName?.trim(),
+            refId,
+            quantity,
+            unit
+        });
+
+
+        // Add new subItem
+        // unitObj.subItems.push({ subItemName: subItemName?.trim(), refId, quantity, unit });
 
         await orderDoc.save();
 
@@ -432,7 +471,7 @@ export const updateSubItemInUnit = async (req: Request, res: Response): Promise<
             return res.status(400).json({ ok: false, message: "Invalid IDs" });
         }
 
-        if (!subItemName) {
+        if (!subItemName?.trim()) {
             return res.status(400).json({ message: "material name is requried", ok: false })
         }
 
@@ -462,7 +501,7 @@ export const updateSubItemInUnit = async (req: Request, res: Response): Promise<
         //     return res.status(400).json({ message: "item already exists", ok: false })
         // }
 
-        subItemObj.subItemName = subItemName;
+        subItemObj.subItemName = subItemName.trim();
         if (quantity !== null) subItemObj.quantity = quantity;
         if (!unit !== undefined) subItemObj.unit = unit;
 
@@ -551,6 +590,49 @@ export const updateDeliveryLocationDetails = async (req: Request, res: Response)
     }
     catch (error: any) {
         console.error("Error updatinthe delivery details form ordering room", error);
+        return res.status(500).json({ message: "Server error", ok: false });
+    }
+};
+
+
+
+
+export const updateShopDetails = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params;
+        const { shopName, address, contactPerson, phoneNumber } = req.body;
+
+
+
+        if (!shopName || !address || !contactPerson || !phoneNumber) {
+            return res.status(400).json({ ok: false, message: "All shop details are required." });
+        }
+
+        const orderingDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
+            { projectId },
+            {
+                $set: {
+                    shopDetails: { shopName, address, contactPerson, phoneNumber },
+                },
+            },
+            { new: true, upsert: true }
+        );
+
+        if (!orderingDoc) {
+            return res.status(400).json({ ok: false, message: "Failed to update shop details." });
+        }
+
+        // const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
+        // await redisClient.set(redisMainKey, JSON.stringify(orderingDoc.toObject()), { EX: 60 * 10 })
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderingDoc })
+
+
+
+        res.status(200).json({ ok: true, message: "Shop details updated", data: orderingDoc.shopDetails });
+    }
+    catch (error: any) {
+        console.error("Error updatinthe shop details form ordering room", error);
         return res.status(500).json({ message: "Server error", ok: false });
     }
 };
@@ -726,6 +808,56 @@ export const generateOrderHistoryPDFController = async (req: Request, res: Respo
 };
 
 
+
+// DELETE PDF API
+export const deleteOrderMaterialPdf = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { projectId, pdfId } = req.params;
+
+    // 1. Find the pdf record in DB
+    // const orderDoc = await OrderMaterialHistoryModel.findOne({
+    //   projectId,
+    //   generatedLink:{
+    //     $pull: {_id: pdfId}
+    //   }
+    // });
+
+       const orderDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
+      { projectId },
+      { $pull: { generatedLink: { _id: pdfId } } },
+      {returnDocument:"after"}
+    );
+
+    if (!orderDoc) {
+      return res.status(404).json({ message: "PDF not found", ok:false });
+    }
+
+    // 2. Delete from S3
+    // const pdfKey = pdfRecord.fileKey; // store s3 key in db when uploading
+    // if (pdfKey) {
+    //   await s3
+    //     .deleteObject({
+    //       Bucket: process.env.AWS_S3_BUCKET!,
+    //       Key: pdfKey,
+    //     })
+    //     .promise();
+    // }
+
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+
+
+    return res.status(200).json({
+      message: "PDF deleted successfully",
+      data:pdfId,
+      ok:true
+    });
+  } catch (err) {
+    console.error("Error deleting PDF:", err);
+    return res.status(500).json({ message: "Failed to delete PDF", error: err, ok:false });
+  }
+};
+
 export const getPublicDetails = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
@@ -810,3 +942,5 @@ export const getPublicDetails = async (req: Request, res: Response): Promise<any
 
     }
 }
+
+

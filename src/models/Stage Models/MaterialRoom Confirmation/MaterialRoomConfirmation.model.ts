@@ -143,23 +143,29 @@ export interface IMaterialRoomUpload {
 import mongoose, { Document, model, Schema, Types } from "mongoose";
 import { IRoomItemEntry, } from './MaterialRoomTypes'
 import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
-import { ItemSchema } from "../requirment model/mainRequirementNew.model";
+import { Items, ItemSchema } from "../requirment model/mainRequirementNew.model";
 
 
 // 👇 Room with a set of predefined items
-export interface IPredefinedRoom {
+// export interface IPredefinedRoom {
+//   name: string; // predefined names only
+//   roomFields: {
+//     [key: string]: IRoomItemEntry | { [key: string]: IRoomItemEntry }; // support for attachedBathroom etc.
+//   };
+//   uploads: IMaterialRoomUpload[];
+// }
+
+
+export interface IMaterialRoom {
   name: string; // predefined names only
-  roomFields: {
-    [key: string]: IRoomItemEntry | { [key: string]: IRoomItemEntry }; // support for attachedBathroom etc.
-  };
+  roomFields: Items[];
   uploads: IMaterialRoomUpload[];
 }
-
 
 // 👇 Final model interface for Material Selection
 export interface IMaterialRoomConfirmation extends Document {
   projectId: Types.ObjectId;
-  rooms: IPredefinedRoom[];
+  rooms: IMaterialRoom[];
   status: "pending" | "completed";
   isEditable: boolean;
   timer: {
@@ -191,10 +197,10 @@ const timerSchema = new Schema(
 );
 
 
-const roomSchema = new Schema(
+const roomSchema = new Schema<IMaterialRoom>(
   {
     name: { type: String },
-    roomFields: {type: [ItemSchema], default: []},
+    roomFields: { type: [ItemSchema], default: [] },
     uploads: [uploadSchema],
   },
   { _id: true }
@@ -220,7 +226,7 @@ const materialRoomConfirmationSchema = new Schema<IMaterialRoomConfirmation>(
   { timestamps: true }
 );
 
-materialRoomConfirmationSchema.index({projectId:1})
+materialRoomConfirmationSchema.index({ projectId: 1 })
 
 materialRoomConfirmationSchema.plugin(procurementLogger);
 

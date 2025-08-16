@@ -165,7 +165,7 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
         if (orderHistory?.selectedUnits?.length) {
             newItems = orderHistory.selectedUnits.flatMap((unit: any) =>
                 unit.subItems.map((subItem: OrderSubItems) => ({
-                    unitName: subItem.subItemName,
+                    unitName: subItem.subItemName?.trim(),
                     quantity: 0,          // will be updated by site staff
                     image: null,          // staff will upload
                     isVerified: false,    // verification pending
@@ -186,16 +186,16 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
             });
         } else {
             // 🔍 Preserve already verified items
-            const existingList = materialArrival.materialArrivalList || [];
+            const existingList = materialArrival?.materialArrivalList || [];
             const existingMap = new Map(
-                (existingList as any)?.map((item: any) => [item.unitName, item])
+                (existingList as any)?.map((item: any) => [item.unitName?.trim(), item])
             );
 
             const finalItemsToAdd: any[] = [];
 
             for (const item of newItems) {
                 if (existingMap.has(item.unitName)) {
-                    const existingItem: any = existingMap.get(item.unitName);
+                    const existingItem: any = existingMap.get(item.unitName?.trim());
                     if (existingItem.isVerified) {
                         // Preserve entire object if already verified
                         continue;
@@ -206,7 +206,9 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
             }
 
             if (finalItemsToAdd.length > 0) {
-                (materialArrival.materialArrivalList as any)?.push(...finalItemsToAdd);
+                (materialArrival?.materialArrivalList as any)?.push(...finalItemsToAdd);
+
+                materialArrival.timer = timer
                 await materialArrival.save();
             }
         }
@@ -220,7 +222,7 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
         if (orderHistory?.selectedUnits?.length) {
             newItems = orderHistory.selectedUnits.flatMap((unit: any) =>
                 unit.subItems.map((subItem: OrderSubItems) => ({
-                    unitName: subItem.subItemName,
+                    unitName: subItem.subItemName?.trim(),
                     quantity: 0,          // will be updated by site staff
                     image: null,          // staff will upload
                     isVerified: false,    // verification pending
@@ -241,16 +243,16 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
             });
         } else {
             // 🔍 Preserve already verified items
-            const existingList = materialArrival.materialArrivalList || [];
+            const existingList = materialArrival?.materialArrivalList || [];
             const existingMap = new Map(
-                (existingList as any)?.map((item: any) => [item.unitName, item])
+                (existingList as any)?.map((item: any) => [item.unitName?.trim(), item])
             );
 
             const finalItemsToAdd: any[] = [];
 
             for (const item of newItems) {
                 if (existingMap.has(item.unitName)) {
-                    const existingItem: any = existingMap.get(item.unitName);
+                    const existingItem: any = existingMap.get(item.unitName?.trim());
                     if (existingItem.isVerified) {
                         // Preserve entire object if already verified
                         continue;
@@ -261,7 +263,8 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
             }
 
             if (finalItemsToAdd.length > 0) {
-                (materialArrival.materialArrivalList as any)?.push(...finalItemsToAdd);
+                (materialArrival?.materialArrivalList as any)?.push(...finalItemsToAdd);
+                materialArrival.timer = timer
                 await materialArrival.save();
             }
         }
@@ -415,7 +418,7 @@ export const getAllMaterialArrivalDetails = async (req: RoleBasedRequest, res: R
 
 
         const redisMainKey = `stage:MaterialArrivalModel:${projectId}`
-        // await redisClient.del(redisMainKey);
+        await redisClient.del(redisMainKey);
 
         const cachedData = await redisClient.get(redisMainKey)
 

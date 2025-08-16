@@ -10,6 +10,7 @@ import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimatio
 import { syncPaymentConfirationModel } from "../../stage controllers/PaymentConfirmation controllers/PaymentMain.controllers";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { assignedTo, selectedFields } from "../../../constants/BEconstants";
+import { SelectedExternalModel } from "../../../models/externalUnit model/SelectedExternalUnit model/selectedExternalUnit.model";
 
 // ADD A UNIT
 export const addSelectedUnit = async (req: RoleBasedRequest, res: Response): Promise<any> => {
@@ -138,6 +139,14 @@ export const completeModularUnitSelection = async (req: RoleBasedRequest, res: R
       // ✅ Update total cost in the modular unit record
       modularSelection.totalCost = recalculatedTotalCost;
       modularSelection.status = "completed"
+
+
+      const selectedExternal = await SelectedExternalModel.findOne({ projectId });
+      let finalTotalAmount = 0;
+      finalTotalAmount += selectedExternal?.totalCost || 0
+      finalTotalAmount += recalculatedTotalCost
+      await syncPaymentConfirationModel(projectId, finalTotalAmount)
+
       await modularSelection.save();
     }
 

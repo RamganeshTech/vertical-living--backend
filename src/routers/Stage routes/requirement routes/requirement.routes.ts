@@ -19,14 +19,14 @@ const requirementRoutes = express.Router()
 
 
 // need to change
-requirementRoutes.post('/createRoom/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), createRoomRequirement)
-requirementRoutes.delete('/deleteroom/:projectId/:roomId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), deleteRoomRequirement)
+requirementRoutes.post('/createRoom/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkIfStaffIsAssignedToStage(RequirementFormModel), createRoomRequirement)
+requirementRoutes.delete('/deleteroom/:projectId/:roomId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkIfStaffIsAssignedToStage(RequirementFormModel), deleteRoomRequirement)
 // need to change
 
-requirementRoutes.put('/updateroomitem/:projectId/:roomId/:itemId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), updateRoomItem)
-requirementRoutes.delete('/deleteitem/:projectId/:roomId/:itemId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), deleteRoomItemController)
+requirementRoutes.put('/updateroomitem/:projectId/:roomId/:itemId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkIfStaffIsAssignedToStage(RequirementFormModel), updateRoomItem)
+requirementRoutes.delete('/deleteitem/:projectId/:roomId/:itemId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkIfStaffIsAssignedToStage(RequirementFormModel), deleteRoomItemController)
 
-requirementRoutes.post('/createrequirement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), submitRequirementForm)
+requirementRoutes.post('/createrequirement/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkIfStaffIsAssignedToStage(RequirementFormModel), submitRequirementForm)
 // need to change
 
 requirementRoutes.get('/getrequirementform/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), getAllInfo)
@@ -34,16 +34,16 @@ requirementRoutes.get('/getrequirementform/:projectId', multiRoleAuthMiddleware(
 
 requirementRoutes.get('/getroomwise/:projectId/:roomId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), getSingleRoom)
 
-requirementRoutes.patch('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO"), notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), setRequirementStageDeadline)
+requirementRoutes.patch('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO"),  checkIfStaffIsAssignedToStage(RequirementFormModel), setRequirementStageDeadline)
 
-requirementRoutes.post('/formsharelink/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO"), notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), generateShareableFormLink)
-// requirementRoutes.patch('/lockupdation/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), lockRequirementForm)
-requirementRoutes.patch('/formcompleted/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), markFormAsCompleted)
+requirementRoutes.post('/formsharelink/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO"),  checkIfStaffIsAssignedToStage(RequirementFormModel), generateShareableFormLink)
+// requirementRoutes.patch('/lockupdation/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),  checkIfStaffIsAssignedToStage(RequirementFormModel), lockRequirementForm)
+requirementRoutes.patch('/formcompleted/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkIfStaffIsAssignedToStage(RequirementFormModel), markFormAsCompleted)
 
-// requirementRoutes.delete('/deleteform/:projectId',multiRoleAuthMiddleware("owner", "staff", "CTO"), notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), delteRequirementForm)
+// requirementRoutes.delete('/deleteform/:projectId',multiRoleAuthMiddleware("owner", "staff", "CTO"),  checkIfStaffIsAssignedToStage(RequirementFormModel), delteRequirementForm)
 
-requirementRoutes.post( "/upload/multiple/:projectId/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), imageUploadToS3.array("file"), processUploadFiles, uploadGenericController(RequirementFormModel))
-requirementRoutes.patch("/:projectId/deleteuploadedfile/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",), notToUpdateIfStageCompleted(RequirementFormModel), checkIfStaffIsAssignedToStage(RequirementFormModel), deleteRequirementStageFile);
+requirementRoutes.post( "/upload/multiple/:projectId/:formId",multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),  checkIfStaffIsAssignedToStage(RequirementFormModel), imageUploadToS3.array("file"), processUploadFiles, uploadGenericController(RequirementFormModel))
+requirementRoutes.patch("/:projectId/deleteuploadedfile/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(RequirementFormModel), deleteRequirementStageFile);
 
 
 // iun comment this to go back to the normal ktich and toher 3 routes if  you want
