@@ -27,7 +27,7 @@ orgsRouter.patch('/removectofromorganziation', multiRoleAuthMiddleware("owner"),
 // INVITE FOR WORKER FOR PROJECT
 orgsRouter.post('/inviteworker/', multiRoleAuthMiddleware("owner", "CTO", "staff"), inviteWorkerByStaff as RequestHandler)
 orgsRouter.get('/getworker/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), getWorkersByProject as RequestHandler)
-orgsRouter.put('/removeworker/:workerId/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), removeWorkerFromProject as RequestHandler)
+orgsRouter.put('/removeworker/:orgId/:workerId/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), removeWorkerFromProject as RequestHandler)
 
 
 orgsRouter.post('/inviteclienttoproject', multiRoleAuthMiddleware("owner", "CTO"), inviteClient)

@@ -20,11 +20,11 @@ const registerStaff = async (req: Request, res: Response) => {
         }
 
         // 2. Decode the invite token safely
-        let organizationId: string, role: string, expiresAt: string, ownerId: string;
+        let organizationId: string, role: string, expiresAt: string, ownerId: string, specificRole:string;
 
         try {
             const decoded = Buffer.from(invite, "base64").toString("utf-8");
-            ({ organizationId, role, expiresAt, ownerId } = JSON.parse(decoded));
+            ({ organizationId, role, expiresAt, ownerId , specificRole} = JSON.parse(decoded));
         } catch (error) {
             return res.status(400).json({ message: "Invalid invitation link", ok: false });
         }
@@ -56,6 +56,7 @@ const registerStaff = async (req: Request, res: Response) => {
             password: hashedPassword, // Make sure to hash this in middleware
             phoneNo,
             staffName,
+            specificRole: specificRole || null,
             role,
             organizationId: [organizationId],
             ownerId

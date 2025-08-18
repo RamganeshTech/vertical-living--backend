@@ -206,7 +206,7 @@ const getFilesFromRoom = async (req: Request, res: Response): Promise<any> => {
 
 const deleteFileFromRoom = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { projectId, roomName, fileIndex } = req.params;
+    const { projectId, roomName, fileId } = req.params;
 
     if (!projectId) {
       return res.status(400).json({ message: "projectId is requried", ok: false })
@@ -217,12 +217,29 @@ const deleteFileFromRoom = async (req: Request, res: Response): Promise<any> => 
       return res.status(404).json({ ok: false, message: "Sample design not found." });
     }
 
-    const room = design.rooms.find(r => r.roomName === roomName);
-    if (!room || !room.files[+fileIndex]) {
-      return res.status(404).json({ ok: false, message: "File not found in room." });
+    // const room = design.rooms.find(r => r.roomName === roomName);
+    // if (!room || !room.files[+fileIndex]) {
+    //   return res.status(404).json({ ok: false, message: "File not found in room." });
+    // }
+
+    // room.files.splice(+fileIndex, 1);
+    // await design.save();
+
+
+     const room = design.rooms.find(r => r.roomName === roomName);
+    if (!room) {
+      return res.status(404).json({ ok: false, message: "Room not found." });
     }
 
-    room.files.splice(+fileIndex, 1);
+    const filesLength = room.files?.length || 0
+    room.files = room.files.filter((file:any)=>{
+      return file._id.toString() !== fileId
+    })
+
+    if(room.files?.length === filesLength){
+      return res.status(404).json({message:"file not found", ok:false})
+    }
+
     await design.save();
 
 

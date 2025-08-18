@@ -6,6 +6,7 @@ interface IStaff extends Document {
     staffName: string,
     phoneNo: string,
     role: string;
+    specificRole: string;
     organizationId?: [Types.ObjectId];
     ownerId: Types.ObjectId | null
     resetPasswordToken?: string;
@@ -35,6 +36,10 @@ const StaffSchema: Schema<IStaff> = new Schema({
     role: {
         type: String,
         enum: ["staff", null],
+        default: null
+    },
+     specificRole: {
+        type: String,
         default: null
     },
     organizationId: {

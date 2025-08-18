@@ -413,8 +413,12 @@ export const deleteDailyScheduleImage = async (req: Request, res: Response): Pro
       return res.status(404).json({ ok:false, message: "Project schedule not found" });
     }
 
+
+    console.log("taskid", taskId)
+
     // 2. Find the task
     const task = (schedule.tasks as any).id(taskId);
+    
     if (!task) {
       return res.status(404).json({ ok:false, message: "Task not found" });
     }

@@ -17,6 +17,7 @@ import MaterialArrivalModel from "../models/Stage Models/MaterialArrivalCheck Mo
 import { OrderMaterialHistoryModel } from "../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 import { SelectedModularUnitModel } from "../models/Modular Units Models/All Unit Model/SelectedModularUnit Model/selectedUnit.model";
 import { RequirementFormModel } from "../models/Stage Models/requirment model/mainRequirementNew.model";
+import { SelectedExternalModel } from "../models/externalUnit model/SelectedExternalUnit model/selectedExternalUnit.model";
 
 
 export const SUBSCRIPTION_PLANS = {
@@ -52,6 +53,7 @@ export const stageModels: Model<any>[] = [
   SampleDesignModel, // Stage 3
   TechnicalConsultationModel,      // Stage 4
   SelectedModularUnitModel, //stage 5
+  SelectedExternalModel, //stage 6
   MaterialRoomConfirmationModel,      // Stage 5
   CostEstimationModel,                // Stage 6    
   PaymentConfirmationModel,    //stage 7

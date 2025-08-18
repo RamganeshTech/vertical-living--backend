@@ -8,6 +8,7 @@ import ClientModel from "../../models/client model/client.model";
 import { getWorkerUtils, removeWorkerUtils } from "../../utils/workerUtils";
 import { generateWorkerInviteLink } from "../../utils/generateInvitationworker";
 import { syncAllMixedRoutes } from "../Modular Units Controllers/modularUnit.controller";
+import redisClient from "../../config/redisClient";
 
 
 const createOrganziation = async (req: RoleBasedRequest, res: Response) => {
@@ -27,10 +28,10 @@ const createOrganziation = async (req: RoleBasedRequest, res: Response) => {
 
 
         if (existing) {
-                return res.status(400).json({
-                    message: "Owner already has an organization",
-                    ok: false,
-                });
+            return res.status(400).json({
+                message: "Owner already has an organization",
+                ok: false,
+            });
         }
 
 
@@ -229,7 +230,7 @@ const deleteOrganization = async (req: RoleBasedRequest, res: Response) => {
     }
 };
 
-
+// used only in the invitestaff component
 const getStaffsByOrganization = async (req: RoleBasedRequest, res: Response) => {
     try {
         const { orgId } = req.params;
@@ -241,6 +242,8 @@ const getStaffsByOrganization = async (req: RoleBasedRequest, res: Response) => 
         const staffs = await StaffModel.find({
             organizationId: orgId
         }).select("-password -resetPasswordToken -resetPasswordExpire"); // Exclude sensitive fields
+        // console.log("staffs", staffs)
+
 
         return res.status(200).json({
             message: "Staffs fetched successfully",
@@ -261,7 +264,7 @@ const getStaffsByOrganization = async (req: RoleBasedRequest, res: Response) => 
 // POST /api/staff/invite
 const inviteStaff = async (req: RoleBasedRequest, res: Response) => {
     try {
-        const { organizationId, role } = req.body;
+        const { organizationId, role, specificRole } = req.body;
         const user = req.user
         if (!organizationId || !role) {
             res.status(400).json({
@@ -278,6 +281,7 @@ const inviteStaff = async (req: RoleBasedRequest, res: Response) => {
         const invitationPayload = {
             organizationId,
             role,
+            specificRole,
             expiresAt,
             ownerId: user?.ownerId || user?._id
         };
@@ -320,6 +324,8 @@ const removeStaffFromOrganization = async (req: RoleBasedRequest, res: Response)
             res.status(404).json({ message: "Staff not found", ok: false });
             return
         }
+
+        await redisClient.del(`getusers:staff:${orgId}`)
 
         res.status(200).json({ message: "Removed staff from organization", data: staff, ok: true });
 
@@ -426,6 +432,8 @@ const removeCTOFromOrganization = async (req: RoleBasedRequest, res: Response) =
             return
         }
 
+        await redisClient.del(`getusers:CTO:${orgId}`)
+
         res.status(200).json({ message: "Removed CTO from organization", data: CTO, ok: true });
 
     } catch (error) {
@@ -485,7 +493,7 @@ const inviteWorkerByStaff = async (req: RoleBasedRequest, res: Response): Promis
 // PUT /api/worker/remove/:workerId/:projectId
 const removeWorkerFromProject = async (req: RoleBasedRequest, res: Response): Promise<void> => {
     try {
-        const { workerId, projectId } = req.params;
+        const { workerId, projectId, orgId } = req.params;
 
         if (!workerId) {
             res.status(400).json({ message: "workerId is required", ok: false });
@@ -498,6 +506,9 @@ const removeWorkerFromProject = async (req: RoleBasedRequest, res: Response): Pr
             res.status(404).json({ message: "Worker not found", ok: false });
             return;
         }
+
+
+        await redisClient.del(`getusers:worker:${orgId}`)
 
         res.status(200).json({
             message: "Worker removed from the project successfully",

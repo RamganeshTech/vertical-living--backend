@@ -28,7 +28,7 @@ const installationRoutes = Router();
 installationRoutes.get("/:projectId/getalldetail",multiRoleAuthMiddleware("CTO", "owner", "staff", "worker", "client"), getInstallationDetails);
 installationRoutes.put("/:projectId/:taskId/status",notToUpdateIfStageCompleted(InstallationModel), checkIfStaffIsAssignedToStage(InstallationModel), updateInstallationTaskStatus);
 
-installationRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkPreviousStageCompleted(MaterialArrivalModel),notToUpdateIfStageCompleted(InstallationModel), checkIfStaffIsAssignedToStage(InstallationModel),setInstallationStageDeadline)
-installationRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkPreviousStageCompleted(MaterialArrivalModel),notToUpdateIfStageCompleted(InstallationModel), checkIfStaffIsAssignedToStage(InstallationModel),installationCompletionStatus)
+installationRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),   checkIfStaffIsAssignedToStage(InstallationModel),setInstallationStageDeadline)
+installationRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),   checkIfStaffIsAssignedToStage(InstallationModel),installationCompletionStatus)
 
 export default installationRoutes;

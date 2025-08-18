@@ -25,7 +25,7 @@ sampleDesignRoutes.post("/:projectId/rooms/:roomName/upload", multiRoleAuthMiddl
 sampleDesignRoutes.get("/:projectId/rooms", multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(SiteMeasurementModel), getFilesFromRoom);
 
 // Delete file by index
-sampleDesignRoutes.delete("/:projectId/rooms/:roomName/delete/:fileIndex", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel), notToUpdateIfStageCompleted(SampleDesignModel), checkIfStaffIsAssignedToStage(SampleDesignModel), deleteFileFromRoom);
+sampleDesignRoutes.delete("/:projectId/rooms/:roomName/delete/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel), notToUpdateIfStageCompleted(SampleDesignModel), checkIfStaffIsAssignedToStage(SampleDesignModel), deleteFileFromRoom);
 sampleDesignRoutes.delete("/:projectId/:roomId/deleteroom", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel),  notToUpdateIfStageCompleted(SampleDesignModel), checkIfStaffIsAssignedToStage(SampleDesignModel),deleteRoom);
 
 
