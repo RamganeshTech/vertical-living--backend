@@ -305,6 +305,7 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
             timer,
             selectedUnits: selected,
             totalCost,
+            genreatedLink:[]
         });
     } else {
         // existing.timer = timer;

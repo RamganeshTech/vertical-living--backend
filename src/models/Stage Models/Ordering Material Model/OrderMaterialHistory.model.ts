@@ -235,7 +235,7 @@ const OrderHistorySchema = new Schema<IOrderedMaterialHistory>({
     timer: { type: TimerSchema, required: true },
     selectedUnits: { type: [orderedUnits], default: [] },
     totalCost: { type: Number, },
-    generatedLink: { type: [pdfGeneratorSchema], default: null }
+    generatedLink: { type: [pdfGeneratorSchema], default: [] }
 }, { timestamps: true });
 
 OrderHistorySchema.index({ projectId: 1 })

@@ -609,7 +609,13 @@ const generateOrderHistoryPDF = async (projectId: string) => {
             _id: new mongoose.Types.ObjectId()
         };
 
-        orderHistory.generatedLink.push(pdfData as IPdfGenerator);
+        if(Array.isArray(orderHistory.generatedLink)) {
+            orderHistory?.generatedLink?.push(pdfData as IPdfGenerator);
+        }else{
+            orderHistory.generatedLink = []
+            orderHistory?.generatedLink.push(pdfData as IPdfGenerator)
+        }
+        
         console.log("orderHistory.generatedLink", orderHistory.generatedLink)
         await orderHistory.save();
 
