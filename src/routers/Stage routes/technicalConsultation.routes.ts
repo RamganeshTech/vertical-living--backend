@@ -14,20 +14,20 @@ const technicalConsultRoutes = express.Router()
 
 // 4. TECHNICAL CONSULTATION routes
 
-technicalConsultRoutes.post("/createmessage/:projectId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel), notToUpdateIfStageCompleted(TechnicalConsultationModel), checkIfStaffIsAssignedToStage(TechnicalConsultationModel),  imageUploadToS3.array("attachments"), processUploadFiles, addConsultationMessage); // field name used in FormData
+technicalConsultRoutes.post("/createmessage/:projectId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"), checkIfStaffIsAssignedToStage(TechnicalConsultationModel),  imageUploadToS3.array("attachments"), processUploadFiles, addConsultationMessage); // field name used in FormData
 
 // ✅ GET all messages for a project
-technicalConsultRoutes.get("/getmessages/:projectId" ,multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel), getConsultationMessages);
+technicalConsultRoutes.get("/getmessages/:projectId" ,multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"), getConsultationMessages);
 
 // ✅ DELETE a specific message
-technicalConsultRoutes.delete("/deletemessage/:projectId/:messageId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel),  notToUpdateIfStageCompleted(TechnicalConsultationModel), checkIfStaffIsAssignedToStage(TechnicalConsultationModel), deleteConsultationMessage);
+technicalConsultRoutes.delete("/deletemessage/:projectId/:messageId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"), checkIfStaffIsAssignedToStage(TechnicalConsultationModel), deleteConsultationMessage);
 
 // EDIT a sepecific message
-technicalConsultRoutes.put("/editmessage/:projectId/:messageId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),checkPreviousStageCompleted(SampleDesignModel),  notToUpdateIfStageCompleted(TechnicalConsultationModel), checkIfStaffIsAssignedToStage(TechnicalConsultationModel), editConsultationMessage);
+technicalConsultRoutes.put("/editmessage/:projectId/:messageId",multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"), checkIfStaffIsAssignedToStage(TechnicalConsultationModel), editConsultationMessage);
 
 
-technicalConsultRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(SampleDesignModel),  notToUpdateIfStageCompleted(TechnicalConsultationModel), checkIfStaffIsAssignedToStage(TechnicalConsultationModel), tehnicalConsultantCompletionStatus)
-technicalConsultRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(SampleDesignModel), notToUpdateIfStageCompleted(TechnicalConsultationModel), checkIfStaffIsAssignedToStage(TechnicalConsultationModel),  setTechnicalConsultantStageDeadline)
+technicalConsultRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(TechnicalConsultationModel), tehnicalConsultantCompletionStatus)
+technicalConsultRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(TechnicalConsultationModel),  setTechnicalConsultantStageDeadline)
 
 
 

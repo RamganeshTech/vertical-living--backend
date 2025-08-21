@@ -146,15 +146,24 @@ const getConsultationMessages = async (req: Request, res: Response): Promise<any
     }
 
 
-    const doc = await TechnicalConsultationModel.findOne({ projectId })
-      .populate("messages.sender")
-    // .populate({
-    //   path: "messages",
-    //   populate: {
-    //     path: "sender",
-    //     strictPopulate: false // important for refPath
-    //   }
-    // });
+const doc = await TechnicalConsultationModel.findOne({ projectId })
+ .populate({
+    path: "messages.sender",
+  });
+  // .populate({ // thsi code is alos working 
+  //   path: 'messages',
+  //   populate: {
+  //     path: 'sender'
+  //   }
+  // });
+      
+
+    if (doc) {
+  await doc.populate('messages.sender');
+  console.log("After populate:", JSON.stringify(doc, null, 2));
+}
+
+    console.log("Raw doc before population:", JSON.stringify(doc, null, 2));
 
     // console.log("doc", doc)
     if (!doc) {

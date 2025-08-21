@@ -18,7 +18,7 @@ import { syncShortList } from "../sampledesign contorllers/shortList.controller"
 import { ShortlistedDesignModel } from "../../../models/Stage Models/sampleDesing model/shortListed.model";
 
 
-export const syncSiteMeasurement = async (projectId: string) => {
+export const syncSiteMeasurement = async (projectId: string, rooms: any) => {
 
   let siteMeasurement = await SiteMeasurementModel.findOne({ projectId });
 
@@ -44,7 +44,15 @@ export const syncSiteMeasurement = async (projectId: string) => {
         boundaryWallExists: null,
         additionalNotes: null
       },
-      rooms: initializeSiteRequirement,
+      rooms: rooms.map((room: any) => {
+        return {
+          name: room.roomName,
+          height: null,
+          breadth: null,
+          length: null,
+          uploads: []
+        }
+      }),
     });
   } else {
     siteMeasurement.status = "pending";
@@ -53,6 +61,21 @@ export const syncSiteMeasurement = async (projectId: string) => {
     siteMeasurement.timer.reminderSent = false
     siteMeasurement.timer.completedAt = null
     siteMeasurement.timer.deadLine = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+    const existingRoomNames = siteMeasurement?.rooms.map((room: any) => room.name);
+
+    // Create only missing rooms
+    const newRooms = rooms
+      .filter((room: any) => !existingRoomNames.includes(room.roomName))
+      .map((room: any) => ({
+        name: room.roomName,
+        length: null,
+        breadth: null,
+        height: null,
+        uploads: [],
+      }));
+
+    // Append missing rooms while keeping existing rooms intact
+    siteMeasurement.rooms = [...siteMeasurement.rooms, ...newRooms];
   }
   await siteMeasurement.save()
 
@@ -580,20 +603,20 @@ const uploadSiteMeasurementRoomImages = async (req: RoleBasedRequest, res: Respo
       return res.status(404).json({ message: "Room not found", ok: false });
     }
 
-    
+
     let uploadedLength = room?.uploads?.length || 0
     const uploads = imageFiles.map((file,) => {
       uploadedLength += 1
       return {
-      _id: new Types.ObjectId(),
-      type: "image",
-      url: (file as any).location,
-      originalName: file.originalname,
-      categoryName: `general-${uploadedLength}`,
-      uploadedAt: new Date(),
+        _id: new Types.ObjectId(),
+        type: "image",
+        url: (file as any).location,
+        originalName: file.originalname,
+        categoryName: `general-${uploadedLength}`,
+        uploadedAt: new Date(),
+      }
     }
-  } 
-  );
+    );
 
     // Ensure uploads array exists
     if (!room?.uploads) {

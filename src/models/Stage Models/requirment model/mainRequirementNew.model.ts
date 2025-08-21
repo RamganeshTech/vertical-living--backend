@@ -35,7 +35,8 @@ export interface IMainRequirementFormSchema extends Document {
 
 export interface Items {
     itemName: string,
-    quantity:number
+    quantity: number,
+    unit?: string
 }
 
 export interface RequirementRooms {
@@ -54,7 +55,8 @@ export const uploadSchema = new Schema({
 
 export const ItemSchema = new Schema<Items>({
     itemName: { type: String, default: null },
-    quantity: { type: Number, default: 0 }
+    quantity: { type: Number, default: 0 },
+    unit: { type: String, default: "nos" }
 }, { _id: true });
 
 const RequirementRoomsSchema = new Schema({

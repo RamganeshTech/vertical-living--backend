@@ -11,6 +11,7 @@ export interface IProjectPreRequireties {
   plumbingWork: IPreRequiretiesSiteItem;
   civilWork: IPreRequiretiesSiteItem;
   decorationWork: IPreRequiretiesSiteItem;
+  carpentryWork: IPreRequiretiesSiteItem;
   projectId: Types.ObjectId
 }
 
@@ -27,7 +28,10 @@ const PreRequiretiesSchema = new Schema<IProjectPreRequireties>({
   plumbingWork: { type: PreRequiretiesItemSchema, required: true, default: {} },
   civilWork: { type: PreRequiretiesItemSchema, required: true, default: {} },
   decorationWork: { type: PreRequiretiesItemSchema, required: true, default: {} },
+  carpentryWork:{ type: PreRequiretiesItemSchema, required: true, default: {} },
   projectId: {type: Schema.Types.ObjectId, ref:"ProjectModel", default:null}
+}, {
+  timestamps: true
 });
 
 

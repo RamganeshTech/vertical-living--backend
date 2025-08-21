@@ -47,7 +47,7 @@ const attachmentSchema = new Schema<IConsultationAttachment>({
 }, { _id: true });
 
 const messageSchema = new Schema<IConsultationMessage>({
-    sender: { type: Schema.Types.ObjectId, required: true, refPath:"senderModel" },
+    sender: { type: Schema.Types.ObjectId,  refPath:"messages.senderModel" },
     senderModel: {
         type: String,
         required: true,

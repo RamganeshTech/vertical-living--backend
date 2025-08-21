@@ -28,9 +28,9 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRo
 
     design = new SampleDesignModel({
       projectId,
-      rooms: PREDEFINED_ROOMS.map(roomName => {
+      rooms: siteRooms.map(room => {
         return {
-          roomName,
+          roomName:room.name,
           files: []
         }
       }),

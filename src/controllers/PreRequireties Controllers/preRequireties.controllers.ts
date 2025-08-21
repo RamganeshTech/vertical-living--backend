@@ -16,6 +16,7 @@ export const syncPreRequireties = async (projectId: Types.ObjectId | string) => 
         plumbingWork: defaultData,
         civilWork: defaultData,
         decorationWork: defaultData,
+        carpentryWork: defaultData,
         projectId
     })
 
@@ -28,7 +29,7 @@ const updatePreRequiretyNotes = async (req: Request, res: Response): Promise<any
         const { id, section } = req.params; // id = PreRequireties ID, section = which section to update
         const { notes } = req.body;
 
-        if (!['modularWork', 'electricalWork', 'plumbingWork', 'civilWork', 'decorationWork'].includes(section)) {
+        if (!['modularWork', 'electricalWork', 'plumbingWork', 'civilWork', 'decorationWork','carpentryWork'].includes(section)) {
             return res.status(400).json({ ok: false, message: "Invalid section name" });
         }
 
@@ -60,12 +61,12 @@ const updatePreRequiretyBoolean = async (req: Request, res: Response): Promise<a
             return res.status(400).json({ ok: false, message: "isRequired must be a boolean" });
         }
 
-        if (!['modularWork', 'electricalWork', 'plumbingWork', 'civilWork', 'decorationWork'].includes(section)) {
+        if (!['modularWork', 'electricalWork', 'plumbingWork', 'civilWork', 'decorationWork', 'carpentryWork'].includes(section)) {
             return res.status(400).json({ ok: false, message: "Invalid section name" });
         }
 
         const updatePath = `${section}.isRequired`;
-console.log("id ", id)
+// console.log("id ", id)
         const updated = await PreRequiretiesModel.findByIdAndUpdate(
             id,
             { $set: { [updatePath]: isRequired } },

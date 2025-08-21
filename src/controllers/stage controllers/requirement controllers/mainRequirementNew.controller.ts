@@ -204,7 +204,7 @@ export const deleteRoomRequirement = async (req: RoleBasedRequest, res: Response
 export const updateRoomItem = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         let { projectId, roomId, itemId } = req.params
-        const { itemName, quantity } = req.body;
+        const { itemName, quantity, unit } = req.body;
 
         if (!projectId || !roomId || !itemId) {
             return res.status(400).json({ message: "projectId, roomId, itemId  are required required" });
@@ -238,6 +238,7 @@ export const updateRoomItem = async (req: RoleBasedRequest, res: Response): Prom
 
             item.quantity = quantity;
 
+            item.unit = unit
 
             await doc.save();
 
@@ -250,18 +251,19 @@ export const updateRoomItem = async (req: RoleBasedRequest, res: Response): Prom
             const newItem: any = {};
 
 
-            const isExists = room.items.find((item:Items)=> {
+            const isExists = room.items.find((item: Items) => {
                 // console.log("itmem", item.itemName.trim().toLowerCase())
                 // console.log("itmem from input", itemName.toLowerCase())
-               return item.itemName.toLowerCase().trim() === itemName.toLowerCase().trim()
-        })
+                return item.itemName.toLowerCase().trim() === itemName.toLowerCase().trim()
+            })
 
-            if(isExists){
-                return res.status(409).json({message:"Room Item already exists", ok:false})
+            if (isExists) {
+                return res.status(409).json({ message: "Room Item already exists", ok: false })
             }
 
             newItem.itemName = itemName.trim();
             newItem.quantity = quantity; // default quantity
+            newItem.unit = unit
 
             room.items.push(newItem);
             await doc.save();
@@ -466,7 +468,7 @@ export const markFormAsCompleted = async (req: RoleBasedRequest, res: Response):
         await form.save();
 
         if (form.status === "completed") {
-            await syncSiteMeasurement(projectId)
+            await syncSiteMeasurement(projectId, form.rooms)
             await syncMaterialRoomSelectionStage(projectId)
 
             // const uploadedFiles: DocUpload[] = form.uploads.map((upload: any) => ({ type: upload.type, originalName: upload.originalName, url: upload.url }))
