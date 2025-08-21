@@ -87,16 +87,16 @@ const registerStaff = async (req: Request, res: Response) => {
         await redisClient.del(`getusers:${role}:${organizationId}`)
 
         res.status(201).json({ message: "Staff registered successfully", data: staff, ok: true });
-        // syncEmployee({
-        //     organizationId,
-        //     empId: staff._id,
-        //     employeeModel: StaffModel,
-        //     empRole: "organization_staff", name: staff.staffName,
-        //     phoneNo: staff.phoneNo,
-        //     email: staff.email,
-        //     specificRole:specificRole
-        // })
-        //     .catch(err => console.log("syncEmployee error in Hr Dept", err))
+        syncEmployee({
+            organizationId,
+            empId: staff._id,
+            employeeModel: "StaffModel",
+            empRole: "organization_staff", name: staff.staffName,
+            phoneNo: staff.phoneNo,
+            email: staff.email,
+            specificRole:specificRole
+        })
+            .catch(err => console.log("syncEmployee error in Hr Dept", err))
     } catch (error) {
         if (error instanceof Error) {
             console.error("Staff registration failed:", error);

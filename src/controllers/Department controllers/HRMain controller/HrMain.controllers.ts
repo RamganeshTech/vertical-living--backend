@@ -33,6 +33,7 @@ const sourceModels: any = {
  */
 export const syncEmployee = async ({ organizationId, empId, employeeModel, empRole, name, phoneNo, email, specificRole }: SyncEmployeeParams) => {
     if (!empId || !employeeModel || organizationId) {
+      console.log("no empId or employeeModel or organiiaotnID is provided ")
         return
     }
 
@@ -40,6 +41,7 @@ export const syncEmployee = async ({ organizationId, empId, employeeModel, empRo
     const SourceModel = sourceModels[employeeModel];
 
     if (!SourceModel) {
+      console.log("no model is created")
         return
     }
 
@@ -53,7 +55,7 @@ export const syncEmployee = async ({ organizationId, empId, employeeModel, empRo
     const newEmployee = await EmployeeModel.create({
         organizationId,
         empId,
-        employeeModel:employeeModel.modelName,
+        employeeModel:employeeModel,
         empRole: empRole || "organization_staff",
         personalInfo: {
             empName:name,

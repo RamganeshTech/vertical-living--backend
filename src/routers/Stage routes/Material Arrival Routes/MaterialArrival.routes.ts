@@ -29,17 +29,17 @@ const materialArrivalRoutes = express.Router();
 // materialArrivalRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderingMaterialModel), notToUpdateIfStageCompleted(MaterialArrivalModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel),materialArrivalCompletionStatus)
 
 
-materialArrivalRoutes.put('/updateverification/:projectId/:unitName', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderMaterialHistoryModel),notToUpdateIfStageCompleted(MaterialArrivalModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel), toggleMaterialVerification)
-materialArrivalRoutes.put('/updateImage/:projectId/:fieldId',checkPreviousStageCompleted(OrderMaterialHistoryModel), notToUpdateIfStageCompleted(MaterialArrivalModel),  imageUploadToS3.single("upload"), processUploadFiles, updateMaterialArrivalItem)
+materialArrivalRoutes.put('/updateverification/:projectId/:unitName', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderMaterialHistoryModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel), toggleMaterialVerification)
+materialArrivalRoutes.put('/updateImage/:projectId/:fieldId',checkPreviousStageCompleted(OrderMaterialHistoryModel),   imageUploadToS3.single("upload"), processUploadFiles, updateMaterialArrivalItem)
 
-materialArrivalRoutes.put('/verifyall/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderMaterialHistoryModel),notToUpdateIfStageCompleted(MaterialArrivalModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel), bulkToggleAllVerification)
+materialArrivalRoutes.put('/verifyall/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderMaterialHistoryModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel), bulkToggleAllVerification)
 materialArrivalRoutes.get('/getalldetails/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), getAllMaterialArrivalDetails)
 
-materialArrivalRoutes.post("/:projectId/generate-link", multiRoleAuthMiddleware("owner", "staff", "CTO"),checkPreviousStageCompleted(OrderMaterialHistoryModel),notToUpdateIfStageCompleted(MaterialArrivalModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel), generateMaterialArrivalLink);
-materialArrivalRoutes.get("/public/:projectId/:token", checkPreviousStageCompleted(OrderMaterialHistoryModel),getMaterialArrivalPublicDetails);
+materialArrivalRoutes.post("/:projectId/generate-link", multiRoleAuthMiddleware("owner", "staff", "CTO"),checkPreviousStageCompleted(OrderMaterialHistoryModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel), generateMaterialArrivalLink);
+materialArrivalRoutes.get("/public/:projectId/:token", getMaterialArrivalPublicDetails);
 
-materialArrivalRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderMaterialHistoryModel),notToUpdateIfStageCompleted(MaterialArrivalModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel), setMaterialArrivalStageDeadline)
-materialArrivalRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderMaterialHistoryModel), notToUpdateIfStageCompleted(MaterialArrivalModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel),materialArrivalCompletionStatus)
+materialArrivalRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderMaterialHistoryModel), checkIfStaffIsAssignedToStage(MaterialArrivalModel), setMaterialArrivalStageDeadline)
+materialArrivalRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(OrderMaterialHistoryModel),  checkIfStaffIsAssignedToStage(MaterialArrivalModel),materialArrivalCompletionStatus)
 
 
 export default materialArrivalRoutes;
