@@ -16,21 +16,21 @@ const sampleDesignRoutes = express.Router();
 
 
 // Add a new room
-sampleDesignRoutes.post("/:projectId/rooms", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel),  notToUpdateIfStageCompleted(SampleDesignModel), checkIfStaffIsAssignedToStage(SampleDesignModel), addRoom);
+sampleDesignRoutes.post("/:projectId/rooms", multiRoleAuthMiddleware("owner", "staff", "CTO"),  checkIfStaffIsAssignedToStage(SampleDesignModel), addRoom);
 
 // Upload files to a dynamic room
-sampleDesignRoutes.post("/:projectId/rooms/:roomName/upload", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel), notToUpdateIfStageCompleted(SampleDesignModel), checkIfStaffIsAssignedToStage(SampleDesignModel), imageUploadToS3.array("files"), processUploadFiles, uploadFilesToRoom);
+sampleDesignRoutes.post("/:projectId/rooms/:roomName/upload", multiRoleAuthMiddleware("owner", "staff", "CTO"),  checkIfStaffIsAssignedToStage(SampleDesignModel), imageUploadToS3.array("files"), processUploadFiles, uploadFilesToRoom);
 
 // Get files from a room
 sampleDesignRoutes.get("/:projectId/rooms", multiRoleAuthMiddleware("owner", "staff", "CTO", "client"), checkPreviousStageCompleted(SiteMeasurementModel), getFilesFromRoom);
 
 // Delete file by index
-sampleDesignRoutes.delete("/:projectId/rooms/:roomName/delete/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel), notToUpdateIfStageCompleted(SampleDesignModel), checkIfStaffIsAssignedToStage(SampleDesignModel), deleteFileFromRoom);
-sampleDesignRoutes.delete("/:projectId/:roomId/deleteroom", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel),  notToUpdateIfStageCompleted(SampleDesignModel), checkIfStaffIsAssignedToStage(SampleDesignModel),deleteRoom);
+sampleDesignRoutes.delete("/:projectId/rooms/:roomName/delete/:fileId", multiRoleAuthMiddleware("owner", "staff", "CTO"),  checkIfStaffIsAssignedToStage(SampleDesignModel), deleteFileFromRoom);
+sampleDesignRoutes.delete("/:projectId/:roomId/deleteroom", multiRoleAuthMiddleware("owner", "staff", "CTO"),  checkIfStaffIsAssignedToStage(SampleDesignModel),deleteRoom);
 
 
-sampleDesignRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel), notToUpdateIfStageCompleted(SampleDesignModel), checkIfStaffIsAssignedToStage(SampleDesignModel), setSampleDesignStageDeadline)
-sampleDesignRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO"), checkPreviousStageCompleted(SiteMeasurementModel),  notToUpdateIfStageCompleted(SampleDesignModel),checkIfStaffIsAssignedToStage(SampleDesignModel), sampleDesignCompletionStatus)
+sampleDesignRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO"),  checkIfStaffIsAssignedToStage(SampleDesignModel), setSampleDesignStageDeadline)
+sampleDesignRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO"), checkIfStaffIsAssignedToStage(SampleDesignModel), sampleDesignCompletionStatus)
 
 
 export default sampleDesignRoutes;
