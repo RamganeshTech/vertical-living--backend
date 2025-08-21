@@ -26,7 +26,7 @@ const installationRoutes = Router();
 // installationRoutes.delete("/:projectId/item/delete", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker"), checkPreviousStageCompleted(MaterialArrivalModel),notToUpdateIfStageCompleted(InstallationModel), checkIfStaffIsAssignedToStage(InstallationModel),deleteInstallationItem);
 // installationRoutes.get("/:projectId/getroomdetail/:roomName", multiRoleAuthMiddleware("CTO", "owner", "staff", "worker", "client"), checkPreviousStageCompleted(MaterialArrivalModel), getInstallationRoomDetails);
 installationRoutes.get("/:projectId/getalldetail",multiRoleAuthMiddleware("CTO", "owner", "staff", "worker", "client"), getInstallationDetails);
-installationRoutes.put("/:projectId/:taskId/status",notToUpdateIfStageCompleted(InstallationModel), checkIfStaffIsAssignedToStage(InstallationModel), updateInstallationTaskStatus);
+installationRoutes.put("/:projectId/:taskId/status", checkIfStaffIsAssignedToStage(InstallationModel), updateInstallationTaskStatus);
 
 installationRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),   checkIfStaffIsAssignedToStage(InstallationModel),setInstallationStageDeadline)
 installationRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),   checkIfStaffIsAssignedToStage(InstallationModel),installationCompletionStatus)

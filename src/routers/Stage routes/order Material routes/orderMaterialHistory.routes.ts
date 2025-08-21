@@ -19,7 +19,7 @@ orderMaterialHistoryRoutes.delete('/delete/:projectId/:pdfId', multiRoleAuthMidd
 
 orderMaterialHistoryRoutes.get('/getpublic/:projectId', getPublicDetails)
 orderMaterialHistoryRoutes.put("/:projectId/delivery-location", multiRoleAuthMiddleware("owner", "staff", "CTO",) , checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel),updateDeliveryLocationDetails);
-orderMaterialHistoryRoutes.put("/:projectId/shop", multiRoleAuthMiddleware("owner", "staff", "CTO",) ,checkPreviousStageCompleted(PaymentConfirmationModel), updateShopDetails);
+orderMaterialHistoryRoutes.put("/:projectId/shop", multiRoleAuthMiddleware("owner", "staff", "CTO",) , checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel),updateShopDetails);
 
 // Add a subItem to a specific unit of a project
 orderMaterialHistoryRoutes.post("/:projectId/unit/:unitId/addsubitem", multiRoleAuthMiddleware("owner", "staff", "CTO",),checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), addSubItemToUnit);
