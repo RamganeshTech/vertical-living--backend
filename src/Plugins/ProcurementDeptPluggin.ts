@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import procurementModel from "../models/Procurement Model/procurement.model";
+import procurementModel from "../models/Department Models/Procurement Model/procurement.model";
 import { Schema, Types } from "mongoose";
 import ProjectModel from "../models/project model/project.model";
 

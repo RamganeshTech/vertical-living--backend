@@ -1,113 +1,70 @@
-import mongoose,{ Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-const procurementVendorSchema = new Schema({
-  vendorCode: {
-    type: String,
-  },
-  companyName: {
-    type: String,
-  },
-  contactPerson: {
-    name: String,
-    designation: String,
-    email: String,
-    phone: String
-  },
-  address: {
-    street: String,
-    city: String,
-    state: String,
-    pincode: String,
-    country: { type: String, default: 'India' }
-  },
-  businessInfo: {
-    gstNumber: String,
-    panNumber: String,
-    businessType: {
-      type: String,
-      enum: ['manufacturer', 'supplier', 'service_provider', 'contractor']
+
+
+const ActiveLog = new Schema({
+    projectId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ProjectModel",
+        default: null
     },
-    yearsInBusiness: Number
-  },
-  categories: [String], // Materials/services they provide
-  paymentTerms: {
-    creditDays: Number,
-    paymentMethod: {
-      type: String,
-      enum: ['cash', 'cheque', 'bank_transfer', 'online']
+    // Polymorphic user reference
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        refPath: "userType"
+    },
+    userType: {
+        type: String,
+        enum: ["UserModel", "StaffModel", "WorkerModel", "ClientModel", "CTOModel"]
+    },
+    // Polymorphic stage reference
+    stageId: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null,
+        refPath: "stageModel"
+    },
+    stageModel: {
+        type: String,
+        default: null,
+        // Keep enum if you want to restrict to the 14 stage models you have
+        // enum: ["StageTypeA", "StageTypeB", ...]
+    },
+    userRole: {
+        type: String,
+        default: null
+    },
+    actionType: {
+        type: String, // e.g. "create", "update", "delete", "upload", "assign"
+    },
+    // entityType: {
+    //     type: String, // free-form: "project", "stageImage", "payment", "milestone", etc.
+    // },
+    description: {
+        type: String,
+        default: ""
+    },
+    newData: {
+        type: mongoose.Schema.Types.Mixed, // store any new data (flexible JSON)
+        default: {}
     }
-  },
-  rating: {
-    overall: { type: Number, min: 1, max: 5 },
-    quality: { type: Number, min: 1, max: 5 },
-    delivery: { type: Number, min: 1, max: 5 },
-    pricing: { type: Number, min: 1, max: 5 }
-  },
-  status: {
-    type: String,
-    enum: ['active', 'inactive', 'blacklisted'],
-    default: 'active'
-  }
-}, {
-  timestamps: true
-});
+})
 
-const procurementPurchaseOrderSchema = new Schema({
-  poNumber: {
-    type: String,
-  },
-  projectId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'ProjectModel'
-  },
-  vendorId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'ProcurementVendorModel',
-  },
-  requestedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'UserModel',
-  },
-  items: [{
-    
-        materialId: {
-          type: mongoose.Schema.Types.ObjectId,
-          required: true,
-          refPath: "items.refModel", // dynamic reference
+const ProcurementSchema = new mongoose.Schema(
+    {
+        organizationId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "OrganizationModel",
         },
-        refModel: {
-          type: String,
-          enum: ["SelectedModularUnitModel", "SelectedExternalModel"], // allowed collections
-        },
-    description: String,
-    specification: String,
-    quantity: { type: Number, required: true },
-    unit: String,
-    unitPrice: Number,
-    totalPrice: Number,
-    deliveryDate: Date
-  }],
-  totalAmount: Number,
-  taxAmount: Number,
-  grandTotal: Number,
-  deliveryAddress: {
-    address: String,
-    contactPerson: String,
-    contactPhone: String
-  },
-  paymentTerms: String,
-  status: {
-    type: String,
-    enum: ['draft', 'pending_approval', 'approved', 'sent_to_vendor', 'confirmed', 'partially_delivered', 'delivered', 'cancelled'],
-    default: 'draft'
-  },
-  approvedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'UserModel'
-  },
-  expectedDeliveryDate: Date,
-  actualDeliveryDate: Date,
-  notes: String
-}, {
-  timestamps: true
-});
+        activeLog: { type: [ActiveLog], default: [] }
+    },
+    {
+        timestamps: { createdAt: true, updatedAt: false }
+    }
+);
+
+// Indexes for fast querying
+ProcurementSchema.index({ organizationId: 1, createdAt: -1 });
+ProcurementSchema.index({ projectId: 1, createdAt: -1 });
+// ProcurementSchema.index({ stageId: 1, createdAt: -1 });
+
+export default mongoose.model("ProcurementModel", ProcurementSchema);

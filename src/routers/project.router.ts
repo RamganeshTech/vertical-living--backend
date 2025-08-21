@@ -7,7 +7,7 @@ import { checkActivePlan } from './../middlewares/checkActivePlan';
 
 const router = express.Router()
 
-router.post('/createproject/:organizationId', multiRoleAuthMiddleware("owner", "CTO", "staff"), checkActivePlan(), createProject as RequestHandler)
+router.post('/createproject/:organizationId', multiRoleAuthMiddleware("owner", "CTO", "staff"),  createProject as RequestHandler)
 router.get('/getprojects/:organizationId', multiRoleAuthMiddleware('owner', "staff", "CTO", "client", "worker"), getProjects as RequestHandler)
 router.delete('/deleteproject/:projectId', multiRoleAuthMiddleware("owner", "CTO"), deleteProject as RequestHandler)
 router.put('/updateproject/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), updateProject as RequestHandler)

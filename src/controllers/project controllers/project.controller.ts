@@ -32,6 +32,7 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
             endDate,
             dueDate,
             priority,
+            category,
             status
         } = req.body
 
@@ -92,6 +93,7 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
                     dueDate,
                     duration: durationInDays,
                     priority,
+                    category: category || "residential",
                     status,
                 },
             })
@@ -162,7 +164,7 @@ const getProjects = async (req: RoleBasedRequest, res: Response) => {
             res.status(400).json({ message: "organization Id is required", ok: false })
             return
         }
-console.log("organizationId", organizationId)
+        // console.log("organizationId", organizationId)
         const cacheKey = `projects:${organizationId}`;
 
         // await redisClient.del(`projects:${organizationId}`);
@@ -227,7 +229,7 @@ const deleteProject = async (req: RoleBasedRequest, res: Response): Promise<void
             ),
         ]);
 
-         const allModels: Model<any>[] = [
+        const allModels: Model<any>[] = [
             ...stageModels,
             PreRequiretiesModel,
             ShortlistedDesignModel,
@@ -249,7 +251,7 @@ const deleteProject = async (req: RoleBasedRequest, res: Response): Promise<void
         // }
 
 
-         for (const model of allModels) {
+        for (const model of allModels) {
             await model.deleteMany({ projectId }); // Efficient and deletes all matching
         }
 
@@ -316,6 +318,7 @@ const updateProject = async (req: RoleBasedRequest, res: Response): Promise<void
             startDate,
             endDate,
             dueDate,
+            category,
             priority,
             status
         } = req.body
@@ -354,6 +357,7 @@ const updateProject = async (req: RoleBasedRequest, res: Response): Promise<void
                 endDate,
                 dueDate,
                 duration: durationInDays,
+                category: category || "residential",
                 priority,
                 status,
             },

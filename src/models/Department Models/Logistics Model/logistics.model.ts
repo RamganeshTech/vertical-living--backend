@@ -1,58 +1,56 @@
-import mongoose,{ Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
+import { Types, Document } from "mongoose";
 
-const logisticsVehicleSchema = new mongoose.Schema({
-  vehicleNumber: {
-    type: String,
-  },
-  vehicleType: {
-    type: String,
-    enum: ['truck', 'van', 'car', 'bike', 'tempo', 'container']
-  },
-  capacity: {
-    weight: Number, // in KG
-    volume: Number  // in cubic meters
-  },
-  driver: {
-    name: String,
-    phone: String,
-    licenseNumber: String
-  },
-  isAvailable: {
-    type: Boolean,
-    default: true
-  },
-  currentLocation: {
-    address: String,
-    coordinates: {
-      type: [Number], // [longitude, latitude]
-      index: '2dsphere'
-    }
-  },
-  maintenanceStatus: {
-    type: String,
-    enum: ['good', 'needs_service', 'in_service', 'out_of_order'],
-    default: 'good'
-  }
-}, {
-  timestamps: true
-});
 
-const logisticsShipmentSchema = new mongoose.Schema({
-  shipmentNumber: {
-    type: String,
-  },
-  projectId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'ProjectModel'
-  },
-  vehicleId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'LogisticsVehicleModel'
-  },
-  shipmentType: {
-    type: String,
-    enum: ['delivery', 'pickup', 'transfer'],
-  },
+export interface IShipmentItem {
+  name: string;
+  quantity: number;
+  weight?: number;
+  description?: string;
+}
+
+export interface ILogisticsShipment {
+  shipmentNumber?: string;
+  projectId: Types.ObjectId;
+  // vehicleId?: Types.ObjectId;
+  vehicleDetails: Types.ObjectId,
+  shipmentType: "delivery" | "pickup" | "transfer";
+  origin?: {
+    address?: string;
+    contactPerson?: string;
+    contactPhone?: string;
+    coordinates?: number[];
+  };
+  destination?: {
+    address?: string;
+    contactPerson?: string;
+    contactPhone?: string;
+    coordinates?: number[];
+  };
+  items?: IShipmentItem[];
+  status?: "pending" | "assigned" | "in_transit" | "delivered" | "cancelled";
+  scheduledDate?: Date;
+  actualPickupTime?: Date;
+  actualDeliveryTime?: Date;
+  assignedTo?: Types.ObjectId;
+  notes?: string;
+}
+
+export interface ILogisticsMain extends Document {
+  organizationId: Types.ObjectId;
+  vehicles: Types.ObjectId[];
+  projectShipments: {
+    projectId: Types.ObjectId,
+    shipments: Types.ObjectId[],
+  };
+}
+
+
+export const LogisticsShipmentSchema = new Schema<ILogisticsShipment>({
+  projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel" },
+  shipmentNumber: String,
+  shipmentType: { type: String, enum: ["delivery", "pickup", "transfer"] },
+  vehicleDetails: { type: Schema.Types.ObjectId, ref: "LogisticsVehicleModel", default: null },
   origin: {
     address: String,
     contactPerson: String,
@@ -73,17 +71,33 @@ const logisticsShipmentSchema = new mongoose.Schema({
   }],
   status: {
     type: String,
-    enum: ['pending', 'assigned', 'in_transit', 'delivered', 'cancelled'],
-    default: 'pending'
+    enum: ["pending", "assigned", "in_transit", "delivered", "cancelled"],
+    default: "pending"
   },
   scheduledDate: Date,
   actualPickupTime: Date,
   actualDeliveryTime: Date,
-  assignedTo: {
-    type: mongoose.Schema.Types.ObjectId,
-      ref: 'UserModel'
-  },
   notes: String
-}, {
-  timestamps: true
-});
+}, { _id: true, timestamps: true });
+
+const LogisticsMainSchema = new Schema<ILogisticsMain>({
+  organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
+  vehicles: { type: [Schema.Types.ObjectId], ref: "LogisticsVehicleModel", default: [] },
+  projectShipments: [
+    {
+      projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", required: true },
+      shipments: [{ type: Schema.Types.ObjectId, ref: "LogisticsShipmentModel" }] // references, not embedded
+    }
+  ]
+}, { timestamps: true });
+
+export const LogisticsMainModel = mongoose.model<ILogisticsMain>(
+  "LogisticsMainModel",
+  LogisticsMainSchema
+);
+
+
+export const LogisticsShipmentModel = mongoose.model<ILogisticsShipment>(
+  "LogisticsShipmentModel",
+  LogisticsShipmentSchema
+);

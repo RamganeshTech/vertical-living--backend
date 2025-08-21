@@ -61,7 +61,8 @@ import selectedExternalRoutes from './routers/ExternalUnit Routes/selectedExtern
 import './utils/cronJobs/ReminderEmail/checkDeadLines'
 import mongoose from 'mongoose';
 import procurementLogger from './Plugins/ProcurementDeptPluggin';
-import procurementRoutes from './routers/procurement routes/procurement.route';
+import procurementRoutes from './routers/Department Routes/procurement routes/procurement.route';
+import HRRoutes from './routers/Department Routes/HR.routes';
 
 dotenv.config();
 
@@ -150,8 +151,8 @@ app.use('/api/currentactivestage', currentActiveStage)
 
 
 // PROCUREMENT API
-
 app.use('/api/procurement', procurementRoutes)
+app.use('/api/department/hr', HRRoutes)
 
 
 // SHORTLIST API

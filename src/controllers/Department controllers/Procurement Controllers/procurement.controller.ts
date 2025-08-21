@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { ActiveLogEntry } from "../../Plugins/ProcurementDeptPluggin";
-import procurementModel from "../../models/Procurement Model/procurement.model";
+import { ActiveLogEntry } from "../../../Plugins/ProcurementDeptPluggin";
+import procurementModel from "../../../models/Department Models/Procurement Model/procurement.model";
 
 
 export const getProcurementAllLogs = async (req: Request, res: Response):Promise<any> => {

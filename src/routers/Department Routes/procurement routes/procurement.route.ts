@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getProcurementAllLogs, getProcurementLogsFiltered } from "../../controllers/Procurement Controllers/procurement.controller";
+import { getProcurementAllLogs, getProcurementLogsFiltered } from "../../../controllers/Department controllers/Procurement Controllers/procurement.controller";
 
 const procurementRoutes = Router();
 

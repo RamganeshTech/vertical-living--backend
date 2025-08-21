@@ -13,8 +13,9 @@ interface projectInformation {
     // projectGroup: mongoose.Schema.Types.ObjectId | null,
     completionTime: (string | null),
     // TaskAndIssuePrefix: (string | null),
-      preRequisites: Types.ObjectId
-    
+    preRequisites: Types.ObjectId,
+    category: string
+
 }
 
 
@@ -99,6 +100,10 @@ const ProjectSchema: Schema<IProject> = new Schema({
             type: String,
             default: null
         },
+        category: {
+            type: String,
+            default: null
+        }
         // TaskAndIssuePrefix: {
         //     type: String,
         //     default: null
@@ -148,17 +153,17 @@ const ProjectSchema: Schema<IProject> = new Schema({
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending'
     },
-     laboursFullyApproved: {
+    laboursFullyApproved: {
         type: String,
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending'
     },
-    organizationId:{
+    organizationId: {
         type: Schema.Types.ObjectId,
         ref: "OrganizationModel",
-        required:true
+        required: true
     },
-    preRequiretiesCheckID :{
+    preRequiretiesCheckID: {
         type: Schema.Types.ObjectId,
         ref: "PreRequiretiesModel",
         default: null

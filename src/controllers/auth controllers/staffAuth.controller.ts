@@ -7,6 +7,7 @@ import { RoleBasedRequest } from "../../types/types";
 import redisClient from "../../config/redisClient";
 import crypto from 'crypto';
 import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail";
+import { syncEmployee } from "../Department controllers/HRMain controller/HrMain.controllers";
 
 // POST /api/staff/register
 const registerStaff = async (req: Request, res: Response) => {
@@ -20,11 +21,11 @@ const registerStaff = async (req: Request, res: Response) => {
         }
 
         // 2. Decode the invite token safely
-        let organizationId: string, role: string, expiresAt: string, ownerId: string, specificRole:string;
+        let organizationId: string, role: string, expiresAt: string, ownerId: string, specificRole: string;
 
         try {
             const decoded = Buffer.from(invite, "base64").toString("utf-8");
-            ({ organizationId, role, expiresAt, ownerId , specificRole} = JSON.parse(decoded));
+            ({ organizationId, role, expiresAt, ownerId, specificRole } = JSON.parse(decoded));
         } catch (error) {
             return res.status(400).json({ message: "Invalid invitation link", ok: false });
         }
@@ -81,9 +82,21 @@ const registerStaff = async (req: Request, res: Response) => {
         }
         )
 
+
+
         await redisClient.del(`getusers:${role}:${organizationId}`)
 
         res.status(201).json({ message: "Staff registered successfully", data: staff, ok: true });
+        // syncEmployee({
+        //     organizationId,
+        //     empId: staff._id,
+        //     employeeModel: StaffModel,
+        //     empRole: "organization_staff", name: staff.staffName,
+        //     phoneNo: staff.phoneNo,
+        //     email: staff.email,
+        //     specificRole:specificRole
+        // })
+        //     .catch(err => console.log("syncEmployee error in Hr Dept", err))
     } catch (error) {
         if (error instanceof Error) {
             console.error("Staff registration failed:", error);
