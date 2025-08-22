@@ -297,6 +297,19 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
     };
 
     if (!existing) {
+        const commonOrders = {
+            customId: null,
+            // name: unitName,
+            unitName: "Common Orders",
+            category: null,
+            singleUnitCost: 0,
+            quantity: 0,
+            dimention: null,
+            unitId: null,
+            image: null,
+            subItems: []
+        }
+        selected.push(commonOrders)
         existing = new OrderMaterialHistoryModel({
             projectId,
             status: "pending",
@@ -305,7 +318,7 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
             timer,
             selectedUnits: selected,
             totalCost,
-            genreatedLink:[]
+            genreatedLink: []
         });
     } else {
         // existing.timer = timer;
@@ -331,8 +344,6 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
 
         existing.timer = timer;
         existing.totalCost = totalCost;
-
-
 
         selected.forEach((newUnit: any) => {
             const existingUnit = existing?.selectedUnits?.find(
@@ -371,6 +382,29 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
     });
 };
 
+
+
+const manualInsertCustomOrders = async (projectId:string)=>{
+     const commonOrders = {
+            customId: null,
+            // name: unitName,
+            unitName: "Common Orders",
+            category: null,
+            singleUnitCost: 0,
+            quantity: 1,
+            dimention: null,
+            unitId: new mongoose.Types.ObjectId(),
+            image: null,
+            subItems: []
+        }
+      const orders =  await OrderMaterialHistoryModel.findOne({projectId})
+
+      orders?.selectedUnits.push(commonOrders as any)
+        if(orders){
+
+            await orders.save()
+        }
+}
 
 export const addSubItemToUnit = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -417,7 +451,7 @@ export const addSubItemToUnit = async (req: Request, res: Response): Promise<any
             return res.status(400).json({ message: "Material item already exists with the same name", ok: false })
         }
 
-      // 🔹 Find max number used across ALL units' subItems
+        // 🔹 Find max number used across ALL units' subItems
         let maxNumber = 0;
         orderDoc.selectedUnits.forEach((u: any) => {
             u.subItems.forEach((sub: any) => {
@@ -465,7 +499,7 @@ export const updateSubItemInUnit = async (req: Request, res: Response): Promise<
     try {
         const { projectId, unitId, subItemId } = req.params;
         const { subItemName, quantity, unit } = req.body;
-        console.log("subitem name", subItemName)
+        // console.log("subitem name", subItemName)
         if (!projectId ||
             !unitId ||
             !subItemId) {
@@ -654,7 +688,7 @@ export const getOrderHistoryMaterial = async (req: Request, res: Response): Prom
 
 
         const doc = await OrderMaterialHistoryModel.findOne({ projectId });
-
+            // await manualInsertCustomOrders(projectId)
         if (!doc) return res.status(404).json({ ok: false, message: "Data not found" });
 
         // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
@@ -812,51 +846,51 @@ export const generateOrderHistoryPDFController = async (req: Request, res: Respo
 
 // DELETE PDF API
 export const deleteOrderMaterialPdf = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { projectId, pdfId } = req.params;
+    try {
+        const { projectId, pdfId } = req.params;
 
-    // 1. Find the pdf record in DB
-    // const orderDoc = await OrderMaterialHistoryModel.findOne({
-    //   projectId,
-    //   generatedLink:{
-    //     $pull: {_id: pdfId}
-    //   }
-    // });
+        // 1. Find the pdf record in DB
+        // const orderDoc = await OrderMaterialHistoryModel.findOne({
+        //   projectId,
+        //   generatedLink:{
+        //     $pull: {_id: pdfId}
+        //   }
+        // });
 
-       const orderDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
-      { projectId },
-      { $pull: { generatedLink: { _id: pdfId } } },
-      {returnDocument:"after"}
-    );
+        const orderDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
+            { projectId },
+            { $pull: { generatedLink: { _id: pdfId } } },
+            { returnDocument: "after" }
+        );
 
-    if (!orderDoc) {
-      return res.status(404).json({ message: "PDF not found", ok:false });
-    }
+        if (!orderDoc) {
+            return res.status(404).json({ message: "PDF not found", ok: false });
+        }
 
-    // 2. Delete from S3
-    // const pdfKey = pdfRecord.fileKey; // store s3 key in db when uploading
-    // if (pdfKey) {
-    //   await s3
-    //     .deleteObject({
-    //       Bucket: process.env.AWS_S3_BUCKET!,
-    //       Key: pdfKey,
-    //     })
-    //     .promise();
-    // }
+        // 2. Delete from S3
+        // const pdfKey = pdfRecord.fileKey; // store s3 key in db when uploading
+        // if (pdfKey) {
+        //   await s3
+        //     .deleteObject({
+        //       Bucket: process.env.AWS_S3_BUCKET!,
+        //       Key: pdfKey,
+        //     })
+        //     .promise();
+        // }
 
 
         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
 
 
-    return res.status(200).json({
-      message: "PDF deleted successfully",
-      data:pdfId,
-      ok:true
-    });
-  } catch (err) {
-    console.error("Error deleting PDF:", err);
-    return res.status(500).json({ message: "Failed to delete PDF", error: err, ok:false });
-  }
+        return res.status(200).json({
+            message: "PDF deleted successfully",
+            data: pdfId,
+            ok: true
+        });
+    } catch (err) {
+        console.error("Error deleting PDF:", err);
+        return res.status(500).json({ message: "Failed to delete PDF", error: err, ok: false });
+    }
 };
 
 export const getPublicDetails = async (req: Request, res: Response): Promise<any> => {

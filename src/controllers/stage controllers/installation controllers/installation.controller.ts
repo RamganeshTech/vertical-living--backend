@@ -443,7 +443,7 @@ const installationCompletionStatus = async (req: Request, res: Response): Promis
     await form.save();
 
     if (form.status === "completed") {
-      await syncQualityCheck(projectId)
+      // await syncQualityCheck(projectId)
 
       // let uploadedFiles: DocUpload[] = [];
 

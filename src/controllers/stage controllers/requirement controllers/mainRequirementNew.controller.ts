@@ -11,6 +11,7 @@ import { updateProjectCompletionPercentage } from '../../../utils/updateProjectC
 import { syncAdminWall, syncWorkerWall } from '../../Wall Painting controllers/adminWallPainting.controller';
 import redisClient from '../../../config/redisClient';
 import { syncMaterialRoomSelectionStage } from '../material Room confirmation/materialRoomConfirmation.controller';
+import { syncQualityCheck } from '../QualityCheck controllers/QualityCheck.controller';
 
 
 
@@ -470,6 +471,8 @@ export const markFormAsCompleted = async (req: RoleBasedRequest, res: Response):
         if (form.status === "completed") {
             await syncSiteMeasurement(projectId, form.rooms)
             await syncMaterialRoomSelectionStage(projectId)
+            await syncQualityCheck(projectId, form.rooms)
+
 
             // const uploadedFiles: DocUpload[] = form.uploads.map((upload: any) => ({ type: upload.type, originalName: upload.originalName, url: upload.url }))
             // await addOrUpdateStageDocumentation({

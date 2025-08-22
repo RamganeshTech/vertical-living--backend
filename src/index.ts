@@ -63,6 +63,7 @@ import mongoose from 'mongoose';
 import procurementLogger from './Plugins/ProcurementDeptPluggin';
 import procurementRoutes from './routers/Department Routes/procurement routes/procurement.route';
 import HRRoutes from './routers/Department Routes/HR.routes';
+import commonOrderRoutes from './routers/Stage routes/order Material routes/Common OrderMaterial Routes/commonOrderMaterial.routes';
 
 dotenv.config();
 
@@ -140,6 +141,8 @@ app.use('/api/installation', installationRoutes)
 app.use('/api/qualitycheck', qualityCheckRoutes)
 app.use('/api/cleaning', cleaningRoutes)
 app.use('/api/projectdelivery', projectDeliveryRoutes)
+
+app.use('/api/commonorder', commonOrderRoutes)
 
 // SOP
 app.use('/api/adminwall', adminWallroutes)

@@ -12,14 +12,14 @@ import { addOrUpdateStageDocumentation } from "../../documentation controller/do
 import { validRoomKeys } from "../../../constants/BEconstants";
 
 
-export const syncQualityCheck = async (projectId: string) => {
+export const syncQualityCheck = async (projectId: string, rooms: any) => {
 
     const existing = await QualityCheckupModel.findOne({ projectId });
 
     const timer = {
         startedAt: new Date(),
         completedAt: null,
-        deadLine: null,
+        deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
         reminderSent: false,
     };
 
@@ -33,23 +33,28 @@ export const syncQualityCheck = async (projectId: string) => {
             timer,
             assignedTo: null,
 
-            LivingRoom: [],
-            Bedroom: [],
-            Kitchen: [],
-            DiningRoom: [],
-            Balcony: [],
-            FoyerArea: [],
-            Terrace: [],
-            StudyRoom: [],
-            CarParking: [],
-            Garden: [],
-            StorageRoom: [],
-            EntertainmentRoom: [],
-            HomeGym: [],
+            rooms: rooms.map((room: any) => {
+                return {
+                    roomName: room.roomName,
+                    tasks: []
+                }
+            }),
         })
     }
     else {
         existing.timer = timer
+
+        const existingRoomNames = (existing?.rooms || []).map((room: any) => room?.roomName);
+
+        // Create only missing rooms
+        const newRooms = rooms
+            .filter((room: any) => !existingRoomNames.includes(room.roomName))
+            .map((room: any) => ({
+                roomName: room.roomName,
+                tasks: []
+            }));
+
+        existing.rooms = [...existing.rooms, ...newRooms];
 
         await existing.save()
     }
@@ -74,9 +79,9 @@ const createQualityCheckItem = async (req: RoleBasedRequest, res: Response): Pro
             return res.status(400).json({ ok: false, message: "Missing required fields." });
         }
 
-        if (!validRooms.includes(roomName)) {
-            return res.status(400).json({ ok: false, message: "Invalid room name." });
-        }
+        // if (!validRooms.includes(roomName)) {
+        //     return res.status(400).json({ ok: false, message: "Invalid room name." });
+        // }
 
 
         const inspectedBy = req.user?._id;
@@ -125,12 +130,22 @@ const createQualityCheckItem = async (req: RoleBasedRequest, res: Response): Pro
             upload: validatedUpload,
         };
 
+        // const doc: any = await QualityCheckupModel.findOneAndUpdate(
+        //     { projectId },
+        //     { $push: { [roomName]: newItem } },
+        //     { new: true }
+        // );
+
+
+
         const doc: any = await QualityCheckupModel.findOneAndUpdate(
             { projectId },
-            { $push: { [roomName]: newItem } },
-            { new: true }
+            { $push: { "rooms.$[room].works": newItem } },
+            {
+                new: true,
+                arrayFilters: [{ "room.name": roomName }],
+            }
         );
-
         if (!doc) return res.status(404).json({ ok: false, message: "Quality Checkup record not found." });
 
         // const redisMainKey = `stage:QualityCheckupModel:${projectId}`
@@ -162,11 +177,6 @@ const editQualityCheckItem = async (req: RoleBasedRequest, res: Response): Promi
             return res.status(400).json({ ok: false, message: "Invalid room name." });
         }
 
-        const doc: any = await QualityCheckupModel.findOne({ projectId });
-        if (!doc) return res.status(404).json({ ok: false, message: "Quality Checkup record not found." });
-
-        const item = doc[roomName].id(itemId);
-        if (!item) return res.status(404).json({ ok: false, message: "Item not found." });
 
         // ✅ Authenticated user sets inspector identity if updated
         const inspectedBy = req.user?._id;
@@ -190,20 +200,43 @@ const editQualityCheckItem = async (req: RoleBasedRequest, res: Response): Promi
             default:
                 inspectedUserModel = "UserModel";
         }
+        // const doc: any = await QualityCheckupModel.findOne({ projectId });
+        // if (!doc) return res.status(404).json({ ok: false, message: "Quality Checkup record not found." });
+
+        // const item = doc[roomName].id(itemId);
+        // if (!item) return res.status(404).json({ ok: false, message: "Item not found." });
 
 
-        if (workName) item.workName = workName;
-        if (status) item.status = status;
-        if (remarks) item.remarks = remarks;
-        item.inspectedBy = inspectedBy;
-        item.inpectedUserModel = inspectedUserModel;
+        // if (workName) item.workName = workName;
+        // if (status) item.status = status;
+        // if (remarks) item.remarks = remarks;
+        // item.inspectedBy = inspectedBy;
+        // item.inpectedUserModel = inspectedUserModel;
 
+        // if (req.file) {
+        //     const { mimetype, location, originalname } = req.file as any;
+        //     if (!mimetype.startsWith("image/")) {
+        //         return res.status(400).json({ ok: false, message: "Only image uploads are allowed." });
+        //     }
+        //     item.upload = {
+        //         type: "image",
+        //         url: location,
+        //         originalName: originalname,
+        //         uploadedAt: new Date(),
+        //     };
+        // }
+
+        // await doc.save();
+
+
+        // Optional upload (image only)
+        let uploadPayload: any = undefined;
         if (req.file) {
             const { mimetype, location, originalname } = req.file as any;
-            if (!mimetype.startsWith("image/")) {
+            if (!mimetype?.startsWith("image/")) {
                 return res.status(400).json({ ok: false, message: "Only image uploads are allowed." });
             }
-            item.upload = {
+            uploadPayload = {
                 type: "image",
                 url: location,
                 originalName: originalname,
@@ -211,19 +244,61 @@ const editQualityCheckItem = async (req: RoleBasedRequest, res: Response): Promi
             };
         }
 
-        await doc.save();
+        // Build $set paths for the matched room & task
+        const setFields: Record<string, any> = {};
+        if (typeof workName === "string") setFields["rooms.$[room].tasks.$[task].workName"] = workName;
+        if (typeof status === "string") setFields["rooms.$[room].tasks.$[task].status"] = status;
+        if (typeof remarks === "string") setFields["rooms.$[room].tasks.$[task].remarks"] = remarks;
+        // Always stamp who edited
+        setFields["rooms.$[room].tasks.$[task].inspectedBy"] = inspectedBy;
+        setFields["rooms.$[room].tasks.$[task].inspectedUserModel"] = inspectedUserModel;
+        if (uploadPayload) setFields["rooms.$[room].tasks.$[task].upload"] = uploadPayload;
+
+        if (Object.keys(setFields).length === 0) {
+            return res.status(400).json({ ok: false, message: "No fields to update." });
+        }
+
+        const taskObjectId = new Types.ObjectId(itemId);
+
+        const updatedDoc = await QualityCheckupModel.findOneAndUpdate(
+            {
+                projectId,
+                "rooms.roomName": roomName,
+                "rooms.tasks._id": taskObjectId,
+            },
+            { $set: setFields },
+            {
+                new: true,
+                arrayFilters: [
+                    { "room.roomName": roomName },
+                    { "task._id": taskObjectId },
+                ],
+            }
+        );
+
+        if (!updatedDoc) {
+            return res.status(404).json({ ok: false, message: "Room or item not found." });
+        }
+
+
+        // Pull back the updated room & item to return and cache
+        const room = updatedDoc.rooms.find((r: any) => r.roomName === roomName);
+        const updatedItem = (room?.tasks as any).id(taskObjectId);
+        if (!room || !updatedItem) {
+            return res.status(404).json({ ok: false, message: "Item not found after update." });
+        }
 
 
         // const redisMainKey = `stage:QualityCheckupModel:${projectId}`
         const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${roomName}`
 
-        const updatedRoom = (doc as any)[roomName]
+        // const updatedRoom = (doc as any)[roomName]
         // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
-        await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: doc })
+        await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: updatedDoc })
 
-        await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+        await redisClient.set(redisRoomKey, JSON.stringify(room), { EX: 60 * 10 })
 
-        return res.json({ ok: true, data: item });
+        return res.json({ ok: true, data: updatedItem });
     } catch (err: any) {
         console.error("Edit QualityCheckItem:", err);
         return res.status(500).json({ ok: false, message: err.message });
@@ -240,13 +315,20 @@ const deleteQualityCheckItem = async (req: Request, res: Response): Promise<any>
             return res.status(400).json({ ok: false, message: "Missing required fields." });
         }
 
-        if (!validRooms.includes(roomName)) {
-            return res.status(400).json({ ok: false, message: "Invalid room name." });
-        }
+        // if (!validRooms.includes(roomName)) {
+        //     return res.status(400).json({ ok: false, message: "Invalid room name." });
+        // }
+
+        // const doc = await QualityCheckupModel.findOneAndUpdate(
+        //     { projectId },
+        //     { $pull: { [roomName]: { _id: itemId } } },
+        //     { new: true }
+        // );
+
 
         const doc = await QualityCheckupModel.findOneAndUpdate(
-            { projectId },
-            { $pull: { [roomName]: { _id: itemId } } },
+            { projectId, "rooms.roomName": roomName },
+            { $pull: { "rooms.$.tasks": { _id: itemId } } },
             { new: true }
         );
 
@@ -309,9 +391,9 @@ const getQualityCheckRoomItems = async (req: Request, res: Response): Promise<an
             return res.status(400).json({ ok: false, message: "Project ID and room name required." });
         }
 
-        if (!validRooms.includes(roomName)) {
-            return res.status(400).json({ ok: false, message: "Invalid room name." });
-        }
+        // if (!validRooms.includes(roomName)) {
+        //     return res.status(400).json({ ok: false, message: "Invalid room name." });
+        // }
 
         const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${roomName}`
 
@@ -323,15 +405,33 @@ const getQualityCheckRoomItems = async (req: Request, res: Response): Promise<an
 
 
 
-        const doc: any = await QualityCheckupModel.findOne({ projectId });
+        // const doc: any = await QualityCheckupModel.findOne({ projectId });
+        // const doc: any = await QualityCheckupModel.findOne(
+        //     { projectId },
+        //     { "room.$.roomName": roomName } // fetch only that room
+        // ).lean();
+
+
+        // Fetch only the matched room (array element) from the rooms array
+        const doc = await QualityCheckupModel.findOne(
+            { projectId, "rooms.roomName": roomName },
+            { rooms: { $elemMatch: { roomName } } } // <- correct projection for nested array
+        ).lean();
+
+
         if (!doc) return res.status(404).json({ ok: false, message: "Quality Checkup not found." });
 
-        const updatedRoom = (doc as any)[roomName]
-        await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+        const room = doc.rooms?.[0] ?? null;
+
+        if (!room) return res.status(404).json({ ok: false, message: "Room not found." });
+
+
+        // const updatedRoom = (doc as any)[roomName]
+        await redisClient.set(redisRoomKey, JSON.stringify(room), { EX: 60 * 10 })
         await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: doc })
 
 
-        return res.json({ ok: true, data: doc[roomName] || [] });
+        return res.json({ ok: true, data: room || [] });
     } catch (err: any) {
         console.error("Get Room Items:", err);
         return res.status(500).json({ ok: false, message: err.message });
@@ -368,7 +468,7 @@ const qualityCheckCompletionStatus = async (req: Request, res: Response): Promis
             // let uploadedFiles: DocUpload[] = [];
 
 
-         
+
 
             // const roomKeys = validRoomKeys.filter((key) => {
             //     const roomItems = form?.[key];

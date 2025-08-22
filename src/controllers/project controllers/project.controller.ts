@@ -32,7 +32,7 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
             endDate,
             dueDate,
             priority,
-            category,
+            // category,
             status
         } = req.body
 
@@ -93,7 +93,7 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
                     dueDate,
                     duration: durationInDays,
                     priority,
-                    category: category || "residential",
+                    // category: category || "residential",
                     status,
                 },
             })
