@@ -1,6 +1,6 @@
 import mongoose, { Schema, Types } from "mongoose"
 
-interface IStaff extends Document {
+export interface IStaff extends Document {
     email: string,
     password: string,
     staffName: string,

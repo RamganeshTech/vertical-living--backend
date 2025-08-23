@@ -334,3 +334,12 @@ export const STAGE_KEY_DOCMENTION_MAP: Record<string, string> = {
   "13": "Cleaning And Sanitization",
   "14": "Project Delivery",
 };
+
+
+export const getRoleByModel = {
+  "StaffModel": "staff",
+  "WorkerModel": "worker",
+  "UserModel": "owner",
+  "CTOModel": "CTO",
+  "ClientModel": "client"
+} as const;

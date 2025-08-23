@@ -15,7 +15,7 @@ HRRoutes.get(
 
 // Get single employee by ID
 HRRoutes.get(
-  "/getsingle/:empId",
+  "/getsingle/:id",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   getSingleEmployee
 );

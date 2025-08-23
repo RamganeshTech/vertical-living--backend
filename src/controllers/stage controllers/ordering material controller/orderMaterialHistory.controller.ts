@@ -384,27 +384,28 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
 
 
 
-const manualInsertCustomOrders = async (projectId:string)=>{
-     const commonOrders = {
-            customId: null,
-            // name: unitName,
-            unitName: "Common Orders",
-            category: null,
-            singleUnitCost: 0,
-            quantity: 1,
-            dimention: null,
-            unitId: new mongoose.Types.ObjectId(),
-            image: null,
-            subItems: []
-        }
-      const orders =  await OrderMaterialHistoryModel.findOne({projectId})
+// const manualInsertCustomOrders = async (projectId:string)=>{
+//      const commonOrders = {
+//             customId: null,
+//             // name: unitName,
+//             unitName: "Common Orders",
+//             category: null,
+//             singleUnitCost: 0,
+//             quantity: 1,
+//             dimention: null,
+//             unitId: new mongoose.Types.ObjectId(),
+//             image: null,
+//             subItems: []
+//         }
+//         console.log("getin ented")
+//       const orders =  await OrderMaterialHistoryModel.findOne({projectId})
 
-      orders?.selectedUnits.push(commonOrders as any)
-        if(orders){
+//       orders?.selectedUnits.push(commonOrders as any)
+//         if(orders){
 
-            await orders.save()
-        }
-}
+//             await orders.save()
+//         }
+// }
 
 export const addSubItemToUnit = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -686,9 +687,7 @@ export const getOrderHistoryMaterial = async (req: Request, res: Response): Prom
             return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
         }
 
-
         const doc = await OrderMaterialHistoryModel.findOne({ projectId });
-            // await manualInsertCustomOrders(projectId)
         if (!doc) return res.status(404).json({ ok: false, message: "Data not found" });
 
         // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })

@@ -35,7 +35,7 @@ export interface IEmployment {
     allowances?: number;
     total?: number;
   };
-  specificRole:string,
+  // specificRole:string,
   workLocation?: string;
 }
 
@@ -71,40 +71,40 @@ export const PersonalInfoSchema = new Schema<IPersonalInfo>({
   email: {type:String, default:null},
   phoneNo: {type:String, default:null},
   gender: { type: String, enum: ["male", "female", "other", null], default: null },
-  maritalStatus: { type: String, enum: ["single", "married", "divorced", "widowed", null], default: null },
+  maritalStatus: { type: String, enum: ["unmarried", "married", "divorced", "widowed", null], default: null },
   address: {
     type: {
-      street: String,
-      city: String,
-      state: String,
-      pincode: String,
+      street:  { type: String, default: null },
+      city:  { type: String, default: null },
+      state:  { type: String, default: null },
+      pincode:  { type: String, default: null },
       country: { type: String, default: "India" },
-    }, default: null
+    }, default: {}
   },
   emergencyContact: {
     type: {
-      name: String,
-      relationship: String,
-      phone: String,
-    }, default: null
+      name:  { type: String, default: null },
+      relationship:  { type: String, default: null },
+      phone:  { type: String, default: null },
+    }, default: {}
   }
 }, { _id: false });
 
 
 export const EmploymentSchema = new Schema<IEmployment>({
-  joinDate: { type: Date, default: null },
+  joinDate: { type: Date, default: new Date() },
   designation: { type: String, default: null },
   department: { type: String, default: null },
   employmentType: { type: String, enum: ["full_time", "part_time", "contract", "intern", null], default: null },
   salary: {
     type: {
-      basic: Number,
-      hra: Number,
-      allowances: Number,
-      total: Number,
-    }, default: null
+      basic:  { type: Number, default: null },
+      hra: { type: Number, default: null },
+      allowances: { type: Number, default: null },
+      total: { type: Number, default: null },
+    }, default: {}
   },
-  specificRole:{type:String, default:null},
+  // specificRole:{type:String, default:null},
   workLocation: { type: String, default: null },
 }, { _id: false });
 
@@ -126,7 +126,7 @@ const EmployeeSchema = new Schema<IEmployee>({
     type: mongoose.Schema.Types.ObjectId,
     ref: "OrganizationModel",
   },
-  empId: {
+  empId: {               // going to take the empId from the client model, worker model, cto models _id propery value will be stored
     type: mongoose.Schema.Types.ObjectId,
     refPath: 'employeeModel',
   },

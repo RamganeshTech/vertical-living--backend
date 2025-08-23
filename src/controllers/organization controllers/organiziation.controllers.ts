@@ -9,6 +9,7 @@ import { getWorkerUtils, removeWorkerUtils } from "../../utils/workerUtils";
 import { generateWorkerInviteLink } from "../../utils/generateInvitationworker";
 import { syncAllMixedRoutes } from "../Modular Units Controllers/modularUnit.controller";
 import redisClient from "../../config/redisClient";
+import { EmployeeModel, HREmployeeModel } from "../../models/Department Models/HR Model/HRMain.model";
 
 
 const createOrganziation = async (req: RoleBasedRequest, res: Response) => {
@@ -314,11 +315,12 @@ const removeStaffFromOrganization = async (req: RoleBasedRequest, res: Response)
     const { staffId, orgId } = req.query;
 
     try {
-        const staff = await StaffModel.findByIdAndUpdate(
-            staffId,
-            { $pull: { organizationId: orgId } },
-            { new: true }
+        const [staff, hremp] = await Promise.all([
+            StaffModel.findByIdAndDelete(staffId, { new: true }),
+            EmployeeModel.findOneAndDelete({ empId: staffId })]
         );
+
+
 
         if (!staff) {
             res.status(404).json({ message: "Staff not found", ok: false });

@@ -3,79 +3,84 @@ import { EmployeeModel, HREmployeeModel } from "../../../models/Department Model
 
 import { Types } from "mongoose"
 import UserModel from "../../../models/usermodel/user.model";
-import StaffModel from "../../../models/staff model/staff.model";
+import StaffModel, { IStaff } from "../../../models/staff model/staff.model";
 import CTOModel from "../../../models/CTO model/CTO.model";
 import { WorkerModel } from "../../../models/worker model/worker.model";
 import { RoleBasedRequest } from "../../../types/types";
+import redisClient from "../../../config/redisClient";
+import { getRoleByModel } from "../../../constants/BEconstants";
 
 
 
 interface SyncEmployeeParams {
-    organizationId: Types.ObjectId | string
-    empId: Types.ObjectId;
-    employeeModel: any;
-    empRole: string;
-    name: string;
-    phoneNo: string | number;
-    email: string;
-    specificRole:string | null
+  organizationId: Types.ObjectId | string
+  empId: Types.ObjectId | string;
+  employeeModel: any;
+  empRole: string;
+  name: string;
+  phoneNo: string | number;
+  email: string;
+  specificRole: string | null
 }
 
 const sourceModels: any = {
-    UserModel,
-    StaffModel,
-    CTOModel,
-    WorkerModel,
+  UserModel,
+  StaffModel,
+  CTOModel,
+  WorkerModel,
 };
 
 /**
  * 1. Auto-generate HR Employee from existing model
  */
 export const syncEmployee = async ({ organizationId, empId, employeeModel, empRole, name, phoneNo, email, specificRole }: SyncEmployeeParams) => {
-    if (!empId || !employeeModel || organizationId) {
-      console.log("no empId or employeeModel or organiiaotnID is provided ")
-        return
+  console.log("empId", empId, "employeeModel", employeeModel,)
+  if (!empId || !employeeModel || !organizationId) {
+    console.log("no empId or employeeModel or organiiaotnID is provided ")
+    return
+  }
+
+  // pick the correct source model dynamically
+  const SourceModel = sourceModels[employeeModel];
+
+  if (!SourceModel) {
+    console.log("no model is created")
+
+    return
+  }
+  console.log("souce model", SourceModel)
+  // const sourceData = await SourceModel.findById(empId).lean();
+  // if (!sourceData) {
+  //   return 
+  // }
+
+  // auto-generate preview fields (you can map more)
+
+  const newEmployee = await EmployeeModel.create({
+    organizationId,
+    empId,
+    employeeModel: employeeModel,
+    empRole: empRole || "organization_staff",
+    personalInfo: {
+      empName: name,
+      email,
+      phoneNo: phoneNo,
+    },
+    employment: {
+      department: specificRole || null
     }
+  });
 
-    // pick the correct source model dynamically
-    const SourceModel = sourceModels[employeeModel];
-
-    if (!SourceModel) {
-      console.log("no model is created")
-        return
-    }
-
-    // const sourceData = await SourceModel.findById(empId).lean();
-    // if (!sourceData) {
-    //   return 
-    // }
-
-    // auto-generate preview fields (you can map more)
-
-    const newEmployee = await EmployeeModel.create({
-        organizationId,
-        empId,
-        employeeModel:employeeModel,
-        empRole: empRole || "organization_staff",
-        personalInfo: {
-            empName:name,
-            email,
-            phoneNo: phoneNo,
-        },
-        employment:{
-          specificRole: specificRole || null
-        }
-    });
-
-    await HREmployeeModel.findOneAndUpdate(
-        { organizationId },
-        {
-            $addToSet: { employeeDetails: newEmployee._id }, // avoids duplicates
-        },
-        { upsert: true, new: true }
-    );
+  await HREmployeeModel.findOneAndUpdate(
+    { organizationId },
+    {
+      $addToSet: { employeeDetails: newEmployee._id }, // avoids duplicates
+    },
+    { upsert: true, new: true }
+  );
 
 }
+
 
 
 
@@ -94,11 +99,11 @@ export const flattenObject = (obj: any, parent = "", res: any = {}) => {
 };
 
 
-export const updateEmployee = async (req: RoleBasedRequest, res: Response):Promise<any> => {
+export const updateEmployee = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { empId } = req.params;
     if (!empId) {
-      return res.status(400).json({  ok: false,message: "Employee ID is required" });
+      return res.status(400).json({ ok: false, message: "Employee ID is required" });
     }
 
     // Convert nested object to dot-notation
@@ -111,17 +116,17 @@ export const updateEmployee = async (req: RoleBasedRequest, res: Response):Promi
     );
 
     if (!updatedEmployee) {
-      return res.status(404).json({  ok: false,message: "Employee not found" });
+      return res.status(404).json({ ok: false, message: "Employee not found" });
     }
 
     res.status(200).json({
       message: "Employee updated successfully",
       data: updatedEmployee,
-       ok: true,
+      ok: true,
     });
   } catch (error) {
     console.error("Error updating employee:", error);
-    res.status(500).json({  ok: false,message: "Internal server error" });
+    res.status(500).json({ ok: false, message: "Internal server error" });
   }
 };
 
@@ -130,24 +135,57 @@ export const updateEmployee = async (req: RoleBasedRequest, res: Response):Promi
 // Get/Search/Filter Employees with Pagination
 export const getAllEmployees = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
-    const { organizationId, name, email, phone, empRole, page = 1, limit = 10 } = req.query;
+    const { organizationId, name, email, phone, empRole, status, department, page = 1, limit = 10 } = req.query;
 
     if (!organizationId || !Types.ObjectId.isValid(organizationId as string)) {
-      return res.status(400).json({  ok:false, message: "Invalid organizationId" });
+      return res.status(400).json({ ok: false, message: "Invalid organizationId" });
     }
 
+
+  //   const employeesToSync = [
+
+  // {
+  //   empId: "6880a17ea790362c9f19525a",
+  //   name: "vivek",
+  //   email: "workwithvivek6@gmail.com",
+  //   phone: "6666666666",
+  // }
+
+  //   ];
+
+  //   // Run syncEmployee in loop
+  //   for (const emp of employeesToSync) {
+  //     // await syncEmployee({
+  //     //   organizationId: "684a57015e439b678e8f6918",
+  //     //   empId: emp.empId,
+  //     //   employeeModel: "StaffModel",
+  //     //   empRole: "organization_staff",
+  //     //   name: emp.name,
+  //     //   phoneNo: emp.phone,
+  //     //   email: emp.email,
+  //     //   specificRole: ""
+  //     // });
+  //   }
+
+   
     // Base filter
     const filters: any = { organizationId };
 
     // Search filters
-    if (name) filters["personalInfo.name"] = { $regex: name as string, $options: "i" };
+    if (name) filters["personalInfo.empName"] = { $regex: name as string, $options: "i" };
     if (email) filters["personalInfo.email"] = { $regex: email as string, $options: "i" };
     if (phone) filters["personalInfo.phone"] = { $regex: phone as string, $options: "i" };
 
     // Role filter
-    if (empRole) filters.empRole = empRole; 
+    if (empRole) filters.empRole = empRole;
+
+    if (status) filters.status = status
+    if (department) filters["employment.department"] = department
     // empRole: "organization_staff" | "nonorganization_staff"
 
+
+
+    console.log("filtes", filters)
     // Pagination setup
     const pageNumber = parseInt(page as string, 10) || 1;
     const pageSize = parseInt(limit as string, 10) || 10;
@@ -155,15 +193,15 @@ export const getAllEmployees = async (req: RoleBasedRequest, res: Response): Pro
 
     // Query
     const [employees, total] = await Promise.all([
-      HREmployeeModel.find(filters)
+      EmployeeModel.find(filters)
         .skip(skip)
         .limit(pageSize)
         .lean(),
-      HREmployeeModel.countDocuments(filters),
+      EmployeeModel.countDocuments(filters),
     ]);
 
     res.status(200).json({
-      ok:true,
+      ok: true,
       data: employees,
       pagination: {
         total,
@@ -173,7 +211,7 @@ export const getAllEmployees = async (req: RoleBasedRequest, res: Response): Pro
       },
     });
   } catch (err: any) {
-    res.status(500).json({ ok:false,message: "Error fetching employees", error: err.message });
+    res.status(500).json({ ok: false, message: "Error fetching employees", error: err.message });
   }
 };
 
@@ -181,50 +219,73 @@ export const getAllEmployees = async (req: RoleBasedRequest, res: Response): Pro
 
 
 // 2. Get Single Employee (by empId)
-export const getSingleEmployee = async (req: RoleBasedRequest, res: Response):Promise<any> => {
+export const getSingleEmployee = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
-    const { empId } = req.params;
+    const { id } = req.params;
 
-    if (!empId || !Types.ObjectId.isValid(empId)) {
-      return res.status(400).json({  ok: false,message: "Invalid empId" });
+    if (!id || !Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ ok: false, message: "Invalid id" });
     }
 
-    const employee = await HREmployeeModel.findById(empId);
+    const employee = await EmployeeModel.findById(id);
     if (!employee) {
-      return res.status(404).json({  ok: false,message: "Employee not found", data:null });
+      return res.status(404).json({ ok: false, message: "Employee not found", data: null });
     }
 
-    res.status(200).json({data:employee, ok:true});
+
+    console.log("employee", employee)
+    res.status(200).json({ data: employee, ok: true });
   } catch (err: any) {
-    res.status(500).json({  ok: false,message: "Error fetching employee", error: err.message });
+    res.status(500).json({ ok: false, message: "Error fetching employee", error: err.message });
   }
 };
 
 
 
 // 3. Delete Employee
-export const deleteEmployee = async (req: RoleBasedRequest, res: Response):Promise<any> => {
+export const deleteEmployee = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { empId } = req.params;
-
+    console.log("empuid", empId)
     if (!empId || !Types.ObjectId.isValid(empId)) {
-      return res.status(400).json({  ok: false,message: "Invalid empId" });
+      return res.status(400).json({ ok: false, message: "Invalid empId" });
     }
 
-    const deleted = await HREmployeeModel.findByIdAndDelete(empId);
+    const deleted = await EmployeeModel.findByIdAndDelete(empId).populate<{ empId: IStaff }>("empId");
+
+
     if (!deleted) {
-      return res.status(404).json({  ok: false,message: "Employee not found" });
+      return res.status(404).json({ ok: false, message: "Employee not found" });
     }
 
-    res.status(200).json({  ok: true,message: "Employee deleted successfully" });
+
+
+    // Step 2: Check if employeeModel exists
+    if (deleted.employeeModel && deleted.empId && sourceModels[deleted.employeeModel]) {
+      try {
+        await sourceModels[deleted.employeeModel].findByIdAndDelete(deleted.empId);
+        console.log(`Deleted from ${deleted.employeeModel} as well`);
+      } catch (err: any) {
+        console.warn(`Failed to delete from ${deleted.employeeModel}:`, err.message);
+      }
+    }
+
+
+    if (deleted?.employeeModel && deleted.employeeModel in getRoleByModel) {
+      const orgId = deleted?.empId?.organizationId?.[0]
+
+      await redisClient.del(`getusers:${getRoleByModel[deleted.employeeModel] as string}:${orgId}}`)
+    }
+
+    res.status(200).json({ ok: true, message: "Employee deleted successfully" });
   } catch (err: any) {
-    res.status(500).json({  ok: false,message: "Error deleting employee", error: err.message });
+    res.status(500).json({ ok: false, message: "Error deleting employee", error: err.message });
   }
 };
 
 
 
-export const uploadEmployeeDocument = async (req: RoleBasedRequest, res: Response):Promise<any> => {
+export const uploadEmployeeDocument = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { empId } = req.params;
     const { type } = req.body; // resume, aadhar, pan, etc.
@@ -264,7 +325,7 @@ export const uploadEmployeeDocument = async (req: RoleBasedRequest, res: Respons
 
 
 // 2. Delete Employee Document
-export const deleteEmployeeDocument = async (req: RoleBasedRequest, res: Response):Promise<any> => {
+export const deleteEmployeeDocument = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { empId, docId } = req.params;
 
