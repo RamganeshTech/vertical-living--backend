@@ -138,7 +138,6 @@ const updateWorkPlan = async (req: Request, res: Response): Promise<any> => {
 };
 
 
-
 const deleteWorkPlan = async (req: Request, res: Response): Promise<any> => {
   try {
     const { workScheduleId, planId, projectId } = req.params;

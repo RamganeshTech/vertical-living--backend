@@ -2,8 +2,8 @@ import { Router } from "express";
 // import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader"; // your S3 uploader
 import { 
   createWork,
-  deleteDailyScheduleImage,
-  deleteWork,
+  // deleteDailyScheduleImage,
+  // deleteWork,
   // addDailyTask, deleteDailyTask,
    updateDailyScheduleStatus,
    updateWork,
@@ -43,66 +43,24 @@ workTaskRoutes.get("/getdailyschedule/:projectId",
   getAllDailySchedules
 );
 
-// creating the tasks inside the sub models
-// workTaskRoutes.post("/:projectId/daily-task/:dailyScheduleId",
-//   multiRoleAuthMiddleware("owner", "staff", "CTO"),
-//   // checkPreviousStageCompleted(MaterialArrivalModel),
-//   // notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
-//   checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
-//   imageUploadToS3.single("file"), // single file!
-//   processUploadFiles,
-//   addDailyTask
-// );
-
 workTaskRoutes.post("/:projectId/work-plan/:workScheduleId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   // checkPreviousStageCompleted(MaterialArrivalModel),
   // notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
   checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
-
   imageUploadToS3.single("file"),
   processUploadFiles,
-
   addWorkPlan
 );
-
-// updating the single item
-// workTaskRoutes.put(
-//   "/:projectId/daily-task/:dailyScheduleId/:taskId",
-//   multiRoleAuthMiddleware("owner", "staff", "CTO"),
-//   // checkPreviousStageCompleted(MaterialArrivalModel),
-//   // notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
-//   checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
-
-//   imageUploadToS3.single("file"),
-//   processUploadFiles,
-//   updateDailyTask
-// );
 
 workTaskRoutes.put(
   "/:projectId/work-plan/:workScheduleId/:planId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
-  // checkPreviousStageCompleted(MaterialArrivalModel),
-  // notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
   checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
-
   imageUploadToS3.single("file"),
   processUploadFiles,
-
   updateWorkPlan
 );
-
-// deleteing the single item
-
-// workTaskRoutes.delete(
-//   "/:projectId/daily-task/:dailyScheduleId/:taskId",
-//   multiRoleAuthMiddleware("owner", "staff", "CTO"),
-//   // checkPreviousStageCompleted(MaterialArrivalModel),
-//   // notToUpdateIfStageCompleted(WorkMainStageScheduleModel),
-//   checkIfStaffIsAssignedToStage(WorkMainStageScheduleModel),
-
-//   deleteDailyTask
-// );
 
 workTaskRoutes.delete(
   "/:projectId/work-plan/:workScheduleId/:planId",
@@ -146,31 +104,53 @@ workTaskRoutes.delete(
 // );
 
 
-workTaskRoutes.post("/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO"), createWork);
 
-workTaskRoutes.put("/:projectId/update/:taskId", multiRoleAuthMiddleware("owner", "staff", "CTO"), updateWork);
 
-workTaskRoutes.delete("/:projectId/:taskId", multiRoleAuthMiddleware("owner", "staff", "CTO"), deleteWork);
+//  Daily schedule images starts from here (OLD VERRIOIN CALENDER UI) 
+// workTaskRoutes.post("/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO"), createWork);
+
+// workTaskRoutes.put("/:projectId/update/:taskId", multiRoleAuthMiddleware("owner", "staff", "CTO"), updateWork);
+
+// workTaskRoutes.delete("/:projectId/:taskId", multiRoleAuthMiddleware("owner", "staff", "CTO"), deleteWork);
+
+// workTaskRoutes.post(
+//   "/:projectId/:taskId/uploads/:dateId",
+//   imageUploadToS3.array("files"), // already filters multiple
+//   processUploadFiles,
+//   uploadDailyScheduleImages
+// );
+
+
+// workTaskRoutes.delete(
+//   "/:projectId/:taskId/uploads/:dateId/:imageId",
+//   deleteDailyScheduleImage
+// );
+
+
+
+workTaskRoutes.post("/create/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("files"),
+  processUploadFiles, createWork);
+
+workTaskRoutes.put("/update/:projectId/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), updateWork);
+
 
 workTaskRoutes.post(
-  "/:projectId/:taskId/uploads/:dateId",
-  imageUploadToS3.array("files"), // already filters multiple
+  "/:scheduleId/task/:taskId/upload",
+  imageUploadToS3.array("files"),
   processUploadFiles,
   uploadDailyScheduleImages
 );
 
 
 workTaskRoutes.delete(
-  "/:projectId/:taskId/uploads/:dateId/:imageId",
-  deleteDailyScheduleImage
+  ":scheduleId/task/:taskId/date/:dailyImageId/image/:imageId",
+  uploadDailyScheduleImages
 );
-
 
 // get workers based on project
 workTaskRoutes.get("/:projectId/getworkers",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   getProjectWorkers)
-
 
 
 // COMMON TASKS

@@ -11,50 +11,6 @@ import { validRoomKeys } from "../../../constants/BEconstants";
 import { DailyScheduleModel } from "../../../models/Stage Models/WorkTask Model/dailySchedule.model";
 import mongoose from "mongoose"
 
-// export const syncInstallationWork = async (projectId: string) => {
-
-//   const existing = await InstallationModel.findOne({ projectId });
-
-//     const timer = {
-//       startedAt: new Date(),
-//       completedAt: null,
-//       deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-//       reminderSent: false,
-//     };
-//   if (!existing) {
-
-
-
-//     await InstallationModel.create({
-//       projectId,
-//       isEditable: true,
-//       status: "pending",
-//       timer,
-//       assignedTo: null,
-
-//       LivingRoom: [],
-//       Bedroom: [],
-//       Kitchen: [],
-//       DiningRoom: [],
-//       Balcony: [],
-//       FoyerArea: [],
-//       Terrace: [],
-//       StudyRoom: [],
-//       CarParking: [],
-//       Garden: [],
-//       StorageRoom: [],
-//       EntertainmentRoom: [],
-//       HomeGym: [],
-//     })
-//   }
-//   else {
-//     existing.timer =timer
-
-//       await existing.save()
-//   }
-//   const redisKey = `stage:InstallationModel:${projectId}`;
-//   await redisClient.del(redisKey);
-// }
 
 
 export const syncInstallationWork = async (projectId: string) => {
@@ -72,18 +28,18 @@ export const syncInstallationWork = async (projectId: string) => {
   dailySchedule.tasks.forEach(task => {
     const allImages: { url: string }[] = [];
 
-    task?.dates?.forEach(dateEntry => {
-      dateEntry?.uploads?.forEach(upload => {
-        if (upload.fileType === "image" && upload?.url) {
-          allImages.push({ url: upload?.url });
-        }
-      });
-    });
+    // task?.dates?.forEach(dateEntry => {
+    //   dateEntry?.uploads?.forEach(upload => {
+    //     if (upload.fileType === "image" && upload?.url) {
+    //       allImages.push({ url: upload?.url });
+    //     }
+    //   });
+    // });
 
-    if (!taskUploadsMap[task.taskName]) {
-      taskUploadsMap[task.taskName] = [];
-    }
-    taskUploadsMap[task.taskName].push(...allImages);
+    // if (!taskUploadsMap[task.taskName]) {
+    //   taskUploadsMap[task.taskName] = [];
+    // }
+    // taskUploadsMap[task.taskName].push(...allImages);
   });
 
 

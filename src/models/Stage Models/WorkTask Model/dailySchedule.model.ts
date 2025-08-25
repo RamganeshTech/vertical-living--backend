@@ -68,34 +68,137 @@ export interface IDailyTask {
 
 export interface IDailySchedule {
     projectId: Types.ObjectId;   // Project reference
-    tasks: IDailyTask[];         // List of tasks for the project
+    tasks: Types.ObjectId[];         // List of tasks for the project
+    status: "pending" | "completed";
     createdAt?: Date;
     updatedAt?: Date;
 }
+
+
+
+// const DailyTaskSchema = new Schema<IDailyTask>({
+//     taskName: { type: String, },
+//     description: { type: String },
+//     status: {
+//         type: String,
+//         enum: ["pending", "submitted", "approved", "rejected"],
+//         default: "pending",
+//     },
+//     assignedTo: { type: Schema.Types.ObjectId, ref: "WorkerModel", default: null },
+//     dates: [DailyTaskDateSchema], // Multiple specific dates with their own uploads
+// }, { _id: true });
+
+
+export interface IProjectAssignee {
+    projectName: string;
+    siteAddress: string;
+    designReferenceId: string;
+    carpenterName: string;   // could be ObjectId if linked
+    supervisorName: string;  // could be ObjectId if linked
+    plannedStartDate: Date;
+}
+
+export interface IWorkTask {
+    datePlanned: Date;
+    room: string;
+    workDescription: string;
+    startTime: string;      // e.g. "09:00"
+    endTime: string;        // e.g. "17:30"
+    materialsNeeded: string[];
+    manpower: number;
+    status: "planned" | "in-progress" | "completed";
+    uploadedImages: IDailyTaskDate[],
+}
+
+
+export interface ISupervisorCheck {
+    reviewerName: string;
+    reviewerId: Types.ObjectId | null;
+    reviewDateTime: Date;
+    status: "approved" | "needs_changes" | "rejected";
+    remarks: string;
+    gatekeeping: "block" | "allow_with_watch";
+}
+
+
+
+export interface IComparisonImages {
+    plannedImage: IUploadFile | null;
+    actualImage: IUploadFile | null;
+}
+
+
+const ProjectAssigneeSchema = new Schema<IProjectAssignee>({
+    projectName: { type: String, },
+    siteAddress: { type: String, },
+    designReferenceId: { type: String },
+    carpenterName: { type: String },   // can later change to ref WorkerModel
+    supervisorName: { type: String },  // can later change to ref StaffModel
+    plannedStartDate: { type: Date },
+}, { _id: false });
+
+const ComparisonImagesSchema = new Schema<IComparisonImages>({
+    plannedImage: { type: uploadSchema, default: null },
+    actualImage: { type: uploadSchema, default: null },
+}, { _id: false });
+
+
+const SupervisorCheckSchema = new Schema<ISupervisorCheck>({
+    reviewerName: { type: String,  },
+    reviewerId: { type: Schema.Types.ObjectId, ref: "StaffModel", default: null },
+    reviewDateTime: { type: Date, default: new Date() },
+    status: {
+        type: String,
+        enum: ["approved", "needs_changes", "rejected", null],
+        default: null
+    },
+    remarks: { type: String },
+    gatekeeping: {
+        type: String,
+        enum: ["block", "allow_with_watch"],
+        default: "block",
+    },
+}, { _id: false });
+
 
 const DailyTaskDateSchema = new Schema<IDailyTaskDate>({
     date: { type: Date }, // Full Date object
     uploads: [uploadSchema], // Multiple images per specific date
 }, { _id: true });
 
-const DailyTaskSchema = new Schema<IDailyTask>({
-    taskName: { type: String, },
-    description: { type: String },
+const DailyTaskSchema = new Schema<IWorkTask>({
+    datePlanned: { type: Date, },
+    room: { type: String, },
+    workDescription: { type: String, },
+    startTime: { type: String },
+    endTime: { type: String },
+    materialsNeeded: [{ type: String }],
+    manpower: { type: Number },
     status: {
         type: String,
-        enum: ["pending", "submitted", "approved", "rejected"],
-        default: "pending",
+        enum: ["planned", "in-progress", "completed"],
+        default: "planned",
     },
-    assignedTo: { type: Schema.Types.ObjectId, ref: "WorkerModel", default: null },
-    dates: [DailyTaskDateSchema], // Multiple specific dates with their own uploads
+    uploadedImages: { type: [DailyTaskDateSchema], default: [] }
 }, { _id: true });
+
+
+const DailyTaskSubSchema = new Schema({
+    projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", required: true }, // <-- replace dailyScheduleId
+    dailyTasks: [DailyTaskSchema],
+    projectAssignee: [ProjectAssigneeSchema],
+    designPlanImages: [uploadSchema],
+    siteImages: [uploadSchema],
+    comparison: ComparisonImagesSchema,
+    supervisorCheck: SupervisorCheckSchema,
+}, { timestamps: true });
+
+export const DailyTaskSubModel = mongoose.model("DailyTaskSubModel", DailyTaskSubSchema);
 
 const DailyScheduleSchema = new Schema<IDailySchedule>({
     projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", required: true },
-    tasks: [DailyTaskSchema],
+    tasks: { type: [Schema.Types.ObjectId], ref: "DailyTaskModel", default: [] },
 }, { timestamps: true });
-
-
 
 
 export const DailyScheduleModel = mongoose.model("DailyScheduleModel", DailyScheduleSchema);

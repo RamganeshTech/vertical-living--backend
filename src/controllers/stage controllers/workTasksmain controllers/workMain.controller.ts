@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { WorkScheduleModel } from "../../../models/Stage Models/WorkTask Model/workSchedule.model";
-import { DailyScheduleModel } from "../../../models/Stage Models/WorkTask Model/dailySchedule.model";
+import { DailyScheduleModel, DailyTaskSubModel } from "../../../models/Stage Models/WorkTask Model/dailySchedule.model";
 import { Types } from "mongoose";
 import WorkMainStageScheduleModel from './../../../models/Stage Models/WorkTask Model/WorkTask.model';
 import { WorkerModel } from "../../../models/worker model/worker.model";
@@ -31,7 +31,7 @@ export const syncWorkSchedule = async (projectId: string) => {
       timer: {
         startedAt: new Date(),
         completedAt: null,
-        deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+        deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
         reminderSent: false
       },
       isEditable: false
@@ -67,8 +67,8 @@ export const syncWorkSchedule = async (projectId: string) => {
     console.log("im gettin involde the else part")
     docs.timer.startedAt = new Date()
     docs.timer.completedAt = null
-    docs.timer.deadLine =  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-    docs.timer.reminderSent = false
+    docs.timer.deadLine = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+      docs.timer.reminderSent = false
 
 
     docs.save()
@@ -168,18 +168,21 @@ const getAllDailySchedules = async (req: Request, res: Response): Promise<any> =
       return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
     }
 
-    const docs = await DailyScheduleModel.findOne({ projectId })
-      .populate({
-        path: "tasks.assignedTo",
-        select: "_id email workerName"
-      });
+    // const docs = await DailyScheduleModel.findOne({ projectId })
+    //   .populate({
+    //     path: "tasks.assignedTo",
+    //     select: "_id email workerName"
+    //   });
+
+
+    const docs = await DailyTaskSubModel.find({ projectId })
 
     if (!docs) {
-      return res.status(404).json({ ok: false, message: "work Schedule stage not found" });
+      return res.status(404).json({ ok: true, data:[], message: "work Schedule stage not found" });
     }
 
 
-    await redisClient.set(redisDailyScheduleKey, JSON.stringify(docs.toObject()), { EX: 60 * 10 })
+    await redisClient.set(redisDailyScheduleKey, JSON.stringify(docs), { EX: 60 * 10 })
 
 
     res.status(200).json({ ok: true, data: docs });
@@ -189,6 +192,7 @@ const getAllDailySchedules = async (req: Request, res: Response): Promise<any> =
 };
 
 
+// GET all daily tasks for a specific schedule
 
 const mdApprovalAction = async (req: Request, res: Response): Promise<any> => {
   try {
