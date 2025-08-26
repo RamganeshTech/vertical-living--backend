@@ -1,7 +1,10 @@
 import { Request, Response } from "express";
 import { DailyScheduleModel, DailyTaskSubModel, IUploadFile } from "../../../models/Stage Models/WorkTask Model/dailySchedule.model";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import redisClient from "../../../config/redisClient";
+import { generateWorkSchedulePDF } from "./workPdfGeenerator";
+import ProjectModel from "../../../models/project model/project.model";
+import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
 
 // export const createWork = async (req: Request, res: Response): Promise<any> => {
 //   try {
@@ -277,6 +280,166 @@ import redisClient from "../../../config/redisClient";
 // ✅ Create / Add Multiple Daily Tasks with optional extras
 
 
+
+
+export const getCurrentProjectDetailsWork = async (req: Request, res: Response): Promise<any> => {
+  try {
+
+    const { projectId } = req.params
+
+    const [project, requirement, dailyWork] = await Promise.all([ProjectModel.findById(projectId),
+    RequirementFormModel.findOne({ projectId }), DailyTaskSubModel.find({ projectId })])
+
+
+    let nextNumber = 1;
+
+    const projectName = project?.projectName || "PRO"; // fallback
+    const projectCode = projectName.substring(0, 3).toLowerCase(); // first 3 letters
+
+
+    if (dailyWork && dailyWork.length > 0) {
+      // Extract numbers from existing references
+      const numbers = dailyWork
+        .map((ele) => {
+          const match = ele?.projectAssignee?.designReferenceId?.match(/-(\d+)$/);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter((num) => num > 0);
+
+      // Get max + 1
+      nextNumber = Math.max(...numbers, 0) + 1;
+    }
+    // 3. Generate new reference
+    const designReferenceId = `${projectCode}-work-${nextNumber}`;
+
+
+    res.status(200).json({
+      message: "project assigned detials", data: {
+        projectName: project?.projectName || "",
+        siteAddress: requirement?.clientData?.location || "",
+        designReferenceId: designReferenceId || "",
+      }
+    })
+
+
+  }
+  catch (error: any) {
+    console.log("error", error)
+    res.status(500).json({ message: "internal server erroro", ok: false })
+  }
+
+}
+
+export const createDailyWorkUtil = async (data: {
+  projectId: string,
+  dailyTasks?: any[],
+  projectAssignee?: any[],
+  supervisorCheck?: any,
+  files?: any
+}) => {
+
+  let { projectId, dailyTasks = [], projectAssignee = [], supervisorCheck = {}, files = {} } = data;
+
+
+
+  if (typeof dailyTasks === 'string') dailyTasks = JSON.parse(dailyTasks);
+  if (typeof projectAssignee === 'string') projectAssignee = JSON.parse(projectAssignee);
+  if (typeof supervisorCheck === 'string') supervisorCheck = JSON.parse(supervisorCheck);
+
+
+  supervisorCheck = {
+    reviewerName: supervisorCheck.reviewerName || "",
+    reviewerId: supervisorCheck.reviewerId || null, // convert empty string to null
+    reviewDateTime: supervisorCheck.reviewDateTime || "",
+    status: ["approved", "needs_changes", "rejected"].includes(supervisorCheck.status)
+      ? supervisorCheck.status
+      : "needs_changes", // fallback to default
+    remarks: supervisorCheck.remarks || "",
+    gatekeeping: supervisorCheck.gatekeeping || "block",
+  };
+
+  console.log("projectId", projectId)
+  console.log("dailyTasks", dailyTasks)
+  console.log("projectAssignee", projectAssignee)
+  console.log("supervisorCheck", supervisorCheck)
+
+  // const files: any = uploadedFiles as { [fieldname: string]: Express.Multer.File[] };
+  console.log("files formt eh at first ", files)
+  // Parse optional images if uploaded
+  const designPlanImages = files?.designPlanImages
+    ? files.designPlanImages.map((file: any) => ({
+      fileType: "image",                // required enum
+      url: file.location,               // S3 URL
+      originalName: file.originalname,  // original file name
+      uploadedAt: new Date(),
+    }))
+    : [];
+
+
+
+  console.log("req.files", files)
+  const siteImages = files?.siteImages
+    ? files.siteImages.map((file: any) => ({
+      fileType: "image",                // required enum
+      url: file.location,               // S3 URL
+      originalName: file.originalname,  // original file name
+      uploadedAt: new Date(),
+    }))
+    : [];
+
+  // const comparison = files?.comparison
+  //   ? {
+  //     design: files.comparison
+  //       .filter((f: any) => f.fieldname === "comparisonDesign")
+  //       .map((f: any) => ({ url: f.location, key: f.key })),
+  //     site: files.comparison
+  //       .filter((f: any) => f.fieldname === "comparisonSite")
+  //       .map((f: any) => ({ url: f.location, key: f.key })),
+  //   }
+  //   : undefined;
+
+
+
+
+  const actualImage = files?.actualImage?.[0] ? {
+    fileType: "image",
+    url: files.actualImage[0].location,
+    originalName: files.actualImage[0].originalname,
+    uploadedAt: new Date(),
+  } : null;
+  const plannedImage = files?.plannedImage?.[0] ? {
+    fileType: "image",
+    url: files.plannedImage[0].location,
+    originalName: files.plannedImage[0].originalname,
+    uploadedAt: new Date(),
+  } : null;
+
+  let comparison: any;
+  if (actualImage || plannedImage) {
+    comparison = {
+      actualImage: actualImage || null,
+      plannedImage: plannedImage || null
+    }
+  } else {
+    comparison = undefined
+  }
+
+  const newRecord = await DailyTaskSubModel.create({
+    projectId,
+    dailyTasks,
+    projectAssignee,
+    supervisorCheck,
+    ...(designPlanImages.length > 0 && { designPlanImages }),
+    ...(siteImages.length > 0 && { siteImages }),
+    ...(comparison && { comparison }),
+  });
+
+
+
+  return newRecord
+
+}
+
 export const createWork = async (req: Request, res: Response): Promise<any> => {
   try {
 
@@ -287,62 +450,106 @@ export const createWork = async (req: Request, res: Response): Promise<any> => {
       supervisorCheck = {},
     } = req.body;
 
+    const files: any = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-    
-    supervisorCheck = {
-      reviewerName: supervisorCheck.reviewerName || "",
-      reviewerId: supervisorCheck.reviewerId || null, // convert empty string to null
-      reviewDateTime: supervisorCheck.reviewDateTime || "",
-      status: ["approved", "needs_changes", "rejected"].includes(supervisorCheck.status)
-        ? supervisorCheck.status
-        : "needs_changes", // fallback to default
-      remarks: supervisorCheck.remarks || "",
-      gatekeeping: supervisorCheck.gatekeeping || "block",
-    };
 
-    console.log("projectId", projectId)
-    console.log("dailyTasks", dailyTasks)
-    console.log("projectAssignee", projectAssignee)
-    console.log("supervisorCheck", supervisorCheck)
+    // if (typeof dailyTasks === 'string') dailyTasks = JSON.parse(dailyTasks);
+    // if (typeof projectAssignee === 'string') projectAssignee = JSON.parse(projectAssignee);
+    // if (typeof supervisorCheck === 'string') supervisorCheck = JSON.parse(supervisorCheck);
 
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-console.log("files formt eh at first ", files)
-    // Parse optional images if uploaded
-    const designPlanImages = files?.designPlanImages
-      ? files.designPlanImages.map((file: any) => ({
-        url: file.location,
-        key: file.key,
-      }))
-      : [];
 
-    const siteImages = files?.siteImages
-      ? files.siteImages.map((file: any) => ({
-        url: file.location,
-        key: file.key,
-      }))
-      : [];
+    // supervisorCheck = {
+    //   reviewerName: supervisorCheck.reviewerName || "",
+    //   reviewerId: supervisorCheck.reviewerId || null, // convert empty string to null
+    //   reviewDateTime: supervisorCheck.reviewDateTime || "",
+    //   status: ["approved", "needs_changes", "rejected"].includes(supervisorCheck.status)
+    //     ? supervisorCheck.status
+    //     : "needs_changes", // fallback to default
+    //   remarks: supervisorCheck.remarks || "",
+    //   gatekeeping: supervisorCheck.gatekeeping || "block",
+    // };
 
-    const comparison = files?.comparison
-      ? {
-        design: files.comparison
-          .filter((f: any) => f.fieldname === "comparisonDesign")
-          .map((f: any) => ({ url: f.location, key: f.key })),
-        site: files.comparison
-          .filter((f: any) => f.fieldname === "comparisonSite")
-          .map((f: any) => ({ url: f.location, key: f.key })),
-      }
-      : undefined;
+    // console.log("projectId", projectId)
+    // console.log("dailyTasks", dailyTasks)
+    // console.log("projectAssignee", projectAssignee)
+    // console.log("supervisorCheck", supervisorCheck)
 
-    const newRecord = await DailyTaskSubModel.create({
-      projectId,
-      dailyTasks,
+    // console.log("files formt eh at first ", files)
+    // // Parse optional images if uploaded
+    // const designPlanImages = files?.designPlanImages
+    //   ? files.designPlanImages.map((file: any) => ({
+    //     fileType: "image",                // required enum
+    //     url: file.location,               // S3 URL
+    //     originalName: file.originalname,  // original file name
+    //     uploadedAt: new Date(),
+    //   }))
+    //   : [];
+
+
+
+    //   console.log("req.files" ,files)
+    // const siteImages = files?.siteImages
+    //   ? files.siteImages.map((file: any) => ({
+    //     fileType: "image",                // required enum
+    //     url: file.location,               // S3 URL
+    //     originalName: file.originalname,  // original file name
+    //     uploadedAt: new Date(),
+    //   }))
+    //   : [];
+
+    // // const comparison = files?.comparison
+    // //   ? {
+    // //     design: files.comparison
+    // //       .filter((f: any) => f.fieldname === "comparisonDesign")
+    // //       .map((f: any) => ({ url: f.location, key: f.key })),
+    // //     site: files.comparison
+    // //       .filter((f: any) => f.fieldname === "comparisonSite")
+    // //       .map((f: any) => ({ url: f.location, key: f.key })),
+    // //   }
+    // //   : undefined;
+
+
+
+
+    // const actualImage = files?.actualImage?.[0] ? {
+    //   fileType: "image",
+    //   url: files.actualImage[0].location,
+    //   originalName: files.actualImage[0].originalname,
+    //   uploadedAt: new Date(),
+    // } : null;
+    // const plannedImage = files?.plannedImage?.[0] ? {
+    //   fileType: "image",
+    //   url: files.plannedImage[0].location,
+    //   originalName: files.plannedImage[0].originalname,
+    //   uploadedAt: new Date(),
+    // } : null;
+
+    // let comparison: any;
+    // if (actualImage || plannedImage) {
+    //   comparison = {
+    //     actualImage: actualImage || null,
+    //     plannedImage: plannedImage || null
+    //   }
+    // } else {
+    //   comparison = undefined
+    // }
+
+    // const newRecord = await DailyTaskSubModel.create({
+    //   projectId,
+    //   dailyTasks,
+    //   projectAssignee,
+    //   supervisorCheck,
+    //   ...(designPlanImages.length > 0 && { designPlanImages }),
+    //   ...(siteImages.length > 0 && { siteImages }),
+    //   ...(comparison && { comparison }),
+    // });
+
+
+    const newRecord = await createDailyWorkUtil({
+      projectId, dailyTasks,
       projectAssignee,
-      supervisorCheck,
-      ...(designPlanImages.length > 0 && { designPlanImages }),
-      ...(siteImages.length > 0 && { siteImages }),
-      ...(comparison && { comparison }),
-    });
-
+      supervisorCheck, files
+    })
 
 
     const isExists = await DailyScheduleModel.findOne({ projectId })
@@ -371,85 +578,139 @@ console.log("files formt eh at first ", files)
 export const updateWork = async (req: Request, res: Response): Promise<any> => {
   try {
     const { projectId, id } = req.params; // DailyTaskSub _id
-    const { dailyTasks = [], projectAssignee = [], supervisorCheck } = req.body;
+    let { dailyTasks = [], projectAssignee = [], supervisorCheck } = req.body;
 
-    const updateData: any = {};
+    if (typeof dailyTasks === 'string') dailyTasks = JSON.parse(dailyTasks);
+    if (typeof projectAssignee === 'string') projectAssignee = JSON.parse(projectAssignee);
+    if (typeof supervisorCheck === 'string') supervisorCheck = JSON.parse(supervisorCheck);
 
+
+    supervisorCheck = {
+      reviewerName: supervisorCheck.reviewerName || "",
+      reviewerId: supervisorCheck.reviewerId || null, // convert empty string to null
+      reviewDateTime: supervisorCheck.reviewDateTime || "",
+      status: ["approved", "needs_changes", "rejected"].includes(supervisorCheck.status)
+        ? supervisorCheck.status
+        : "needs_changes", // fallback to default
+      remarks: supervisorCheck.remarks || "",
+      gatekeeping: supervisorCheck.gatekeeping || "block",
+    };
+
+    const record = await DailyTaskSubModel.findById(id);
+    if (!record) {
+      return res.status(404).json({ ok: false, message: "task not found" });
+    }
+
+    // Step 2: Update dailyTasks (replace by _id, append new ones)
     if (dailyTasks.length > 0) {
-      updateData.$push = { dailyTasks: { $each: dailyTasks } };
+      // Create a map of existing tasks
+      const taskMap = new Map(
+        record.dailyTasks.map((t: any) => [String(t._id), t])
+      );
+
+      dailyTasks.forEach((newTask: any) => {
+        if (newTask._id && taskMap.has(String(newTask._id))) {
+          const existing = taskMap.get(String(newTask._id));
+
+          // Only merge if there are changes
+          const updated = { ...existing.toObject?.() || existing, ...newTask };
+
+          taskMap.set(String(newTask._id), updated);
+        } else {
+          // Add as new task (preserve _id = true in schema)
+          taskMap.set(
+            new mongoose.Types.ObjectId().toString(),
+            newTask
+          );
+        }
+      });
+
+      // Preserve unmodified tasks as they are
+      record.set("dailyTasks", Array.from(taskMap.values()));
     }
 
-    if (projectAssignee.length > 0) {
-      updateData.$push = {
-        ...(updateData.$push || {}),
-        projectAssignee: { $each: projectAssignee },
-      };
+
+    if (projectAssignee && Object.keys(projectAssignee).length > 0) {
+      // If you want to overwrite fully:
+      record.set("projectAssignee", projectAssignee);
     }
 
-    if (supervisorCheck) {
-      updateData.supervisorCheck = supervisorCheck;
-    }
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-
-    // Handle optional uploads
-    if (files?.designPlanImages) {
-      updateData.$push = {
-        ...(updateData.$push || {}),
-        designPlanImages: {
-          $each: files.designPlanImages.map((file: any) => ({
-            url: file.location,
-            key: file.key,
-          })),
-        },
-      };
-    }
-
-    if (files?.siteImages) {
-      updateData.$push = {
-        ...(updateData.$push || {}),
-        siteImages: {
-          $each: files.siteImages.map((file: any) => ({
-            url: file.location,
-            key: file.key,
-          })),
-        },
-      };
-    }
-
-    if (files?.comparison) {
-      updateData.comparison = {
-        design: files.comparison
-          .filter((f: any) => f.fieldname === "comparisonDesign")
-          .map((f: any) => ({ url: f.location, key: f.key })),
-        site: files.comparison
-          .filter((f: any) => f.fieldname === "comparisonSite")
-          .map((f: any) => ({ url: f.location, key: f.key })),
-      };
-    }
-
-    const updatedRecord = await DailyTaskSubModel.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true }
-    );
-
-
-
-    if (!updatedRecord) {
-      return res.status(404).json({
-        ok: false,
-        message: "task not found",
+    if (supervisorCheck && Object.keys(supervisorCheck).length > 0) {
+      record.set("supervisorCheck", {
+        ...(record.supervisorCheck as any)?.toObject(),
+        ...supervisorCheck,
       });
     }
 
 
-    await DailyScheduleModel.findOneAndUpdate({ projectId }, { $addToSet: { tasks: updatedRecord._id } }, { returnDocument: "after" })
+    const files: any = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+
+    if (files?.designPlanImages?.length > 0) {
+      const existing = record.designPlanImages || [];
+      const newOnes = files.designPlanImages.map((file: any) => ({
+        url: file.location,
+        key: file.key,
+      }));
+
+      record.set("designPlanImages", [...existing, ...newOnes]);
+    }
+
+
+    // Handle siteImages merge
+    if (files?.siteImages?.length > 0) {
+      const existing = record.siteImages || [];
+      const newOnes = files.siteImages.map((file: any) => ({
+        url: file.location,
+        key: file.key,
+      }));
+
+      record.set("siteImages", [...existing, ...newOnes]);
+    }
+
+
+    // Handle actual/planned comparison
+    const actualImage = files?.actualImage?.[0]
+      ? {
+        fileType: "image",
+        url: files.actualImage[0].location,
+        originalName: files.actualImage[0].originalname,
+        uploadedAt: new Date(),
+      }
+      : null;
+
+    const plannedImage = files?.plannedImage?.[0]
+      ? {
+        fileType: "image",
+        url: files.plannedImage[0].location,
+        originalName: files.plannedImage[0].originalname,
+        uploadedAt: new Date(),
+      }
+      : null;
+
+
+    // Only overwrite comparison if new images are given
+    if (actualImage || plannedImage) {
+      record.set("comparison", {
+        ...((record.comparison as any)?.toObject?.() || record.comparison || {}),
+        ...(actualImage ? { actualImage } : {}),
+        ...(plannedImage ? { plannedImage } : {}),
+      });
+    }
+
+
+    await record.save();
+
+
+
+
+    await DailyScheduleModel.findOneAndUpdate({ projectId }, { $addToSet: { tasks: record._id } }, { returnDocument: "after" })
 
 
     return res.status(200).json({
       ok: true,
       message: "Daily tasks updated successfully",
-      data: updatedRecord,
+      data: record,
     });
   } catch (error: any) {
     console.error("Error updating daily tasks:", error);
@@ -457,6 +718,43 @@ export const updateWork = async (req: Request, res: Response): Promise<any> => {
   }
 };
 
+
+
+
+export const deleteWork = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { scheduleId, taskId } = req.params;
+
+    if (!scheduleId || !taskId) {
+      return res.status(400).json({ message: "Invalid projectId or taskId", ok: false });
+    }
+    console.log("tasksid", taskId)
+
+
+    console.log("schedule", scheduleId)
+    // Find the project schedule
+    const dailySchedule = await DailyTaskSubModel.findById(scheduleId);
+    if (!dailySchedule) {
+      return res.status(404).json({ message: "Project schedule not found", ok: false });
+    }
+
+    // Find the task index
+    const totalLength = dailySchedule.dailyTasks.length
+    const task = dailySchedule.dailyTasks.filter((task: any) => task._id.toString() !== taskId);
+    (dailySchedule as any).dailyTasks = task
+    if (task.length === totalLength) {
+      return res.status(404).json({ message: "Task not found", ok: false });
+    }
+
+    await dailySchedule.save();
+
+    return res.status(200).json({ message: "Task deleted successfully", ok: true, data: dailySchedule });
+
+  } catch (error) {
+    console.error("Error deleting task:", error);
+    return res.status(500).json({ message: "Internal server error", ok: false, error });
+  }
+};
 
 
 export const uploadDailyScheduleImages = async (req: Request, res: Response): Promise<any> => {
@@ -476,7 +774,7 @@ export const uploadDailyScheduleImages = async (req: Request, res: Response): Pr
     }
 
     // Find the specific task inside dailyTasks
-    const task = schedule.dailyTasks.id(taskId);
+    const task = (schedule.dailyTasks as any).id(taskId);
     if (!task) {
       return res.status(404).json({ message: "Task not found in schedule.", ok: false });
     }
@@ -493,7 +791,7 @@ export const uploadDailyScheduleImages = async (req: Request, res: Response): Pr
     });
 
     // Check if there's already an entry for the given date
-    let dateEntry = task?.uploadedImages?.find(entry => entry?.date?.toDateString() === new Date(date)?.toDateString());
+    let dateEntry = task?.uploadedImages?.find((entry: any) => entry?.date?.toDateString() === new Date(date)?.toDateString());
 
     if (dateEntry) {
       // If date exists, append new files
@@ -510,7 +808,10 @@ export const uploadDailyScheduleImages = async (req: Request, res: Response): Pr
 
     return res.status(200).json({
       message: "Files uploaded to task successfully",
-      data: task,
+      data: {
+        date: new Date(date).toISOString(), // keep it as string
+        uploads: mappedFiles
+      },
       ok: true
     });
 
@@ -525,19 +826,19 @@ export const uploadDailyScheduleImages = async (req: Request, res: Response): Pr
 export const deleteDailyScheduleImage = async (req: Request, res: Response): Promise<any> => {
   try {
     // Find and update in one shot
-    const { scheduleId, taskId, dailyImageId, imageId } = req.params;
+    const { scheduleId, taskId, date, imageId } = req.params;
 
+
+    console.log("scheduleId", scheduleId)
+    console.log("taskId", taskId)
+    console.log("imageId", imageId)
+    console.log("date", date)
     const updatedDoc = await DailyTaskSubModel.findOneAndUpdate(
-      { _id: scheduleId, "dailyTasks._id": taskId },
+      { _id: scheduleId, "dailyTasks._id": taskId, "dailyTasks.uploadedImages.uploads._id": imageId },
       {
-        $pull: {
-          "dailyTasks.$.uploadedImages.$[dateEntry].uploads": { _id: imageId }
-        }
+        $pull: { "dailyTasks.$[].uploadedImages.$[].uploads": { _id: imageId } }
       },
-      {
-        arrayFilters: [{ "dateEntry._id": dailyImageId }],
-        new: true
-      }
+      { new: true }
     );
 
     if (!updatedDoc) {
@@ -549,7 +850,12 @@ export const deleteDailyScheduleImage = async (req: Request, res: Response): Pro
 
     return res.status(200).json({
       message: "Image deleted successfully",
-      data: updatedDoc,
+      data: {
+        date,
+        uploads: updatedDoc.dailyTasks
+          .find((t: any) => t._id.toString() === taskId)
+          ?.uploadedImages.find((g: any) => g.date.toISOString().split("T")[0] === date)?.uploads || []
+      },
       ok: true,
     });
   } catch (error) {
@@ -560,6 +866,76 @@ export const deleteDailyScheduleImage = async (req: Request, res: Response): Pro
     });
   }
 };
+
+export const generateWorkSchedulePDFController = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { projectId, scheduleId } = req.params
+    let {
+      dailyTasks = [],
+      projectAssignee = [],
+      supervisorCheck = {},
+    } = req.body;
+
+
+
+    const files: any = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+    if (!projectId) {
+      return res.status(400).json({
+        ok: false,
+        message: 'projectId ID is required'
+      });
+    }
+
+
+
+    console.log("dailyTasks", dailyTasks)
+
+    console.log("Raw req.body:", req.body);
+    console.log("Files:", req.files);
+
+    let newRecord: any = null
+    if (!scheduleId) {
+      newRecord = await createDailyWorkUtil({
+        projectId, dailyTasks,
+        projectAssignee,
+        supervisorCheck, files
+      })
+    }
+
+    let result: any;
+    if (newRecord) {
+      result = await generateWorkSchedulePDF(newRecord._id);
+    } else {
+      result = await generateWorkSchedulePDF(scheduleId);
+    }
+
+
+
+    res.status(200).json({ ok: true, message: "pdf generated successfully", data: result });
+
+    if (!scheduleId) {
+      const isExists = await DailyScheduleModel.findOne({ projectId })
+      if (!isExists) {
+        await DailyScheduleModel.create({
+          projectId,
+          tasks: [newRecord._id],
+        })
+      } else {
+        await DailyScheduleModel.findOneAndUpdate({ projectId }, { $addToSet: { tasks: newRecord._id } }, { returnDocument: "after" })
+      }
+    }
+
+
+  } catch (error: any) {
+    console.error('PDF generation controller error:', error);
+    res.status(500).json({
+      ok: false,
+      message: error.message || 'Internal server error'
+    });
+  }
+};
+
 
 
 const updateDailyScheduleStatus = async (req: Request, res: Response): Promise<any> => {

@@ -8,98 +8,171 @@ import { updateProjectCompletionPercentage } from "../../../utils/updateProjectC
 import { DocUpload } from "../../../types/types";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 import { validRoomKeys } from "../../../constants/BEconstants";
-import { DailyScheduleModel } from "../../../models/Stage Models/WorkTask Model/dailySchedule.model";
+import { DailyScheduleModel, DailyTaskSubModel } from "../../../models/Stage Models/WorkTask Model/dailySchedule.model";
 import mongoose from "mongoose"
 
 
 
+// export const syncInstallationWork = async (projectId: string) => {
+
+//   const dailySchedule = await DailyScheduleModel.findOne({ projectId });
+
+//   if (!dailySchedule) {
+//     console.log("work schedule is not created")
+//     return
+//   }
+
+//   // 2. Group uploads by taskName
+//   const taskUploadsMap: Record<string, { url: string }[]> = {};
+
+//   dailySchedule.tasks.forEach(task => {
+//     const allImages: { url: string }[] = [];
+
+//     task?.dates?.forEach(dateEntry => {
+//       dateEntry?.uploads?.forEach(upload => {
+//         if (upload.fileType === "image" && upload?.url) {
+//           allImages.push({ url: upload?.url });
+//         }
+//       });
+//     });
+
+//     if (!taskUploadsMap[task.taskName]) {
+//       taskUploadsMap[task.taskName] = [];
+//     }
+//     taskUploadsMap[task.taskName].push(...allImages);
+//   });
+
+
+//   const existing = await InstallationModel.findOne({ projectId });
+
+
+//   const timer = {
+//     startedAt: new Date(),
+//     completedAt: null,
+//     deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+//     reminderSent: false,
+//   };
+
+//   if (!existing) {
+//     // Create fresh Installation document
+//     let installationDoc = new InstallationModel({
+//       projectId,
+//       isEditable: true,
+//       status: "pending",
+//       timer,
+//       assignedTo: null,
+
+//       tasks: Object.entries(taskUploadsMap).map(([workName, images]) => ({
+//         workName,
+//         images,
+//         status: "pending"
+//       }))
+//     });
+
+//     await installationDoc.save()
+//   } else {
+//     // Update existing Installation document
+//     Object.entries(taskUploadsMap).forEach(([workName, images]) => {
+//       let existingTask = existing.tasks.find(t => t.workName === workName);
+//       if (!existingTask) {
+//         // Add new task if it doesn't exist
+//         existing.tasks.push({
+//           workName,
+//           images,
+//           status: "pending"
+//         });
+//       } else {
+//         // Merge new images (avoid duplicates)
+//         const existingUrls = new Set(existingTask.images.map(img => img.url));
+//         images.forEach(img => {
+//           if (!existingUrls.has(img.url)) {
+//             existingTask.images.push(img);
+//           }
+//         });
+//       }
+//     });
+
+//     // 4. Save to DB
+//     await existing.save();
+//   }
+
+
+//   const redisKey = `stage:InstallationModel:${projectId}`;
+//   await redisClient.del(redisKey);
+// }
+
+
 export const syncInstallationWork = async (projectId: string) => {
+  try {
+    // 1. Fetch all daily schedules for this project
+    const dailySchedules = await DailyTaskSubModel.find({ projectId });
 
-  const dailySchedule = await DailyScheduleModel.findOne({ projectId });
+    if (!dailySchedules || dailySchedules.length === 0) {
+      console.log("No daily schedules found for this project");
+      return;
+    }
 
-  if (!dailySchedule) {
-    console.log("work schedule is not created")
-    return
-  }
+    // 2. Aggregate images grouped by workDescription
+    const taskUploadsMap: Record<string, { url: string }[]> = {};
 
-  // 2. Group uploads by taskName
-  const taskUploadsMap: Record<string, { url: string }[]> = {};
+    dailySchedules.forEach(schedule => {
+      schedule.dailyTasks.forEach(task => {
+        const allImages: { url: string }[] = [];
 
-  dailySchedule.tasks.forEach(task => {
-    const allImages: { url: string }[] = [];
+        task.uploadedImages.forEach(dateEntry => {
+          dateEntry.uploads.forEach(upload => {
+            if (upload.fileType === "image" && upload.url) {
+              allImages.push({ url: upload.url });
+            }
+          });
+        });
 
-    // task?.dates?.forEach(dateEntry => {
-    //   dateEntry?.uploads?.forEach(upload => {
-    //     if (upload.fileType === "image" && upload?.url) {
-    //       allImages.push({ url: upload?.url });
-    //     }
-    //   });
-    // });
-
-    // if (!taskUploadsMap[task.taskName]) {
-    //   taskUploadsMap[task.taskName] = [];
-    // }
-    // taskUploadsMap[task.taskName].push(...allImages);
-  });
-
-
-  const existing = await InstallationModel.findOne({ projectId });
-
-
-  const timer = {
-    startedAt: new Date(),
-    completedAt: null,
-    deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-    reminderSent: false,
-  };
-
-  if (!existing) {
-    // Create fresh Installation document
-    let installationDoc = new InstallationModel({
-      projectId,
-      isEditable: true,
-      status: "pending",
-      timer,
-      assignedTo: null,
-
-      tasks: Object.entries(taskUploadsMap).map(([workName, images]) => ({
-        workName,
-        images,
-        status: "pending"
-      }))
+        if (!taskUploadsMap[task.workDescription]) {
+          taskUploadsMap[task.workDescription] = [];
+        }
+        taskUploadsMap[task.workDescription].push(...allImages);
+      });
     });
 
-    await installationDoc.save()
-  } else {
-    // Update existing Installation document
-    Object.entries(taskUploadsMap).forEach(([workName, images]) => {
-      let existingTask = existing.tasks.find(t => t.workName === workName);
-      if (!existingTask) {
-        // Add new task if it doesn't exist
-        existing.tasks.push({
+    // 3. Fetch or create the Installation document for this project
+    let installation = await InstallationModel.findOne({ projectId });
+    if (!installation) {
+      installation = new InstallationModel({
+        projectId,
+        isEditable: true,
+        status: "pending",
+        tasks: Object.entries(taskUploadsMap).map(([workName, images]) => ({
           workName,
-          images,
+          images: images.map(img => ({ url: img.url })), // convert to { url } objects
           status: "pending"
+        }))
+      });
+
+      await installation.save();
+    }
+
+    // 4. Update tasks array in Installation schema
+    for (const [workName, images] of Object.entries(taskUploadsMap)) {
+      const existingTask = installation.tasks.find(t => t.workName === workName);
+      if (existingTask) {
+        // Merge new images without duplicates
+        const existingUrls = new Set(existingTask.images.map(i => i.url));
+        images.forEach(img => {
+          if (!existingUrls.has(img.url)) existingTask.images.push({ url: img.url });
         });
       } else {
-        // Merge new images (avoid duplicates)
-        const existingUrls = new Set(existingTask.images.map(img => img.url));
-        images.forEach(img => {
-          if (!existingUrls.has(img.url)) {
-            existingTask.images.push(img);
-          }
-        });
+        // Add a new task entry
+        installation.tasks.push({ workName, images: images.map(img => ({ url: img.url })), status: "pending" });
       }
-    });
+    }
 
-    // 4. Save to DB
-    await existing.save();
+    await installation.save();
+    console.log("Installation tasks synced successfully!");
+  } catch (error) {
+    console.error("Error syncing installation work:", error);
+    throw error;
   }
-
-
-  const redisKey = `stage:InstallationModel:${projectId}`;
-  await redisClient.del(redisKey);
-}
+};
 
 
 
@@ -148,7 +221,7 @@ export const updateInstallationTaskStatus = async (req: Request, res: Response):
     res.status(200).json({
       message: "Task status updated successfully",
       updatedSchedule,
-      ok:true
+      ok: true
     });
   } catch (error) {
     console.error("Error updating task status:", error);

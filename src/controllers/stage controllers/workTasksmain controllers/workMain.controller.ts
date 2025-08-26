@@ -39,27 +39,38 @@ export const syncWorkSchedule = async (projectId: string) => {
 
     await workModel.save()
 
-    let dailySchedule = new DailyScheduleModel({
+    // let dailySchedule = new DailyScheduleModel({
+    //   projectId,
+    //   stageId: workModel._id,
+    //   tasks: [],
+    //   status: "pending",
+    //   remarks: ""
+    // })
+
+    // let workSchedule = new WorkScheduleModel({
+    //   projectId,
+    //   stageId: workModel._id,
+    //   plans: [],
+    //   status: "pending",
+    //   remarks: ""
+    // })
+
+
+   
+
+
+
+    // await dailySchedule.save()
+    // await workSchedule.save()
+
+    // workModel.dailyScheduleId = dailySchedule._id as Types.ObjectId
+    // workModel.workScheduleId = workSchedule._id as Types.ObjectId
+
+
+     await DailyScheduleModel.create({
       projectId,
-      stageId: workModel._id,
-      tasks: [],
-      status: "pending",
-      remarks: ""
+      tasks:[]
     })
-
-    let workSchedule = new WorkScheduleModel({
-      projectId,
-      stageId: workModel._id,
-      plans: [],
-      status: "pending",
-      remarks: ""
-    })
-
-    await dailySchedule.save()
-    await workSchedule.save()
-
-    workModel.dailyScheduleId = dailySchedule._id as Types.ObjectId
-    workModel.workScheduleId = workSchedule._id as Types.ObjectId
 
     await workModel.save()
   }

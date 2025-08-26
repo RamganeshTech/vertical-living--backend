@@ -128,6 +128,17 @@ export interface IComparisonImages {
 }
 
 
+export interface IDailyTaskSub {
+    projectId: Types.ObjectId,
+    dailyTasks: IWorkTask[],
+    projectAssignee: IProjectAssignee,
+    designPlanImages: IUploadFile[],
+    siteImages: IUploadFile[],
+    comparison: IComparisonImages,
+    supervisorCheck: ISupervisorCheck,
+}
+
+
 const ProjectAssigneeSchema = new Schema<IProjectAssignee>({
     projectName: { type: String, },
     siteAddress: { type: String, },
@@ -137,6 +148,8 @@ const ProjectAssigneeSchema = new Schema<IProjectAssignee>({
     plannedStartDate: { type: Date },
 }, { _id: false });
 
+
+
 const ComparisonImagesSchema = new Schema<IComparisonImages>({
     plannedImage: { type: uploadSchema, default: null },
     actualImage: { type: uploadSchema, default: null },
@@ -144,7 +157,7 @@ const ComparisonImagesSchema = new Schema<IComparisonImages>({
 
 
 const SupervisorCheckSchema = new Schema<ISupervisorCheck>({
-    reviewerName: { type: String,  },
+    reviewerName: { type: String, },
     reviewerId: { type: Schema.Types.ObjectId, ref: "StaffModel", default: null },
     reviewDateTime: { type: Date, default: new Date() },
     status: {
@@ -183,10 +196,10 @@ const DailyTaskSchema = new Schema<IWorkTask>({
 }, { _id: true });
 
 
-const DailyTaskSubSchema = new Schema({
+const DailyTaskSubSchema = new Schema<IDailyTaskSub>({
     projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", required: true }, // <-- replace dailyScheduleId
     dailyTasks: [DailyTaskSchema],
-    projectAssignee: [ProjectAssigneeSchema],
+    projectAssignee: { type: ProjectAssigneeSchema },
     designPlanImages: [uploadSchema],
     siteImages: [uploadSchema],
     comparison: ComparisonImagesSchema,

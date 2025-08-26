@@ -7,8 +7,8 @@ import { ok } from 'assert';
 import mongoose from 'mongoose';
 import { CommonOrderHistoryModel } from '../../../models/Stage Models/Ordering Material Model/CommonOrderMaterialHistory Model/commonOrderMaterialHistory.model';
 
-const COMPANY_LOGO = "https://th.bing.com/th/id/OIP.Uparc9uI63RDb82OupdPvwAAAA?w=80&h=80&c=1&bgcl=c77779&r=0&o=6&dpr=1.3&pid=ImgRC";
-const COMPANY_NAME = "Vertical Living";
+export const COMPANY_LOGO = "https://th.bing.com/th/id/OIP.Uparc9uI63RDb82OupdPvwAAAA?w=80&h=80&c=1&bgcl=c77779&r=0&o=6&dpr=1.3&pid=ImgRC";
+export const COMPANY_NAME = "Vertical Living";
 
 // Upload PDF to S3
 const uploadToS3 = async (pdfBytes: any, fileName: any) => {
@@ -532,6 +532,13 @@ const generateOrderHistoryPDF = async (projectId: string) => {
         }
 
         console.log("orderHistory.generatedLink", orderHistory.generatedLink)
+
+         // Clear subItems from each selectedUnit
+         orderHistory.selectedUnits.forEach(unit => {
+            unit.subItems = [];
+        });
+
+
         await orderHistory.save();
 
         // console.log("orderhisoty", orderHistory)

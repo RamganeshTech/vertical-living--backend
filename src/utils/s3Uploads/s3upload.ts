@@ -61,6 +61,11 @@ export const processUploadFiles = async (req: Request, res: Response, next: Next
       files.push(...req.files);
     } else if (req.file) {
       files.push(req.file);
+    }else if (req.files && typeof req.files === "object") {
+      // req.files is an object from multer.fields
+      Object.values(req.files).forEach((fieldFiles: any) => {
+        files.push(...fieldFiles);
+      });
     }
     // console.log("requst files", req.files)
     // console.log("requst file", req.file)

@@ -2,6 +2,10 @@ import { Router } from "express";
 // import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader"; // your S3 uploader
 import { 
   createWork,
+  deleteDailyScheduleImage,
+  deleteWork,
+  generateWorkSchedulePDFController,
+  getCurrentProjectDetailsWork,
   // deleteDailyScheduleImage,
   // deleteWork,
   // addDailyTask, deleteDailyTask,
@@ -128,10 +132,30 @@ workTaskRoutes.delete(
 
 
 
-workTaskRoutes.post("/create/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("files"),
+workTaskRoutes.post("/create/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO"),
+//  imageUploadToS3.array("files"),
+imageUploadToS3.fields([
+  { name: 'designPlanImages', maxCount: 1000 }, // practically unlimited
+  { name: 'siteImages', maxCount: 1000 },
+  { name: 'comparison', maxCount: 1000 },
+   { name: 'actualImage', maxCount: 1 },   // add this
+  { name: 'plannedImage', maxCount: 1 },  // add this
+]),
   processUploadFiles, createWork);
 
-workTaskRoutes.put("/update/:projectId/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), updateWork);
+
+workTaskRoutes.put("/update/:projectId/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"),
+ imageUploadToS3.fields([
+    { name: "designPlanImages", maxCount: 1000 },
+    { name: "siteImages", maxCount: 1000 },
+    { name: "comparison", maxCount: 1000 },
+    { name: "actualImage", maxCount: 1 },
+    { name: "plannedImage", maxCount: 1 },
+  ]),
+  processUploadFiles,
+updateWork);
+
+workTaskRoutes.delete("/:scheduleId/:taskId", multiRoleAuthMiddleware("owner", "staff", "CTO"), deleteWork);
 
 
 workTaskRoutes.post(
@@ -143,9 +167,32 @@ workTaskRoutes.post(
 
 
 workTaskRoutes.delete(
-  ":scheduleId/task/:taskId/date/:dailyImageId/image/:imageId",
-  uploadDailyScheduleImages
+  "/:scheduleId/deleteworkimage/:taskId/date/:date/image/:imageId",
+  deleteDailyScheduleImage
 );
+
+
+workTaskRoutes.post(
+  "/generatePdf/work/:projectId/:scheduleId",
+  imageUploadToS3.fields([
+  { name: 'designPlanImages', maxCount: 1000 }, // practically unlimited
+  { name: 'siteImages', maxCount: 1000 },
+  { name: 'comparison', maxCount: 1000 },
+   { name: 'actualImage', maxCount: 1 },   // add this
+  { name: 'plannedImage', maxCount: 1 },  // add this
+]),
+  processUploadFiles,
+  generateWorkSchedulePDFController
+);
+
+
+// get workers based on the project
+
+workTaskRoutes.get(
+  "/getprojectassigne/:projectId",
+  getCurrentProjectDetailsWork
+);
+
 
 // get workers based on project
 workTaskRoutes.get("/:projectId/getworkers",
