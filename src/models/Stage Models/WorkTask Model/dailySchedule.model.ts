@@ -185,7 +185,7 @@ const DailyTaskSchema = new Schema<IWorkTask>({
     workDescription: { type: String, },
     startTime: { type: String },
     endTime: { type: String },
-    materialsNeeded: [{ type: String }],
+    materialsNeeded: [String],
     manpower: { type: Number },
     status: {
         type: String,

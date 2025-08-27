@@ -103,57 +103,54 @@ import mongoose from "mongoose"
 
 
 export const syncInstallationWork = async (projectId: string) => {
-  try {
-    // 1. Fetch all daily schedules for this project
-    const dailySchedules = await DailyTaskSubModel.find({ projectId });
+  // 1. Fetch all daily schedules for this project
+  const dailySchedules = await DailyTaskSubModel.find({ projectId });
 
-    if (!dailySchedules || dailySchedules.length === 0) {
-      console.log("No daily schedules found for this project");
-      return;
-    }
+  if (!dailySchedules || dailySchedules.length === 0) {
+    console.log("No daily schedules found for this project");
+    return;
+  }
 
-    // 2. Aggregate images grouped by workDescription
-    const taskUploadsMap: Record<string, { url: string }[]> = {};
+  // 2. Aggregate images grouped by workDescription
+  const taskUploadsMap: Record<string, { url: string }[]> = {};
 
-    dailySchedules.forEach(schedule => {
-      schedule.dailyTasks.forEach(task => {
-        const allImages: { url: string }[] = [];
+  dailySchedules.forEach(schedule => {
+    schedule.dailyTasks.forEach(task => {
+      const allImages: { url: string }[] = [];
 
-        task.uploadedImages.forEach(dateEntry => {
-          dateEntry.uploads.forEach(upload => {
-            if (upload.fileType === "image" && upload.url) {
-              allImages.push({ url: upload.url });
-            }
-          });
+      task.uploadedImages.forEach(dateEntry => {
+        dateEntry.uploads.forEach(upload => {
+          if (upload.fileType === "image" && upload.url) {
+            allImages.push({ url: upload.url });
+          }
         });
-
-        if (!taskUploadsMap[task.workDescription]) {
-          taskUploadsMap[task.workDescription] = [];
-        }
-        taskUploadsMap[task.workDescription].push(...allImages);
       });
+
+      if (!taskUploadsMap[task.room]) {
+        taskUploadsMap[task.room] = [];
+      }
+      taskUploadsMap[task.room].push(...allImages);
+    });
+  });
+
+  // 3. Fetch or create the Installation document for this project
+  let installation = await InstallationModel.findOne({ projectId });
+  if (!installation) {
+    installation = new InstallationModel({
+      projectId,
+      isEditable: true,
+      status: "pending",
+      tasks: Object.entries(taskUploadsMap).map(([room, images]) => ({
+        workName: room,
+        images: images.map(img => ({ url: img.url })), // convert to { url } objects
+        status: "pending"
+      }))
     });
 
-    // 3. Fetch or create the Installation document for this project
-    let installation = await InstallationModel.findOne({ projectId });
-    if (!installation) {
-      installation = new InstallationModel({
-        projectId,
-        isEditable: true,
-        status: "pending",
-        tasks: Object.entries(taskUploadsMap).map(([workName, images]) => ({
-          workName,
-          images: images.map(img => ({ url: img.url })), // convert to { url } objects
-          status: "pending"
-        }))
-      });
-
-      await installation.save();
-    }
-
+  } else {
     // 4. Update tasks array in Installation schema
-    for (const [workName, images] of Object.entries(taskUploadsMap)) {
-      const existingTask = installation.tasks.find(t => t.workName === workName);
+    for (const [room, images] of Object.entries(taskUploadsMap)) {
+      const existingTask = installation.tasks.find(t => t.workName === room);
       if (existingTask) {
         // Merge new images without duplicates
         const existingUrls = new Set(existingTask.images.map(i => i.url));
@@ -162,16 +159,15 @@ export const syncInstallationWork = async (projectId: string) => {
         });
       } else {
         // Add a new task entry
-        installation.tasks.push({ workName, images: images.map(img => ({ url: img.url })), status: "pending" });
+        installation.tasks.push({ workName: room, images: images.map(img => ({ url: img.url })), status: "pending" });
       }
     }
-
-    await installation.save();
-    console.log("Installation tasks synced successfully!");
-  } catch (error) {
-    console.error("Error syncing installation work:", error);
-    throw error;
   }
+  
+  await installation.save();
+
+  const redisKey = `stage:InstallationModel:${projectId}`;
+    await redisClient.del(redisKey);
 };
 
 
@@ -395,7 +391,7 @@ const getInstallationDetails = async (req: Request, res: Response): Promise<any>
     const { projectId } = req.params;
 
     const redisMainKey = `stage:InstallationModel:${projectId}`
-    // await redisClient.del(redisMainKey)
+    await redisClient.del(redisMainKey)
     const cachedData = await redisClient.get(redisMainKey)
 
     if (cachedData) {
