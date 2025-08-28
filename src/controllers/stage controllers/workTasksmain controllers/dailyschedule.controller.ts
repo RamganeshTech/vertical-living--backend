@@ -5,6 +5,7 @@ import redisClient from "../../../config/redisClient";
 import { generateWorkSchedulePDF } from "./workPdfGeenerator";
 import ProjectModel from "../../../models/project model/project.model";
 import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
+import { RoleBasedRequest } from "../../../types/types";
 
 // export const createWork = async (req: Request, res: Response): Promise<any> => {
 //   try {
@@ -798,19 +799,30 @@ export const uploadDailyScheduleImages = async (req: Request, res: Response): Pr
       dateEntry.uploads.push(...mappedFiles);
     } else {
       // Otherwise, create a new entry for this date
-      task.uploadedImages.push({
-        date: new Date(date),
-        uploads: mappedFiles
-      });
+       dateEntry = {
+    date: new Date(date),
+    uploads: mappedFiles
+  };
+    task.uploadedImages.push(dateEntry);
+
+  // task.uploadedImages.push(dateEntry);
+  //     task.uploadedImages.push({
+  //       date: new Date(date),
+  //       uploads: mappedFiles
+  //     });
     }
 
     await schedule.save();
 
+const savedUploads = dateEntry.uploads.slice(-mappedFiles.length);
+
+    
     return res.status(200).json({
       message: "Files uploaded to task successfully",
+
       data: {
         date: new Date(date).toISOString(), // keep it as string
-        uploads: mappedFiles
+        uploads: savedUploads
       },
       ok: true
     });
@@ -829,34 +841,64 @@ export const deleteDailyScheduleImage = async (req: Request, res: Response): Pro
     const { scheduleId, taskId, date, imageId } = req.params;
 
 
-    console.log("scheduleId", scheduleId)
-    console.log("taskId", taskId)
-    console.log("imageId", imageId)
-    console.log("date", date)
-    const updatedDoc = await DailyTaskSubModel.findOneAndUpdate(
-      { _id: scheduleId, "dailyTasks._id": taskId, "dailyTasks.uploadedImages.uploads._id": imageId },
-      {
-        $pull: { "dailyTasks.$[].uploadedImages.$[].uploads": { _id: imageId } }
-      },
-      { new: true }
-    );
+    // console.log("scheduleId", scheduleId)
+    // console.log("taskId", taskId)
+    // console.log("imageId", imageId)
+    // console.log("date", date)
+    // const updatedDoc = await DailyTaskSubModel.findOneAndUpdate(
+    //   { _id: scheduleId, "dailyTasks._id": taskId, "dailyTasks.uploadedImages.uploads._id": imageId },
+    //   {
+    //     $pull: { "dailyTasks.$[].uploadedImages.$[].uploads": { _id: imageId } }
+    //   },
+    //   { new: true }
+    // );
+  // if (!updatedDoc) {
+  //     return res.status(404).json({
+  //       message: "Task or image not found",
+  //       ok: false,
+  //     });
+  //   }
 
-    if (!updatedDoc) {
-      return res.status(404).json({
-        message: "Task or image not found",
-        ok: false,
-      });
+  
+
+    // return res.status(200).json({
+    //   message: "Image deleted successfully",
+    //   data: {
+    //     date,
+    //     uploads: updatedDoc.dailyTasks
+    //       .find((t: any) => t._id.toString() === taskId)
+    //       ?.uploadedImages.find((g: any) => g.date.toISOString().split("T")[0] === date)?.uploads || []
+    //   },
+    //   ok: true,
+    // });
+
+     const schedule = await DailyTaskSubModel.findOne({ _id: scheduleId });
+    if (!schedule) {
+      return res.status(404).json({ message: "Schedule not found", ok: false });
     }
 
+    const task = schedule.dailyTasks.find((t: any) => t._id.toString() === taskId);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found", ok: false });
+    }
+
+    const dateGroup = task.uploadedImages.find(
+      (g: any) => g.date.toISOString().split("T")[0] === date
+    );
+    if (!dateGroup) {
+      return res.status(404).json({ message: "Date group not found", ok: false });
+    }
+
+    // Remove the image
+    dateGroup.uploads = dateGroup.uploads.filter((u: any) => u._id.toString() !== imageId);
+
+    await schedule.save();
+
+  
     return res.status(200).json({
       message: "Image deleted successfully",
-      data: {
-        date,
-        uploads: updatedDoc.dailyTasks
-          .find((t: any) => t._id.toString() === taskId)
-          ?.uploadedImages.find((g: any) => g.date.toISOString().split("T")[0] === date)?.uploads || []
-      },
-      ok: true,
+      data: dateGroup, // send the updated group for frontend merge
+      ok: true
     });
   } catch (error) {
     console.error("Error deleting task image:", error);
@@ -867,7 +909,7 @@ export const deleteDailyScheduleImage = async (req: Request, res: Response): Pro
   }
 };
 
-export const generateWorkSchedulePDFController = async (req: Request, res: Response): Promise<any> => {
+export const generateWorkSchedulePDFController = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { projectId, scheduleId } = req.params
     let {
@@ -936,6 +978,276 @@ export const generateWorkSchedulePDFController = async (req: Request, res: Respo
   }
 };
 
+export const addComparisonSelectImage = async (
+  req: RoleBasedRequest,
+  res: Response
+): Promise<any> => {
+  try {
+
+    const { scheduleId } = req.params
+    const imageData = req.body;
+    // imageData is from siteImages (single or array)
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).json({ ok: false, message: "Unauthorized" });
+    }
+
+    if (!scheduleId) {
+      return res.status(400).json({ ok: false, message: "scheduleId are required" });
+    }
+
+    // Resolve createModel based on role
+    let createModel = "";
+    switch (user.role) {
+      case "owner":
+        createModel = "UserModel";
+        break;
+      case "CTO":
+        createModel = "CTOModel";
+        break;
+      case "staff":
+        createModel = "StaffModel";
+        break;
+      case "worker":
+        createModel = "WorkerModel";
+        break;
+      default:
+        createModel = "UserModel"; // fallback
+    }
+
+    // Normalize to array
+    const images = Array.isArray(imageData) ? imageData : [imageData];
+console.log("imageData", imageData)
+    // Map to SelectedImgForCorrection shape
+    const selectImageDocs = images.map((img: any) => {
+      console.log("img", img)
+      const { _id, ...rest } = img; // remove _id
+      console.log("rest", rest)
+      return {
+       plannedImage:{
+        ...rest
+       },
+        comment: "", // optional
+        createdBy: user._id,
+        createModel,
+        createdAt: new Date(),
+      };
+    });
+
+    // Create a new ComparisonReview entry
+    const comparisonEntry = {
+      selectImage: selectImageDocs,
+      correctedImages: [],
+    };
+
+    const updatedDoc = await DailyTaskSubModel.findByIdAndUpdate(
+      scheduleId,
+      { $push: { workComparison: comparisonEntry } },
+      { new: true }
+    );
+
+    if (!updatedDoc) {
+      return res.status(404).json({ message: "schedule not found", ok: false });
+    }
+
+    return res.status(200).json({
+      message: "Comparison review entry added successfully",
+      data: updatedDoc.workComparison.slice(-1)[0],
+      ok: true
+    });
+  } catch (error: any) {
+    console.error("Error in addComparisonSelectImageController:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+
+
+export const updateSelectedImageComment = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+    const { scheduleId, comparisonId, selectedImageId } = req.params;
+    const {comment} = req.body;
+
+    const user = req.user
+
+    if (!user) {
+      return res.status(200).json({ ok: false, message: "Not Authorized" })
+    }
+
+    // if (!comment || comment.trim() === "") {
+    //   return res.status(400).json({ ok: false, message: "Comment is required." });
+    // }
+
+    // Find the parent document
+    const doc = await DailyTaskSubModel.findById(scheduleId);
+    if (!doc) {
+      return res.status(404).json({ ok: false, message: "Schedule not found." });
+    }
+
+    // Find the specific comparison
+    const comparison = (doc.workComparison as any).id(comparisonId);
+    if (!comparison) {
+      return res.status(404).json({ ok: false, message: "Comparison not found." });
+    }
+
+    // Find the selected image
+    const selectedImg = comparison.selectImage.id(selectedImageId);
+    if (!selectedImg) {
+      return res.status(404).json({ ok: false, message: "Selected image not found." });
+    }
+
+    // Update the comment
+    selectedImg.comment = comment;
+
+
+    // Resolve createModel based on role
+    let createModel = "";
+    switch (user.role) {
+      case "owner":
+        createModel = "UserModel";
+        break;
+      case "CTO":
+        createModel = "CTOModel";
+        break;
+      case "staff":
+        createModel = "StaffModel";
+        break;
+      case "worker":
+        createModel = "WorkerModel";
+        break;
+      default:
+        createModel = "UserModel"; // fallback
+    }
+
+
+    selectedImg.createModel = createModel;
+    selectedImg.createdAt = new Date()
+    selectedImg.createdBy = user?._id
+
+    await doc.save();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Comment updated successfully.",
+      data: doc.workComparison,
+    });
+  } catch (error: any) {
+    console.error("Error in updateSelectedImageComment:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+
+
+export const uploadCorrectImages = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { scheduleId, comparisonId } = req.params
+
+    const files = req.files as (Express.Multer.File & { location: string })[];
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded.", ok: false });
+    }
+
+    const doc = await DailyTaskSubModel.findById(scheduleId);
+    if (!doc) {
+      return res.status(404).json({ message: "Sample design not found.", ok: false });
+    }
+
+    const comparison = doc.workComparison.find((r: any) => r?._id.toString() === comparisonId);
+
+    if (!comparison) {
+      return res.status(404).json({ message: "comparison not found.", ok: false });
+    }
+
+    const mappedFiles: IUploadFile[] = files
+      .filter(file => file.mimetype.startsWith("image")) // ✅ only allow images
+      .map(file => ({
+        fileType: "image",
+        url: file.location,
+        originalName: file.originalname,
+        uploadedAt: new Date()
+      }));
+
+
+    comparison.correctedImages = [
+      ...(comparison.correctedImages || []),
+      ...mappedFiles,
+    ];
+
+    await doc.save();
+
+
+ return res.status(200).json({
+      ok: true,
+      message: "updaloaded successfully",
+      data:doc.workComparison
+    });
+  }
+  catch (error: any) {
+    console.error("Error in addComparisonSelectImageController:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+}
+
+
+export const deleteWorkCorrectImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+    const { scheduleId, comparisonId, imageId } = req.params;
+
+    // Find parent document
+    const doc = await DailyTaskSubModel.findById(scheduleId);
+    if (!doc) {
+      return res.status(404).json({ ok: false, message: "Schedule not found" });
+    }
+
+    // Find comparison object
+    const comparison = (doc.workComparison as any).id(comparisonId);
+    if (!comparison) {
+      return res.status(404).json({ ok: false, message: "Comparison not found" });
+    }
+
+    // Find and remove image by _id
+    const imageIndex = comparison.correctedImages.findIndex(
+      (img: any) => img._id.toString() === imageId
+    );
+
+    if (imageIndex === -1) {
+      return res.status(404).json({ ok: false, message: "Image not found" });
+    }
+
+    // Remove from array
+    comparison.correctedImages.splice(imageIndex, 1);
+
+    await doc.save();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Corrected image deleted successfully",
+      data: doc.workComparison,
+    });
+  } catch (error: any) {
+    console.error("Error in deleteWorkCorrectImages:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
 
 
 const updateDailyScheduleStatus = async (req: Request, res: Response): Promise<any> => {

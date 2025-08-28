@@ -128,12 +128,28 @@ export interface IComparisonImages {
 }
 
 
+
+export interface ISelectedImgForCorrection {
+    comment: string,
+    createdBy: string | Types.ObjectId,
+    createModel: string,
+    createdAt?: Date
+    plannedImage: IUploadFile
+}
+
+export interface IComparisonReviewSchema {
+    selectImage: ISelectedImgForCorrection[],
+    correctedImages: IUploadFile[]
+}
+
+
 export interface IDailyTaskSub {
     projectId: Types.ObjectId,
     dailyTasks: IWorkTask[],
     projectAssignee: IProjectAssignee,
     designPlanImages: IUploadFile[],
     siteImages: IUploadFile[],
+    workComparison: IComparisonReviewSchema[]
     comparison: IComparisonImages,
     supervisorCheck: ISupervisorCheck,
 }
@@ -196,13 +212,31 @@ const DailyTaskSchema = new Schema<IWorkTask>({
 }, { _id: true });
 
 
+
+
+const SelectedImgForCorrection = new Schema<ISelectedImgForCorrection>({
+    comment: { type: String},         // What staff says must change
+    createdBy: { type: Schema.Types.ObjectId, refPath: "createModel" }, // Who added correction
+    createModel: { type: String },
+    createdAt: { type: Date, default: new Date() },
+    plannedImage: { type: uploadSchema},     // uploaded by staff
+}, { _id: true })
+
+// Extended comparison schema (new one, doesn't touch old one)
+const ComparisonReviewSchema = new Schema<IComparisonReviewSchema>({
+    selectImage: { type: [SelectedImgForCorrection], default: [] },
+    correctedImages: { type: [uploadSchema], default: [] },   // comments + fixes
+}, { _id: true });
+
+
 const DailyTaskSubSchema = new Schema<IDailyTaskSub>({
     projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", required: true }, // <-- replace dailyScheduleId
-    dailyTasks: [DailyTaskSchema],
+    dailyTasks: {type: [DailyTaskSchema], default:[]},
     projectAssignee: { type: ProjectAssigneeSchema },
-    designPlanImages: [uploadSchema],
-    siteImages: [uploadSchema],
-    comparison: ComparisonImagesSchema,
+    designPlanImages: {type: [uploadSchema], default:[]},
+    siteImages: {type: [uploadSchema], default:[]},
+    workComparison: { type: [ComparisonReviewSchema], default: [] },
+    comparison: ComparisonImagesSchema, // old
     supervisorCheck: SupervisorCheckSchema,
 }, { timestamps: true });
 

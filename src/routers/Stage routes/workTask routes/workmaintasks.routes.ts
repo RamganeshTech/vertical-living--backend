@@ -1,16 +1,20 @@
 import { Router } from "express";
 // import { imageUploadToS3 } from "../../../utils/s3Uploads/s3ImageUploader"; // your S3 uploader
 import { 
+  addComparisonSelectImage,
   createWork,
   deleteDailyScheduleImage,
   deleteWork,
+  deleteWorkCorrectImages,
   generateWorkSchedulePDFController,
   getCurrentProjectDetailsWork,
   // deleteDailyScheduleImage,
   // deleteWork,
   // addDailyTask, deleteDailyTask,
    updateDailyScheduleStatus,
+   updateSelectedImageComment,
    updateWork,
+   uploadCorrectImages,
    uploadDailyScheduleImages,
     // updateDailyTask
    } from "../../../controllers/stage controllers/workTasksmain controllers/dailyschedule.controller";
@@ -184,6 +188,27 @@ workTaskRoutes.post(
   processUploadFiles,
   generateWorkSchedulePDFController
 );
+
+
+
+workTaskRoutes.post(
+  "/createcorrection/:scheduleId",
+  multiRoleAuthMiddleware("owner", "CTO", "staff"),
+  addComparisonSelectImage
+);
+
+
+workTaskRoutes.put('/uploadcorrectedimage/:scheduleId/:comparisonId',
+   imageUploadToS3.array("files"), processUploadFiles, uploadCorrectImages)
+   
+workTaskRoutes.put(
+  "/updateSelectimagecomment/:scheduleId/:comparisonId/:selectedImageId",
+  multiRoleAuthMiddleware("owner", "CTO", "staff"),
+  updateSelectedImageComment
+);
+
+
+workTaskRoutes.delete('/deletecorrectedimages/:scheduleId/:comparisonId/:imageId', deleteWorkCorrectImages)
 
 
 // get workers based on the project
