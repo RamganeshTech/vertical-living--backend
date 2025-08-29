@@ -6,6 +6,7 @@ import {
   deleteDailyScheduleImage,
   deleteWork,
   deleteWorkCorrectImages,
+  deleteWorkSelectImage,
   generateWorkSchedulePDFController,
   getCurrentProjectDetailsWork,
   // deleteDailyScheduleImage,
@@ -14,6 +15,7 @@ import {
    updateDailyScheduleStatus,
    updateSelectedImageComment,
    updateWork,
+   uploadComparisonImagesManually,
    uploadCorrectImages,
    uploadDailyScheduleImages,
     // updateDailyTask
@@ -198,6 +200,9 @@ workTaskRoutes.post(
 );
 
 
+workTaskRoutes.put('/uploadselectimagemanually/:scheduleId/:comparisonId',
+   imageUploadToS3.array("correctfiles"), processUploadFiles, uploadComparisonImagesManually)
+   
 workTaskRoutes.put('/uploadcorrectedimage/:scheduleId/:comparisonId',
    imageUploadToS3.array("files"), processUploadFiles, uploadCorrectImages)
    
@@ -209,6 +214,7 @@ workTaskRoutes.put(
 
 
 workTaskRoutes.delete('/deletecorrectedimages/:scheduleId/:comparisonId/:imageId', deleteWorkCorrectImages)
+workTaskRoutes.delete('/deleteselectimages/:scheduleId/:comparisonId/:selectId', deleteWorkSelectImage)
 
 
 // get workers based on the project

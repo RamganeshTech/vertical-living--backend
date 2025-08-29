@@ -83,7 +83,7 @@ const CleaningAndSanitationSchema = new Schema<ICleaningAndSanitation>(
 
 CleaningAndSanitationSchema.index({ projectId: 1 })
 
-CleaningAndSanitationSchema.plugin(procurementLogger);
+// CleaningAndSanitationSchema.plugin(procurementLogger);
 
 export const CleaningAndSanitationModel = mongoose.model<ICleaningAndSanitation>(
     "CleaningAndSanitationModel",

@@ -150,7 +150,7 @@ const PaymentConfirmationSchema = new Schema<IPaymentConfirmation>({
 
 
 PaymentConfirmationSchema.index({ projectId: 1 })
-PaymentConfirmationSchema.plugin(procurementLogger)
+// PaymentConfirmationSchema.plugin(procurementLogger)
 
 const PaymentConfirmationModel = model("PaymentConfirmationModel", PaymentConfirmationSchema)
 

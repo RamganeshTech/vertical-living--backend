@@ -228,7 +228,7 @@ const materialRoomConfirmationSchema = new Schema<IMaterialRoomConfirmation>(
 
 materialRoomConfirmationSchema.index({ projectId: 1 })
 
-materialRoomConfirmationSchema.plugin(procurementLogger);
+// materialRoomConfirmationSchema.plugin(procurementLogger);
 
 const MaterialRoomConfirmationModel = model<IMaterialRoomConfirmation>(
   "MaterialRoomConfirmationModel",

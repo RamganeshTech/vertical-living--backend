@@ -211,7 +211,7 @@ const InstallationSchema = new Schema<IInstallationMain>({
 
 InstallationSchema.index({ projectId: 1 })
 
-InstallationSchema.plugin(procurementLogger);
+// InstallationSchema.plugin(procurementLogger);
 
 const InstallationModel = model("InstallationModel", InstallationSchema)
 

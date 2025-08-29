@@ -114,7 +114,7 @@ const WorkMainStageScheduleSchema = new Schema<WorkMainStageScheduleDocument>({
 }, { timestamps: true });
 
 WorkMainStageScheduleSchema.index({projectId:1})
-WorkMainStageScheduleSchema.plugin(procurementLogger)
+// WorkMainStageScheduleSchema.plugin(procurementLogger)
 
 const WorkMainStageScheduleModel = mongoose.model<WorkMainStageScheduleDocument>("WorkMainStageScheduleModel", WorkMainStageScheduleSchema);
 

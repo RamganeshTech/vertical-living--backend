@@ -85,7 +85,7 @@ const MaterialArrivalSchema = new Schema<IMaterialArrival>({
 
 MaterialArrivalSchema.index({projectId:1})
 
-MaterialArrivalSchema.plugin(procurementLogger);
+// MaterialArrivalSchema.plugin(procurementLogger);
 
 const MaterialArrivalModel = model("MaterialArrivalModel", MaterialArrivalSchema)
 

@@ -521,6 +521,7 @@ const generateOrderHistoryPDF = async (projectId: string) => {
             url: uploadResult.Location,
             refUniquePdf, // <-- now has projectName-uniquenumber-pdf
             pdfName: "Order Material",
+            status: "pending",
             _id: new mongoose.Types.ObjectId()
         };
 
@@ -1019,6 +1020,7 @@ export const gerneateCommonOrdersPdf = async (id: string) => {
                 url: uploadResult.Location,
                 refUniquePdf, // <-- now has projectName-uniquenumber-pdf
                 pdfName: "Order Material",
+                status:"pending",
                 _id: new mongoose.Types.ObjectId()
             };
 
@@ -1030,6 +1032,12 @@ export const gerneateCommonOrdersPdf = async (id: string) => {
             }
 
             console.log("orderHistory.pdfLink", orderHistory.pdfLink)
+
+              // Clear subItems from each selectedUnit
+         orderHistory.selectedUnits.forEach(unit => {
+            unit.subItems = [];
+        });
+        
             await orderHistory.save();
 
             // console.log("orderhisoty", orderHistory)

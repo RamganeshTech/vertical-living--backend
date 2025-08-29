@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { DailyScheduleModel, DailyTaskSubModel, IUploadFile } from "../../../models/Stage Models/WorkTask Model/dailySchedule.model";
+import { DailyScheduleModel, DailyTaskSubModel, ISelectedImgForCorrection, IUploadFile } from "../../../models/Stage Models/WorkTask Model/dailySchedule.model";
 import mongoose, { Types } from "mongoose";
 import redisClient from "../../../config/redisClient";
 import { generateWorkSchedulePDF } from "./workPdfGeenerator";
@@ -590,7 +590,7 @@ export const updateWork = async (req: Request, res: Response): Promise<any> => {
       reviewerName: supervisorCheck.reviewerName || "",
       reviewerId: supervisorCheck.reviewerId || null, // convert empty string to null
       reviewDateTime: supervisorCheck.reviewDateTime || "",
-      status: ["approved", "needs_changes", "rejected"].includes(supervisorCheck.status)
+      status: ["approved", "needs_changes", "pending"].includes(supervisorCheck.status)
         ? supervisorCheck.status
         : "needs_changes", // fallback to default
       remarks: supervisorCheck.remarks || "",
@@ -636,6 +636,8 @@ export const updateWork = async (req: Request, res: Response): Promise<any> => {
       record.set("projectAssignee", projectAssignee);
     }
 
+
+    console.log("supervisor", supervisorCheck)
     if (supervisorCheck && Object.keys(supervisorCheck).length > 0) {
       record.set("supervisorCheck", {
         ...(record.supervisorCheck as any)?.toObject(),
@@ -799,24 +801,24 @@ export const uploadDailyScheduleImages = async (req: Request, res: Response): Pr
       dateEntry.uploads.push(...mappedFiles);
     } else {
       // Otherwise, create a new entry for this date
-       dateEntry = {
-    date: new Date(date),
-    uploads: mappedFiles
-  };
-    task.uploadedImages.push(dateEntry);
+      dateEntry = {
+        date: new Date(date),
+        uploads: mappedFiles
+      };
+      task.uploadedImages.push(dateEntry);
 
-  // task.uploadedImages.push(dateEntry);
-  //     task.uploadedImages.push({
-  //       date: new Date(date),
-  //       uploads: mappedFiles
-  //     });
+      // task.uploadedImages.push(dateEntry);
+      //     task.uploadedImages.push({
+      //       date: new Date(date),
+      //       uploads: mappedFiles
+      //     });
     }
 
     await schedule.save();
 
-const savedUploads = dateEntry.uploads.slice(-mappedFiles.length);
+    const savedUploads = dateEntry.uploads.slice(-mappedFiles.length);
 
-    
+
     return res.status(200).json({
       message: "Files uploaded to task successfully",
 
@@ -852,14 +854,14 @@ export const deleteDailyScheduleImage = async (req: Request, res: Response): Pro
     //   },
     //   { new: true }
     // );
-  // if (!updatedDoc) {
-  //     return res.status(404).json({
-  //       message: "Task or image not found",
-  //       ok: false,
-  //     });
-  //   }
+    // if (!updatedDoc) {
+    //     return res.status(404).json({
+    //       message: "Task or image not found",
+    //       ok: false,
+    //     });
+    //   }
 
-  
+
 
     // return res.status(200).json({
     //   message: "Image deleted successfully",
@@ -872,7 +874,7 @@ export const deleteDailyScheduleImage = async (req: Request, res: Response): Pro
     //   ok: true,
     // });
 
-     const schedule = await DailyTaskSubModel.findOne({ _id: scheduleId });
+    const schedule = await DailyTaskSubModel.findOne({ _id: scheduleId });
     if (!schedule) {
       return res.status(404).json({ message: "Schedule not found", ok: false });
     }
@@ -894,7 +896,7 @@ export const deleteDailyScheduleImage = async (req: Request, res: Response): Pro
 
     await schedule.save();
 
-  
+
     return res.status(200).json({
       message: "Image deleted successfully",
       data: dateGroup, // send the updated group for frontend merge
@@ -997,6 +999,11 @@ export const addComparisonSelectImage = async (
       return res.status(400).json({ ok: false, message: "scheduleId are required" });
     }
 
+
+    if (scheduleId === "null") {
+      return res.status(400).json({ message: "first save the document, then you try uploading images for correction section" })
+    }
+
     // Resolve createModel based on role
     let createModel = "";
     switch (user.role) {
@@ -1018,16 +1025,17 @@ export const addComparisonSelectImage = async (
 
     // Normalize to array
     const images = Array.isArray(imageData) ? imageData : [imageData];
-console.log("imageData", imageData)
+    // console.log("imageData", imageData)
     // Map to SelectedImgForCorrection shape
     const selectImageDocs = images.map((img: any) => {
-      console.log("img", img)
+      // console.log("img", img)
       const { _id, ...rest } = img; // remove _id
-      console.log("rest", rest)
+
+      // console.log("rest", rest)
       return {
-       plannedImage:{
-        ...rest
-       },
+        plannedImage: {
+          ...rest
+        },
         comment: "", // optional
         createdBy: user._id,
         createModel,
@@ -1068,10 +1076,118 @@ console.log("imageData", imageData)
 
 
 
+export const uploadComparisonImagesManually = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+    const { scheduleId, comparisonId } = req.params
+    const user = req.user
+    const files = req.files as (Express.Multer.File & { location: string })[];
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded.", ok: false });
+    }
+
+    const doc = await DailyTaskSubModel.findById(scheduleId);
+    if (!doc) {
+      return res.status(404).json({ message: "Task not found.", ok: false });
+    }
+
+
+
+    // Resolve createModel based on role
+    let createModel = "";
+    switch (user?.role) {
+      case "owner":
+        createModel = "UserModel";
+        break;
+      case "CTO":
+        createModel = "CTOModel";
+        break;
+      case "staff":
+        createModel = "StaffModel";
+        break;
+      case "worker":
+        createModel = "WorkerModel";
+        break;
+      default:
+        createModel = "UserModel"; // fallback
+    }
+
+
+    const selectImageDocs: ISelectedImgForCorrection[] = files
+      .filter(file => file.mimetype.startsWith("image")) // ✅ only allow images
+      .map(file => ({
+        plannedImage: {
+          fileType: "image",
+          url: file.location,
+          originalName: file.originalname,
+          uploadedAt: new Date()
+        },
+        comment: "", // optional
+        createdBy: user?._id!,
+        createModel,
+        createdAt: new Date(),
+      }));
+
+    if (comparisonId !== "null") {
+
+      let comparison = (doc.workComparison as any).id(comparisonId);
+      if (!comparison) {
+        return res.status(404).json({ ok: false, message: "Comparison not found." });
+      }
+
+      comparison.selectImage = [...comparison.selectImage, ...selectImageDocs];
+await doc.save()
+
+return res.status(200).json({
+      ok: true,
+      message: "updaloaded successfully",
+      data: doc.workComparison
+    });
+    } else {
+      // Create a new ComparisonReview entry
+
+
+      const comparisonEntry = {
+        selectImage: selectImageDocs,
+        correctedImages: [],
+      };
+
+      const updatedDoc = await DailyTaskSubModel.findByIdAndUpdate(
+        scheduleId,
+        { $push: { workComparison: comparisonEntry } },
+        { new: true }
+      );
+
+      if (!updatedDoc) {
+        return res.status(404).json({ message: "schedule not found", ok: false });
+      }
+
+      return res.status(200).json({
+      ok: true,
+      message: "updaloaded successfully",
+      data: updatedDoc.workComparison
+    });
+
+    }
+
+
+    
+  }
+  catch (error: any) {
+    console.error("Error in addComparisonSelectImageController:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+}
+
+
 export const updateSelectedImageComment = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { scheduleId, comparisonId, selectedImageId } = req.params;
-    const {comment} = req.body;
+    const { comment } = req.body;
 
     const user = req.user
 
@@ -1148,6 +1264,68 @@ export const updateSelectedImageComment = async (req: RoleBasedRequest, res: Res
 
 
 
+
+
+export const deleteWorkSelectImage = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+    const { scheduleId, comparisonId, selectId } = req.params;
+
+
+
+    // shorter way
+//    const doc = await DailyTaskSubModel.updateOne(
+//   { _id: scheduleId, "workComparison._id": comparisonId },
+//   { $pull: { "workComparison.$.selectImage": { _id: selectId } } }
+// );
+
+//  if (!doc) {
+//       return res.status(404).json({ ok: false, message: "Schedule not found" });
+//     }
+
+
+    // Find parent document
+    const doc = await DailyTaskSubModel.findById(scheduleId);
+    if (!doc) {
+      return res.status(404).json({ ok: false, message: "Schedule not found" });
+    }
+
+    // Find comparison object
+    const comparison = (doc.workComparison as any).id(comparisonId);
+    if (!comparison) {
+      return res.status(404).json({ ok: false, message: "Comparison not found" });
+    }
+
+    // Find and remove image by _id
+    const imageIndex = comparison.selectImage.findIndex(
+      (img: any) => img._id.toString() === selectId
+    );
+
+    if (imageIndex === -1) {
+      return res.status(404).json({ ok: false, message: "Image not found" });
+    }
+
+    // Remove from array
+    comparison.selectImage.splice(imageIndex, 1);
+
+    await doc.save();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Selected image deleted successfully",
+      data: doc.workComparison,
+    });
+  } catch (error: any) {
+    console.error("Error in deleteWorkCorrectImages:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+
+
 export const uploadCorrectImages = async (req: Request, res: Response): Promise<any> => {
   try {
     const { scheduleId, comparisonId } = req.params
@@ -1160,7 +1338,7 @@ export const uploadCorrectImages = async (req: Request, res: Response): Promise<
 
     const doc = await DailyTaskSubModel.findById(scheduleId);
     if (!doc) {
-      return res.status(404).json({ message: "Sample design not found.", ok: false });
+      return res.status(404).json({ message: "Task not found.", ok: false });
     }
 
     const comparison = doc.workComparison.find((r: any) => r?._id.toString() === comparisonId);
@@ -1187,10 +1365,10 @@ export const uploadCorrectImages = async (req: Request, res: Response): Promise<
     await doc.save();
 
 
- return res.status(200).json({
+    return res.status(200).json({
       ok: true,
       message: "updaloaded successfully",
-      data:doc.workComparison
+      data: doc.workComparison
     });
   }
   catch (error: any) {

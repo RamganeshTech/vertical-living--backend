@@ -99,7 +99,7 @@ const ProjectDeleiverySchema = new Schema<IProjectDelivery>(
 )
 
 ProjectDeleiverySchema.index({projectId:1})
-ProjectDeleiverySchema.plugin(procurementLogger)
+// ProjectDeleiverySchema.plugin(procurementLogger)
 
 
 export const ProjectDeliveryModel = mongoose.model(

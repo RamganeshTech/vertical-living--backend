@@ -185,7 +185,7 @@ const QualityCheckupSchema = new Schema<IQualityCheckup>({
 });
 
 QualityCheckupSchema.index({projectId:1})
-QualityCheckupSchema.plugin(procurementLogger)
+// QualityCheckupSchema.plugin(procurementLogger)
 
 
 export const QualityCheckupModel = model("QualityCheckupModel", QualityCheckupSchema);

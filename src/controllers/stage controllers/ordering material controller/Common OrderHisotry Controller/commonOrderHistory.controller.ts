@@ -685,3 +685,51 @@ export const deleteCommonOrderPdf = async (req: RoleBasedRequest, res: Response)
     }
 };
 
+
+
+
+
+export const updateCommonOrderPdfStatus = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+    const { id, pdfId } = req.params; // order history and pdf doc inside generatedLink
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ ok: false, message: "Status is required" });
+    }
+
+
+    // validate allowed statuses
+    const allowedStatuses = [
+      "pending",
+      "ordered",
+      "shipped",
+      "delivered",
+      "cancelled",
+      "yet to order"
+    ];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ ok: false, message: "Invalid status value" });
+    }
+
+    // update only the status field of the matching pdfGeneratorSchema
+    const updatedDoc = await CommonOrderHistoryModel.findOneAndUpdate(
+      { _id: id, "pdfLink._id": pdfId },
+      { $set: { "pdfLink.$.status": status } },
+      { new: true }
+    );
+
+    if (!updatedDoc) {
+      return res.status(404).json({ ok: false, message: "Order history or PDF not found" });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: "Status updated successfully",
+      data: updatedDoc,
+    });
+  } catch (error: any) {
+    console.error("Error updating PDF status:", error);
+    return res.status(500).json({ ok: false, message: error.message });
+  }
+};

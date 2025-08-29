@@ -68,7 +68,7 @@ const sampleDesignSchema = new Schema<ISampleDesign>({
 sampleDesignSchema.index({projectId:1})
 
 
-sampleDesignSchema.plugin(procurementLogger)
+// sampleDesignSchema.plugin(procurementLogger)
 
 
 export const SampleDesignModel = mongoose.model("SampleDesignModel", sampleDesignSchema);

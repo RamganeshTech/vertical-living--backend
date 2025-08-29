@@ -36,6 +36,6 @@ const WorkScheduleSchema = new Schema<WorkScheduleDocument>({
   remarks: { type: String },
 }, { timestamps: true });
 
-WorkScheduleSchema.plugin(procurementLogger)
+// WorkScheduleSchema.plugin(procurementLogger)
 
 export const WorkScheduleModel = mongoose.model<WorkScheduleDocument>("WorkScheduleModel", WorkScheduleSchema);

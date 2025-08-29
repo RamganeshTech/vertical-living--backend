@@ -280,7 +280,7 @@ const costEstimationSchema = new Schema<ICostEstimation>({
 }, { timestamps: true });
 
 costEstimationSchema.index({projectId:1})
-costEstimationSchema.plugin(procurementLogger);
+// costEstimationSchema.plugin(procurementLogger);
 
 
 export const CostEstimationModel = model<ICostEstimation>("CostEstimation", costEstimationSchema);

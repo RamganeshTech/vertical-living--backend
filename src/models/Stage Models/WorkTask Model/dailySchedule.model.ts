@@ -178,7 +178,7 @@ const SupervisorCheckSchema = new Schema<ISupervisorCheck>({
     reviewDateTime: { type: Date, default: new Date() },
     status: {
         type: String,
-        enum: ["approved", "needs_changes", "rejected", null],
+        enum: ["approved", "needs_changes", "pending", null],
         default: null
     },
     remarks: { type: String },

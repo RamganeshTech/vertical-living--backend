@@ -892,6 +892,57 @@ export const deleteOrderMaterialPdf = async (req: Request, res: Response): Promi
     }
 };
 
+
+
+export const updatePdfStatus = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+    const { projectId, pdfId } = req.params; // order history and pdf doc inside generatedLink
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ ok: false, message: "Status is required" });
+    }
+
+
+    // validate allowed statuses
+    const allowedStatuses = [
+      "pending",
+      "ordered",
+      "shipped",
+      "delivered",
+      "cancelled",
+      "yet to order"
+    ];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ ok: false, message: "Invalid status value" });
+    }
+
+    // update only the status field of the matching pdfGeneratorSchema
+    const updatedDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
+      { projectId, "generatedLink._id": pdfId },
+      { $set: { "generatedLink.$.status": status } },
+      { new: true }
+    );
+
+    if (!updatedDoc) {
+      return res.status(404).json({ ok: false, message: "Order history or PDF not found" });
+    }
+
+
+            await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: updatedDoc })
+
+
+    return res.status(200).json({
+      ok: true,
+      message: "Status updated successfully",
+      data: updatedDoc,
+    });
+  } catch (error: any) {
+    console.error("Error updating PDF status:", error);
+    return res.status(500).json({ ok: false, message: error.message });
+  }
+};
+
 export const getPublicDetails = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;

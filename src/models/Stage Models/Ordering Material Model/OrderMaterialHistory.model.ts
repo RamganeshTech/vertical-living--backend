@@ -154,6 +154,7 @@ export interface IPdfGenerator extends Document {
     url: string | null;
     refUniquePdf: string
     pdfName: string | null;
+    status: string,
 }
 
 // Timer schema
@@ -196,7 +197,8 @@ const DimentionSchema = new Schema<IOrderDimention>({
 const pdfGeneratorSchema = new Schema<IPdfGenerator>({
     url: { type: String, default: null },
     refUniquePdf: { type: String, default: null },
-    pdfName: { type: String, default: null }
+    pdfName: { type: String, default: null },
+    status: {type: String, default:"pending"} //delivered, shipped, ordered, cancelled, yet to order
 }, { _id: true })
 
 
@@ -240,6 +242,6 @@ const OrderHistorySchema = new Schema<IOrderedMaterialHistory>({
 
 OrderHistorySchema.index({ projectId: 1 })
 
-OrderHistorySchema.plugin(procurementLogger);
+// OrderHistorySchema.plugin(procurementLogger);
 
 export const OrderMaterialHistoryModel = model("OrderMaterialHistoryModel", OrderHistorySchema);

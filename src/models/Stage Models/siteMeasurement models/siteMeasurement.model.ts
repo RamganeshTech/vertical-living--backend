@@ -110,7 +110,7 @@ const SiteMeasurementSchema = new Schema<ISiteMeasurement>({
 
 
 SiteMeasurementSchema.index({ projectId: 1 })
-SiteMeasurementSchema.plugin(procurementLogger)
+// SiteMeasurementSchema.plugin(procurementLogger)
 
 
 export const SiteMeasurementModel = model<ISiteMeasurement>("SiteMeasurementModel", SiteMeasurementSchema)

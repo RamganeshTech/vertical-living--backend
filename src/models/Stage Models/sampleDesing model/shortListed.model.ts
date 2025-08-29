@@ -62,7 +62,7 @@ const ShortlistedDesignSchema = new Schema<ShortlistedDesignDocument>(
 );
 
 
-ShortlistedDesignSchema.plugin(procurementLogger)
+// ShortlistedDesignSchema.plugin(procurementLogger)
 
 
 export const ShortlistedDesignModel = mongoose.model<ShortlistedDesignDocument>(

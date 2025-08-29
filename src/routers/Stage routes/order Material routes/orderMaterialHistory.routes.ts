@@ -6,7 +6,7 @@ import PaymentConfirmationModel from '../../../models/Stage Models/Payment Confi
 import { notToUpdateIfStageCompleted } from '../../../middlewares/notToUpdateIfStageCompleted';
 import { checkIfStaffIsAssignedToStage } from '../../../middlewares/checkIfStaffIsAssignedToStage';
 import { OrderMaterialHistoryModel } from '../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
-import { addSubItemToUnit, deleteOrderMaterialPdf, deleteSubItemFromUnit, generateOrderHistoryPDFController, getOrderHistoryMaterial, getPublicDetails, orderMaterialHistoryCompletionStatus, setOrderMaterialHistoryStageDeadline, updateDeliveryLocationDetails, updateShopDetails, updateSubItemInUnit } from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
+import { addSubItemToUnit, deleteOrderMaterialPdf, deleteSubItemFromUnit, generateOrderHistoryPDFController, getOrderHistoryMaterial, getPublicDetails, orderMaterialHistoryCompletionStatus, setOrderMaterialHistoryStageDeadline, updateDeliveryLocationDetails, updatePdfStatus, updateShopDetails, updateSubItemInUnit } from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
 // import { generateOrderHistoryPDFController } from '../../../controllers/stage controllers/ordering material controller/pdfOrderHistory.controller';
 
 const orderMaterialHistoryRoutes = express.Router()
@@ -15,6 +15,7 @@ orderMaterialHistoryRoutes.get('/getalldetails/:projectId', multiRoleAuthMiddlew
 // orderMaterialHistoryRoutes.patch('/generatelink/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), generateOrderingMaterialLink)
 orderMaterialHistoryRoutes.patch('/generatelink/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), generateOrderHistoryPDFController)
 orderMaterialHistoryRoutes.delete('/delete/:projectId/:pdfId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), deleteOrderMaterialPdf)
+orderMaterialHistoryRoutes.patch('/upddatepdfstatus/:projectId/:pdfId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), updatePdfStatus)
 
 
 orderMaterialHistoryRoutes.get('/getpublic/:projectId', getPublicDetails)

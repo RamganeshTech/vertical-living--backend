@@ -1,11 +1,9 @@
 // routes/commonOrderRoutes.ts
 import express from "express";
-import { addCommonSubItemToUnit, commonOrderMaterialHistoryCompletionStatus, createCommonOrderingUnit, createCommonOrderProjectName, deleteCommonOrderingUnit, deleteCommonOrderPdf, deleteCommonOrderProject, deleteCommonSubItemFromUnit, editCommonOrderingUnit, editCommonOrderProject, generateCommonOrderPDFController, getCommonOrderHistoryMaterial, getSingleproject, updateCommonOrderDeliveryLocationDetails, updateCommonOrderShopDetails, updateCommonSubItemInUnit } from "../../../../controllers/stage controllers/ordering material controller/Common OrderHisotry Controller/commonOrderHistory.controller";
+import { addCommonSubItemToUnit, commonOrderMaterialHistoryCompletionStatus, createCommonOrderingUnit, createCommonOrderProjectName, deleteCommonOrderingUnit, deleteCommonOrderPdf, deleteCommonOrderProject, deleteCommonSubItemFromUnit, editCommonOrderingUnit, editCommonOrderProject, generateCommonOrderPDFController, getCommonOrderHistoryMaterial, getSingleproject, updateCommonOrderDeliveryLocationDetails, updateCommonOrderPdfStatus, updateCommonOrderShopDetails, updateCommonSubItemInUnit } from "../../../../controllers/stage controllers/ordering material controller/Common OrderHisotry Controller/commonOrderHistory.controller";
 import { multiRoleAuthMiddleware } from "../../../../middlewares/multiRoleAuthMiddleware";
 
 const commonOrderRoutes = express.Router();
-
-
 
 
 commonOrderRoutes.post(
@@ -103,6 +101,7 @@ commonOrderRoutes.get(
 commonOrderRoutes.put('/completionstatus/:id', multiRoleAuthMiddleware("owner", "staff", "CTO",), commonOrderMaterialHistoryCompletionStatus)
 commonOrderRoutes.patch('/generatelink/:id', multiRoleAuthMiddleware("owner", "staff", "CTO",), generateCommonOrderPDFController)
 commonOrderRoutes.delete('/delete/:id/:pdfId', multiRoleAuthMiddleware("owner", "staff", "CTO",), deleteCommonOrderPdf)
+commonOrderRoutes.patch('/upddatepdfstatus/:id/:pdfId', multiRoleAuthMiddleware("owner", "staff", "CTO",),   updateCommonOrderPdfStatus)
 
 
 export default commonOrderRoutes;

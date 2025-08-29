@@ -122,7 +122,7 @@ const mainRequirementSchema = new Schema<IMainRequirementFormSchema>({
 
 mainRequirementSchema.index({ projectId: 1 })
 
-mainRequirementSchema.plugin(procurementLogger)
+// mainRequirementSchema.plugin(procurementLogger)
 
 export const RequirementFormModel = mongoose.model("RequirementFormModel", mainRequirementSchema)
 
