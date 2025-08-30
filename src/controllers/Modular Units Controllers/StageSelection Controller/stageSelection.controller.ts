@@ -94,7 +94,7 @@ export const getStageSelectionByProject = async (req: RoleBasedRequest, res: Res
       return res.status(404).json({ message: "Stage selection not found.", ok: true });
     }
 
-    return res.status(200).json({ data: selection.mode, ok: true });
+    return res.status(200).json({ data: {mode: selection.mode.mode, projectName: selection?.mode?.projectId?.projectName || ""}, ok: true });
   } catch (err) {
     return res.status(500).json({ message: "Server error", error: err, ok: true });
   }
@@ -105,17 +105,18 @@ export const getStageSelectionUtil = async (projectId: string): Promise<any | nu
   const redisKey = `stage:StageSelection:${projectId}`;
 
   // Check Redis first
+  // await redisClient.del(redisKey)
   const cached = await redisClient.get(redisKey);
   if (cached) {
     return { projectId, mode: JSON.parse(cached) }; // Return in expected IStageSelection format
   }
 
   // Fallback to DB
-  const selection = await StageSelectionModel.findOne({ projectId });
+  const selection = await StageSelectionModel.findOne({ projectId }).populate("projectId");
   if (!selection) return null;
-
+console.log("selection form Util", selection)
   // Cache for future
-  await redisClient.set(redisKey, JSON.stringify(selection.mode), { EX: 60 * 10 });
+  await redisClient.set(redisKey, JSON.stringify(selection.toObject()), { EX: 60 * 10 });
 
   return selection;
 };

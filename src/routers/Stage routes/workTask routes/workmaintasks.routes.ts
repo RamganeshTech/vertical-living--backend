@@ -41,7 +41,7 @@ workTaskRoutes.get("/getworktaksmain/:projectId",
 );
 
 workTaskRoutes.get("/getworkschedule/:projectId",
-  multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "staff"),
+  multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
   // checkPreviousStageCompleted(MaterialArrivalModel),
 
   getAllWorkSchedules
@@ -166,6 +166,7 @@ workTaskRoutes.delete("/:scheduleId/:taskId", multiRoleAuthMiddleware("owner", "
 
 workTaskRoutes.post(
   "/:scheduleId/task/:taskId/upload",
+  multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
   imageUploadToS3.array("files"),
   processUploadFiles,
   uploadDailyScheduleImages
@@ -174,12 +175,14 @@ workTaskRoutes.post(
 
 workTaskRoutes.delete(
   "/:scheduleId/deleteworkimage/:taskId/date/:date/image/:imageId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
   deleteDailyScheduleImage
 );
 
 
 workTaskRoutes.post(
   "/generatePdf/work/:projectId/:scheduleId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO",),
   imageUploadToS3.fields([
   { name: 'designPlanImages', maxCount: 1000 }, // practically unlimited
   { name: 'siteImages', maxCount: 1000 },
@@ -201,9 +204,11 @@ workTaskRoutes.post(
 
 
 workTaskRoutes.put('/uploadselectimagemanually/:scheduleId/:comparisonId',
+  multiRoleAuthMiddleware("owner", "CTO", "staff"),
    imageUploadToS3.array("correctfiles"), processUploadFiles, uploadComparisonImagesManually)
    
 workTaskRoutes.put('/uploadcorrectedimage/:scheduleId/:comparisonId',
+  multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
    imageUploadToS3.array("files"), processUploadFiles, uploadCorrectImages)
    
 workTaskRoutes.put(
@@ -213,8 +218,8 @@ workTaskRoutes.put(
 );
 
 
-workTaskRoutes.delete('/deletecorrectedimages/:scheduleId/:comparisonId/:imageId', deleteWorkCorrectImages)
-workTaskRoutes.delete('/deleteselectimages/:scheduleId/:comparisonId/:selectId', deleteWorkSelectImage)
+workTaskRoutes.delete('/deletecorrectedimages/:scheduleId/:comparisonId/:imageId', multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"), deleteWorkCorrectImages)
+workTaskRoutes.delete('/deleteselectimages/:scheduleId/:comparisonId/:selectId',  multiRoleAuthMiddleware("owner", "CTO", "staff"), deleteWorkSelectImage)
 
 
 // get workers based on the project

@@ -15,6 +15,8 @@ import { SelectedExternalModel } from './../../../models/externalUnit model/Sele
 import { RoleBasedRequest } from "../../../types/types";
 import { generateOrderingToken } from "../../../utils/generateToken";
 import { generateOrderHistoryPDF } from "./pdfOrderHistory.controller";
+import { updateInventoryRemainingQuantity } from "../Inventory controllers/inventory.controller";
+import { InventoryModel } from "../../../models/Stage Models/Inventory Model/inventroy.model";
 
 // export const syncOrderingMaterialsHistory = async (projectId: string) => {
 
@@ -488,7 +490,9 @@ export const addSubItemToUnit = async (req: Request, res: Response): Promise<any
 
         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
 
-        return res.json({ ok: true, message: "SubItem added", subItems: unitObj.subItems });
+        res.json({ ok: true, message: "SubItem added", subItems: unitObj.subItems });
+
+        updateInventoryRemainingQuantity({ itemName: subItemName, orderedQuantity: quantity })
     } catch (error: any) {
         return res.status(500).json({ ok: false, message: error.message });
     }
@@ -537,6 +541,12 @@ export const updateSubItemInUnit = async (req: Request, res: Response): Promise<
         //     return res.status(400).json({ message: "item already exists", ok: false })
         // }
 
+
+        // ---- INVENTORY UPDATE PART ----
+        // Track old quantity before updating
+        const oldQuantity = subItemObj.quantity || 0;
+
+
         subItemObj.subItemName = subItemName.trim();
         if (quantity !== null) subItemObj.quantity = quantity;
         if (!unit !== undefined) subItemObj.unit = unit;
@@ -545,7 +555,33 @@ export const updateSubItemInUnit = async (req: Request, res: Response): Promise<
 
         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
 
-        return res.json({ ok: true, message: "SubItem updated", subItem: subItemObj });
+        res.status(200).json({ ok: true, message: "SubItem updated", subItem: subItemObj });
+
+        // ---- INVENTORY UPDATE PART (background) ----
+        if (quantity !== null && quantity !== oldQuantity) {
+            const diff = quantity - oldQuantity;  
+
+            (async () => {
+                try {
+                    if (diff > 0) {
+                        await updateInventoryRemainingQuantity({
+                            itemName: subItemName.trim(),
+                            orderedQuantity: diff,
+                        });
+                    } else if (diff < 0) {
+                        await InventoryModel.updateOne(
+                            { "subItems.itemName": subItemName.trim() },
+                            { $inc: { "subItems.$.remainingQuantity": Math.abs(diff) } }
+                        ).exec();
+                        console.log(
+                            `Inventory restored: Item "${subItemName}" increased by ${Math.abs(diff)}`
+                        );
+                    }
+                } catch (err) {
+                    console.error("Background inventory update failed:", err);
+                }
+            })();
+        }
     } catch (error: any) {
         return res.status(500).json({ ok: false, message: error.message });
     }
@@ -578,13 +614,32 @@ export const deleteSubItemFromUnit = async (req: Request, res: Response): Promis
             return res.status(404).json({ ok: false, message: "SubItem not found" });
         }
 
+        const { subItemName, quantity } = subItemObj;
+
+
         unitObj.subItems.pull({ _id: subItemId });
         await orderDoc.save();
 
         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
 
 
-        return res.json({ ok: true, message: "SubItem deleted", subItems: unitObj.subItems });
+         res.json({ ok: true, message: "SubItem deleted", subItems: unitObj.subItems });
+
+
+           // ---- BACKGROUND INVENTORY UPDATE ----
+        (async () => {
+            try {
+                // add back deleted quantity to inventory
+                await InventoryModel.updateOne(
+                    { "subItems.itemName": subItemName.trim() },
+                    { $inc: { "subItems.$.remainingQuantity": quantity } }
+                ).exec();
+
+                console.log(`Inventory restored: "${subItemName}" increased by ${quantity}`);
+            } catch (err) {
+                console.error("Inventory update failed (deleteSubItemFromUnit):", err);
+            }
+        })();
     } catch (error: any) {
         return res.status(500).json({ ok: false, message: error.message });
     }
@@ -895,52 +950,52 @@ export const deleteOrderMaterialPdf = async (req: Request, res: Response): Promi
 
 
 export const updatePdfStatus = async (req: RoleBasedRequest, res: Response): Promise<any> => {
-  try {
-    const { projectId, pdfId } = req.params; // order history and pdf doc inside generatedLink
-    const { status } = req.body;
+    try {
+        const { projectId, pdfId } = req.params; // order history and pdf doc inside generatedLink
+        const { status } = req.body;
 
-    if (!status) {
-      return res.status(400).json({ ok: false, message: "Status is required" });
+        if (!status) {
+            return res.status(400).json({ ok: false, message: "Status is required" });
+        }
+
+
+        // validate allowed statuses
+        const allowedStatuses = [
+            "pending",
+            "ordered",
+            "shipped",
+            "delivered",
+            "cancelled",
+            "yet to order"
+        ];
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({ ok: false, message: "Invalid status value" });
+        }
+
+        // update only the status field of the matching pdfGeneratorSchema
+        const updatedDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
+            { projectId, "generatedLink._id": pdfId },
+            { $set: { "generatedLink.$.status": status } },
+            { new: true }
+        );
+
+        if (!updatedDoc) {
+            return res.status(404).json({ ok: false, message: "Order history or PDF not found" });
+        }
+
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: updatedDoc })
+
+
+        return res.status(200).json({
+            ok: true,
+            message: "Status updated successfully",
+            data: updatedDoc,
+        });
+    } catch (error: any) {
+        console.error("Error updating PDF status:", error);
+        return res.status(500).json({ ok: false, message: error.message });
     }
-
-
-    // validate allowed statuses
-    const allowedStatuses = [
-      "pending",
-      "ordered",
-      "shipped",
-      "delivered",
-      "cancelled",
-      "yet to order"
-    ];
-    if (!allowedStatuses.includes(status)) {
-      return res.status(400).json({ ok: false, message: "Invalid status value" });
-    }
-
-    // update only the status field of the matching pdfGeneratorSchema
-    const updatedDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
-      { projectId, "generatedLink._id": pdfId },
-      { $set: { "generatedLink.$.status": status } },
-      { new: true }
-    );
-
-    if (!updatedDoc) {
-      return res.status(404).json({ ok: false, message: "Order history or PDF not found" });
-    }
-
-
-            await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: updatedDoc })
-
-
-    return res.status(200).json({
-      ok: true,
-      message: "Status updated successfully",
-      data: updatedDoc,
-    });
-  } catch (error: any) {
-    console.error("Error updating PDF status:", error);
-    return res.status(500).json({ ok: false, message: error.message });
-  }
 };
 
 export const getPublicDetails = async (req: Request, res: Response): Promise<any> => {

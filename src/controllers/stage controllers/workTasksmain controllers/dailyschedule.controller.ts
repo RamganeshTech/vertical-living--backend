@@ -933,10 +933,10 @@ export const generateWorkSchedulePDFController = async (req: RoleBasedRequest, r
 
 
 
-    console.log("dailyTasks", dailyTasks)
+    // console.log("dailyTasks", dailyTasks)
 
-    console.log("Raw req.body:", req.body);
-    console.log("Files:", req.files);
+    // console.log("Raw req.body:", req.body);
+    // console.log("Files:", req.files);
 
     let newRecord: any = null
     if (!scheduleId) {
@@ -1307,6 +1307,17 @@ export const deleteWorkSelectImage = async (req: RoleBasedRequest, res: Response
     // Remove from array
     comparison.selectImage.splice(imageIndex, 1);
 
+
+
+      // ✅ If both arrays are empty, remove the entire comparison object
+    if (
+      comparison.selectImage.length === 0 &&
+      (!comparison.correctedImages || comparison.correctedImages.length === 0)
+    ) {
+      doc.workComparison = doc.workComparison.filter(
+        (comp: any) => comp._id.toString() !== comparisonId
+      );
+    }
     await doc.save();
 
     return res.status(200).json({
