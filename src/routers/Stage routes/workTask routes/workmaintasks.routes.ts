@@ -222,8 +222,7 @@ workTaskRoutes.delete('/deletecorrectedimages/:scheduleId/:comparisonId/:imageId
 workTaskRoutes.delete('/deleteselectimages/:scheduleId/:comparisonId/:selectId',  multiRoleAuthMiddleware("owner", "CTO", "staff"), deleteWorkSelectImage)
 
 
-// get workers based on the project
-
+// get projectAssinged detials for automatic flled data
 workTaskRoutes.get(
   "/getprojectassigne/:projectId",
   getCurrentProjectDetailsWork

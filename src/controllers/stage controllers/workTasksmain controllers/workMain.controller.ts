@@ -187,6 +187,10 @@ const getAllDailySchedules = async (req: Request, res: Response): Promise<any> =
 
 
     const docs = await DailyTaskSubModel.find({ projectId })
+     .populate({
+    path: "projectAssignee.carpenterName",
+    select: "_id email workerName" // adjust fields as needed
+  });
 
     if (!docs) {
       return res.status(404).json({ ok: true, data:[], message: "work Schedule stage not found" });

@@ -8,7 +8,10 @@ import { COMPANY_LOGO, uploadToS3 } from "../ordering material controller/pdfOrd
 export const generateWorkSchedulePDF = async (scheduleId: string | Types.ObjectId) => {
     try {
         // Fetch work schedule data
-        const workSchedule = await DailyTaskSubModel.findById(scheduleId);
+        const workSchedule = await DailyTaskSubModel.findById(scheduleId).populate({
+    path: "projectAssignee.carpenterName",
+    select: "_id email workerName" // adjust fields as needed
+  });;
 
         if (!workSchedule) {
             throw new Error('Work schedule not found for the given schedule ID');
@@ -123,7 +126,7 @@ export const generateWorkSchedulePDF = async (scheduleId: string | Types.ObjectI
                 { label: "Project Name:", value: assignee.projectName || "N/A" },
                 { label: "Site Address:", value: assignee.siteAddress || "N/A" },
                 { label: "Design Reference ID:", value: assignee.designReferenceId || "N/A" },
-                { label: "Carpenter Name:", value: assignee.carpenterName || "N/A" },
+                { label: "Carpenter Name:", value: (assignee.carpenterName as any)?.workerName || "N/A" },
                 { label: "Supervisor Name:", value: assignee.supervisorName || "N/A" },
                 { label: "Planned Start Date:", value: assignee.plannedStartDate ? new Date(assignee.plannedStartDate).toLocaleDateString() : "N/A" }
             ];

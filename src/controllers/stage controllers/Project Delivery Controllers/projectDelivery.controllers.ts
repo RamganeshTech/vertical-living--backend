@@ -6,6 +6,7 @@ import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 import { DocUpload } from "../../../types/types";
+import { addToRecycleMaterials } from "../Inventory controllers/Recycle Controllers/recycle.controllers";
 export const syncProjectDelivery = async (
     projectId: string
 ): Promise<any> => {
@@ -39,7 +40,7 @@ export const syncProjectDelivery = async (
             timer: {
                 startedAt: new Date(),
                 completedAt: null,
-                deadLine:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+                deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
                 reminderSent: false,
             },
             uploads: [],
@@ -49,7 +50,7 @@ export const syncProjectDelivery = async (
         });
     } else {
         doc.timer.startedAt = new Date()
-        doc.timer.deadLine =  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+        doc.timer.deadLine = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
             doc.timer.completedAt = null,
             doc.timer.reminderSent = false,
 
@@ -285,7 +286,7 @@ const setProjectDeliveryStageDeadline = (req: Request, res: Response): Promise<a
 
 const projectDeliveryCompletionStatus = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { projectId } = req.params;
+        const { projectId , organizationId} = req.params;
         const form = await ProjectDeliveryModel.findOne({ projectId });
 
         if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
@@ -318,8 +319,13 @@ const projectDeliveryCompletionStatus = async (req: Request, res: Response): Pro
 
         res.status(200).json({ ok: true, message: "Quality Checkup stage marked as completed", data: form });
 
-        updateProjectCompletionPercentage(projectId);
+        updateProjectCompletionPercentage(projectId).catch(err =>
+            console.error("⚠️ updateProjectCompletionPercentage failed:", err.message)
+        );
 
+        addToRecycleMaterials({ projectId, organizationId }).catch(err =>
+            console.error("⚠️ addToRecycleMaterials failed:", err.message)
+        );
     } catch (err) {
         console.error(err);
         return res.status(500).json({ ok: false, message: "Server error, try again after some time" });

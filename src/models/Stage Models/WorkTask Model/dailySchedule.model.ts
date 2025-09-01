@@ -93,7 +93,7 @@ export interface IProjectAssignee {
     projectName: string;
     siteAddress: string;
     designReferenceId: string;
-    carpenterName: string;   // could be ObjectId if linked
+    carpenterName: Types.ObjectId;   // could be ObjectId if linked
     supervisorName: string;  // could be ObjectId if linked
     plannedStartDate: Date;
 }
@@ -159,7 +159,7 @@ const ProjectAssigneeSchema = new Schema<IProjectAssignee>({
     projectName: { type: String, },
     siteAddress: { type: String, },
     designReferenceId: { type: String },
-    carpenterName: { type: String },   // can later change to ref WorkerModel
+    carpenterName: { type: Schema.Types.ObjectId, default:null, ref:"WorkerModel" },   // can later change to ref WorkerModel
     supervisorName: { type: String },  // can later change to ref StaffModel
     plannedStartDate: { type: Date },
 }, { _id: false });

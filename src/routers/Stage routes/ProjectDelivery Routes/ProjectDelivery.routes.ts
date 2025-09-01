@@ -29,7 +29,7 @@ projectDeliveryRoutes.get("/:projectId",multiRoleAuthMiddleware("owner", "CTO", 
 
 
 projectDeliveryRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),checkPreviousStageCompleted(CleaningAndSanitationModel),  notToUpdateIfStageCompleted(ProjectDeliveryModel), checkIfStaffIsAssignedToStage(ProjectDeliveryModel), setProjectDeliveryStageDeadline)
-projectDeliveryRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(ProjectDeliveryModel), projectDeliveryCompletionStatus)
+projectDeliveryRoutes.put('/completionstatus/:organizationId/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(ProjectDeliveryModel), projectDeliveryCompletionStatus)
 
 
 export default projectDeliveryRoutes;

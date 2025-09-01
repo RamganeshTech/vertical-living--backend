@@ -1,6 +1,6 @@
 import express from "express";
-import { multiRoleAuthMiddleware } from "../../middlewares/multiRoleAuthMiddleware";
-import { createInventorySubItem, deleteInventorySubItem, getInventoryDetails, updateInventorySubItem } from "../../controllers/stage controllers/Inventory controllers/inventory.controller";
+import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
+import { createInventorySubItem, deleteInventorySubItem, getInventoryDetails, updateInventorySubItem } from "../../../controllers/stage controllers/Inventory controllers/inventory.controller";
 
 const InventoryRoutes = express.Router();
 
