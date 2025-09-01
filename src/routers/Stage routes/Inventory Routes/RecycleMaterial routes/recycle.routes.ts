@@ -1,5 +1,5 @@
 import express from "express";
-import { getGlobalMaterials, getProjectMaterials, updateRecycleMaterialManually } from "../../../../controllers/stage controllers/Inventory controllers/Recycle Controllers/recycle.controllers";
+import { getGlobalMaterials, getProjectMaterials, updateRecycleMaterialManually, updateRecycleQuantity } from "../../../../controllers/stage controllers/Inventory controllers/Recycle Controllers/recycle.controllers";
 import { multiRoleAuthMiddleware } from "../../../../middlewares/multiRoleAuthMiddleware";
 
 const recycleMaterialRoutes = express.Router();
@@ -12,6 +12,16 @@ recycleMaterialRoutes.put(
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   updateRecycleMaterialManually
 );
+
+
+
+// ✅ Get all inventory details
+recycleMaterialRoutes.patch(
+  "/updatequantity/:organizationId/:projectId/:itemId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  updateRecycleQuantity
+);
+
 
 // ✅ Get all inventory details
 recycleMaterialRoutes.get(

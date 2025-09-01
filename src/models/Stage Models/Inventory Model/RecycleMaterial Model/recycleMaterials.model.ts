@@ -1,34 +1,39 @@
 import { Schema, model, Types } from "mongoose";
 
 interface IRecycleMain {
-        _id?: Types.ObjectId;
+  _id?: Types.ObjectId;
   projectId: Types.ObjectId;
   organizationId: Types.ObjectId;
-    subItems: IRecycleItems[]
+  subItems: IRecycleItems[]
 }
 
 
 
 export interface IRecycleItems {
-    _id?: Types.ObjectId; // MongoDB will add this automatically
-    itemName: string; // e.g., plywood, screws
-    unit: string | null; // kg, pcs, etc.
-    remainingQuantity: number;
+  _id?: Types.ObjectId; // MongoDB will add this automatically
+  itemName: string; // e.g., plywood, screws
+  unit: string | null; // kg, pcs, etc.
+  remainingQuantity: number;
+  performedBy: Types.ObjectId | string,
+  createModel: string
 }
 
 
 
 const RecycleSubItems = new Schema<IRecycleItems>({
-itemName: { type: String,},
-    remainingQuantity: { type: Number, default: 0 },
-    unit: { type: String, default: null },
-}, {_id:true}) 
+  itemName: { type: String, },
+  remainingQuantity: { type: Number, default: 0 },
+  unit: { type: String, default: null },
+  performedBy: { type: Schema.Types.ObjectId, refPath: "subItems.createModel", default: null },
+  createModel: { type: String,default:null }
+
+}, { _id: true })
 
 const RecycleSchema = new Schema<IRecycleMain>(
   {
-    organizationId:{type: Schema.Types.ObjectId, ref:"OrganizationModel"},
+    organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
     projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel" },
-  subItems: {type: [RecycleSubItems], default:[]}
+    subItems: { type: [RecycleSubItems], default: [] }
   },
   { timestamps: true }
 );

@@ -11,7 +11,7 @@ import { Response } from "express";
  * This is idempotent: repeated calls overwrite the project's recycle subItems
  * with the current inventory remaining values (no double-count).
  */
-export const addToRecycleMaterials = async ({ projectId , organizationId}: { projectId: string, organizationId:string }) => {
+export const addToRecycleMaterials = async ({ projectId, organizationId }: { projectId: string, organizationId: string }) => {
     try {
         // Step 1. Load inventory doc for the project
         const inventoryDoc = await InventoryModel.findOne({ projectId }).lean();
@@ -36,7 +36,7 @@ export const addToRecycleMaterials = async ({ projectId , organizationId}: { pro
             }));
 
         // Step 3. Replace the recycle doc's subItems array in one atomic call
-       const result =  await RecycleModel.findOneAndUpdate(
+        const result = await RecycleModel.findOneAndUpdate(
             { projectId, organizationId },
             { $set: { subItems: newSubItems } },
             { upsert: true, new: true }
@@ -55,24 +55,104 @@ export const addToRecycleMaterials = async ({ projectId , organizationId}: { pro
 
 
 export const updateRecycleMaterialManually = async (req: RoleBasedRequest, res: Response): Promise<any> => {
-  try {
-    const { projectId, organizationId } = req.params;
+    try {
+        const { projectId, organizationId } = req.params;
 
-    if (!projectId || !organizationId) {
-      return res.status(400).json({ ok: false, message: "projectId and organizationId are required" });
+        if (!projectId || !organizationId) {
+            return res.status(400).json({ ok: false, message: "projectId and organizationId are required" });
+        }
+
+        await addToRecycleMaterials({ projectId, organizationId });
+
+        return res.status(200).json({ ok: true, data: [], message: "sync successfully created" });
+
+    } catch (err: any) {
+        console.error("♻️ regenerateRecycleMaterials failed:", err.message);
+        return res.status(500).json({ ok: false, message: "Failed to regenerate recycle materials" });
     }
-
-    await addToRecycleMaterials({ projectId, organizationId });
-
-    return res.status(200).json({ ok: true, data:[], message:"sync successfully created"  });
-
-  } catch (err: any) {
-    console.error("♻️ regenerateRecycleMaterials failed:", err.message);
-    return res.status(500).json({ ok: false, message: "Failed to regenerate recycle materials" });
-  }
 };
 
-export const getProjectMaterials = async (req: RoleBasedRequest, res: Response): Promise<any>  => {
+
+
+export const updateRecycleQuantity = async (
+    req: RoleBasedRequest,
+    res: Response
+): Promise<any> => {
+    try {
+        const { projectId, organizationId, itemId } = req.params;
+        const { quantity } = req.body
+
+        const user = req.user;
+
+
+        if (!user) {
+            return res.status(401).json({ ok: false, message: "Not Authorized" });
+        }
+
+        if (!Types.ObjectId.isValid(projectId) || !Types.ObjectId.isValid(itemId)) {
+            return res.status(400).json({ ok: false, message: "Invalid ID(s)" });
+        }
+
+
+        // resolve createModel
+        let createModel = "";
+        switch (user.role) {
+            case "owner":
+                createModel = "UserModel";
+                break;
+            case "CTO":
+                createModel = "CTOModel";
+                break;
+            case "staff":
+                createModel = "StaffModel";
+                break;
+            case "worker":
+                createModel = "WorkerModel";
+                break;
+            default:
+                createModel = "UserModel"; // fallback
+        }
+
+
+        // Find the recycle document
+        const recycleDoc = await RecycleModel.findOne({
+            projectId: new Types.ObjectId(projectId),
+            organizationId: new Types.ObjectId(organizationId),
+        });
+
+        if (!recycleDoc) {
+            return res.status(404).json({ ok: false, message: "Recycle doc not found" });
+        }
+
+        // Find the subItem by _id
+        const subItem = (recycleDoc.subItems as any).id(itemId);
+        if (!subItem) {
+            return res.status(404).json({ ok: false, message: "SubItem not found" });
+        }
+
+        // Update remainingQuantity
+        subItem.remainingQuantity = quantity;
+        // track performedBy
+        subItem.performedBy = new Types.ObjectId(user._id);
+        subItem.createModel = createModel;
+        // Optional: prevent negative quantity
+        if (subItem.remainingQuantity < 0) subItem.remainingQuantity = 0;
+
+        // Track who updated it
+        subItem.lastUpdatedBy = req.user?._id || null; // assumes req.user exists
+        subItem.lastUpdatedAt = new Date();
+
+        // Save the document
+        await recycleDoc.save();
+
+        return res.status(200).json({ ok: true, data: subItem });
+    } catch (err: any) {
+        console.error("♻️ updateRecycleQuantity failed:", err.message);
+        return res.status(500).json({ ok: false, message: err.message });
+    }
+};
+
+export const getProjectMaterials = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { projectId, organizationId } = req.params;
 
@@ -80,8 +160,8 @@ export const getProjectMaterials = async (req: RoleBasedRequest, res: Response):
             return res.status(400).json({ ok: false, message: "Invalid projectId" });
         }
 
-        
-        const projectMaterials = await RecycleModel.findOne({projectId});
+
+        const projectMaterials = await RecycleModel.findOne({ projectId }).populate({path:"subItems.performedBy", select:"-password"});
 
         return res.status(200).json({ ok: true, data: projectMaterials });
     } catch (error: any) {
@@ -91,13 +171,13 @@ export const getProjectMaterials = async (req: RoleBasedRequest, res: Response):
 
 
 
-export const getGlobalMaterials = async (req: RoleBasedRequest, res: Response): Promise<any>  => {
+export const getGlobalMaterials = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
 
-                const { organizationId } = req.params;
+        const { organizationId } = req.params;
 
         const globalMaterials = await RecycleModel.aggregate([
-              { $match: { organizationId:  new Types.ObjectId(organizationId) } },
+            { $match: { organizationId: new Types.ObjectId(organizationId) } },
             { $unwind: "$subItems" },
             {
                 $group: {
@@ -119,7 +199,7 @@ export const getGlobalMaterials = async (req: RoleBasedRequest, res: Response): 
         ]);
 
         return res.status(200).json({ ok: true, data: globalMaterials });
-    } catch (error:any) {
+    } catch (error: any) {
         return res.status(500).json({ ok: false, message: error.message });
     }
 };
