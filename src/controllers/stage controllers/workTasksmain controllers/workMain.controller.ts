@@ -280,16 +280,16 @@ const mdApprovalAction = async (req: Request, res: Response): Promise<any> => {
 
 const getProjectWorkers = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { projectId } = req.params;
+    const { organizationId } = req.params;
 
-    if (!projectId || !Types.ObjectId.isValid(projectId)) {
+    if (!organizationId || !Types.ObjectId.isValid(organizationId)) {
       return res.status(400).json({ ok: false, message: "Valid Project ID is required" });
     }
 
-    const redisGetWorker = `stage:WorkMainStageScheduleModel:${projectId}:getworkers`
+    const redisGetWorker = `stage:WorkMainStageScheduleModel:${organizationId}:getworkers`
 
 
-    const workers = await WorkerModel.find({ projectId: projectId }).select("_id workerName email");
+    const workers = await WorkerModel.find({ organizationId: organizationId }).select("_id workerName email");
 
     await redisClient.set(redisGetWorker, JSON.stringify(workers), { EX: 60 * 10 })
 

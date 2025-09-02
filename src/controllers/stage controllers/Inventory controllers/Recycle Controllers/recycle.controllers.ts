@@ -54,7 +54,7 @@ export const addToRecycleMaterials = async ({ projectId, organizationId }: { pro
 
 
 
-export const updateRecycleMaterialManually = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const updateRecycleMaterialManually = async (req: RoleBasedRequest, res: Response):Promise<any> => {
     try {
         const { projectId, organizationId } = req.params;
 
@@ -73,11 +73,7 @@ export const updateRecycleMaterialManually = async (req: RoleBasedRequest, res: 
 };
 
 
-
-export const updateRecycleQuantity = async (
-    req: RoleBasedRequest,
-    res: Response
-): Promise<any> => {
+export const updateRecycleQuantity = async (req: RoleBasedRequest,res: Response):Promise<any> => {
     try {
         const { projectId, organizationId, itemId } = req.params;
         const { quantity } = req.body
@@ -152,14 +148,13 @@ export const updateRecycleQuantity = async (
     }
 };
 
-export const getProjectMaterials = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const getProjectMaterials = async (req: RoleBasedRequest, res: Response):Promise<any> => {
     try {
         const { projectId, organizationId } = req.params;
 
         if (!Types.ObjectId.isValid(projectId)) {
             return res.status(400).json({ ok: false, message: "Invalid projectId" });
         }
-
 
         const projectMaterials = await RecycleModel.findOne({ projectId }).populate({path:"subItems.performedBy", select:"-password"});
 

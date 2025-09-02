@@ -230,7 +230,7 @@ workTaskRoutes.get(
 
 
 // get workers based on project
-workTaskRoutes.get("/:projectId/getworkers",
+workTaskRoutes.get("/:organizationId/getworkers",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   getProjectWorkers)
 
