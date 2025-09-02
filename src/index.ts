@@ -66,21 +66,116 @@ import HRRoutes from './routers/Department Routes/HR.routes';
 import commonOrderRoutes from './routers/Stage routes/order Material routes/Common OrderMaterial Routes/commonOrderMaterial.routes';
 import InventoryRoutes from './routers/Stage routes/Inventory Routes/inventory.routes';
 import recycleMaterialRoutes from './routers/Stage routes/Inventory Routes/RecycleMaterial routes/recycle.routes';
+import http from 'http';
+import { Server, Socket } from 'socket.io';
+import ProjectModel from './models/project model/project.model';
+import  jwt  from 'jsonwebtoken';
+import { RoleUserPayload } from './types/types';
+import { SocketService } from './config/socketService';
+
+
+
+// Extend Socket interface for custom properties
+interface CustomSocket extends Socket {
+  userId?: string;
+  userRole?: string;
+  ownerId?: string;
+  currentRoom?: string;
+  currentProjectId?: string;
+  currentOrgId?: string;
+}
+
+
 
 dotenv.config();
 
 const app = express()
+const server = http.createServer(app);
 
+
+// Socket.IO setup with CORS
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:5173", // Your React app URL
+    methods: ["GET", "POST", "PUT", "PATCH", "PUT"],
+    credentials: true
+  }
+});
+
+
+SocketService.initialize(io);
+
+
+
+
+io.use((socket:CustomSocket, next) => {
+   console.log("🚀 middleware reached");
+  const cookieHeader = socket.request.headers.cookie;
+  // console.log("cookie header", cookieHeader)
+  if (!cookieHeader) return next(new Error("No cookies found"));
+// console.log("cookieJHeader", cookieHeader)
+  // parse manually if needed
+  const cookies = Object.fromEntries(
+    cookieHeader.split(";").map((c) => {
+      const [k, v] = c.trim().split("=");
+      return [k, decodeURIComponent(v)];
+    })
+  );
+// console.log("cookies", cookies)
+
+  const token =
+    cookies.useraccesstoken ||
+    cookies.ctoaccesstoken ||
+    cookies.staffaccesstoken ||
+    cookies.workeraccesstoken ||
+    cookies.clientaccesstoken;
+
+
+    console.log("token", token)
+  if (!token) return next(new Error("No token found"));
+
+   const tokenSecretMap = {
+    useraccesstoken: process.env.JWT_ACCESS_SECRET,
+    staffaccesstoken: process.env.JWT_STAFF_ACCESS_SECRET,
+    workeraccesstoken: process.env.JWT_WORKER_ACCESS_SECRET,
+    ctoaccesstoken: process.env.JWT_CTO_ACCESS_SECRET,
+    clientaccesstoken: process.env.JWT_CLIENT_ACCESS_SECRET,
+  };
+
+
+   let decoded:any = null;
+  for (const [cookieName, secret] of Object.entries(tokenSecretMap)) {
+    const token = cookies[cookieName];
+
+    if (token && secret) {
+      try {
+        decoded = jwt.verify(token, secret);
+        console.log(`✅ Token '${cookieName}' verified successfully`);
+        // socket.data.user = decoded;
+
+        // Attach to socket (this is what fixes your issue)
+        socket.userId = decoded._id;
+        socket.userRole = decoded.role;
+        socket.data.user = decoded;
+
+        return next();
+      } catch (err:any) {
+        console.warn(`❌ Token '${cookieName}' failed: ${err.message}`);
+      }
+    }
+  }
+
+});
+
+
+// Make io available globally for controllers
+declare global {
+  var socketIO: Server;
+}
+global.socketIO = io;
 
 
 // console.log("env file", process.env.FRONTEND_URL)
-
-app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  credentials: true
-}))
-app.use(cookieParser())
-app.use(express.urlencoded({ extended: true }))
 
 app.use(cors({
   origin: process.env.FRONTEND_URL,
@@ -198,14 +293,136 @@ app.use('/api/profile', profileRoutes)
 app.use('/api/ai', utilAiRoutes)
 
 
+
+
+
+
+
+// io.use(async (socket: CustomSocket, next) => {
+//   try {
+//     const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
+    
+//     if (!token) {
+//       return next(new Error('Authentication token required'));
+//     }
+
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+//     socket.userId = decoded._id;
+//     socket.userRole = decoded.role;
+//     socket.ownerId = decoded.ownerId;
+    
+//     next();
+//   } catch (error) {
+//     next(new Error('Invalid token'));
+//   }
+// });
+
+    
+
+
+// io.on("connection", (socket) => {
+//   console.log("🔌 Client connected:", socket.id);
+
+//   socket.on("disconnect", () => {
+//     console.log("❌ Client disconnected:", socket.id);
+//   });
+// });
+
+
+
+// Socket.IO Connection Handler
+io.on('connection', (socket:CustomSocket) => {
+  console.log(`User ${socket.userId} connected with role ${socket.userRole}`);
+  
+  // Handle joining project rooms
+  socket.on('join_organization', async (data: { organizationId: string }) => {
+    try {
+      const { organizationId } = data;
+      
+      // Get organization ID from project
+      // const project = await ProjectModel.findById({ _id: projectId }).populate('organizationId');
+      // if (!project) {
+      //   socket.emit('error', { message: 'Project not found' });
+      //   return;
+      // }
+      // const organizationId = project.organizationId._id.toString();
+      const roomName = `org_${organizationId}`;
+      
+      await socket.join(roomName);
+      socket.currentRoom = roomName;
+      // socket.currentProjectId = projectId;
+      socket.currentOrgId = organizationId;
+      
+      console.log(`User ${socket.userId} joined room: ${roomName}`);
+      
+      // Notify other users in the room
+      socket.to(roomName).emit('user_joined', {
+        userId: socket.userId,
+        userRole: socket.userRole,
+        // projectId
+      });
+
+      console.log(`User ${socket.userId} joined room: ${roomName}`);
+
+      
+    } catch (error) {
+      socket.emit('error', { message: 'Failed to join project room' });
+    }
+  });
+  
+  // Handle leaving project rooms
+  socket.on('leave_organization', () => {
+    if (socket.currentRoom) {
+      socket.leave(socket.currentRoom);
+      socket.to(socket.currentRoom).emit('user_left', {
+        userId: socket.userId,
+        userRole: socket.userRole
+      });
+      console.log(`User ${socket.userId} left room: ${socket.currentRoom}`);
+      socket.currentRoom = undefined;
+      // socket.currentOrgId = undefined;
+      socket.currentOrgId = undefined;
+    }
+  });
+  
+  socket.on('disconnect', () => {
+    console.log(`User ${socket.userId} disconnected`);
+  });
+});
+
+
 const PORT = process.env.PORT || 3000
 
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log("DB connected")
-    console.log(`Server listening to http://localhost:${PORT}`)
+// connectDB().then(() => {
+//   app.listen(PORT, () => {
+//     console.log("DB connected")
+//     console.log(`Server listening to http://localhost:${PORT}`)
+//   })
+// })
+// .catch((error:Error)=>{
+//   console.log("error from DB connection", error.message)
+// })
+
+
+setTimeout(() => {
+  io.to("org_6881a8c24a56bad430507bb8").emit("workSchedule:task_created", {
+    taskId: "klsdjljsljfslls",
+      dailyTasks: "klsdjljsljfslls",
+      projectAssignee: "klsdjljsljfslls",
+      supervisorCheck: "klsdjljsljfslls",
+      createdBy: "ssssssssssssssssss",
+      createdByRole: "owner"
+  });
+  console.log("👋 Emitted test event to org_6881a8c24a56bad430507bb8");
+}, 5000);
+
+connectDB()
+  .then(() => {
+    server.listen(PORT, () => {   // <- start the HTTP server, not app
+      console.log("DB connected");
+      console.log(`Server listening on http://localhost:${PORT}`);
+    });
   })
-})
-.catch((error:Error)=>{
-  console.log("error from DB connection", error.message)
-})
+  .catch((error: Error) => {
+    console.log("error from DB connection", error.message);
+  });

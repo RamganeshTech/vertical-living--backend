@@ -6,20 +6,20 @@ export const multiRoleAuthMiddleware =
   (...allowedRoles: string[]) =>
     async (req: RoleBasedRequest, res: Response, next: NextFunction): Promise<void> => {
       try {
-        // console.log("usera cecess token", req.cookies.useraccesstoken)
+        console.log("usera cecess token", req.cookies.useraccesstoken)
 
         const ownerToken = req.cookies?.useraccesstoken;
         const ctoToken = req.cookies?.ctoaccesstoken;
         const staffToken = req.cookies?.staffaccesstoken;
         const workerToken = req.cookies?.workeraccesstoken;
         const clientToken = req.cookies?.clientaccesstoken;
-//         console.log("ownerToken", ownerToken,
-//         "ctoToken", ctoToken,
-//         "staffToken",staffToken,
-//         "workerToken",workerToken,
-//         "clientToken", clientToken)
+        console.log("ownerToken", ownerToken,
+        "ctoToken", ctoToken,
+        "staffToken",staffToken,
+        "workerToken",workerToken,
+        "clientToken", clientToken)
 
-// console.log("req.rul", req.url)
+console.log("req.rul", req.url)
 
 
 

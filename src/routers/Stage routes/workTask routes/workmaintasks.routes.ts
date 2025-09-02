@@ -165,7 +165,7 @@ workTaskRoutes.delete("/:scheduleId/:taskId", multiRoleAuthMiddleware("owner", "
 
 
 workTaskRoutes.post(
-  "/:scheduleId/task/:taskId/upload",
+  "/:scheduleId/task/:taskId/uploaddailyimage",
   multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
   imageUploadToS3.array("files"),
   processUploadFiles,

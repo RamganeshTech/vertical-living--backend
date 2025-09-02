@@ -6,6 +6,7 @@ import { generateWorkSchedulePDF } from "./workPdfGeenerator";
 import ProjectModel from "../../../models/project model/project.model";
 import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
 import { RoleBasedRequest } from "../../../types/types";
+import { SocketService } from "../../../config/socketService";
 
 // export const createWork = async (req: Request, res: Response): Promise<any> => {
 //   try {
@@ -359,13 +360,13 @@ export const createDailyWorkUtil = async (data: {
     gatekeeping: supervisorCheck.gatekeeping || "block",
   };
 
-  console.log("projectId", projectId)
-  console.log("dailyTasks", dailyTasks)
-  console.log("projectAssignee", projectAssignee)
-  console.log("supervisorCheck", supervisorCheck)
+  // console.log("projectId", projectId)
+  // console.log("dailyTasks", dailyTasks)
+  // console.log("projectAssignee", projectAssignee)
+  // console.log("supervisorCheck", supervisorCheck)
 
   // const files: any = uploadedFiles as { [fieldname: string]: Express.Multer.File[] };
-  console.log("files formt eh at first ", files)
+  // console.log("files formt eh at first ", files)
   // Parse optional images if uploaded
   const designPlanImages = files?.designPlanImages
     ? files.designPlanImages.map((file: any) => ({
@@ -378,7 +379,7 @@ export const createDailyWorkUtil = async (data: {
 
 
 
-  console.log("req.files", files)
+  // console.log("req.files", files)
   const siteImages = files?.siteImages
     ? files.siteImages.map((file: any) => ({
       fileType: "image",                // required enum
@@ -441,7 +442,7 @@ export const createDailyWorkUtil = async (data: {
 
 }
 
-export const createWork = async (req: Request, res: Response): Promise<any> => {
+export const createWork = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
 
     const { projectId } = req.params
@@ -564,6 +565,17 @@ export const createWork = async (req: Request, res: Response): Promise<any> => {
     }
 
 
+console.log("getting created")
+    // 🔥 WebSocket Emission
+    await SocketService.emitToProject(projectId, 'workSchedule:task_created', {
+      taskId: newRecord._id,
+      dailyTasks: newRecord.dailyTasks,
+      projectAssignee: newRecord.projectAssignee,
+      supervisorCheck: newRecord.supervisorCheck,
+      createdBy: req?.user?._id,
+      createdByRole: req?.user?.role
+    });
+
     return res.status(201).json({
       ok: true,
       message: "Daily tasks added successfully",
@@ -576,7 +588,7 @@ export const createWork = async (req: Request, res: Response): Promise<any> => {
 };
 
 // ✅ Update existing DailyTaskSub by pushing more tasks / assignees
-export const updateWork = async (req: Request, res: Response): Promise<any> => {
+export const updateWork = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { projectId, id } = req.params; // DailyTaskSub _id
     let { dailyTasks = [], projectAssignee = [], supervisorCheck } = req.body;
@@ -710,6 +722,18 @@ export const updateWork = async (req: Request, res: Response): Promise<any> => {
     await DailyScheduleModel.findOneAndUpdate({ projectId }, { $addToSet: { tasks: record._id } }, { returnDocument: "after" })
 
 
+    // 🔥 WebSocket Emission
+    await SocketService.emitToProject(projectId, 'workSchedule:task_updated', {
+      taskId: record._id,
+      updatedData: {
+        dailyTasks: record.dailyTasks,
+        projectAssignee: record.projectAssignee,
+        supervisorCheck: record.supervisorCheck
+      },
+      updatedBy: req.user?._id,
+      updatedByRole: req.user?.role
+    });
+
     return res.status(200).json({
       ok: true,
       message: "Daily tasks updated successfully",
@@ -724,7 +748,7 @@ export const updateWork = async (req: Request, res: Response): Promise<any> => {
 
 
 
-export const deleteWork = async (req: Request, res: Response): Promise<any> => {
+export const deleteWork = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { scheduleId, taskId } = req.params;
 
@@ -751,6 +775,17 @@ export const deleteWork = async (req: Request, res: Response): Promise<any> => {
 
     await dailySchedule.save();
 
+    // 🔥 WebSocket Emission - Need to get projectId from schedule
+    const schedule = await DailyScheduleModel.findOne({ tasks: scheduleId });
+    if (schedule) {
+      await SocketService.emitToProject(String(schedule.projectId), 'workSchedule:task_deleted', {
+        scheduleId,
+        taskId,
+        deletedBy: req.user?._id,
+        deletedByRole: req.user?.role
+      });
+    }
+
     return res.status(200).json({ message: "Task deleted successfully", ok: true, data: dailySchedule });
 
   } catch (error) {
@@ -760,7 +795,7 @@ export const deleteWork = async (req: Request, res: Response): Promise<any> => {
 };
 
 
-export const uploadDailyScheduleImages = async (req: Request, res: Response): Promise<any> => {
+export const uploadDailyScheduleImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { scheduleId, taskId } = req.params;
     const { date } = req.body;
@@ -818,6 +853,18 @@ export const uploadDailyScheduleImages = async (req: Request, res: Response): Pr
 
     const savedUploads = dateEntry.uploads.slice(-mappedFiles.length);
 
+    // 🔥 WebSocket Emission - Need to get projectId
+    const dailySchedule = await DailyScheduleModel.findOne({ tasks: scheduleId });
+    if (dailySchedule) {
+      await SocketService.emitToProject(String(dailySchedule.projectId), 'workSchedule:image_uploaded', {
+        scheduleId,
+        taskId,
+        date: new Date(date).toISOString(),
+        newImages: savedUploads,
+        uploadedBy: req.user?._id,
+        uploadedByRole: req.user?.role
+      });
+    }
 
     return res.status(200).json({
       message: "Files uploaded to task successfully",
@@ -837,7 +884,7 @@ export const uploadDailyScheduleImages = async (req: Request, res: Response): Pr
 
 
 
-export const deleteDailyScheduleImage = async (req: Request, res: Response): Promise<any> => {
+export const deleteDailyScheduleImage = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     // Find and update in one shot
     const { scheduleId, taskId, date, imageId } = req.params;
@@ -895,6 +942,22 @@ export const deleteDailyScheduleImage = async (req: Request, res: Response): Pro
     dateGroup.uploads = dateGroup.uploads.filter((u: any) => u._id.toString() !== imageId);
 
     await schedule.save();
+
+
+    // 🔥 WebSocket Emission
+    const dailySchedule = await DailyScheduleModel.findOne({ tasks: scheduleId });
+    if (dailySchedule) {
+      await SocketService.emitToProject(String(dailySchedule.projectId), 'workSchedule:image_deleted', {
+        scheduleId,
+        taskId,
+        date,
+        imageId,
+        remainingImages: dateGroup.uploads,
+        deletedBy: req.user?._id,
+        deletedByRole: req.user?.role
+      });
+    }
+
 
 
     return res.status(200).json({
@@ -1059,6 +1122,21 @@ export const addComparisonSelectImage = async (
       return res.status(404).json({ message: "schedule not found", ok: false });
     }
 
+
+    // 🔥 WebSocket Emission - Need to get projectId from schedule
+    const dailySchedule = await DailyScheduleModel.findOne({ _id: scheduleId });
+    if (dailySchedule) {
+      await SocketService.emitToProject(String(dailySchedule.projectId), 'workSchedule:selectimage_added', {
+        scheduleId,
+        comparisonId: (updatedDoc.workComparison.slice(-1)[0] as any)._id,
+        // selectImages: selectImageDocs,
+        selectImages: updatedDoc.workComparison.slice(-1)[0],
+        addedBy: user._id,
+        addedByRole: user.role
+      });
+    }
+
+
     return res.status(200).json({
       message: "Comparison review entry added successfully",
       data: updatedDoc.workComparison.slice(-1)[0],
@@ -1136,13 +1214,27 @@ export const uploadComparisonImagesManually = async (req: RoleBasedRequest, res:
       }
 
       comparison.selectImage = [...comparison.selectImage, ...selectImageDocs];
-await doc.save()
+      await doc.save()
 
-return res.status(200).json({
-      ok: true,
-      message: "updaloaded successfully",
-      data: doc.workComparison
-    });
+
+      // 🔥 WebSocket Emission - Update existing comparison
+      const dailySchedule = await DailyScheduleModel.findById(scheduleId);
+      if (dailySchedule) {
+        await SocketService.emitToProject(String(dailySchedule.projectId), 'workSchedule:selectimage_added_manual', {
+          scheduleId,
+          comparisonId,
+          newSelectImages: doc.workComparison,
+          uploadedBy: user?._id,
+          uploadedByRole: user?.role
+        });
+      }
+
+
+      return res.status(200).json({
+        ok: true,
+        message: "updaloaded successfully",
+        data: doc.workComparison
+      });
     } else {
       // Create a new ComparisonReview entry
 
@@ -1162,16 +1254,29 @@ return res.status(200).json({
         return res.status(404).json({ message: "schedule not found", ok: false });
       }
 
+
+      // 🔥 WebSocket Emission - New comparison created
+      const dailySchedule = await DailyScheduleModel.findById(scheduleId);
+      if (dailySchedule) {
+        await SocketService.emitToProject(String(dailySchedule.projectId), 'workSchedule:comparison_created', {
+          scheduleId,
+          comparisonId: (updatedDoc.workComparison.slice(-1)[0] as any)._id,
+          selectImages: updatedDoc.workComparison.slice(-1)[0],
+          createdBy: user?._id,
+          createdByRole: user?.role
+        });
+      }
+
       return res.status(200).json({
-      ok: true,
-      message: "updaloaded successfully",
-      data: updatedDoc.workComparison
-    });
+        ok: true,
+        message: "updaloaded successfully",
+        data: updatedDoc.workComparison
+      });
 
     }
 
 
-    
+
   }
   catch (error: any) {
     console.error("Error in addComparisonSelectImageController:", error);
@@ -1247,6 +1352,22 @@ export const updateSelectedImageComment = async (req: RoleBasedRequest, res: Res
 
     await doc.save();
 
+
+
+    // 🔥 WebSocket Emission - Comment updated
+    const dailySchedule = await DailyScheduleModel.findById(scheduleId);
+    if (dailySchedule) {
+      await SocketService.emitToProject(String(dailySchedule.projectId), 'workSchedule:selectimage_comment', {
+        scheduleId,
+        comparisonId,
+        selectedImageId,
+        comment,
+        updatedBy: user._id,
+        updatedByRole: user.role
+      });
+    }
+
+
     return res.status(200).json({
       ok: true,
       message: "Comment updated successfully.",
@@ -1271,16 +1392,16 @@ export const deleteWorkSelectImage = async (req: RoleBasedRequest, res: Response
     const { scheduleId, comparisonId, selectId } = req.params;
 
 
-
+    const user = req?.user
     // shorter way
-//    const doc = await DailyTaskSubModel.updateOne(
-//   { _id: scheduleId, "workComparison._id": comparisonId },
-//   { $pull: { "workComparison.$.selectImage": { _id: selectId } } }
-// );
+    //    const doc = await DailyTaskSubModel.updateOne(
+    //   { _id: scheduleId, "workComparison._id": comparisonId },
+    //   { $pull: { "workComparison.$.selectImage": { _id: selectId } } }
+    // );
 
-//  if (!doc) {
-//       return res.status(404).json({ ok: false, message: "Schedule not found" });
-//     }
+    //  if (!doc) {
+    //       return res.status(404).json({ ok: false, message: "Schedule not found" });
+    //     }
 
 
     // Find parent document
@@ -1307,9 +1428,10 @@ export const deleteWorkSelectImage = async (req: RoleBasedRequest, res: Response
     // Remove from array
     comparison.selectImage.splice(imageIndex, 1);
 
+ const deletedImage = comparison.selectImage[imageIndex];
+    // let comparisonDeleted = false;
 
-
-      // ✅ If both arrays are empty, remove the entire comparison object
+    // ✅ If both arrays are empty, remove the entire comparison object
     if (
       comparison.selectImage.length === 0 &&
       (!comparison.correctedImages || comparison.correctedImages.length === 0)
@@ -1317,8 +1439,31 @@ export const deleteWorkSelectImage = async (req: RoleBasedRequest, res: Response
       doc.workComparison = doc.workComparison.filter(
         (comp: any) => comp._id.toString() !== comparisonId
       );
+      // comparisonDeleted = true;
     }
     await doc.save();
+
+    const dailySchedule = await DailyScheduleModel.findById(scheduleId);
+    if (dailySchedule) {
+      // if (comparisonDeleted) {
+        await SocketService.emitToProject(String(dailySchedule.projectId), 'workSchedule:selectimage_delete', {
+          scheduleId,
+          comparisonId,
+          images:doc.workComparison,
+          deletedBy: user?._id,
+          deletedByRole: user?.role
+        });
+      // } else {
+      //   await SocketService.emitToProject(String(dailySchedule.projectId), 'workSchedule:select_image_deleted', {
+      //     scheduleId,
+      //     comparisonId,
+      //     selectImageId: selectId,
+      //     deletedImage,
+      //     deletedBy: user?._id,
+      //     deletedByRole: user?.role
+      //   });
+      // }
+    }
 
     return res.status(200).json({
       ok: true,
@@ -1337,9 +1482,10 @@ export const deleteWorkSelectImage = async (req: RoleBasedRequest, res: Response
 
 
 
-export const uploadCorrectImages = async (req: Request, res: Response): Promise<any> => {
+export const uploadCorrectImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { scheduleId, comparisonId } = req.params
+    const user = req.user
 
     const files = req.files as (Express.Multer.File & { location: string })[];
 
@@ -1375,6 +1521,18 @@ export const uploadCorrectImages = async (req: Request, res: Response): Promise<
 
     await doc.save();
 
+     // 🔥 WebSocket Emission - Corrected images uploaded
+    const dailySchedule = await DailyScheduleModel.findById(scheduleId);
+    if (dailySchedule) {
+      await SocketService.emitToProject(String(dailySchedule.projectId), 'workSchedule:correctimage_upload', {
+        scheduleId,
+        comparisonId,
+        newCorrectedImages: doc.workComparison,
+        uploadedBy: user?._id,
+        uploadedByRole: user?.role
+      });
+    }
+
 
     return res.status(200).json({
       ok: true,
@@ -1396,6 +1554,7 @@ export const uploadCorrectImages = async (req: Request, res: Response): Promise<
 export const deleteWorkCorrectImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { scheduleId, comparisonId, imageId } = req.params;
+    const user = req.user;
 
     // Find parent document
     const doc = await DailyTaskSubModel.findById(scheduleId);
@@ -1417,11 +1576,28 @@ export const deleteWorkCorrectImages = async (req: RoleBasedRequest, res: Respon
     if (imageIndex === -1) {
       return res.status(404).json({ ok: false, message: "Image not found" });
     }
+    // Store deleted image info for socket emission
+    const deletedImage = comparison.correctedImages[imageIndex];
 
     // Remove from array
     comparison.correctedImages.splice(imageIndex, 1);
 
+
+
     await doc.save();
+
+      // 🔥 WebSocket Emission - Corrected image deleted
+    const dailySchedule = await DailyScheduleModel.findById(scheduleId);
+    if (dailySchedule) {
+      await SocketService.emitToProject(String(dailySchedule.projectId), 'workSchedule:correctimage_delete', {
+        scheduleId,
+        comparisonId,
+        imageId,
+        deletedImage: doc.workComparison,
+        deletedBy: user?._id,
+        deletedByRole: user?.role
+      });
+    }
 
     return res.status(200).json({
       ok: true,
