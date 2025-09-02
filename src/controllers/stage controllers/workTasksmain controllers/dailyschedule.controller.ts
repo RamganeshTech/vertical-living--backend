@@ -609,6 +609,18 @@ export const updateWork = async (req: RoleBasedRequest, res: Response): Promise<
       gatekeeping: supervisorCheck.gatekeeping || "block",
     };
 
+
+      projectAssignee = {
+      projectName: projectAssignee.projectName || "",
+      siteAddress: projectAssignee.siteAddress || null, // convert empty string to null
+      designReferenceId: projectAssignee.designReferenceId || "",
+      carpenterName: projectAssignee?.carpenterName || null,
+      supervisorName: projectAssignee.supervisorName || "",
+      plannedStartDate: projectAssignee.plannedStartDate || null,
+    };
+
+
+
     const record = await DailyTaskSubModel.findById(id);
     if (!record) {
       return res.status(404).json({ ok: false, message: "task not found" });
