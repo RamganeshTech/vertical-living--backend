@@ -131,7 +131,7 @@ io.use((socket:CustomSocket, next) => {
     cookies.clientaccesstoken;
 
 
-    console.log("token", token)
+    // console.log("token", token)
   if (!token) return next(new Error("No token found"));
 
    const tokenSecretMap = {
@@ -150,7 +150,7 @@ io.use((socket:CustomSocket, next) => {
     if (token && secret) {
       try {
         decoded = jwt.verify(token, secret);
-        console.log(`✅ Token '${cookieName}' verified successfully`);
+        // console.log(`✅ Token '${cookieName}' verified successfully`);
         // socket.data.user = decoded;
 
         // Attach to socket (this is what fixes your issue)
@@ -391,7 +391,7 @@ io.on('connection', (socket:CustomSocket) => {
 });
 
 
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 4000
 
 // connectDB().then(() => {
 //   app.listen(PORT, () => {
@@ -404,17 +404,6 @@ const PORT = process.env.PORT || 3000
 // })
 
 
-setTimeout(() => {
-  io.to("org_6881a8c24a56bad430507bb8").emit("workSchedule:task_created", {
-    taskId: "klsdjljsljfslls",
-      dailyTasks: "klsdjljsljfslls",
-      projectAssignee: "klsdjljsljfslls",
-      supervisorCheck: "klsdjljsljfslls",
-      createdBy: "ssssssssssssssssss",
-      createdByRole: "owner"
-  });
-  console.log("👋 Emitted test event to org_6881a8c24a56bad430507bb8");
-}, 5000);
 
 connectDB()
   .then(() => {
