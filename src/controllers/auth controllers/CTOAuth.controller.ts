@@ -7,6 +7,7 @@ import CTOModel from "../../models/CTO model/CTO.model";
 import redisClient from "../../config/redisClient";
 import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail";
 import crypto from 'crypto';
+import { syncEmployee } from "../Department controllers/HRMain controller/HrMain.controllers";
 
 // POST /api/CTO/register
 const registerCTO = async (req: Request, res: Response) => {
@@ -89,6 +90,19 @@ const registerCTO = async (req: Request, res: Response) => {
         )
 
         res.status(201).json({ message: "CTO registered successfully", data: CTO, ok: true });
+
+          syncEmployee({
+                        organizationId,
+                        empId: CTO._id,
+                        employeeModel: "CTOModel",
+                        empRole: "organization_staff", 
+                        name: CTO.CTOName,
+                        phoneNo: CTO.phoneNo,
+                        email: CTO.email,
+                        specificRole: ""
+                    })
+                        .catch((err) => console.log("syncEmployee error in Hr Dept from CTO model", err))
+                
     } catch (error) {
         if (error instanceof Error) {
             console.error("CTO registration failed:", error);

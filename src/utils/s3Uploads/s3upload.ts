@@ -41,7 +41,13 @@ import { NextFunction, Request, Response } from "express";
 export const imageUploadToS3 = multer({
   storage: multer.memoryStorage(),
   fileFilter: (_req, file, cb) => {
-    const allowed = ["image/jpeg", "image/png", "application/pdf"];
+    const allowed = ["image/jpeg", "image/png", "application/pdf",
+       "video/mp4",       // Add video types
+      "video/quicktime", // .mov
+      "video/x-msvideo", // .avi
+      "video/x-ms-wmv",  // .wmv
+      "video/webm"       // .webm
+      ];
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -103,6 +109,24 @@ export const processUploadFiles = async (req: Request, res: Response, next: Next
           Key: s3Key,
           Body: optimized,
           ContentType: "image/jpeg",
+        };
+
+        const { Location } = await s3.upload(params).promise();
+        (file as any).location = Location;
+      }else if (file.mimetype.startsWith("video/")) {
+        // Set a larger size limit for videos
+        // if (file.size > 100 * 1024 * 1024) {
+        //   return res
+        //     .status(400)
+        //     .json({ message: `Video ${file.originalname} exceeds 100MB limit.` });
+        // }
+        
+        const s3Key = `videos/${generateS3Key(file.originalname)}`;
+        const params = {
+          Bucket: S3_BUCKET,
+          Key: s3Key,
+          Body: file.buffer,
+          ContentType: file.mimetype,
         };
 
         const { Location } = await s3.upload(params).promise();

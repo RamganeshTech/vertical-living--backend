@@ -9,6 +9,8 @@ import { WorkerModel } from "../../../models/worker model/worker.model";
 import { RoleBasedRequest } from "../../../types/types";
 import redisClient from "../../../config/redisClient";
 import { getRoleByModel } from "../../../constants/BEconstants";
+import { arch } from "os";
+import { uploadToS3 } from "../../stage controllers/ordering material controller/pdfOrderHistory.controller";
 
 
 
@@ -34,7 +36,7 @@ const sourceModels: any = {
  * 1. Auto-generate HR Employee from existing model
  */
 export const syncEmployee = async ({ organizationId, empId, employeeModel, empRole, name, phoneNo, email, specificRole }: SyncEmployeeParams) => {
-  console.log("empId", empId, "employeeModel", employeeModel,)
+  // console.log("empId", empId, "employeeModel", employeeModel,)
   if (!empId || !employeeModel || !organizationId) {
     console.log("no empId or employeeModel or organiiaotnID is provided ")
     return
@@ -45,39 +47,77 @@ export const syncEmployee = async ({ organizationId, empId, employeeModel, empRo
 
   if (!SourceModel) {
     console.log("no model is created")
-
     return
   }
-  console.log("souce model", SourceModel)
   // const sourceData = await SourceModel.findById(empId).lean();
   // if (!sourceData) {
   //   return 
   // }
 
   // auto-generate preview fields (you can map more)
+  let newEmployee;
+  const isCreated = await EmployeeModel.findOne({ "personalInfo.email": email })
+  
+  if (!isCreated) {
+    console.log("getting into the if condition")
+    newEmployee = await EmployeeModel.create({
+      organizationId,
+      empId,
+      employeeModel: employeeModel,
+      empRole: empRole || "organization_staff",
+      personalInfo: {
+        empName: name,
+        email,
+        phoneNo: phoneNo,
+      },
+      employment: {
+        department: specificRole || null
+      }
+    });
+  }
+  else {
+    // newEmployee = await EmployeeModel.findOneAndUpdate({ "personalInfo.email": email }, {
+    //   empId: empId,
+    //   employeeModel: employeeModel,
+    //   empRole: empRole || "organization_staff",
+    //   employment: {
+    //     department: specificRole || null
+    //   }
+    // })
 
-  const newEmployee = await EmployeeModel.create({
-    organizationId,
-    empId,
-    employeeModel: employeeModel,
-    empRole: empRole || "organization_staff",
-    personalInfo: {
-      empName: name,
-      email,
-      phoneNo: phoneNo,
-    },
-    employment: {
-      department: specificRole || null
-    }
-  });
+    // console.log("getting into the else condition")
+    // console.log("email", email)
+    // console.log("pjoneNo", phoneNo)
+    // console.log("name", name)
+
+    newEmployee = await EmployeeModel.findOneAndUpdate(
+      { "personalInfo.email": email },
+      {
+        $set: {
+          empId: empId,
+          employeeModel: employeeModel,
+          empRole: empRole || "organization_staff",
+          "employment.department":specificRole ? specificRole : isCreated?.employment?.department || null,
+          "personalInfo.email": email ? email : isCreated?.personalInfo?.email || null,
+          "personalInfo.phoneNo": phoneNo ? phoneNo : isCreated?.personalInfo?.phoneNo || null,
+          "personalInfo.empName": name ? name : isCreated?.personalInfo?.empName || null
+        }
+      },
+      { new: true }
+    );
+
+  }
 
   await HREmployeeModel.findOneAndUpdate(
     { organizationId },
     {
-      $addToSet: { employeeDetails: newEmployee._id }, // avoids duplicates
+      $addToSet: { employeeDetails: newEmployee!._id }, // avoids duplicates
     },
     { upsert: true, new: true }
   );
+
+
+  console.log("newEdmployee", newEmployee)
 
 }
 
@@ -131,6 +171,75 @@ export const updateEmployee = async (req: RoleBasedRequest, res: Response): Prom
 };
 
 
+export const addEmployeeByHR = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+    // // Convert nested object to dot-notation
+    // // const updates = flattenObject(req.body);
+
+    // const newEmployee = await EmployeeModel.create(req.body);
+
+
+    // if (!newEmployee) {
+    //   return res.status(404).json({ ok: false, message: "Employee not found" });
+    // }
+
+    // res.status(200).json({
+    //   message: "Employee created successfully",
+    //   data: newEmployee,
+    //   ok: true,
+    // });
+
+    // Extract text data from form
+    const employeeData = JSON.parse(req.body.employeeData);
+    
+    // Process uploaded files
+    const documents: any[] = [];
+    
+    // Process each document type
+    if (req.files) {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      
+      // Process each file field
+      Object.entries(files).forEach(([fieldName, fileArray]) => {
+        fileArray.forEach((file:any) => {
+          // The file now has a 'location' property added by processUploadFiles
+          if (file.location) {
+            documents.push({
+              type: fieldName,
+              fileName: file.originalname,
+              fileUrl: file.location,
+              uploadedAt: new Date()
+            });
+          }
+        });
+      });
+    }
+    
+    // Add documents to employee data
+    employeeData.documents = documents;
+    
+    // Create employee
+    const newEmployee = await EmployeeModel.create(employeeData);
+
+    if (!newEmployee) {
+      return res.status(404).json({ ok: false, message: "Employee not found" });
+    }
+
+    res.status(200).json({
+      message: "Employee created successfully",
+      data: newEmployee,
+      ok: true,
+    });
+
+
+  }
+  catch (error: any) {
+    console.error("Error updating employee:", error);
+    res.status(500).json({ ok: false, message: "Internal server error" });
+  }
+}
+
+
 
 // Get/Search/Filter Employees with Pagination
 export const getAllEmployees = async (req: RoleBasedRequest, res: Response): Promise<any> => {
@@ -142,32 +251,32 @@ export const getAllEmployees = async (req: RoleBasedRequest, res: Response): Pro
     }
 
 
-  //   const employeesToSync = [
+    //   const employeesToSync = [
 
-  // {
-  //   empId: "6880a17ea790362c9f19525a",
-  //   name: "vivek",
-  //   email: "workwithvivek6@gmail.com",
-  //   phone: "6666666666",
-  // }
+    // {
+    //   empId: "6880a17ea790362c9f19525a",
+    //   name: "vivek",
+    //   email: "workwithvivek6@gmail.com",
+    //   phone: "6666666666",
+    // }
 
-  //   ];
+    //   ];
 
-  //   // Run syncEmployee in loop
-  //   for (const emp of employeesToSync) {
-  //     // await syncEmployee({
-  //     //   organizationId: "684a57015e439b678e8f6918",
-  //     //   empId: emp.empId,
-  //     //   employeeModel: "StaffModel",
-  //     //   empRole: "organization_staff",
-  //     //   name: emp.name,
-  //     //   phoneNo: emp.phone,
-  //     //   email: emp.email,
-  //     //   specificRole: ""
-  //     // });
-  //   }
+    //   // Run syncEmployee in loop
+    //   for (const emp of employeesToSync) {
+    //     // await syncEmployee({
+    //     //   organizationId: "684a57015e439b678e8f6918",
+    //     //   empId: emp.empId,
+    //     //   employeeModel: "StaffModel",
+    //     //   empRole: "organization_staff",
+    //     //   name: emp.name,
+    //     //   phoneNo: emp.phone,
+    //     //   email: emp.email,
+    //     //   specificRole: ""
+    //     // });
+    //   }
 
-   
+
     // Base filter
     const filters: any = { organizationId };
 

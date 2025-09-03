@@ -7,6 +7,7 @@ import bcrypt from 'bcrypt';
 import redisClient from "../../config/redisClient";
 import crypto from 'crypto';
 import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail";
+import { syncEmployee } from "../Department controllers/HRMain controller/HrMain.controllers";
 
 // Helper: Token generator
 const generateWorkerTokens = (workerId: string, role: string, workerName: string, projectId: string[]) => {
@@ -52,7 +53,7 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({ message: "Invitation link has expired.", ok: false });
       return;
     }
-    
+
     const exists = await WorkerModel.findOne({
       $or: [
         { email },
@@ -110,6 +111,21 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
       data: newWorker,
       ok: true
     });
+
+
+
+    syncEmployee({
+      organizationId,
+      empId: newWorker._id as Types.ObjectId,
+      employeeModel: "WorkerModel",
+      empRole: "nonorganization_staff",
+      name: newWorker.workerName,
+      phoneNo: newWorker.phoneNo!,
+      email: newWorker.email,
+      specificRole: ""
+    })
+      .catch((err) => console.log("syncEmployee error in Hr Dept from Worker model", err))
+
 
   } catch (error) {
     console.error("Register error:", error);

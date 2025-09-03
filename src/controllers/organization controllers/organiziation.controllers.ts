@@ -287,6 +287,9 @@ const inviteStaff = async (req: RoleBasedRequest, res: Response) => {
             ownerId: user?.ownerId || user?._id
         };
 
+
+
+        console.log("invite", invitationPayload)
         const encodedPayload = Buffer.from(JSON.stringify(invitationPayload)).toString("base64");
 
         const baseUrl = process.env.NODE_ENV === "development"
@@ -423,11 +426,18 @@ const removeCTOFromOrganization = async (req: RoleBasedRequest, res: Response) =
     const { CTOId, orgId } = req.query;
 
     try {
-        const CTO = await CTOModel.findByIdAndUpdate(
-            CTOId,
-            { $pull: { organizationId: orgId } },
-            { new: true }
+        // const CTO = await CTOModel.findByIdAndUpdate(
+        //     CTOId,
+        //     { $pull: { organizationId: orgId } },
+        //     { new: true }
+        // );
+
+
+        const [CTO, hremp] = await Promise.all([
+            CTOModel.findByIdAndDelete(CTOId, { new: true }),
+            EmployeeModel.findOneAndDelete({ empId: CTOId })]
         );
+
 
         if (!CTO) {
             res.status(404).json({ message: "CTO not found", ok: false });

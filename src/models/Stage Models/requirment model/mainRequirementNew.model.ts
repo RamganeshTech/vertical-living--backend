@@ -2,7 +2,7 @@ import mongoose, { Schema, Types } from "mongoose";
 import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 export interface Iupload {
-    type?: "image" | " pdf",
+    type?: "image" | "pdf"  | "video",
     url: string,
     uploadedAt: Date,
     originalName: string,
@@ -47,7 +47,7 @@ export interface RequirementRooms {
 }
 
 export const uploadSchema = new Schema({
-    type: { type: String, enum: ["image", "pdf"] },
+    type: { type: String, enum: ["image", "pdf", "video"] },
     url: { type: String, },
     originalName: String,
     uploadedAt: { type: Date, default: new Date() }

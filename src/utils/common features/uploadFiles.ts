@@ -29,9 +29,21 @@ export const uploadGenericController = (ModelRef: Model<any>) => async (req: Req
     }
 
     for (const file of files) {
-      const fileType = file.mimetype.includes("pdf") ? "pdf" : "image";
+      // const fileType = file.mimetype.includes("pdf") ? "pdf" : "image";
 
         // console.log("✅ After upload:", files.map(f => ({ original: f.originalname, location: (f as any).location , file:f})));
+
+         let fileType: "image" | "pdf" | "video";
+    
+    if (file.mimetype === "application/pdf") {
+        fileType = "pdf";
+    } else if (file.mimetype.startsWith("image/")) {
+        fileType = "image";
+    } else if (file.mimetype.startsWith("video/")) {
+        fileType = "video";
+    }else{
+      fileType = "image"
+    }
 
       (doc as any).uploads.push({
         type: fileType,

@@ -8,6 +8,7 @@ import redisClient from "../../config/redisClient";
 import crypto from 'crypto';
 import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail";
 import { syncEmployee } from "../Department controllers/HRMain controller/HrMain.controllers";
+import { EmployeeModel } from "../../models/Department Models/HR Model/HRMain.model";
 
 // POST /api/staff/register
 const registerStaff = async (req: Request, res: Response) => {
@@ -87,16 +88,22 @@ const registerStaff = async (req: Request, res: Response) => {
         await redisClient.del(`getusers:${role}:${organizationId}`)
 
         res.status(201).json({ message: "Staff registered successfully", data: staff, ok: true });
-        syncEmployee({
-            organizationId,
-            empId: staff._id,
-            employeeModel: "StaffModel",
-            empRole: "organization_staff", name: staff.staffName,
-            phoneNo: staff.phoneNo,
-            email: staff.email,
-            specificRole:specificRole
-        })
-            .catch(err => console.log("syncEmployee error in Hr Dept", err))
+
+
+       
+            syncEmployee({
+                organizationId,
+                empId: staff._id,
+                employeeModel: "StaffModel",
+                empRole: "organization_staff", 
+                name: staff.staffName,
+                phoneNo: staff.phoneNo,
+                email: staff.email,
+                specificRole: null
+            })
+                .catch(err => console.log("syncEmployee error in Hr Dept from Staff model", err))
+        
+
     } catch (error) {
         if (error instanceof Error) {
             console.error("Staff registration failed:", error);

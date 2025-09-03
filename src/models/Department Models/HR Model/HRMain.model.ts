@@ -8,7 +8,7 @@ export interface IPersonalInfo {
   email:string,
   phoneNo:string,
   gender?: "male" | "female" | "other";
-  maritalStatus?: "single" | "married" | "divorced" | "widowed";
+  maritalStatus?: "unmarried" | "married" | "divorced" | "widowed";
   address?: {
     street?: string;
     city?: string;
@@ -129,10 +129,12 @@ const EmployeeSchema = new Schema<IEmployee>({
   empId: {               // going to take the empId from the client model, worker model, cto models _id propery value will be stored
     type: mongoose.Schema.Types.ObjectId,
     refPath: 'employeeModel',
+    default:null
   },
   employeeModel: {
     type: String,
-    enum: ["UserModel", "StaffModel", "CTOModel", "WorkerModel"],
+    enum: ["UserModel", "StaffModel", "CTOModel", "WorkerModel", null],
+    default: null,
   },
   empRole: { type: String, default: null },
   personalInfo: { type: PersonalInfoSchema, default: {} },

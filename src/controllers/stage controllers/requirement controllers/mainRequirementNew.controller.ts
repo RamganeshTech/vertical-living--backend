@@ -574,7 +574,20 @@ export const uploadRequirementSectionFilesController = async (
 
         // Push new uploads
         for (const file of files) {
-            const fileType = file.mimetype.includes("pdf") ? "pdf" : "image";
+            // const fileType = file.mimetype.includes("pdf") ? "pdf" : "image";
+
+             let fileType: "image" | "pdf" | "video";
+    
+    if (file.mimetype === "application/pdf") {
+        fileType = "pdf";
+    } else if (file.mimetype.startsWith("image/")) {
+        fileType = "image";
+    } else if (file.mimetype.startsWith("video/")) {
+        fileType = "video";
+    }else{
+      fileType = "image"
+    }
+    
             const location =
                 (file as any).transforms?.[0]?.location || (file as any).location;
 
