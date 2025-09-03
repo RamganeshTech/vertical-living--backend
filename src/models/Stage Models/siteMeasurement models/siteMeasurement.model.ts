@@ -5,7 +5,7 @@ import procurementLogger from '../../../Plugins/ProcurementDeptPluggin';
 
 
 export interface Iupload {
-    type: "image" | "pdf",
+    type: "image" | "pdf" | "video",
     url: string,
     uploadedAt: Date,
     originalName: string,
@@ -53,7 +53,7 @@ export interface ISiteMeasurement extends Document {
 
 
 const uploadSchema = new Schema({
-    type: { type: String, enum: ["image", "pdf"] },
+    type: { type: String, enum: ["image", "pdf", "video"] },
     url: { type: String, },
     originalName: String,
     categoryName: {type:String, default:null},
