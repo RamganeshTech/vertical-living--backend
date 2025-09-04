@@ -72,6 +72,7 @@ import ProjectModel from './models/project model/project.model';
 import  jwt  from 'jsonwebtoken';
 import { RoleUserPayload } from './types/types';
 import { SocketService } from './config/socketService';
+import LogisticsRoutes from './routers/Department Routes/Logistics Routes/logistics.routes';
 
 
 
@@ -261,6 +262,9 @@ app.use('/api/currentactivestage', currentActiveStage)
 // PROCUREMENT API
 app.use('/api/procurement', procurementRoutes)
 app.use('/api/department/hr', HRRoutes)
+app.use('/api/department/logistics', LogisticsRoutes)
+
+
 
 
 // SHORTLIST API
