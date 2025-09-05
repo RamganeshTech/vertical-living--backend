@@ -636,7 +636,7 @@ import { LogisticsShipmentModel } from "../../../models/Department Models/Logist
 export const createShipment = async (req: Request, res: Response): Promise<any> => {
     try {
 
-        const { projectId, organizationId ,projectName} = req.params;
+        const { projectId, organizationId, projectName } = req.params;
 
         const {
             // shipmentType,
@@ -664,31 +664,31 @@ export const createShipment = async (req: Request, res: Response): Promise<any> 
 
 
 
-    const prefix = projectName.substring(0, 3).toLowerCase();
+        const prefix = projectName.substring(0, 3).toLowerCase();
 
 
 
-      const existingShipments = await LogisticsShipmentModel.find({ organizationId });
+        const existingShipments = await LogisticsShipmentModel.find({ organizationId });
 
-    const existingNumbers = new Set<string>();
+        const existingNumbers = new Set<string>();
 
-    for (const s of existingShipments) {
-      if (s.shipmentNumber?.startsWith(prefix)) {
-        const parts = s.shipmentNumber.split('-');
-        if (parts.length === 2 && /^\d+$/.test(parts[1])) {
-          existingNumbers.add(parts[1]);
+        for (const s of existingShipments) {
+            if (s.shipmentNumber?.startsWith(prefix)) {
+                const parts = s.shipmentNumber.split('-');
+                if (parts.length === 2 && /^\d+$/.test(parts[1])) {
+                    existingNumbers.add(parts[1]);
+                }
+            }
         }
-      }
-    }
 
-    // Step 3: Find next available number
-    let nextNumber = 1;
-    while (existingNumbers.has(nextNumber.toString().padStart(3, '0'))) {
-      nextNumber++;
-    }
+        // Step 3: Find next available number
+        let nextNumber = 1;
+        while (existingNumbers.has(nextNumber.toString().padStart(3, '0'))) {
+            nextNumber++;
+        }
 
-    const shipmentNumber = `${prefix}-${nextNumber.toString().padStart(3, '0')}`;
-    
+        const shipmentNumber = `${prefix}-${nextNumber.toString().padStart(3, '0')}`;
+
         const {
             vehicleNumber,
             vehicleType,
@@ -745,7 +745,7 @@ export const updateShipment = async (req: Request, res: Response): Promise<any> 
             status,
             scheduledDate,
             // assignedTo,
-             actualDeliveryTime,
+            actualDeliveryTime,
             actualPickupTime,
             notes
         } = req.body;
@@ -840,14 +840,31 @@ export const deleteShipment = async (req: Request, res: Response): Promise<any> 
 
 export const getAllShipments = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { organizationId } = req.query;
+        const { organizationId, status, scheduledDate, projectId } = req.query;
 
         if (!organizationId) {
             return res.status(400).json({ ok: false, message: "Missing organizationId" });
         }
 
+        const filters: any = { organizationId };
+
+        if (status) filters.status = status;
+        if (projectId) filters.projectId = projectId;
+
+        // ✅ Handle scheduledDate (exact date match or range)
+        if (scheduledDate) {
+            const date = new Date(scheduledDate as string);
+
+            // Create a range for that day: start -> end
+            const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+            const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+
+            filters.scheduledDate = { $gte: startOfDay, $lte: endOfDay };
+        }
+
+
         // Step 1: Find the LogisticsMain document for the organization
-        const logisticsMain = await LogisticsShipmentModel.find({ organizationId })
+        const logisticsMain = await LogisticsShipmentModel.find(filters)
 
         if (!logisticsMain) {
             return res.status(200).json({ ok: false, message: "No logistics data found", data: [] });
@@ -865,4 +882,19 @@ export const getAllShipments = async (req: Request, res: Response): Promise<any>
     }
 };
 
+export const getSingleLogisticsShipment = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { shipmentId } = req.params;
 
+        const shipment = await LogisticsShipmentModel.findById(shipmentId)
+
+        if (!shipment) {
+            return res.status(404).json({ message: "Shipment not found", ok: false });
+        }
+
+        res.status(200).json({ data: shipment, ok: true });
+    } catch (error: any) {
+        console.error("Error fetching shipment:", error);
+        res.status(500).json({ message: "Internal server error", ok: false });
+    }
+};

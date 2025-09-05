@@ -1,6 +1,6 @@
 // logistics.routes.ts
 import express from "express";
-import { createShipment,  deleteShipment,  getAllShipments,  updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
+import { createShipment,  deleteShipment,  getAllShipments,  getSingleLogisticsShipment,  updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 
 const LogisticsRoutes = express.Router();
@@ -16,6 +16,7 @@ LogisticsRoutes.post("/shipment/create/:projectId/:organizationId/:projectName",
 LogisticsRoutes.put("/shipment/update/:projectId/:organizationId/:shipmentId", multiRoleAuthMiddleware("owner", "CTO", "staff"), updateShipment);
 LogisticsRoutes.delete("/shipment/delete/:organizationId/:shipmentId", multiRoleAuthMiddleware("owner", "CTO", "staff"), deleteShipment);
 LogisticsRoutes.get("/shipment/getshipment",  multiRoleAuthMiddleware("owner", "CTO", "staff"),getAllShipments);
+LogisticsRoutes.get("/shipment/getsingle/:shipmentId",  multiRoleAuthMiddleware("owner", "CTO", "staff"),getSingleLogisticsShipment);
 
 
 
