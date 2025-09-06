@@ -52,19 +52,19 @@ export const LogisticsShipmentSchema = new Schema<ILogisticsShipment>({
   organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
   
   projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel" },
-  shipmentNumber: String,
+  shipmentNumber: {type:String, default: null },
   // shipmentType: { type: String, enum: ["delivery", "pickup", "transfer"] },
   vehicleDetails: { type:LogisticsVehicleSchema, default: null },
   origin: {
-    address: String,
-    contactPerson: String,
-    contactPhone: String,
+    address: {type: String, default:null},
+    contactPerson: {type: String, default:null},
+    contactPhone: {type: String, default:null},
     // coordinates: [Number]
   },
   destination: {
-    address: String,
-    contactPerson: String,
-    contactPhone: String,
+    address: {type: String, default:null},
+    contactPerson: {type: String, default:null},
+    contactPhone: {type: String, default:null},
     // coordinates: [Number]
   },
   items: [{
@@ -75,13 +75,13 @@ export const LogisticsShipmentSchema = new Schema<ILogisticsShipment>({
   }],
   status: {
     type: String,
-    enum: ["pending", "assigned", "in_transit", "delivered", "cancelled"],
+    enum: ["pending", "assigned", "in_transit", "delivered", "cancelled", null],
     default: "pending"
   },
-  scheduledDate: Date,
-  actualPickupTime: Date,
-  actualDeliveryTime: Date,
-  notes: String
+  scheduledDate: {type: Date, default:null},
+  actualPickupTime: {type: Date, default:null},
+  actualDeliveryTime: {type: Date, default:null},
+  notes: {type: String, default:null}
 }, { _id: true, timestamps: true });
 
 

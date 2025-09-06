@@ -4,9 +4,9 @@ import { getProcurementAllLogs, getProcurementLogsFiltered } from "../../../cont
 const procurementRoutes = Router();
 
 // Get all logs for an organization
-procurementRoutes.get("/:organizationId", getProcurementAllLogs);
+// procurementRoutes.get("/:organizationId", getProcurementAllLogs);
 
-// Get filtered logs
-procurementRoutes.get("/:organizationId/filter", getProcurementLogsFiltered);
+// // Get filtered logs
+// procurementRoutes.get("/:organizationId/filter", getProcurementLogsFiltered);
 
 export default procurementRoutes;

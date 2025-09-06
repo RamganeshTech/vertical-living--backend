@@ -632,6 +632,90 @@ import { LogisticsShipmentModel } from "../../../models/Department Models/Logist
 // NEW OCNTORLLERS 
 
 
+export const createShipmentUtil = async ({ organizationId, projectId,
+    projectName,
+    vehicleDetails,
+    origin={},
+    destination ={},
+    items,
+    status,
+    scheduledDate= new Date(),
+    notes,
+    actualDeliveryTime,
+    actualPickupTime
+}: {
+    organizationId: string | Types.ObjectId;
+    projectId: string | Types.ObjectId;
+    projectName: string;
+    vehicleDetails?: any; // optional
+    origin?: any;
+    destination?: any;
+    items?: any[];
+    status?: string;
+    scheduledDate?: Date;
+    notes?: string;
+    actualDeliveryTime?: Date;
+    actualPickupTime?: Date;
+}) => {
+    const prefix = projectName.substring(0, 3).toLowerCase();
+
+
+
+    const existingShipments = await LogisticsShipmentModel.find({ organizationId });
+
+    const existingNumbers = new Set<string>();
+
+    for (const s of existingShipments) {
+        if (s.shipmentNumber?.startsWith(prefix)) {
+            const parts = s.shipmentNumber.split('-');
+            if (parts.length === 2 && /^\d+$/.test(parts[1])) {
+                existingNumbers.add(parts[1]);
+            }
+        }
+    }
+
+    // Step 3: Find next available number
+    let nextNumber = 1;
+    while (existingNumbers.has(nextNumber.toString().padStart(3, '0'))) {
+        nextNumber++;
+    }
+
+    const shipmentNumber = `${prefix}-${nextNumber.toString().padStart(3, '0')}`;
+
+    // const {
+    //     vehicleNumber,
+    //     vehicleType,
+    //     driver,
+    //     driverCharge,
+    //     isAvailable,
+    //     currentLocation,
+    // } = vehicleDetails;
+
+    // // Minimum fields check
+    // if (!vehicleNumber) {
+    //     throw new Error("vehicleNumber  is required");
+    // }
+
+
+    // Create Shipment with the resolved vehicleId
+    const shipment = await LogisticsShipmentModel.create({
+        organizationId,
+        projectId,
+        shipmentNumber,
+        vehicleDetails: vehicleDetails,
+        origin,
+        destination,
+        items,
+        status,
+        scheduledDate,
+        actualDeliveryTime,
+        actualPickupTime,
+        notes
+    });
+
+    return shipment
+}
+
 
 export const createShipment = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -661,66 +745,23 @@ export const createShipment = async (req: Request, res: Response): Promise<any> 
         //   return res.status(400).json({ ok: false, message: "Invalid shipmentType" });
         // }
 
-
-
-
-        const prefix = projectName.substring(0, 3).toLowerCase();
-
-
-
-        const existingShipments = await LogisticsShipmentModel.find({ organizationId });
-
-        const existingNumbers = new Set<string>();
-
-        for (const s of existingShipments) {
-            if (s.shipmentNumber?.startsWith(prefix)) {
-                const parts = s.shipmentNumber.split('-');
-                if (parts.length === 2 && /^\d+$/.test(parts[1])) {
-                    existingNumbers.add(parts[1]);
-                }
-            }
-        }
-
-        // Step 3: Find next available number
-        let nextNumber = 1;
-        while (existingNumbers.has(nextNumber.toString().padStart(3, '0'))) {
-            nextNumber++;
-        }
-
-        const shipmentNumber = `${prefix}-${nextNumber.toString().padStart(3, '0')}`;
-
-        const {
-            vehicleNumber,
-            vehicleType,
-            driver,
-            driverCharge,
-            isAvailable,
-            currentLocation,
-        } = vehicleDetails;
-
-        // Minimum fields check
-        if (!vehicleNumber) {
-            return res.status(400).json({ ok: false, message: "vehicleNumber and vehicleType required for new vehicle" });
-        }
-
-
-        // Create Shipment with the resolved vehicleId
-        const shipment = await LogisticsShipmentModel.create({
+        const shipment = await createShipmentUtil({
             organizationId,
             projectId,
-            shipmentNumber,
-            // shipmentType,
-            vehicleDetails: vehicleDetails,
+            projectName,
+            vehicleDetails,
             origin,
             destination,
             items,
             status,
             scheduledDate,
-            // assignedTo,
-            actualDeliveryTime: actualDeliveryTime || new Date(),
-            actualPickupTime: actualPickupTime || new Date(),
-            notes
-        });
+            notes,
+            actualDeliveryTime,
+            actualPickupTime
+        })
+
+
+
 
         res.status(201).json({ ok: true, data: shipment });
     }

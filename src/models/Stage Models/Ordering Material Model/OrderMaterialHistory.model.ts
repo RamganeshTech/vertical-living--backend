@@ -169,7 +169,7 @@ const TimerSchema = new Schema<IOrderHistorytimer>({
 
 
 
-const DeliveryLocationDetailsSchema = new Schema<OrderMaterialSiteDetail>({
+export const DeliveryLocationDetailsSchema = new Schema<OrderMaterialSiteDetail>({
     siteName: String,
     address: String,
     siteSupervisor: String,
@@ -178,7 +178,7 @@ const DeliveryLocationDetailsSchema = new Schema<OrderMaterialSiteDetail>({
 
 
 
-const ShopDetailsSchema = new Schema<OrderMaterialShopDetails>({
+export const ShopDetailsSchema = new Schema<OrderMaterialShopDetails>({
     shopName: String,
     address: String,
     contactPerson: String,
@@ -194,7 +194,7 @@ const DimentionSchema = new Schema<IOrderDimention>({
 })
 
 
-const pdfGeneratorSchema = new Schema<IPdfGenerator>({
+export const pdfGeneratorSchema = new Schema<IPdfGenerator>({
     url: { type: String, default: null },
     refUniquePdf: { type: String, default: null },
     pdfName: { type: String, default: null },
@@ -203,7 +203,7 @@ const pdfGeneratorSchema = new Schema<IPdfGenerator>({
 
 
 
-const OrderSubItemSchema = new Schema<OrderSubItems>({
+export const OrderSubItemSchema = new Schema<OrderSubItems>({
     subItemName: { type: String, default: null },
     refId: { type: String, default: null },
     quantity: { type: Number, default: null },

@@ -83,8 +83,8 @@ export interface ILogisticsVehicle {
 
 export const LogisticsVehicleSchema = new Schema<ILogisticsVehicle>({
   // organizationId: {type: Schema.Types.ObjectId, ref:"OrganizationModel"},
-  vehicleNumber: String,
-  vehicleType: { type: String, enum: ["truck", "van", "car", "bike", "tempo", "container"] },
+  vehicleNumber: {type:String, default: null},
+  vehicleType: { type: String, enum: ["truck", "van", "car", "bike", "tempo", "container", null], default:null },
   
   driver: {
     name: {type:String, default:null},

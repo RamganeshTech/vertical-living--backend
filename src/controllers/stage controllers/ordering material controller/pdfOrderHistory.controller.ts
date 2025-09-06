@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import { ok } from 'assert';
 import mongoose from 'mongoose';
 import { CommonOrderHistoryModel } from '../../../models/Stage Models/Ordering Material Model/CommonOrderMaterialHistory Model/commonOrderMaterialHistory.model';
+import ProcurementModelNew from '../../../models/Department Models/ProcurementNew Model/procurementNew.model';
 
 export const COMPANY_LOGO = "https://th.bing.com/th/id/OIP.Uparc9uI63RDb82OupdPvwAAAA?w=80&h=80&c=1&bgcl=c77779&r=0&o=6&dpr=1.3&pid=ImgRC";
 export const COMPANY_NAME = "Vertical Living";
@@ -30,7 +31,7 @@ const uploadToS3 = async (pdfBytes: any, fileName: any) => {
 };
 
 // Main PDF generation function
-const generateOrderHistoryPDF = async (projectId: string) => {
+const generateOrderHistoryPDF = async (projectId: string, organizationId: string) => {
     try {
         // Fetch order history data
         const orderHistory = await OrderMaterialHistoryModel.findOne({ projectId })
@@ -534,8 +535,63 @@ const generateOrderHistoryPDF = async (projectId: string) => {
 
         console.log("orderHistory.generatedLink", orderHistory.generatedLink)
 
-         // Clear subItems from each selectedUnit
-         orderHistory.selectedUnits.forEach(unit => {
+        // const ProcurementNewItems: any[] = [];
+
+        // // Flatten subItems into one array
+        // orderHistory.selectedUnits.forEach(unit => {
+        //     unit.subItems.forEach((subItem:any) => {
+        //         const { _id, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
+        //         ProcurementNewItems.push({
+        //             ...rest,
+        //             _id: new mongoose.Types.ObjectId() // always refresh ID
+        //         });
+        //     });
+        // });
+
+
+        const ProcurementNewItems: any[] = [];
+        const subItemMap: Record<string, any> = {}; // key = subItemName
+
+        orderHistory.selectedUnits.forEach(unit => {
+            unit.subItems.forEach((subItem: any) => {
+                const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
+
+                const name = rest.subItemName?.trim().toLowerCase() || "";
+                const unitKey = rest.unit?.trim().toLowerCase() || "";
+                const key = `${name}__${unitKey}`; // combine name + unit
+
+                if (key) {
+                    if (subItemMap[key]) {
+                        // Already exists with same name+unit → add quantity
+                        subItemMap[key].quantity += rest.quantity || 0;
+                    } else {
+                        // Create fresh entry
+                        subItemMap[key] = {
+                            ...rest,
+                            quantity: rest.quantity || 0,
+                            _id: new mongoose.Types.ObjectId() // always refresh ID
+                        };
+                    }
+                }
+            });
+        });
+
+        // Convert map back to array
+        Object.values(subItemMap).forEach((item: any) => ProcurementNewItems.push(item));
+
+        // console.log("procurement", ProcurementNewItems)
+        await ProcurementModelNew.create({
+            organizationId,
+            projectId: projectId,
+            shopDetails: orderHistory.shopDetails,
+            deliveryLocationDetails: orderHistory.deliveryLocationDetails,
+            selectedUnits: ProcurementNewItems,
+            refPdfId: refUniquePdf,
+            totalCost: 0
+        })
+        // Clear subItems from each selectedUnit
+
+        orderHistory.selectedUnits.forEach(unit => {
             unit.subItems = [];
         });
 
@@ -709,357 +765,357 @@ export const gerneateCommonOrdersPdf = async (id: string) => {
             });
         }
 
-            yPosition -= 30; // move down for next content
+        yPosition -= 30; // move down for next content
 
-            // Project details
-            if (orderHistory.projectName) {
-                const projectText = `Project: ${orderHistory.projectName}`;
-                page.drawText(projectText, {
-                    x: 50,
-                    y: yPosition,
-                    size: 16,
-                    font: boldFont,
-                    color: rgb(0.3, 0.3, 0.3),
-                });
-                yPosition -= 40;
+        // Project details
+        if (orderHistory.projectName) {
+            const projectText = `Project: ${orderHistory.projectName}`;
+            page.drawText(projectText, {
+                x: 50,
+                y: yPosition,
+                size: 16,
+                font: boldFont,
+                color: rgb(0.3, 0.3, 0.3),
+            });
+            yPosition -= 40;
+        }
+
+
+
+        // Shop Details Section
+        // if (orderHistory.shopDetails) {
+        //     page.drawText("Shop Details:", {
+        //         x: 50,
+        //         y: yPosition,
+        //         size: 14,
+        //         font: boldFont,
+        //         color: rgb(0.2, 0.2, 0.2),
+        //     });
+        //     yPosition -= 20;
+
+        //     if (orderHistory.shopDetails.shopName) {
+        //         page.drawText(`Shop Name: ${orderHistory.shopDetails.shopName}`, {
+        //             x: 50,
+        //             y: yPosition,
+        //             size: 10,
+        //             font: regularFont,
+        //             color: rgb(0.3, 0.3, 0.3),
+        //         });
+        //         yPosition -= 15;
+        //     }
+
+        //     if (orderHistory.shopDetails.address) {
+        //         page.drawText(`Address: ${orderHistory.shopDetails.address}`, {
+        //             x: 50,
+        //             y: yPosition,
+        //             size: 10,
+        //             font: regularFont,
+        //             color: rgb(0.3, 0.3, 0.3),
+        //         });
+        //         yPosition -= 15;
+        //     }
+
+        //     if (orderHistory.shopDetails.contactPerson) {
+        //         page.drawText(`Contact Person: ${orderHistory.shopDetails.contactPerson}`, {
+        //             x: 50,
+        //             y: yPosition,
+        //             size: 10,
+        //             font: regularFont,
+        //             color: rgb(0.3, 0.3, 0.3),
+        //         });
+        //         yPosition -= 15;
+        //     }
+
+        //     if (orderHistory.shopDetails.phoneNumber) {
+        //         page.drawText(`Phone: ${orderHistory.shopDetails.phoneNumber}`, {
+        //             x: 50,
+        //             y: yPosition,
+        //             size: 10,
+        //             font: regularFont,
+        //             color: rgb(0.3, 0.3, 0.3),
+        //         });
+        //         yPosition -= 15;
+        //     }
+        //     yPosition -= 10;
+        // }
+
+        // Delivery Location Details Section
+        // if (orderHistory.deliveryLocationDetails) {
+        //     page.drawText("Delivery Location:", {
+        //         x: 50,
+        //         y: yPosition,
+        //         size: 14,
+        //         font: boldFont,
+        //         color: rgb(0.2, 0.2, 0.2),
+        //     });
+        //     yPosition -= 20;
+
+        //     if (orderHistory.deliveryLocationDetails.siteName) {
+        //         page.drawText(`Site Name: ${orderHistory.deliveryLocationDetails.siteName}`, {
+        //             x: 50,
+        //             y: yPosition,
+        //             size: 10,
+        //             font: regularFont,
+        //             color: rgb(0.3, 0.3, 0.3),
+        //         });
+        //         yPosition -= 15;
+        //     }
+
+        //     if (orderHistory.deliveryLocationDetails.address) {
+        //         page.drawText(`Site Address: ${orderHistory.deliveryLocationDetails.address}`, {
+        //             x: 50,
+        //             y: yPosition,
+        //             size: 10,
+        //             font: regularFont,
+        //             color: rgb(0.3, 0.3, 0.3),
+        //         });
+        //         yPosition -= 15;
+        //     }
+
+        //     if (orderHistory.deliveryLocationDetails.siteSupervisor) {
+        //         page.drawText(`Site Supervisor: ${orderHistory.deliveryLocationDetails.siteSupervisor}`, {
+        //             x: 50,
+        //             y: yPosition,
+        //             size: 10,
+        //             font: regularFont,
+        //             color: rgb(0.3, 0.3, 0.3),
+        //         });
+        //         yPosition -= 15;
+        //     }
+
+        //     if (orderHistory.deliveryLocationDetails.phoneNumber) {
+        //         page.drawText(`Contact: ${orderHistory.deliveryLocationDetails.phoneNumber}`, {
+        //             x: 50,
+        //             y: yPosition,
+        //             size: 10,
+        //             font: regularFont,
+        //             color: rgb(0.3, 0.3, 0.3),
+        //         });
+        //         yPosition -= 15;
+        //     }
+        //     yPosition -= 20;
+        // }
+
+
+        // Process each unit and its sub-items
+        let serialNumber = 1;
+
+        for (const unit of orderHistory?.selectedUnits) {
+
+
+            //no room condition - only show unit if it has subitems
+            if (!unit?.subItems || unit?.subItems?.length === 0) {
+                continue; // Skip units without subitems
             }
 
-
-
-            // Shop Details Section
-            // if (orderHistory.shopDetails) {
-            //     page.drawText("Shop Details:", {
-            //         x: 50,
-            //         y: yPosition,
-            //         size: 14,
-            //         font: boldFont,
-            //         color: rgb(0.2, 0.2, 0.2),
-            //     });
-            //     yPosition -= 20;
-
-            //     if (orderHistory.shopDetails.shopName) {
-            //         page.drawText(`Shop Name: ${orderHistory.shopDetails.shopName}`, {
-            //             x: 50,
-            //             y: yPosition,
-            //             size: 10,
-            //             font: regularFont,
-            //             color: rgb(0.3, 0.3, 0.3),
-            //         });
-            //         yPosition -= 15;
-            //     }
-
-            //     if (orderHistory.shopDetails.address) {
-            //         page.drawText(`Address: ${orderHistory.shopDetails.address}`, {
-            //             x: 50,
-            //             y: yPosition,
-            //             size: 10,
-            //             font: regularFont,
-            //             color: rgb(0.3, 0.3, 0.3),
-            //         });
-            //         yPosition -= 15;
-            //     }
-
-            //     if (orderHistory.shopDetails.contactPerson) {
-            //         page.drawText(`Contact Person: ${orderHistory.shopDetails.contactPerson}`, {
-            //             x: 50,
-            //             y: yPosition,
-            //             size: 10,
-            //             font: regularFont,
-            //             color: rgb(0.3, 0.3, 0.3),
-            //         });
-            //         yPosition -= 15;
-            //     }
-
-            //     if (orderHistory.shopDetails.phoneNumber) {
-            //         page.drawText(`Phone: ${orderHistory.shopDetails.phoneNumber}`, {
-            //             x: 50,
-            //             y: yPosition,
-            //             size: 10,
-            //             font: regularFont,
-            //             color: rgb(0.3, 0.3, 0.3),
-            //         });
-            //         yPosition -= 15;
-            //     }
-            //     yPosition -= 10;
-            // }
-
-            // Delivery Location Details Section
-            // if (orderHistory.deliveryLocationDetails) {
-            //     page.drawText("Delivery Location:", {
-            //         x: 50,
-            //         y: yPosition,
-            //         size: 14,
-            //         font: boldFont,
-            //         color: rgb(0.2, 0.2, 0.2),
-            //     });
-            //     yPosition -= 20;
-
-            //     if (orderHistory.deliveryLocationDetails.siteName) {
-            //         page.drawText(`Site Name: ${orderHistory.deliveryLocationDetails.siteName}`, {
-            //             x: 50,
-            //             y: yPosition,
-            //             size: 10,
-            //             font: regularFont,
-            //             color: rgb(0.3, 0.3, 0.3),
-            //         });
-            //         yPosition -= 15;
-            //     }
-
-            //     if (orderHistory.deliveryLocationDetails.address) {
-            //         page.drawText(`Site Address: ${orderHistory.deliveryLocationDetails.address}`, {
-            //             x: 50,
-            //             y: yPosition,
-            //             size: 10,
-            //             font: regularFont,
-            //             color: rgb(0.3, 0.3, 0.3),
-            //         });
-            //         yPosition -= 15;
-            //     }
-
-            //     if (orderHistory.deliveryLocationDetails.siteSupervisor) {
-            //         page.drawText(`Site Supervisor: ${orderHistory.deliveryLocationDetails.siteSupervisor}`, {
-            //             x: 50,
-            //             y: yPosition,
-            //             size: 10,
-            //             font: regularFont,
-            //             color: rgb(0.3, 0.3, 0.3),
-            //         });
-            //         yPosition -= 15;
-            //     }
-
-            //     if (orderHistory.deliveryLocationDetails.phoneNumber) {
-            //         page.drawText(`Contact: ${orderHistory.deliveryLocationDetails.phoneNumber}`, {
-            //             x: 50,
-            //             y: yPosition,
-            //             size: 10,
-            //             font: regularFont,
-            //             color: rgb(0.3, 0.3, 0.3),
-            //         });
-            //         yPosition -= 15;
-            //     }
-            //     yPosition -= 20;
-            // }
-
-
-            // Process each unit and its sub-items
-            let serialNumber = 1;
-
-            for (const unit of orderHistory?.selectedUnits) {
-
-
-                //no room condition - only show unit if it has subitems
-                if (!unit?.subItems || unit?.subItems?.length === 0) {
-                    continue; // Skip units without subitems
-                }
-
-                // Unit name heading
-                if (unit.unitName) {
-                    page.drawText(`Unit: ${unit.unitName}`, {
-                        x: 50,
-                        y: yPosition,
-                        size: 14,
-                        font: boldFont,
-                        color: rgb(0.2, 0.2, 0.2),
-                    });
-                    yPosition -= 30;
-                }
-
-                // Check if we need a new page
-                if (yPosition < 150) {
-                    page = pdfDoc.addPage([595, 842]);
-                    yPosition = height - 50;
-                }
-
-                // Table headers
-                const tableStartY = yPosition;
-                const rowHeight = 25;
-                // const columnWidths = [60, , 300, 80, 80]; // S.No, Material Item, Quantity, Unit
-                // const columnPositions = [50, 110, 410, 490];
-
-                const columnWidths = [50, 100, 200, 80, 50];
-                const columnPositions = [
-                    50,  // S.No
-                    100, // Ref ID
-                    180, // Material Item
-                    420, // Quantity
-                    500  // Unit
-                ];
-                // Draw table header background
-                page.drawRectangle({
-                    x: 45,
-                    y: yPosition - 5,
-                    width: 500,
-                    height: rowHeight,
-                    color: rgb(0.9, 0.9, 0.9),
+            // Unit name heading
+            if (unit.unitName) {
+                page.drawText(`Unit: ${unit.unitName}`, {
+                    x: 50,
+                    y: yPosition,
+                    size: 14,
+                    font: boldFont,
+                    color: rgb(0.2, 0.2, 0.2),
                 });
+                yPosition -= 30;
+            }
 
-                // Table headers
-                const headers = ['S.No', 'Ref ID', 'Material Item', 'Quantity', 'Unit'];
-                headers.forEach((header, index) => {
-                    page.drawText(header, {
-                        x: columnPositions[index],
-                        y: yPosition,
-                        size: 12,
-                        font: boldFont,
-                        color: rgb(0.2, 0.2, 0.2),
-                    });
+            // Check if we need a new page
+            if (yPosition < 150) {
+                page = pdfDoc.addPage([595, 842]);
+                yPosition = height - 50;
+            }
+
+            // Table headers
+            const tableStartY = yPosition;
+            const rowHeight = 25;
+            // const columnWidths = [60, , 300, 80, 80]; // S.No, Material Item, Quantity, Unit
+            // const columnPositions = [50, 110, 410, 490];
+
+            const columnWidths = [50, 100, 200, 80, 50];
+            const columnPositions = [
+                50,  // S.No
+                100, // Ref ID
+                180, // Material Item
+                420, // Quantity
+                500  // Unit
+            ];
+            // Draw table header background
+            page.drawRectangle({
+                x: 45,
+                y: yPosition - 5,
+                width: 500,
+                height: rowHeight,
+                color: rgb(0.9, 0.9, 0.9),
+            });
+
+            // Table headers
+            const headers = ['S.No', 'Ref ID', 'Material Item', 'Quantity', 'Unit'];
+            headers.forEach((header, index) => {
+                page.drawText(header, {
+                    x: columnPositions[index],
+                    y: yPosition,
+                    size: 12,
+                    font: boldFont,
+                    color: rgb(0.2, 0.2, 0.2),
                 });
+            });
 
-                yPosition -= rowHeight + 5;
+            yPosition -= rowHeight + 5;
 
-                // Table content - sub items
-                if (unit.subItems && unit.subItems.length > 0) {
-                    unit.subItems.forEach((subItem, index) => {
-                        // Alternate row coloring
-                        if (index % 2 === 0) {
-                            page.drawRectangle({
-                                x: 45,
-                                y: yPosition - 5,
-                                width: 500,
-                                height: rowHeight,
-                                color: rgb(0.98, 0.98, 0.98),
-                            });
-                        }
-
-                        // Table borders
+            // Table content - sub items
+            if (unit.subItems && unit.subItems.length > 0) {
+                unit.subItems.forEach((subItem, index) => {
+                    // Alternate row coloring
+                    if (index % 2 === 0) {
                         page.drawRectangle({
                             x: 45,
                             y: yPosition - 5,
                             width: 500,
                             height: rowHeight,
-                            borderColor: rgb(0.8, 0.8, 0.8),
-                            borderWidth: 0.5,
+                            color: rgb(0.98, 0.98, 0.98),
                         });
+                    }
 
-                        const rowData = [
-                            serialNumber.toString(),
-                            subItem.refId || "N/A",
-                            subItem.subItemName || 'N/A',
-                            (subItem.quantity || 0).toString(),
-                            subItem.unit || 'N/A'
-                        ];
+                    // Table borders
+                    page.drawRectangle({
+                        x: 45,
+                        y: yPosition - 5,
+                        width: 500,
+                        height: rowHeight,
+                        borderColor: rgb(0.8, 0.8, 0.8),
+                        borderWidth: 0.5,
+                    });
 
-                        rowData.forEach((data, colIndex) => {
-                            let displayText = data;
-                            // Truncate long text to fit in column
-                            if (colIndex === 1 && data.length > 35) {
-                                displayText = data.substring(0, 32) + '...';
-                            }
+                    const rowData = [
+                        serialNumber.toString(),
+                        subItem.refId || "N/A",
+                        subItem.subItemName || 'N/A',
+                        (subItem.quantity || 0).toString(),
+                        subItem.unit || 'N/A'
+                    ];
 
-                            page.drawText(displayText, {
-                                x: columnPositions[colIndex],
-                                y: yPosition,
-                                size: 10,
-                                font: regularFont,
-                                color: rgb(0.3, 0.3, 0.3),
-                            });
-                        });
-
-                        yPosition -= rowHeight;
-                        serialNumber++;
-
-                        // Check if we need a new page
-                        if (yPosition < 100) {
-                            page = pdfDoc.addPage([595, 842]);
-                            yPosition = height - 50;
+                    rowData.forEach((data, colIndex) => {
+                        let displayText = data;
+                        // Truncate long text to fit in column
+                        if (colIndex === 1 && data.length > 35) {
+                            displayText = data.substring(0, 32) + '...';
                         }
+
+                        page.drawText(displayText, {
+                            x: columnPositions[colIndex],
+                            y: yPosition,
+                            size: 10,
+                            font: regularFont,
+                            color: rgb(0.3, 0.3, 0.3),
+                        });
                     });
-                } else {
-                    // No sub items message
-                    page.drawText('No sub-items available', {
-                        x: columnPositions[1],
-                        y: yPosition,
-                        size: 10,
-                        font: regularFont,
-                        color: rgb(0.6, 0.6, 0.6),
-                    });
+
                     yPosition -= rowHeight;
-                }
+                    serialNumber++;
 
-                yPosition -= 20; // Space between units
-            }
-
-            // // Total cost section
-            // if (orderHistory.totalCost) {
-            //     yPosition -= 20;
-            //     page.drawText(`Total Cost: Rs${orderHistory.totalCost.toLocaleString()}`, {
-            //         x: width - 200,
-            //         y: yPosition,
-            //         size: 14,
-            //         font: boldFont,
-            //         color: rgb(0.2, 0.2, 0.2),
-            //     });
-            // }
-
-            // // Footer
-            // const footerY = 50;
-            // page.drawText(`Generated on: ${new Date().toLocaleDateString()}`, {
-            //     x: 50,
-            //     y: footerY,
-            //     size: 8,
-            //     font: regularFont,
-            //     color: rgb(0.6, 0.6, 0.6),
-            // });
-
-            // Save PDF
-            const pdfBytes = await pdfDoc.save();
-
-            // Upload to AWS S3
-            const fileName = `order-material/order-${orderHistory.projectName}-${Date.now()}.pdf`;
-            const uploadResult = await uploadToS3(pdfBytes, fileName);
-
-            // Update the order history with generated link
-            // await OrderMaterialHistoryModel.findByIdAndUpdate({projectId}, {
-            //     generatedLink: uploadResult.Location
-            // });
-
-            // console.log("generateld dat", uploadResult.Location)
-
-
-            const pdfData = {
-                url: uploadResult.Location,
-                refUniquePdf, // <-- now has projectName-uniquenumber-pdf
-                pdfName: "Order Material",
-                status:"pending",
-                _id: new mongoose.Types.ObjectId()
-            };
-
-            if (Array.isArray(orderHistory.pdfLink)) {
-                orderHistory?.pdfLink?.push(pdfData as IPdfGenerator);
+                    // Check if we need a new page
+                    if (yPosition < 100) {
+                        page = pdfDoc.addPage([595, 842]);
+                        yPosition = height - 50;
+                    }
+                });
             } else {
-                orderHistory.pdfLink = []
-                orderHistory?.pdfLink.push(pdfData as IPdfGenerator)
+                // No sub items message
+                page.drawText('No sub-items available', {
+                    x: columnPositions[1],
+                    y: yPosition,
+                    size: 10,
+                    font: regularFont,
+                    color: rgb(0.6, 0.6, 0.6),
+                });
+                yPosition -= rowHeight;
             }
 
-            console.log("orderHistory.pdfLink", orderHistory.pdfLink)
+            yPosition -= 20; // Space between units
+        }
 
-              // Clear subItems from each selectedUnit
-         orderHistory.selectedUnits.forEach(unit => {
+        // // Total cost section
+        // if (orderHistory.totalCost) {
+        //     yPosition -= 20;
+        //     page.drawText(`Total Cost: Rs${orderHistory.totalCost.toLocaleString()}`, {
+        //         x: width - 200,
+        //         y: yPosition,
+        //         size: 14,
+        //         font: boldFont,
+        //         color: rgb(0.2, 0.2, 0.2),
+        //     });
+        // }
+
+        // // Footer
+        // const footerY = 50;
+        // page.drawText(`Generated on: ${new Date().toLocaleDateString()}`, {
+        //     x: 50,
+        //     y: footerY,
+        //     size: 8,
+        //     font: regularFont,
+        //     color: rgb(0.6, 0.6, 0.6),
+        // });
+
+        // Save PDF
+        const pdfBytes = await pdfDoc.save();
+
+        // Upload to AWS S3
+        const fileName = `order-material/order-${orderHistory.projectName}-${Date.now()}.pdf`;
+        const uploadResult = await uploadToS3(pdfBytes, fileName);
+
+        // Update the order history with generated link
+        // await OrderMaterialHistoryModel.findByIdAndUpdate({projectId}, {
+        //     generatedLink: uploadResult.Location
+        // });
+
+        // console.log("generateld dat", uploadResult.Location)
+
+
+        const pdfData = {
+            url: uploadResult.Location,
+            refUniquePdf, // <-- now has projectName-uniquenumber-pdf
+            pdfName: "Order Material",
+            status: "pending",
+            _id: new mongoose.Types.ObjectId()
+        };
+
+        if (Array.isArray(orderHistory.pdfLink)) {
+            orderHistory?.pdfLink?.push(pdfData as IPdfGenerator);
+        } else {
+            orderHistory.pdfLink = []
+            orderHistory?.pdfLink.push(pdfData as IPdfGenerator)
+        }
+
+        console.log("orderHistory.pdfLink", orderHistory.pdfLink)
+
+        // Clear subItems from each selectedUnit
+        orderHistory.selectedUnits.forEach(unit => {
             unit.subItems = [];
         });
-        
-            await orderHistory.save();
 
-            // console.log("orderhisoty", orderHistory)
+        await orderHistory.save();
 
-            return {
-                ok: true,
-                pdfUrl: uploadResult.Location,
-                data: orderHistory,
-                message: 'PDF generated successfully'
-            };
+        // console.log("orderhisoty", orderHistory)
 
-        } catch (error: any) {
-            console.error('Error generating PDF:', error);
-            throw new Error(`PDF generation failed: ${error.message}`);
-        }
+        return {
+            ok: true,
+            pdfUrl: uploadResult.Location,
+            data: orderHistory,
+            message: 'PDF generated successfully'
+        };
+
+    } catch (error: any) {
+        console.error('Error generating PDF:', error);
+        throw new Error(`PDF generation failed: ${error.message}`);
     }
+}
 
 export {
-        generateOrderHistoryPDF,
-        // generateOrderHistoryPDFController,
-        uploadToS3
-    };
+    generateOrderHistoryPDF,
+    // generateOrderHistoryPDFController,
+    uploadToS3
+};
 
 // Example route usage:
 // import { generateOrderHistoryPDFController } from './path-to-your-service.js';

@@ -652,8 +652,13 @@ export const updateDeliveryLocationDetails = async (req: Request, res: Response)
         const { projectId } = req.params;
         const { siteName, address, siteSupervisor, phoneNumber } = req.body;
 
-        if (!siteName || !address || !siteSupervisor || !phoneNumber) {
-            return res.status(400).json({ ok: false, message: "All delivery location details are required." });
+        // if (!siteName || !address || !siteSupervisor || !phoneNumber) {
+        //     return res.status(400).json({ ok: false, message: "All delivery location details are required." });
+        // }
+
+
+        if(phoneNumber?.trim()  && phoneNumber.length !== 10){
+            return res.status(400).json({ ok: false, message: "Phone Number should be 10 digits" });
         }
 
         const orderingDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
@@ -695,8 +700,13 @@ export const updateShopDetails = async (req: Request, res: Response): Promise<an
 
 
 
-        if (!shopName || !address || !contactPerson || !phoneNumber) {
-            return res.status(400).json({ ok: false, message: "All shop details are required." });
+        // if (!shopName || !address || !contactPerson || !phoneNumber) {
+        //     return res.status(400).json({ ok: false, message: "All shop details are required." });
+        // }
+
+
+        if(phoneNumber?.trim()  && phoneNumber.length !== 10){
+            return res.status(400).json({ ok: false, message: "Phone Number should be 10 digits" });
         }
 
         const orderingDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
@@ -871,7 +881,7 @@ export const orderMaterialHistoryCompletionStatus = async (req: Request, res: Re
 // Controller function
 export const generateOrderHistoryPDFController = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { projectId } = req.params;
+        const { projectId, organizationId } = req.params;
 
         if (!projectId) {
             return res.status(400).json({
@@ -880,7 +890,7 @@ export const generateOrderHistoryPDFController = async (req: Request, res: Respo
             });
         }
 
-        const result = await generateOrderHistoryPDF(projectId);
+        const result = await generateOrderHistoryPDF(projectId, organizationId);
 
         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: result.data })
 

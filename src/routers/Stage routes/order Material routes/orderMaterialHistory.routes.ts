@@ -13,7 +13,7 @@ const orderMaterialHistoryRoutes = express.Router()
 
 orderMaterialHistoryRoutes.get('/getalldetails/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "client"),  getOrderHistoryMaterial)
 // orderMaterialHistoryRoutes.patch('/generatelink/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), generateOrderingMaterialLink)
-orderMaterialHistoryRoutes.patch('/generatelink/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), generateOrderHistoryPDFController)
+orderMaterialHistoryRoutes.patch('/generatelink/:projectId/:organizationId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), generateOrderHistoryPDFController)
 orderMaterialHistoryRoutes.delete('/delete/:projectId/:pdfId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), deleteOrderMaterialPdf)
 orderMaterialHistoryRoutes.patch('/upddatepdfstatus/:projectId/:pdfId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), updatePdfStatus)
 
