@@ -113,12 +113,14 @@ import { DeliveryLocationDetailsSchema, IPdfGenerator, OrderMaterialShopDetails,
 // });
 
 
-
+export interface ProcurementOrderDetaisl extends OrderMaterialShopDetails {
+  upiId?: string
+}
 
 export interface IProcurementNew {
   organizationId: Types.ObjectId,
   projectId: Types.ObjectId,
-  shopDetails: OrderMaterialShopDetails,
+  shopDetails: ProcurementOrderDetaisl,
   deliveryLocationDetails: OrderMaterialSiteDetail,
   selectedUnits: OrderSubItems[],
   totalCost: number
@@ -126,15 +128,15 @@ export interface IProcurementNew {
   procurementPdfs: IPdfGenerator[]
 }
 
-
-
-
-
+const ShopSchemaProcurement = new Schema<ProcurementOrderDetaisl>({
+  ...ShopDetailsSchema.obj,
+  upiId: {type:String, default:null},
+})
 
 const procurementPurchaseOrderSchema = new Schema<IProcurementNew>({
   organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
   projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel",  },
-  shopDetails: ShopDetailsSchema,
+  shopDetails: ShopSchemaProcurement,
   deliveryLocationDetails: DeliveryLocationDetailsSchema,
   selectedUnits: { type: [OrderSubItemSchema], default: [] },
   totalCost: { type: Number, },
@@ -146,6 +148,7 @@ const procurementPurchaseOrderSchema = new Schema<IProcurementNew>({
 
 
 const ProcurementModelNew = model("ProcurementModelNew",procurementPurchaseOrderSchema )
+
 export default ProcurementModelNew
 
 

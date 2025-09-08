@@ -2,6 +2,7 @@
 import { Request, Response } from "express";
 import { Types } from "mongoose";
 import { LogisticsShipmentModel } from "../../../models/Department Models/Logistics Model/logistics.model";
+import { createAccountingEntry } from "../Accounting Controller/accounting.controller";
 
 // Create a new Vehicle
 // export const createVehicle = async (req: Request, res: Response): Promise<any> => {
@@ -635,11 +636,11 @@ import { LogisticsShipmentModel } from "../../../models/Department Models/Logist
 export const createShipmentUtil = async ({ organizationId, projectId,
     projectName,
     vehicleDetails,
-    origin={},
-    destination ={},
+    origin = {},
+    destination = {},
     items,
     status,
-    scheduledDate= new Date(),
+    scheduledDate = new Date(),
     notes,
     actualDeliveryTime,
     actualPickupTime
@@ -810,17 +811,19 @@ export const updateShipment = async (req: Request, res: Response): Promise<any> 
             vehicleType,
             driver,
             driverCharge,
+            driverUpiId,
             isAvailable,
             currentLocation,
         } = vehicleDetails;
 
         // SUBCASE A: Update existing vehicle (when _id is given)
-
         // Update only provided fields (partial update)
+        
         if (vehicleNumber) existingShipment.vehicleDetails.vehicleNumber = vehicleNumber;
         if (vehicleType) existingShipment.vehicleDetails.vehicleType = vehicleType;
         if (driver) existingShipment.vehicleDetails.driver = driver;
-        if (typeof driverCharge === "number") existingShipment.vehicleDetails.driverCharge = driverCharge;
+        if (driverCharge) existingShipment.vehicleDetails.driverCharge = driverCharge;
+        if (typeof driverUpiId === "string") existingShipment.vehicleDetails.driverUpiId = driverUpiId;
         // if (typeof isAvailable === "boolean") existingShipment.vehicleDetails.isAvailable = isAvailable;
         // if (currentLocation) existingShipment.vehicleDetails.currentLocation = currentLocation;
 
@@ -939,3 +942,29 @@ export const getSingleLogisticsShipment = async (req: Request, res: Response): P
         res.status(500).json({ message: "Internal server error", ok: false });
     }
 };
+
+
+
+export const SyncAccountingFromLogistics = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { organizationId, projectId } = req.params;
+        const { totalCost, upiId } = req.body;
+
+        if (!organizationId || !projectId) {
+            return res.status(400).json({ ok: false, message: "OrganizationId and  ProjectId is required" });
+        }
+
+        const doc = await createAccountingEntry({
+            organizationId,
+            projectId,
+            fromDept: "logistics",
+            totalCost,
+            upiId,
+        });
+
+        res.status(201).json({ ok: true, data: doc });
+    } catch (err: any) {
+        console.error("Error sending logistics entry to accounting:", err);
+        res.status(500).json({ ok: false, message: err.message });
+    }
+}

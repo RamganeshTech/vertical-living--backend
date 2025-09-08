@@ -74,6 +74,7 @@ import { RoleUserPayload } from './types/types';
 import { SocketService } from './config/socketService';
 import LogisticsRoutes from './routers/Department Routes/Logistics Routes/logistics.routes';
 import procurementNewRoutes from './routers/Department Routes/ProcurementNew Routes/procurementNew.routes';
+import accountingRoutes from './routers/Department Routes/Accounting Routes/accounting.routes';
 
 
 
@@ -265,6 +266,7 @@ app.use('/api/procurement', procurementRoutes)
 app.use('/api/department/hr', HRRoutes)
 app.use('/api/department/logistics', LogisticsRoutes)
 app.use('/api/department/procurement', procurementNewRoutes)
+app.use('/api/department/accounting', accountingRoutes)
 
 
 

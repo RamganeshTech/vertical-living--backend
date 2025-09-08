@@ -78,6 +78,7 @@ export interface ILogisticsVehicle {
   //   address?: string;
   // };
   driverCharge: number,
+  driverUpiId: string,
   // maintenanceStatus?: "good" | "needs_service" | "in_service" | "out_of_order";
 }
 
@@ -93,8 +94,10 @@ export const LogisticsVehicleSchema = new Schema<ILogisticsVehicle>({
   },
   driverCharge:{
     type:Number,
-    default: 0
+    default: 0,
+    
   },
+  driverUpiId: {type: String, default:null}
   // isAvailable: { type: Boolean, default: true },
   // currentLocation: {
   //   address: String,
@@ -102,3 +105,5 @@ export const LogisticsVehicleSchema = new Schema<ILogisticsVehicle>({
   // },
 
 }, {_id:true, timestamps:true});
+
+

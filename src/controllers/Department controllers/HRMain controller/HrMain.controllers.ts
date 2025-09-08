@@ -59,7 +59,6 @@ export const syncEmployee = async ({ organizationId, empId, employeeModel, empRo
   const isCreated = await EmployeeModel.findOne({ "personalInfo.email": email })
   
   if (!isCreated) {
-    console.log("getting into the if condition")
     newEmployee = await EmployeeModel.create({
       organizationId,
       empId,

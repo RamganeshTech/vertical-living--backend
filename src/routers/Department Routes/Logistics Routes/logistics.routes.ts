@@ -1,6 +1,6 @@
 // logistics.routes.ts
 import express from "express";
-import { createShipment,  deleteShipment,  getAllShipments,  getSingleLogisticsShipment,  updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
+import { createShipment,  deleteShipment,  getAllShipments,  getSingleLogisticsShipment,  SyncAccountingFromLogistics,  updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 
 const LogisticsRoutes = express.Router();
@@ -20,5 +20,11 @@ LogisticsRoutes.get("/shipment/getsingle/:shipmentId",  multiRoleAuthMiddleware(
 
 
 
+LogisticsRoutes.post(
+  "/syncaccounting/:organizationId/:projectId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  SyncAccountingFromLogistics
+
+);
 
 export default LogisticsRoutes;

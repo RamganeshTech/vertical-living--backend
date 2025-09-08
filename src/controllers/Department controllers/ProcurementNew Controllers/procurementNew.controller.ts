@@ -3,6 +3,7 @@ import ProcurementModelNew from "../../../models/Department Models/ProcurementNe
 import { generateProcurementPdf } from "./procurementPdf";
 import { LogisticsShipmentModel } from "../../../models/Department Models/Logistics Model/logistics.model";
 import { createShipmentUtil } from "../Logistics Controllers/logistics.controller";
+import { createAccountingEntry } from "../Accounting Controller/accounting.controller";
 
 export const getProcurementNewDetails = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -117,7 +118,7 @@ export const updateProcurementDeliveryLocationDetails = async (req: Request, res
 export const updateProcurementShopDetails = async (req: Request, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
-        const { shopName, address, contactPerson, phoneNumber } = req.body;
+        const { shopName, address, contactPerson, phoneNumber, upiId } = req.body;
 
 
 
@@ -134,7 +135,7 @@ export const updateProcurementShopDetails = async (req: Request, res: Response):
             id,
             {
                 $set: {
-                    shopDetails: { shopName, address, contactPerson, phoneNumber },
+                    shopDetails: { shopName, address, contactPerson, phoneNumber , upiId },
                 },
             },
             { new: true, upsert: true }
@@ -349,5 +350,32 @@ export const syncLogisticsDept = async (req: Request, res: Response): Promise<an
 
     } catch (err: any) {
         return res.status(500).json({ ok: false, error: "Failed to sync Logistics shipment", message: err?.message });
+    }
+}
+
+
+
+
+export const SyncAccountingFromProcurement = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { organizationId, projectId } = req.params;
+        const { totalCost, upiId } = req.body;
+
+        if (!organizationId || !projectId) {
+            return res.status(400).json({ ok: false, message: "OrganizationId and  ProjectId is required" });
+        }
+
+        const doc = await createAccountingEntry({
+            organizationId,
+            projectId,
+            fromDept: "procurement",
+            totalCost,
+            upiId
+        });
+
+        res.status(201).json({ ok: true, data: doc });
+    } catch (err: any) {
+        console.error("Error sending logistics entry to accounting:", err);
+        res.status(500).json({ ok: false, message: err.message });
     }
 }

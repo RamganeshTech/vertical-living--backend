@@ -2,7 +2,7 @@
 import express from "express";
 import { createShipment,  deleteShipment,  getAllShipments,  getSingleLogisticsShipment,  updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
-import { deleteprocurement, deleteProcurementPdf, generateProcurementPDFController, getProcurementNewDetails, getProcurementNewSingleItem, syncLogisticsDept, updateProcurementDeliveryLocationDetails, updateProcurementShopDetails, updateProcurementTotalCost } from "../../../controllers/Department controllers/ProcurementNew Controllers/procurementNew.controller";
+import { deleteprocurement, deleteProcurementPdf, generateProcurementPDFController, getProcurementNewDetails, getProcurementNewSingleItem, SyncAccountingFromProcurement, syncLogisticsDept, updateProcurementDeliveryLocationDetails, updateProcurementShopDetails, updateProcurementTotalCost } from "../../../controllers/Department controllers/ProcurementNew Controllers/procurementNew.controller";
 
 const procurementNewRoutes = express.Router();
 
@@ -18,5 +18,11 @@ procurementNewRoutes.delete('/deletepdf/:id/:pdfId', multiRoleAuthMiddleware("ow
 procurementNewRoutes.post('/synclogistics/:id', multiRoleAuthMiddleware("owner", "staff", "CTO",),   syncLogisticsDept)
 
 
+procurementNewRoutes.post(
+  "/syncaccounting/:organizationId/:projectId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  SyncAccountingFromProcurement
+
+);
 
 export default procurementNewRoutes;
