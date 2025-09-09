@@ -4,7 +4,7 @@ import { handleSetStageDeadline } from "../../../utils/common features/timerFunc
 import { TechnicalConsultationModel } from "../../../models/Stage Models/technical consulatation/technicalconsultation.model";
 import redisClient from "../../../config/redisClient";
 import { PREDEFINED_ROOMS } from "../../../constants/phaseConstants";
-import { siteRooms } from "../../../utils/syncings/syncRoomsWithMaterialConfimation";
+// import { siteRooms } from "../../../utils/syncings/syncRoomsWithMaterialConfimation";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { syncTechnicalConsultantStage } from "../technicalConsultant controllers/technicalConsultant.controller";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
@@ -16,7 +16,7 @@ import { syncWorkSchedule } from "../workTasksmain controllers/workMain.controll
 
 
 
-export const syncSampleDesignModel = async (projectId: string, siteRooms: siteRooms[]) => {
+export const syncSampleDesignModel = async (projectId: string, siteRooms: any[]) => {
 
   let design = await SampleDesignModel.findOne({ projectId });
 

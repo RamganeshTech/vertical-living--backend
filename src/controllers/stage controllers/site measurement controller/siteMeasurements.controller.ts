@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
 import { handleSetStageDeadline } from "../../../utils/common features/timerFuncitonality";
 import { SampleDesignModel } from "../../../models/Stage Models/sampleDesing model/sampleDesign.model";
-import { syncRoomsToMaterialConfirmation } from "../../../utils/syncings/syncRoomsWithMaterialConfimation";
+// import { syncRoomsToMaterialConfirmation } from "../../../utils/syncings/syncRoomsWithMaterialConfimation";
 import { Types } from "mongoose";
 
 import redisClient from './../../../config/redisClient';

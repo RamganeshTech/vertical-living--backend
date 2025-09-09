@@ -13,44 +13,116 @@ import { addOrUpdateStageDocumentation } from "../../documentation controller/do
 import { Items, RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
 import { syncCostEstimation } from "../cost estimation controllers/costEstimation.controller";
 import { IRoomItemEntry } from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomTypes";
+import { listenerCount } from "events";
+import { generatePackageComparisonPDF } from "./pdfMaterialSelection";
+import { uploadToS3 } from "../ordering material controller/pdfOrderHistory.controller";
 
 
-// export const initializeMaterialSelection = async (projectId: string) => {
+// export const syncMaterialRoomSelectionStage = async (projectId: mongoose.Types.ObjectId | string) => {
+//   // 1. Fetch requirement form for given project
+//   const requirementDoc = await RequirementFormModel.findOne({ projectId });
+//   if (!requirementDoc) return;
 
-//   const existing = await MaterialRoomConfirmationModel.findOne({ projectId });
 
 //   const timer = {
 //     startedAt: new Date(),
 //     completedAt: null,
-//     deadLine: null,
+//     deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
 //     reminderSent: false,
 //   };
 
 
-//   if (!existing) {
-//     const rooms = predefinedRooms.map((room) => ({
-//       name: room.name,
-//       roomFields: room.fields,
-//       uploads: [],
-//     }));
+//   // 2. Fetch existing material selection doc (if any)
+//   let materialDoc = await MaterialRoomConfirmationModel.findOne({ projectId });
 
-//     await MaterialRoomConfirmationModel.create({
+//   // 3. Map requirement rooms (removing _id from items)
+//   const newRooms = (requirementDoc.rooms || []).map((room: any) => ({
+//     _id: new mongoose.Types.ObjectId(), // fresh room id
+//     name: room.roomName,
+//     roomFields: (room.items || []).map((item: Items) => ({
+//       _id: new mongoose.Types.ObjectId(), // fresh item id
+//       itemName: item.itemName,
+//       quantity: item.quantity
+//     })),
+//     uploads: []
+//   }));
+
+
+//   console.log("new Rooms for the material rooms selection", newRooms)
+
+
+//   if (!materialDoc) {
+//     // 4. If no existing doc → create fresh
+//     materialDoc = await MaterialRoomConfirmationModel.create({
 //       projectId,
-//       rooms,
-//       assignedTo: null,
-//       customRooms: [],
+//       rooms: newRooms,
 //       status: "pending",
 //       isEditable: true,
-//       timer
+//       assignedTo: null,
+//       timer: timer
 //     });
+//   } else {
+//     // 5. Merge: Add only rooms that don't exist yet
+//     const existingRoomNames = new Set(materialDoc.rooms.map(r => r.name.toLowerCase()));
+//     console.log("exising rooms", existingRoomNames)
+//     // newRooms.forEach(room => {
+//     //   if (!existingRoomNames.has(room.name.toLowerCase())) {
+//     //     materialDoc!.rooms.push(room);
+//     //   }
+//     // });
+
+//     // materialDoc.timer = timer
+
+//     // await materialDoc.save();
+
+
+
+//     newRooms.forEach(room => {
+//       const existingRoom = materialDoc!.rooms.find(r => r?.name?.toLowerCase() === room?.name?.toLowerCase());
+
+//       if (!existingRoom) {
+//         // New room → push entire room
+//         materialDoc!.rooms?.push(room);
+//       } else {
+
+
+//         // if (!Array.isArray(existingRoom.roomFields)) {
+//         //   existingRoom.roomFields = [];
+//         // }
+
+
+//         const roomFieldsArray: any[] = Array.isArray(existingRoom?.roomFields)
+//           ? existingRoom?.roomFields
+//           : Object.values(existingRoom.roomFields || {});
+
+//         const existingItemNames = new Set(
+//           roomFieldsArray?.map(f => f?.itemName?.toLowerCase())
+//         );
+
+//         room.roomFields.forEach((field: Items) => {
+//           if (!existingItemNames.has(field?.itemName?.toLowerCase())) {
+//             if (Array.isArray(existingRoom?.roomFields)) {
+//               existingRoom.roomFields.push(field);
+//             }
+//             //  else {
+//             //   // if roomFields is an object, assign with a new key (use field.itemName as key or generate unique id)
+//             //   existingRoom.roomFields[field?.itemName] = field;
+//             // }
+//           }
+//         });
+//       }
+//     });
+
+//     materialDoc.timer = timer;
+
+//     await materialDoc.save();
 //   }
-//   else {
-//     existing.timer = timer
-//     await existing.save()
-//   }
+
+
 //   const redisKey = `stage:MaterialRoomConfirmationModel:${projectId}`;
 //   await redisClient.del(redisKey);
 // };
+
 
 export const syncMaterialRoomSelectionStage = async (projectId: mongoose.Types.ObjectId | string) => {
   // 1. Fetch requirement form for given project
@@ -69,84 +141,93 @@ export const syncMaterialRoomSelectionStage = async (projectId: mongoose.Types.O
   // 2. Fetch existing material selection doc (if any)
   let materialDoc = await MaterialRoomConfirmationModel.findOne({ projectId });
 
-  // 3. Map requirement rooms (removing _id from items)
-  const newRooms = (requirementDoc.rooms || []).map((room: any) => ({
-    _id: new mongoose.Types.ObjectId(), // fresh room id
-    name: room.roomName,
-    roomFields: (room.items || []).map((item: Items) => ({
-      _id: new mongoose.Types.ObjectId(), // fresh item id
-      itemName: item.itemName,
-      quantity: item.quantity
-    })),
-    uploads: []
-  }));
 
+  const packages = ["economy", "premium", "luxury"].map((pkg) => {
+    return {
+      _id: new mongoose.Types.ObjectId(), // fresh room id
+      level: pkg,
+      rooms: (requirementDoc.rooms || []).map((room: any) => ({
+        _id: new mongoose.Types.ObjectId(), // fresh room id
+        name: room.roomName,
+        roomFields: (room.items || []).map((item: Items) => ({
+          _id: new mongoose.Types.ObjectId(), // fresh item id
+          itemName: item.itemName,
+          quantity: item.quantity,
+          unit: item.unit || "nos",
+          materialItems: [],
+        })),
+        totalCost: 0,
+        uploads: [],
 
-  console.log("new Rooms for the material rooms selection", newRooms)
+      }))
+    }
+  })
+
 
 
   if (!materialDoc) {
     // 4. If no existing doc → create fresh
     materialDoc = await MaterialRoomConfirmationModel.create({
       projectId,
-      rooms: newRooms,
+      package: packages,
+      packageSelected: "economy",
       status: "pending",
       isEditable: true,
       assignedTo: null,
       timer: timer
     });
-  } else {
-    // 5. Merge: Add only rooms that don't exist yet
-    const existingRoomNames = new Set(materialDoc.rooms.map(r => r.name.toLowerCase()));
-    console.log("exising rooms", existingRoomNames)
-    // newRooms.forEach(room => {
-    //   if (!existingRoomNames.has(room.name.toLowerCase())) {
-    //     materialDoc!.rooms.push(room);
-    //   }
-    // });
+  }
+  else {
 
-    // materialDoc.timer = timer
+    const requirementRooms = requirementDoc.rooms || [];
 
-    // await materialDoc.save();
+    // Define the base packages you're expecting always
+    const basePackageLevels: ("economy" | "luxury" | "premium")[] = ["economy", "luxury", "premium"];
 
+    // If packages are missing, initialize them
+    if (!materialDoc.package || materialDoc.package.length === 0) {
+      materialDoc.package = basePackageLevels.map((level) => ({
+        _id: new mongoose.Types.ObjectId(),
+        level,
+        rooms: [],
+      }));
+    }
 
-
-    newRooms.forEach(room => {
-      const existingRoom = materialDoc!.rooms.find(r => r?.name?.toLowerCase() === room?.name?.toLowerCase());
-
-      if (!existingRoom) {
-        // New room → push entire room
-        materialDoc!.rooms?.push(room);
-      } else {
-
-
-        // if (!Array.isArray(existingRoom.roomFields)) {
-        //   existingRoom.roomFields = [];
-        // }
-
-
-        const roomFieldsArray: any[] = Array.isArray(existingRoom?.roomFields)
-          ? existingRoom?.roomFields
-          : Object.values(existingRoom.roomFields || {});
-
-        const existingItemNames = new Set(
-          roomFieldsArray?.map(f => f?.itemName?.toLowerCase())
-        );
-
-        room.roomFields.forEach((field: Items) => {
-          if (!existingItemNames.has(field?.itemName?.toLowerCase())) {
-            if (Array.isArray(existingRoom?.roomFields)) {
-              existingRoom.roomFields.push(field);
-            }
-            //  else {
-            //   // if roomFields is an object, assign with a new key (use field.itemName as key or generate unique id)
-            //   existingRoom.roomFields[field?.itemName] = field;
-            // }
-          }
-        });
-      }
+    // For duplicate prevention: collect existing room names across all packages
+    const existingRoomNames = new Set<string>();
+    materialDoc.package.forEach(pkg => {
+      pkg.rooms.forEach(room => {
+        if (room.name) {
+          existingRoomNames.add(room.name.toLowerCase());
+        }
+      });
     });
 
+    // Loop over base packages and add missing rooms
+    for (const pkg of materialDoc.package) {
+      for (const room of requirementRooms) {
+        const roomName = room.roomName?.toLowerCase();
+        if (!existingRoomNames.has(roomName)) {
+          const newRoom = {
+            _id: new mongoose.Types.ObjectId(),
+            name: room.roomName,
+            roomFields: (room.items || []).map(item => ({
+              _id: new mongoose.Types.ObjectId(),
+              itemName: item.itemName,
+              quantity: item.quantity,
+              unit: item.unit || "nos",
+              materialItems: []
+            })),
+            totalCost: 0,
+            uploads: [],
+          };
+
+          pkg.rooms.push(newRoom);
+        }
+      }
+    }
+
+    // Update timer
     materialDoc.timer = timer;
 
     await materialDoc.save();
@@ -193,41 +274,41 @@ const getMaterialRoomConfirmationByProject = async (req: Request, res: Response)
 
 
 
-const getMaterialRoomConfirmationSingleRoom = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { projectId, roomId } = req.params;
-    // const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
+// const getMaterialRoomConfirmationSingleRoom = async (req: Request, res: Response): Promise<any> => {
+//   try {
+//     const { projectId, roomId } = req.params;
+//     // const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
 
-    // const redisCachedData = await redisClient.get(redisRoomKey)
-
-
-    // if (redisCachedData) {
-    //   return res.json({ message: "data fetched from the cache for single room", data: JSON.parse(redisCachedData), ok: true })
-    // }
-
-    const doc = await MaterialRoomConfirmationModel.findOne({ projectId })
-
-    if (!doc) {
-      return res.status(404).json({ ok: false, message: "Material Room Not Found" });
-    }
+//     // const redisCachedData = await redisClient.get(redisRoomKey)
 
 
-    const room = (doc.rooms as any).id(roomId)
+//     // if (redisCachedData) {
+//     //   return res.json({ message: "data fetched from the cache for single room", data: JSON.parse(redisCachedData), ok: true })
+//     // }
 
-    if (!room) {
-      return res.status(404).json({ ok: false, message: "Room not found" });
-    }
+//     const doc = await MaterialRoomConfirmationModel.findOne({ projectId })
+
+//     if (!doc) {
+//       return res.status(404).json({ ok: false, message: "Material Room Not Found" });
+//     }
 
 
-    // await redisClient.set(redisRoomKey, JSON.stringify(room), { EX: 60 * 10 })
+//     const room = (doc.rooms as any).id(roomId)
 
-    return res.status(200).json({ message: "data fetched for single room", data: room, ok: true })
+//     if (!room) {
+//       return res.status(404).json({ ok: false, message: "Room not found" });
+//     }
 
-  }
-  catch (error) {
-    return res.status(500).json({ ok: false, message: "Server error" });
-  }
-}
+
+//     // await redisClient.set(redisRoomKey, JSON.stringify(room), { EX: 60 * 10 })
+
+//     return res.status(200).json({ message: "data fetched for single room", data: room, ok: true })
+
+//   }
+//   catch (error) {
+//     return res.status(500).json({ ok: false, message: "Server error" });
+//   }
+// }
 
 // const getSinglePredefinedRoom = async (req: Request, res: Response): Promise<any> => {
 //   try {
@@ -442,41 +523,227 @@ const getMaterialRoomConfirmationSingleRoom = async (req: Request, res: Response
 //   }
 // };
 
-const deleteRoom = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+
+const getMaterialByPackageLevel = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { projectId, roomId } = req.params;
+    const { projectId, packageId, roomId } = req.params;
 
-
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ ok: false, message: "Invalid projectId." });
+    if (!mongoose.Types.ObjectId.isValid(packageId)) {
+      return res.status(400).json({ message: "Invalid packageId", ok: false });
     }
 
-    const updated = await MaterialRoomConfirmationModel.findOneAndUpdate(
-      { projectId },
-      {
-        $pull: {
-          rooms: { _id: roomId },
-          customRooms: { _id: roomId },
-        },
-      },
-      { new: true }
-    );
+    const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:package:${packageId}`
+    // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
+    await redisClient.del(redisRoomKey)
+    const redisCachedData = await redisClient.get(redisRoomKey)
 
-    if (!updated) {
+
+    if (redisCachedData) {
+      return res.json({ message: "data fetched from the cache", data: JSON.parse(redisCachedData), ok: true })
+    }
+
+    const materialDoc = await MaterialRoomConfirmationModel.findOne({ projectId });
+
+    if (!materialDoc) {
+      return res.status(404).json({ message: "Material document not found", ok: false });
+    }
+
+    const selectedPackage = materialDoc.package.find((pkg: any) => pkg._id?.toString() === packageId);
+
+    if (!selectedPackage) {
+      return res.status(404).json({ message: "Package with given ID not found", ok: false });
+    }
+
+    let room = (selectedPackage.rooms).find((room: any) => room._id.toString() === roomId)
+
+
+    return res.status(200).json({ data: room, ok: true, message: "retrived successfully" });
+
+
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error, ok: false });
+  }
+};
+
+
+const addOrUpdateMaterialItem = async (req: Request, res: Response): Promise<any> => {
+  const { projectId, packageId, roomId, fieldId } = req.params;
+  const newMaterial = req.body; // Validate before using in production
+
+  try {
+    const doc = await MaterialRoomConfirmationModel.findOne({ projectId });
+
+    if (!doc) return res.status(404).json({ ok: false, message: "Material record not found" });
+
+    const pkg = doc.package.find((p: any) => p._id.toString() === packageId);
+    if (!pkg) return res.status(404).json({ ok: false, message: "Package not found" });
+
+    const room = (pkg.rooms as any).id(roomId);
+    if (!room) return res.status(404).json({ ok: false, message: "Room not found" });
+
+
+    const item = room.roomFields.id(fieldId);
+    if (!item) return res.status(404).json({ ok: false, message: "Item not found" });
+
+    const inputId = newMaterial._id;
+
+    if (inputId) {
+      // Try to find existing by _id
+      const existing = item.materialItems.id(inputId);
+
+      if (!existing) {
+        return res.status(404).json({ ok: false, message: "Material item with given _id not found in this item." });
+      }
+
+      // Update fields of existing item
+      existing.materialName = newMaterial.materialName;
+      existing.unit = newMaterial.unit;
+      existing.price = newMaterial.price;
+      existing.labourCost = newMaterial.labourCost;
+      existing.quantity = newMaterial.quantity;
+
+    } else {
+      // If no _id, check if same materialName already exists (per business rule)
+      const duplicate = item.materialItems.find((mat: any) => mat.materialName === newMaterial.materialName);
+
+      if (duplicate) {
+        return res.status(400).json({ message: `Material item '${newMaterial.materialName}' already exists.`, ok: false });
+      }
+
+      // Add new material item
+      item.materialItems.push(newMaterial);
+    }
+
+
+    room.totalCost = room.roomFields
+      .flatMap((item: any) => item.materialItems)
+      .reduce((sum: number, mat: any) => {
+        const itemCost = ((mat.price || 0) + (mat.labourCost || 0)) * (mat.quantity || 0);
+        return sum + itemCost;
+      }, 0);
+
+
+    await doc.save();
+
+    const updatedPackage = doc.package.find((pkg: any) => pkg._id.toString() === packageId);
+
+    const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:package:${packageId}`
+    const updatedRoom = updatedPackage;
+
+    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
+    await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: doc })
+
+
+    return res.status(200).json({
+      message: inputId ? 'Material item updated successfully' : 'Material item added successfully',
+      data: item.materialItems,
+      ok: true
+    });
+
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error", error: err });
+  }
+};
+
+export const deleteMaterialSubItem = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { projectId, packageId, roomId, fieldId, itemId } = req.params;
+
+    const doc = await MaterialRoomConfirmationModel.findOne({ projectId });
+
+    if (!doc) return res.status(404).json({ ok: false, message: "Material record not found" });
+
+    const pkg = doc.package.find((p: any) => p._id.toString() === packageId);
+    if (!pkg) return res.status(404).json({ ok: false, message: "Package not found" });
+
+    const room = (pkg.rooms as any).id(roomId);
+    if (!room) return res.status(404).json({ ok: false, message: "Room not found" });
+
+    const item = room.roomFields.id(fieldId);
+    if (!item) return res.status(404).json({ ok: false, message: "Item not found" });
+
+
+    // Try to find existing by _id
+    item.materialItems = item.materialItems.filter((item: any) => item._id.toString() !== itemId);
+
+
+    // ✅ After material item is removed, update totalCost as well
+    room.totalCost = room.roomFields
+      .flatMap((item: any) => item.materialItems)
+      .reduce((sum: number, mat: any) => {
+        return sum + ((mat.price || 0) + (mat.labourCost || 0)) * (mat.quantity || 0);
+      }, 0);
+
+
+    await doc.save();
+
+    const updatedPackage = doc.package.find((pkg: any) => pkg._id.toString() === packageId);
+
+    const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:package:${packageId}`
+    const updatedRoom = updatedPackage;
+
+    await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
+    await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: doc })
+
+
+    return res.status(200).json({
+      message: 'Material item deleted successfully',
+      data: updatedRoom,
+      ok: true
+    });
+
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error", error: err });
+  }
+}
+
+
+const deleteRoom = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+    const { projectId, packageId, roomId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(projectId) || !mongoose.Types.ObjectId.isValid(packageId) || !mongoose.Types.ObjectId.isValid(roomId)) {
+      return res.status(400).json({ ok: false, message: "Invalid ID(s) provided." });
+    }
+
+    const materialDoc = await MaterialRoomConfirmationModel.findOne({ projectId });
+
+    if (!materialDoc) {
       return res.status(404).json({ ok: false, message: "Material selection document not found." });
     }
 
+    const targetPackage = materialDoc.package.find((pkg: any) => pkg._id.toString() === packageId);
 
-    // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
-    // await redisClient.set(redisMainKey, JSON.stringify(materialSelection.toObject()), { EX: 60 * 10 })
+    if (!targetPackage) {
+      return res.status(404).json({ ok: false, message: "Package not found." });
+    }
 
-    await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: updated })
+    const initialLength = targetPackage.rooms.length;
 
+    // Remove room with matching roomId
+    targetPackage.rooms = targetPackage.rooms.filter((room: any) => room._id.toString() !== roomId);
+
+    if (targetPackage.rooms.length === initialLength) {
+      return res.status(404).json({ ok: false, message: "Room not found in specified package." });
+    }
+
+    await materialDoc.save();
+
+    // Optionally cache it with staff info, etc
+    await populateWithAssignedToField({
+      stageModel: MaterialRoomConfirmationModel,
+      projectId,
+      dataToCache: materialDoc,
+    });
 
     return res.status(200).json({
       ok: true,
       message: "Room deleted successfully.",
-      data: updated,
+      data: materialDoc,
     });
 
   } catch (error) {
@@ -484,6 +751,37 @@ const deleteRoom = async (req: RoleBasedRequest, res: Response): Promise<any> =>
     return res.status(500).json({ ok: false, message: "Server error" });
   }
 };
+
+
+
+export const generatePdfMaterialPacakgeComparison = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+    const { projectId } = req.params;
+
+    const resp = await generatePackageComparisonPDF(projectId)
+
+    const safeProjectName = ((resp.materialDoc.projectId as any).projectName || "project").replace(/\s+/g, "-");
+
+    const fileName = `home-interior-${safeProjectName}-${Date.now()}.pdf`;
+    const uploadResult = await uploadToS3(resp.pdfBytes, fileName);
+
+    const pdfData = {
+      url: uploadResult.Location,
+      pdfName: fileName,
+    };
+
+    return res.status(200).json({
+      ok: true,
+      data: pdfData,
+      message: 'PDF generated successfully'
+    });
+
+
+  } catch (error: any) {
+    console.error("Error deleting room:", error);
+    return res.status(500).json({ ok: false, message: error.message, error: "Server Error" });
+  }
+}
 
 // const addItemToCustomRoom = async (req: Request, res: Response): Promise<any> => {
 //   try {
@@ -674,9 +972,9 @@ const setMaterialConfirmationStageDeadline = (req: Request, res: Response): Prom
 
 const uploadMaterialRoomFiles = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { projectId, roomId } = req.params;
+    const { projectId, roomId, packageId } = req.params;
 
-    if (!projectId || !roomId) {
+    if (!projectId || !roomId || !packageId) {
       return res.status(400).json({ ok: false, message: "Project ID and Room ID are required" });
     }
 
@@ -689,7 +987,17 @@ const uploadMaterialRoomFiles = async (req: Request, res: Response): Promise<any
       return res.status(404).json({ ok: false, message: "Material confirmation document not found" });
     }
 
-    let room = (materialDoc.rooms as Types.DocumentArray<any>).id(roomId);
+    let packageLevel = (materialDoc.package as Types.DocumentArray<any>).id(packageId);
+
+
+    if (!packageLevel) {
+      return res.status(404).json({ ok: false, message: "Room not found." });
+    }
+
+    const room = packageLevel.rooms.find((room: any) => room._id.toString() === roomId.toString())
+
+
+    // let room = (materialDoc.rooms as Types.DocumentArray<any>).id(roomId);
     // if (!room) {
     //   room = (materialDoc.customRooms as Types.DocumentArray<any>).id(roomId);
     // }
@@ -712,11 +1020,11 @@ const uploadMaterialRoomFiles = async (req: Request, res: Response): Promise<any
     await materialDoc.save();
 
 
-    const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
+    const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:package:${packageId}`
     // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
 
     // ✅ Correct: updatedRoom is the room you just updated
-    const updatedRoom = room;
+    const updatedRoom = packageLevel;
     // await redisClient.set(redisMainKey, JSON.stringify(materialDoc.toObject()), { EX: 60 * 10 })
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
     await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: materialDoc })
@@ -736,9 +1044,9 @@ const uploadMaterialRoomFiles = async (req: Request, res: Response): Promise<any
 
 const deleteMaterialRoomFile = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { projectId, roomId, fileId } = req.params;
+    const { projectId, roomId, fileId, packageId } = req.params;
 
-    if (!projectId || !roomId || !fileId) {
+    if (!projectId || !roomId || !fileId || !packageId) {
       return res.status(400).json({ ok: false, message: "Missing required parameters." });
     }
 
@@ -747,17 +1055,23 @@ const deleteMaterialRoomFile = async (req: Request, res: Response): Promise<any>
       return res.status(404).json({ ok: false, message: "Material confirmation document not found." });
     }
 
-    let room = (materialDoc.rooms as Types.DocumentArray<any>).id(roomId);
+    let packageLevel = (materialDoc.package as Types.DocumentArray<any>).id(packageId);
     // if (!room) {
     //   room = (materialDoc.customRooms as Types.DocumentArray<any>).id(roomId);
     // }
 
-    if (!room) {
+    if (!packageLevel) {
       return res.status(404).json({ ok: false, message: "Room not found." });
     }
 
-    const initialLength = room.uploads.length;
+    const room = packageLevel.rooms.find((room: any) => room._id.toString() === roomId.toString())
+
+    if (!room) {
+      return res.status(404).json({ ok: false, message: "Room not found" });
+    }
+
     // console.log("fileId", fileId)
+    const initialLength = room.uplods?.length || 0
     room.uploads = room.uploads.filter((upload: any) => upload._id.toString() !== fileId.toString());
 
     if (room.uploads.length === initialLength) {
@@ -767,11 +1081,11 @@ const deleteMaterialRoomFile = async (req: Request, res: Response): Promise<any>
     await materialDoc.save();
 
 
-    const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:room:${roomId}`
+    const redisRoomKey = `stage:MaterialRoomConfirmationModel:${projectId}:package:${packageId}`
     // const redisMainKey = `stage:MaterialRoomConfirmationModel:${projectId}`
 
     // ✅ Correct: updatedRoom is the room you just updated
-    const updatedRoom = room;
+    const updatedRoom = packageLevel;
     // await redisClient.set(redisMainKey, JSON.stringify(materialDoc.toObject()), { EX: 60 * 10 })
     await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
     await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: materialDoc })
@@ -790,7 +1104,9 @@ const deleteMaterialRoomFile = async (req: Request, res: Response): Promise<any>
 
 export {
   getMaterialRoomConfirmationByProject,
-  getMaterialRoomConfirmationSingleRoom,
+  getMaterialByPackageLevel,
+  addOrUpdateMaterialItem,
+  // getMaterialRoomConfirmationSingleRoom,
   // getSinglePredefinedRoom,
   // updatePredefinedRoomField,
   // createCustomRoom,

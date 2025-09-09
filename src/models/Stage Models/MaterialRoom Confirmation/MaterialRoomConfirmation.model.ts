@@ -143,7 +143,7 @@ export interface IMaterialRoomUpload {
 import mongoose, { Document, model, Schema, Types } from "mongoose";
 import { IRoomItemEntry, } from './MaterialRoomTypes'
 import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
-import { Items, ItemSchema } from "../requirment model/mainRequirementNew.model";
+import { ItemSchema } from "../requirment model/mainRequirementNew.model";
 
 
 // 👇 Room with a set of predefined items
@@ -156,16 +156,38 @@ import { Items, ItemSchema } from "../requirment model/mainRequirementNew.model"
 // }
 
 
+export interface IMaterialSubItems {
+  materialName: string
+  unit:string, 
+  price: number,
+  labourCost:number,
+  quantity: number,
+}
+export interface IMatItems {
+    itemName: string,
+    quantity: number,
+    unit?: string,
+    materialItems: IMaterialSubItems[]
+}
+
 export interface IMaterialRoom {
   name: string; // predefined names only
-  roomFields: Items[];
+  roomFields: IMatItems[];
   uploads: IMaterialRoomUpload[];
+  totalCost: number
+}
+
+export interface IPackage {
+  level:string,
+  rooms:IMaterialRoom[]
 }
 
 // 👇 Final model interface for Material Selection
 export interface IMaterialRoomConfirmation extends Document {
   projectId: Types.ObjectId;
-  rooms: IMaterialRoom[];
+  package: IPackage[]
+  packageSelected: string,
+  // rooms: IMaterialRoom[];
   status: "pending" | "completed";
   isEditable: boolean;
   timer: {
@@ -197,14 +219,37 @@ const timerSchema = new Schema(
 );
 
 
+
+const MaterialSubItemsSchema = new Schema<IMaterialSubItems>({
+  materialName: { type: String, },
+  unit: { type: String, },
+  price: { type: Number, min: 0 },
+  labourCost:{type:Number},
+  quantity: { type: Number, default: 0 },
+}, {_id:true});
+
+const ItemsSchema = new Schema<IMatItems>({
+  itemName: { type: String, },
+  quantity: { type: Number, default: 0 },
+  unit: { type: String, },
+  materialItems: { type: [MaterialSubItemsSchema], default: [] },
+}, {_id:true});
+
 const roomSchema = new Schema<IMaterialRoom>(
   {
     name: { type: String },
-    roomFields: { type: [ItemSchema], default: [] },
+    roomFields: { type: [ItemsSchema], default: [] },
+    totalCost: {type: Number, default: 0},
     uploads: [uploadSchema],
   },
   { _id: true }
 )
+
+const PackageSchema = new Schema<IPackage>({
+ level: {type:String, default: "economy", enum:["economy", "luxury", "premium"]},
+ rooms: {type: [roomSchema], default:[]}
+}, {_id:true})
+
 
 const materialRoomConfirmationSchema = new Schema<IMaterialRoomConfirmation>(
   {
@@ -213,7 +258,8 @@ const materialRoomConfirmationSchema = new Schema<IMaterialRoomConfirmation>(
       ref: "ProjectModel",
       required: true,
     },
-    rooms: [roomSchema],
+    package: {type:[PackageSchema], default:[]},
+    packageSelected: {type: String, default: "economy"},
     status: { type: String, enum: ["pending", "completed"], default: "pending" },
     isEditable: { type: Boolean, default: true },
     assignedTo: {

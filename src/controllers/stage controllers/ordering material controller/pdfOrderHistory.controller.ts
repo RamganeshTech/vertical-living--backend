@@ -1064,14 +1064,6 @@ export const gerneateCommonOrdersPdf = async (id: string) => {
         const fileName = `order-material/order-${orderHistory.projectName}-${Date.now()}.pdf`;
         const uploadResult = await uploadToS3(pdfBytes, fileName);
 
-        // Update the order history with generated link
-        // await OrderMaterialHistoryModel.findByIdAndUpdate({projectId}, {
-        //     generatedLink: uploadResult.Location
-        // });
-
-        // console.log("generateld dat", uploadResult.Location)
-
-
         const pdfData = {
             url: uploadResult.Location,
             refUniquePdf, // <-- now has projectName-uniquenumber-pdf

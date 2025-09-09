@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import mongoose, { Types } from 'mongoose'
 import { CostEstimationModel, ICostEstimaionUpload, ICostEstimation } from '../../../models/Stage Models/Cost Estimation Model/costEstimation.model';
 import { SiteMeasurementModel } from '../../../models/Stage Models/siteMeasurement models/siteMeasurement.model';
-import MaterialRoomConfirmationModel, { IMaterialRoomConfirmation } from './../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model';
+import MaterialRoomConfirmationModel, { IMaterialRoom, IMaterialRoomConfirmation } from './../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model';
 import { PREDEFINED_ROOMS } from '../../../constants/phaseConstants';
 import { handleSetStageDeadline, timerFunctionlity } from '../../../utils/common features/timerFuncitonality';
 import { syncInstallationWork } from '../installation controllers/installation.controller';
@@ -138,7 +138,7 @@ export const syncCostEstimation = async (
 ) => {
 
     // 1. If no materialDoc passed, fetch from DB
-    if (!materialDoc || !materialDoc.rooms) {
+    if (!materialDoc || !materialDoc.package) {
         materialDoc = await MaterialRoomConfirmationModel.findOne({ projectId }) as any;
         if (!materialDoc) return;
     }
@@ -150,8 +150,23 @@ export const syncCostEstimation = async (
         reminderSent: false,
     };
 
+
+      // ✅ pick only the selected package
+        const selectedPackageLevel = materialDoc.packageSelected || "economy";
+        const selectedPackage = (materialDoc.package || []).find(
+            (pkg) => pkg.level === selectedPackageLevel
+        );
+
+        if (!selectedPackage) {
+            console.log("No matching package found:", selectedPackageLevel);
+            return;
+        }
+
+        const rooms = selectedPackage.rooms || [];
+
+
     // 2. Map rooms → cost estimation format
-    const materialEstimation = (materialDoc.rooms || []).map((room: any) => ({
+    const materialEstimation = (rooms || []).map((room: IMaterialRoom) => ({
         _id: new mongoose.Types.ObjectId(), // fresh room id
         name: room.name,
         totalCost: 0,

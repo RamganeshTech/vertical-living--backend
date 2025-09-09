@@ -164,129 +164,146 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
 
 
     } else if (mode === "Manual Flow") {
-        // const [materials, estimation] = await Promise.all([
-        //     MaterialRoomConfirmationModel.findOne({ projectId }),
-        //     CostEstimationModel.findOne({ projectId }),
-        // ]);
-
-        // const materialMap = new Map<string, number>(); // key → quantity
-
-        // // collect quantities from roomFields
-        // materials?.rooms?.forEach(room => {
-        //     const roomFields = room.roomFields || {};
-        //     for (const key in roomFields) {
-        //         const entry = roomFields[key] as IRoomItemEntry;
-        //         const qty = entry?.quantity || 0;
-        //         materialMap.set(key, (materialMap.get(key) || 0) + qty);
-        //     }
-        // });
 
 
-        // estimation?.materialEstimation?.forEach(room => {
-        //     room.materials?.forEach(item => {
-        //         // Skip if no finalRate (i.e., not estimated)
-        //         if (typeof item.finalRate !== "number") return;
+        // const materialRoomData = await MaterialRoomConfirmationModel.findOne({ projectId }).lean();
+        // if (!materialRoomData) {
+        //     console.log("mteiral room stage not found")
+        //     return
+        // }
+        // const rooms = materialRoomData.rooms || [];
 
-        //         // Skip if no matching material in the confirmation
-        //         const quantity = materialMap.get(item.key);
-        //         if (!quantity) return;
+        // // 2. Get cost estimation data
+        // const costEstimationData = await CostEstimationModel.findOne({ projectId }).lean();
+        // if (!costEstimationData) {
+        //     console.log("cost estimation stage not found")
+        //     return
+        // }
 
-        //         const unit = {
-        //             category: item.key,
-        //             quantity,
-        //             singleUnitCost: item.finalRate,
-        //             unitId: null,
-        //             customId: item.key,
-        //             image: null,
-        //         };
+        // const materialEstimationRooms = costEstimationData.materialEstimation || [];
 
-        //         selected.push(unit);
-        //         totalCost += item.finalRate * quantity;
+        // // 3. Build cost lookup map by room name and key
+        // const costMap: Record<string, Record<string, number>> = {};
+        // materialEstimationRooms.forEach(room => {
+        //     costMap[room.name] = {};
+        //     (room.materials || []).forEach(material => {
+        //         costMap[room.name][material.key] = material.totalCost || 0;
         //     });
         // });
 
+        // // 4. Build selectedUnits array for OrderMaterialHistory
+
+
+        // rooms.forEach(room => {
+
+        //     ((room.roomFields as any) || []).forEach((item: any) => {
+        //         const unitName = item.itemName;    /// room name 
+        //         const quantity = item.quantity || 0;
+        //         const unitCost = costMap?.[room.name]?.[item.itemName] || 0;
+
+        //         if (quantity <= 0) return; // skip zero quantity
+
+        //         selected.push({
+        //             unitId: null, // If you can resolve unitId from somewhere, set here
+        //             category: unitName, // Set category if you have it, else null
+        //             image: null, // Set image if you have it, else null
+        //             customId: null, // Set customId if available
+        //             unitName,
+        //             dimention: null,
+        //             quantity,
+        //             singleUnitCost: unitCost,
+        //             subItems: [],
+        //         });
+        //     });
+        // });
+
+        // // 5. Calculate total cost
+        // totalCost = selected.reduce(
+        //     (acc, item) => acc + item.quantity * item.singleUnitCost,
+        //     0
+        // );
+
+
+
+        // 1. Get material confirmation data (with packages)
         const materialRoomData = await MaterialRoomConfirmationModel.findOne({ projectId }).lean();
         if (!materialRoomData) {
-            console.log("mteiral room stage not found")
-            return
+            console.log("material room stage not found");
+            return;
         }
-        const rooms = materialRoomData.rooms || [];
+
+        // ✅ pick only the selected package
+        const selectedPackageLevel = materialRoomData.packageSelected || "economy";
+        const selectedPackage = (materialRoomData.package || []).find(
+            (pkg) => pkg.level === selectedPackageLevel
+        );
+
+        if (!selectedPackage) {
+            console.log("No matching package found:", selectedPackageLevel);
+            return;
+        }
+
+        const rooms = selectedPackage.rooms || [];
 
         // 2. Get cost estimation data
         const costEstimationData = await CostEstimationModel.findOne({ projectId }).lean();
         if (!costEstimationData) {
-            console.log("cost estimation stage not found")
-            return
+            console.log("cost estimation stage not found");
+            return;
         }
 
         const materialEstimationRooms = costEstimationData.materialEstimation || [];
 
-        // 3. Build cost lookup map by room name and key
+        // 3. Build cost lookup map by room name + itemName
         const costMap: Record<string, Record<string, number>> = {};
-        materialEstimationRooms.forEach(room => {
+        materialEstimationRooms.forEach((room) => {
             costMap[room.name] = {};
-            (room.materials || []).forEach(material => {
+            (room.materials || []).forEach((material) => {
                 costMap[room.name][material.key] = material.totalCost || 0;
             });
         });
 
         // 4. Build selectedUnits array for OrderMaterialHistory
+        const selected: any[] = [];
 
-
-        rooms.forEach(room => {
-            // let materialsCostMap: any;
-            // if (Array.isArray(room.roomFields)) {
-            //     room.roomFields.forEach(ele => {
-            //         materialsCostMap = costMap?.[room.name]?.[ele.itemName] ?? {};
-            //     });
-            // }
-            ((room.roomFields as any) || []).forEach((item: any) => {
-                const unitName = item.itemName;    /// room name 
+        rooms.forEach((room) => {
+            (room.roomFields || []).forEach((item: any) => {
+                const unitName = item.itemName;
                 const quantity = item.quantity || 0;
                 const unitCost = costMap?.[room.name]?.[item.itemName] || 0;
 
                 if (quantity <= 0) return; // skip zero quantity
 
                 selected.push({
-                    unitId: null, // If you can resolve unitId from somewhere, set here
-                    category: unitName, // Set category if you have it, else null
-                    image: null, // Set image if you have it, else null
-                    customId: null, // Set customId if available
-                    unitName,
-                    dimention: null,
+                    unitId: null, // optional if you track IDs
+                    category: room.name, // room name as category
+                    image: null,
+                    customId: null,
+                    unitName, // itemName from schema
+                    dimension: null,
                     quantity,
                     singleUnitCost: unitCost,
-                    subItems: [],
+
+                    // ✅ materialItems become subItems
+                    subItems: (item.materialItems || []).map((mat: any) => ({
+                        materialName: mat.materialName,
+                        unit: mat.unit,
+                        quantity: mat.quantity,
+                        price: mat.price,
+                        labourCost: mat.labourCost,
+                    })),
                 });
             });
         });
 
         // 5. Calculate total cost
-        totalCost = selected.reduce(
+        const totalCost = selected.reduce(
             (acc, item) => acc + item.quantity * item.singleUnitCost,
             0
         );
 
-        // 6. Upsert OrderMaterialHistoryModel document
-        // const orderHistoryDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
-        //     { projectId },
-        //     {
-        //         projectId,
-        //         selectedUnits:selected,
-        //         totalCost,
-        //         status: "pending",
-        //         isEditable: true,
-        //         timer: {
-        //             startedAt: null,
-        //             completedAt: null,
-        //             deadLine: null,
-        //             reminderSent: false,
-        //         },
-        //         assignedTo: null,
-        //         generatedLink: "",
-        //     },
-        //     { new: true }
-        // );
+
+
 
     }
 
@@ -559,7 +576,7 @@ export const updateSubItemInUnit = async (req: Request, res: Response): Promise<
 
         // ---- INVENTORY UPDATE PART (background) ----
         if (quantity !== null && quantity !== oldQuantity) {
-            const diff = quantity - oldQuantity;  
+            const diff = quantity - oldQuantity;
 
             (async () => {
                 try {
@@ -623,10 +640,10 @@ export const deleteSubItemFromUnit = async (req: Request, res: Response): Promis
         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
 
 
-         res.json({ ok: true, message: "SubItem deleted", subItems: unitObj.subItems });
+        res.json({ ok: true, message: "SubItem deleted", subItems: unitObj.subItems });
 
 
-           // ---- BACKGROUND INVENTORY UPDATE ----
+        // ---- BACKGROUND INVENTORY UPDATE ----
         (async () => {
             try {
                 // add back deleted quantity to inventory
@@ -657,7 +674,7 @@ export const updateDeliveryLocationDetails = async (req: Request, res: Response)
         // }
 
 
-        if(phoneNumber?.trim()  && phoneNumber.length !== 10){
+        if (phoneNumber?.trim() && phoneNumber.length !== 10) {
             return res.status(400).json({ ok: false, message: "Phone Number should be 10 digits" });
         }
 
@@ -705,7 +722,7 @@ export const updateShopDetails = async (req: Request, res: Response): Promise<an
         // }
 
 
-        if(phoneNumber?.trim()  && phoneNumber.length !== 10){
+        if (phoneNumber?.trim() && phoneNumber.length !== 10) {
             return res.status(400).json({ ok: false, message: "Phone Number should be 10 digits" });
         }
 
