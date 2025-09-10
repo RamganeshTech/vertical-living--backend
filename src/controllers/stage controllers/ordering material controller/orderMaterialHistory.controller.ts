@@ -2,12 +2,12 @@ import { Request, Response } from "express";
 import mongoose from "mongoose"
 import redisClient from "../../../config/redisClient";
 import { SelectedModularUnitModel } from "../../../models/Modular Units Models/All Unit Model/SelectedModularUnit Model/selectedUnit.model";
-import { IOrderHistorytimer, OrderMaterialHistoryModel, OrderSubItems } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
+import { IOrderHistorytimer, OrderedMaterialSingle, OrderMaterialHistoryModel, OrderSubItems } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import { syncMaterialArrivalNew } from "../MaterialArrival controllers/materialArrivalCheckNew.controller";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
-import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
+import MaterialRoomConfirmationModel, { IMaterialRoom, IMaterialSubItems } from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
 import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
 import { getStageSelectionUtil } from "../../Modular Units Controllers/StageSelection Controller/stageSelection.controller";
 import { IRoomItemEntry } from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomTypes";
@@ -83,6 +83,95 @@ import { InventoryModel } from "../../../models/Stage Models/Inventory Model/inv
 
 
 
+
+export const restoreInventoryQuantities = async ({
+    projectId,
+    subItems,
+}: {
+    projectId: string;
+    subItems: { subItemName: string; quantity: number }[];
+}) => {
+    try {
+        const aggregated: Record<string, number> = {};
+
+        subItems.forEach(({ subItemName, quantity }) => {
+            const key = subItemName.toLowerCase().trim();
+            if (!aggregated[key]) aggregated[key] = 0;
+            aggregated[key] += quantity;
+        });
+
+        const bulkOps = Object.entries(aggregated).map(([subItemName, quantity]) => ({
+            updateOne: {
+                filter: {
+                    projectId,
+                    "subItems.itemName": subItemName
+                },
+                update: {
+                    $inc: {
+                        "subItems.$.remainingQuantity": quantity
+                    }
+                }
+            }
+        }));
+
+        if (bulkOps.length) {
+            await InventoryModel.bulkWrite(bulkOps);
+            console.log("✅ Inventory restored:", bulkOps.length);
+        }
+    } catch (error: any) {
+        console.error("❌ Inventory restore failed:", error.message);
+    }
+};
+
+
+export const bulkDeductInventoryQuantities = async ({
+    projectId,
+    subItems,
+}: {
+    projectId: string;
+    subItems: { subItemName: string; quantity: number }[];
+}) => {
+    try {
+        // Aggregate quantities per unique item
+        const quantityMap: Record<string, number> = {};
+
+        subItems.forEach(({ subItemName, quantity }) => {
+            const key = subItemName.toLowerCase().trim();
+            if (!quantityMap[key]) {
+                quantityMap[key] = 0;
+            }
+            quantityMap[key] += quantity || 0;
+        });
+
+
+
+        console.log("quantityMap for inventory", quantityMap)
+
+        // Create efficient bulk write operations
+        const bulkOps = Object.entries(quantityMap).map(([itemName, totalQty]) => ({
+            updateOne: {
+                filter: {
+                    projectId,
+                    "subItems.itemName": itemName,
+                },
+                update: {
+                    $inc: {
+                        "subItems.$.remainingQuantity": -Math.abs(totalQty),
+                    },
+                },
+            },
+        }));
+        console.log("bulkOps for inventory", bulkOps)
+
+        if (bulkOps.length > 0) {
+            await InventoryModel.bulkWrite(bulkOps);
+            console.log(`Inventory updated for ${bulkOps.length} sub-items.`);
+        }
+    } catch (error: any) {
+        console.error("❌ Error updating inventory:", error.message);
+    }
+};
+
 export const syncOrderingMaterialsHistory = async (projectId: string) => {
     let existing = await OrderMaterialHistoryModel.findOne({ projectId });
 
@@ -90,10 +179,10 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
     const stageSelection = await getStageSelectionUtil(projectId);
     const mode = stageSelection?.mode || "Manual Flow";
 
-    let selected: any[] = [];
+    let selected: OrderedMaterialSingle[] = [];
     let totalCost = 0;
 
-    if (mode === "Modular Units") {
+    if (mode?.mode === "Modular Units") {
         const units = await SelectedModularUnitModel.findOne({ projectId });
 
         const isExternalExists = await SelectedExternalModel.findOne({ projectId })
@@ -163,9 +252,9 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
         }
 
 
-    } else if (mode === "Manual Flow") {
+    } else if (mode?.mode === "Manual Flow") {
 
-
+        console.log("gettin g into the manual flow")
         // const materialRoomData = await MaterialRoomConfirmationModel.findOne({ projectId }).lean();
         // if (!materialRoomData) {
         //     console.log("mteiral room stage not found")
@@ -264,9 +353,9 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
         });
 
         // 4. Build selectedUnits array for OrderMaterialHistory
-        const selected: any[] = [];
+        // const selected: any[] = [];
 
-        rooms.forEach((room) => {
+        rooms.forEach((room: IMaterialRoom) => {
             (room.roomFields || []).forEach((item: any) => {
                 const unitName = item.itemName;
                 const quantity = item.quantity || 0;
@@ -280,12 +369,12 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
                     image: null,
                     customId: null,
                     unitName, // itemName from schema
-                    dimension: null,
+                    dimention: null,
                     quantity,
                     singleUnitCost: unitCost,
 
                     // ✅ materialItems become subItems
-                    subItems: (item.materialItems || []).map((mat: any) => ({
+                    subItems: (item.materialItems || []).map((mat: IMaterialSubItems) => ({
                         materialName: mat.materialName,
                         unit: mat.unit,
                         quantity: mat.quantity,
@@ -297,12 +386,12 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
         });
 
         // 5. Calculate total cost
-        const totalCost = selected.reduce(
+        totalCost = selected.reduce(
             (acc, item) => acc + item.quantity * item.singleUnitCost,
             0
         );
 
-
+        console.log("slected in the first else condition", selected)
 
 
     }
@@ -364,11 +453,17 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
         existing.timer = timer;
         existing.totalCost = totalCost;
 
-        selected.forEach((newUnit: any) => {
+
+
+        console.log("selectedUnits", selected)
+
+        // selected.forEach((newUnit: OrderedMaterialSingle) => {
+        for (const newUnit of selected) {
             const existingUnit = existing?.selectedUnits?.find(
                 (unit: any) => unit.unitName === newUnit.unitName
             );
 
+            console.log("existing units", existingUnit)
             if (!existingUnit) {
                 // ✅ Only update quantity if the new unit is modular
                 existing?.selectedUnits.push(newUnit);
@@ -389,8 +484,69 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
                     existingUnit.singleUnitCost = newUnit.singleUnitCost;
                 }
 
+
+
+                // existingUnit.subItems = newUnit?.subItems || []; // safely replace for simplicity
+
+
+
+                // Make sure subItems exist
+                const newSubItems = newUnit?.subItems || [];
+
+                const existingRefIds = new Set<string>();
+                existingUnit.subItems?.forEach((sub: any) => {
+                    if (sub.refId) existingRefIds.add(sub.refId);
+                });
+
+                // Step 1: Find max existing number across all selectedUnits
+                let maxNumber = 0;
+                existing!.selectedUnits.forEach((u: any) => {
+                    u.subItems.forEach((sub: any) => {
+                        if (sub.refId) {
+                            const num = parseInt(sub.refId.replace(/^\D+/, ""), 10);
+                            if (!isNaN(num)) {
+                                maxNumber = Math.max(maxNumber, num);
+                            }
+                        }
+                    });
+                });
+
+                // Step 2: Define prefix from unitName
+                let prefix = (newUnit.unitName || "").substring(0, 3).toUpperCase();
+                if (prefix.length < 3) prefix = prefix.padEnd(3, "A");
+
+                // Step 3: Process subItems
+                const processedSubItems = newSubItems.map((sub: any) => {
+                    if (sub.refId && existingRefIds.has(sub.refId)) {
+                        // Existing refId: keep it
+                        return sub;
+                    } else {
+                        // Generate new refId
+                        maxNumber += 1;
+                        const newRefId = `${prefix}-${maxNumber}`;
+                        console.log("subItems", sub)
+                        return {
+                            // ...sub,
+                            subItemName: sub.materialName,
+                            quantity: sub.quantity,
+                            unit: sub.unit,
+                            refId: newRefId,
+                        };
+                    }
+                });
+
+                existingUnit.subItems =  processedSubItems;
+
+                await bulkDeductInventoryQuantities({
+                    projectId,
+                    subItems: processedSubItems.map((sub: any) => ({
+                        subItemName: sub.subItemName, // NOT materialName — it's already mapped
+                        quantity: sub.quantity,
+                    })),
+                });
+
             }
-        });
+        }
     }
 
     await existing.save();
@@ -662,6 +818,72 @@ export const deleteSubItemFromUnit = async (req: Request, res: Response): Promis
     }
 };
 
+
+
+export const deleteAllSubUnits = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params;
+
+        if (!projectId) {
+            return res.status(400).json({ ok: false, message: "Invalid Project ID" });
+        }
+
+        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+        if (!orderDoc) {
+            return res.status(404).json({ ok: false, message: "Order history not found" });
+        }
+
+        // orderDoc.selectedUnits.forEach(unit => {
+        //     unit.subItems = [];
+        // });
+
+        // await orderDoc.save();
+
+
+        // 🧮 Step 1: Collect all subItems to restore quantities
+        const allSubItemsToRestore: { subItemName: string; quantity: number }[] = [];
+
+        orderDoc.selectedUnits.forEach(unit => {
+            unit.subItems.forEach(sub => {
+                if (sub.subItemName && sub.quantity > 0) {
+                    allSubItemsToRestore.push({
+                        subItemName: sub.subItemName,
+                        quantity: sub.quantity,
+                    });
+                }
+            });
+
+            // Then clear subItems
+            unit.subItems = [];
+        });
+
+        // 🛠️ Restore subItem quantities before saving
+
+
+        await orderDoc.save();
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+
+
+        res.json({ ok: true, message: "SubItem deleted", data: orderDoc.selectedUnits });
+
+
+        // 🔁 Fire-and-forget to restore inventory without blocking response
+        setImmediate(async () => {
+            try {
+                await restoreInventoryQuantities({
+                    projectId,
+                    subItems: allSubItemsToRestore,
+                });
+            } catch (err: any) {
+                console.error("❌ Failed to restore inventory after deleteAllSubUnits:", err.message);
+            }
+        })
+
+    } catch (error: any) {
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+};
 
 
 export const updateDeliveryLocationDetails = async (req: Request, res: Response): Promise<any> => {

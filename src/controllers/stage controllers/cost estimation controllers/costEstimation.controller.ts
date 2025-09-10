@@ -151,18 +151,18 @@ export const syncCostEstimation = async (
     };
 
 
-      // ✅ pick only the selected package
-        const selectedPackageLevel = materialDoc.packageSelected || "economy";
-        const selectedPackage = (materialDoc.package || []).find(
-            (pkg) => pkg.level === selectedPackageLevel
-        );
+    // ✅ pick only the selected package
+    const selectedPackageLevel = materialDoc.packageSelected || "economy";
+    const selectedPackage = (materialDoc.package || []).find(
+        (pkg) => pkg.level === selectedPackageLevel
+    );
 
-        if (!selectedPackage) {
-            console.log("No matching package found:", selectedPackageLevel);
-            return;
-        }
+    if (!selectedPackage) {
+        console.log("No matching package found:", selectedPackageLevel);
+        return;
+    }
 
-        const rooms = selectedPackage.rooms || [];
+    const rooms = selectedPackage.rooms || [];
 
 
     // 2. Map rooms → cost estimation format
@@ -263,7 +263,7 @@ const getCostEstimationByProject = async (req: Request, res: Response): Promise<
         const costEstimation = await CostEstimationModel.findOne({ projectId }).populate(assignedTo, selectedFields);
 
         if (!costEstimation) {
-            return res.status(404).json({ ok: false, message: "Cost Estimation stage not created please complete the last stage", data:null });
+            return res.status(404).json({ ok: false, message: "Cost Estimation stage not created please complete the last stage", data: null });
         }
 
         return res.status(200).json({
@@ -728,7 +728,8 @@ const setCostEstimationStageDeadline = (req: Request, res: Response): Promise<an
 const costEstimationCompletionStatus = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
-        const form = await CostEstimationModel.findOne({ projectId });
+        const [form, materialSelection] = await Promise.all([CostEstimationModel.findOne({ projectId }),
+        MaterialRoomConfirmationModel.findOne({ projectId })]);
 
         if (!form) return res.status(404).json({ ok: false, message: "Form not found" });
 
@@ -741,8 +742,31 @@ const costEstimationCompletionStatus = async (req: Request, res: Response): Prom
         timerFunctionlity(form, "completedAt")
         await form.save();
 
+        const selectedPackage = materialSelection?.packageSelected || "economy"
+
+        console.log("mateialSelection", materialSelection)
+
+        let materialCost: number = 0;
+
+        for (let pkg of (materialSelection?.package || [])) {
+            console.log("pkg level", pkg.level)
+            if (pkg?.level !== selectedPackage) {
+                console.log("getting skipped", pkg.level)
+                continue;
+            }
+
+            pkg?.rooms?.forEach(room => {
+                console.log("inside the loop name", room)
+                console.log("getting into the forloop", room.name, room.totalCost)
+                materialCost += room.totalCost
+            })
+        }
+
+        console.log("mateiral cost", materialCost)
+        const totalCost = form.totalEstimation + materialCost
+
         if (form.status === "completed") {
-            await syncPaymentConfirationModel(projectId, form.totalEstimation)
+            await syncPaymentConfirationModel(projectId, totalCost)
 
             // let uploadedFiles: DocUpload[] = [];
 

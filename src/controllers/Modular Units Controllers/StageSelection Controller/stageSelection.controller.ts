@@ -1,10 +1,8 @@
 import { Request, Response } from "express";
-import { IStageSelection, StageSelectionModel } from "../../../models/Modular Units Models/All Unit Model/Stage Selection Model/stageSelection.model";
+import {  StageSelectionModel } from "../../../models/Modular Units Models/All Unit Model/Stage Selection Model/stageSelection.model";
 import { RoleBasedRequest } from "../../../types/types";
 import { ObjectId, Types } from 'mongoose';
-import { syncPaymentConfirationModel } from "../../stage controllers/PaymentConfirmation controllers/PaymentMain.controllers";
 import redisClient from "../../../config/redisClient";
-import { SelectedModularUnitModel } from "../../../models/Modular Units Models/All Unit Model/SelectedModularUnit Model/selectedUnit.model";
 
 
 
@@ -114,7 +112,7 @@ export const getStageSelectionUtil = async (projectId: string): Promise<any | nu
   // Fallback to DB
   const selection = await StageSelectionModel.findOne({ projectId }).populate("projectId");
   if (!selection) return null;
-console.log("selection form Util", selection)
+// console.log("selection form Util", selection)
   // Cache for future
   await redisClient.set(redisKey, JSON.stringify(selection.toObject()), { EX: 60 * 10 });
 

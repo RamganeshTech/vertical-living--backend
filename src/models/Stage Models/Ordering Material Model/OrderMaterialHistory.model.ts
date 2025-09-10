@@ -124,12 +124,12 @@ export interface IOrderDimention {
     depth: number;
 }
 export interface OrderedMaterialSingle {
-    unitId: Types.ObjectId;
-    category: string; // e.g., "bedCot", "tv", etc.
-    customId: string; // e.g., "bedCot", "tv", etc.
-    image: string;
+    unitId: Types.ObjectId | null;
+    category: string | null; // e.g., "bedCot", "tv", etc.
+    customId: string | null; // e.g., "bedCot", "tv", etc.
+    image: string | null;
     subItems: OrderSubItems[];
-    dimention: IOrderDimention
+    dimention: IOrderDimention | null
     unitName: string,
     quantity: number;
     singleUnitCost: number

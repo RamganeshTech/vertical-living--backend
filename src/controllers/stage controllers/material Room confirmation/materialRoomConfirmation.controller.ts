@@ -702,6 +702,32 @@ export const deleteMaterialSubItem = async (req: Request, res: Response): Promis
 }
 
 
+
+export const updateSelectedPackage = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { projectId } = req.params;
+    const { selectedPackage } = req.body
+
+    const doc = await MaterialRoomConfirmationModel.findOneAndUpdate({ projectId }, { $set: { packageSelected: selectedPackage } }, {new:true});
+
+    if (!doc) return res.status(404).json({ ok: false, message: "Material record not found" });
+
+    await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: doc })
+
+    return res.status(200).json({
+      message: "Package Updated successfully",
+      data: doc.packageSelected,
+      ok: true
+    });
+
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error", error: err, ok:false });
+  }
+}
+
+
 const deleteRoom = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { projectId, packageId, roomId } = req.params;
