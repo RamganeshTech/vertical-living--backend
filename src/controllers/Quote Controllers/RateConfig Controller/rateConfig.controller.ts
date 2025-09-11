@@ -81,7 +81,7 @@ export const createMaterialCategory = async (req: Request, res: Response): Promi
 
     if (!organizationId || !name || !Array.isArray(fields)) {
       return res.status(400).json({
-        success: false,
+        ok: false,
         message: "organizationId, name, and fields are required",
       });
     }
@@ -90,13 +90,13 @@ export const createMaterialCategory = async (req: Request, res: Response): Promi
     for (const field of fields) {
       if (!field.key) {
         return res.status(400).json({
-          success: false,
+          ok: false,
           message: "Each field must have a key",
         });
       }
       if (field.type && !["string", "number", "boolean"].includes(field.type)) {
         return res.status(400).json({
-          success: false,
+          ok: false,
           message: `Invalid type '${field.type}' for field '${field.key}'`,
         });
       }
@@ -111,14 +111,14 @@ export const createMaterialCategory = async (req: Request, res: Response): Promi
     await newCategory.save();
 
     return res.status(201).json({
-      success: true,
+      ok: true,
       message: "Material category created successfully",
       data: newCategory,
     });
   } catch (error: any) {
     console.error("Error creating material category:", error);
     return res.status(500).json({
-      success: false,
+      ok: false,
       message: "Internal server error",
       error: error.message,
     });
