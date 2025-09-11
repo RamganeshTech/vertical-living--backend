@@ -75,6 +75,8 @@ import { SocketService } from './config/socketService';
 import LogisticsRoutes from './routers/Department Routes/Logistics Routes/logistics.routes';
 import procurementNewRoutes from './routers/Department Routes/ProcurementNew Routes/procurementNew.routes';
 import accountingRoutes from './routers/Department Routes/Accounting Routes/accounting.routes';
+import RateConfigRoutes from './routers/Quote Routes/RateConfig Routes/rateConfig.routes';
+import QuoteRouter from './routers/Quote Routes/QuoteGenerate Routes/quoteGenerate.routes';
 
 
 
@@ -268,6 +270,10 @@ app.use('/api/department/logistics', LogisticsRoutes)
 app.use('/api/department/procurement', procurementNewRoutes)
 app.use('/api/department/accounting', accountingRoutes)
 
+
+// QUOTES API
+app.use('/api/quote/rateconfig', RateConfigRoutes)
+app.use('/api/quote/quotegenerate', QuoteRouter)
 
 
 
