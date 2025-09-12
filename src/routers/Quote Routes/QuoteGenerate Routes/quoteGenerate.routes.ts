@@ -1,8 +1,9 @@
 import express from "express";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
-import { createMaterialQuote, getMaterialItemsByCategoryForQuote } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/quoteGenerate.controller";
+import { createMaterialQuote,  deleteMaterialQuoteById,  getMaterialQuoteEntries } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/quoteGenerate.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { getMaterialCategories } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
+import { getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
 
 const QuoteRouter = express.Router();
 
@@ -14,18 +15,43 @@ QuoteRouter.post(
   createMaterialQuote              // ✅ Your TS controller
 );
 
-
 QuoteRouter.get(
-  "/getcategories/:organizationId",
+  "/getquotes/:organizationId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
-  getMaterialCategories
+  getMaterialQuoteEntries
+);
+
+
+
+// QuoteRouter.get(
+//   "/getcategories/:organizationId",
+//   multiRoleAuthMiddleware("owner", "staff", "CTO"),
+//   getMaterialCategories
+// );
+
+
+
+
+// QUOTE VARIANT ROUTES
+QuoteRouter.get(
+  "/getquotesingle/:organizationId/:id",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  getMaterialQuoteSingle
 );
 
 
 QuoteRouter.get(
-  "/getmaterials/:organizationId/:categoryId",
+  "/getmaterials/:organizationId/:categoryName",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   getMaterialItemsByCategoryForQuote
+);
+
+
+
+QuoteRouter.delete(
+  '/deletequote/:id',
+  multiRoleAuthMiddleware('owner', 'staff', 'CTO'), // if required
+  deleteMaterialQuoteById
 );
 
 export default QuoteRouter;

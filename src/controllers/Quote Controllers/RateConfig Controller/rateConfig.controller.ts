@@ -188,6 +188,7 @@ export const createMaterialItems = async (req: Request, res: Response): Promise<
     const itemDocs = items.map((data) => ({
       organizationId,
       categoryId,
+      categoryName:category.name,
       data,
     }));
 

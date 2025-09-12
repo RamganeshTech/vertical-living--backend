@@ -11,117 +11,231 @@ interface UploadedFile extends Express.Multer.File {
 // ----------------------------
 // @route   POST /api/material-quote/:organizationId/:projectId
 // ----------------------------
+// old one
+// export const createMaterialQuote = async (req: Request, res: Response): Promise<any> => {
+//     try{
+//   const { organizationId, projectId } = req.params;
+
+//   // Validate IDs
+//   if (!organizationId || !Types.ObjectId.isValid(organizationId)) {
+//     return res.status(400).json({ ok:false, message: "Missing or invalid organizationId" });
+//   }
+//   if (!projectId || !Types.ObjectId.isValid(projectId)) {
+//     return res.status(400).json({ ok:false, message: "Missing or invalid projectId" });
+//   }
+
+// //   const {
+// //     categorySections = [],
+// //     fittings = [],
+// //     glues = [],
+// //     nonBrandedMaterials = [],
+// //     plywoodTotal = 0,
+// //     fittingsTotal = 0,
+// //     glueTotal = 0,
+// //     nbmTotal = 0,
+// //     grandTotal = 0
+// //   } = req.body;
+
+
+
+// const categorySections = JSON.parse(req.body.categorySections || "[]");
+// const fittings = JSON.parse(req.body.fittings || "[]");
+// const glues = JSON.parse(req.body.glues || "[]");
+// const nonBrandedMaterials = JSON.parse(req.body.nonBrandedMaterials || "[]");
+
+// const plywoodTotal = Number(req.body.plywoodTotal || 0);
+// const fittingsTotal = Number(req.body.fittingsTotal || 0);
+// const glueTotal = Number(req.body.glueTotal || 0);
+// const nbmTotal = Number(req.body.nbmTotal || 0);
+// const grandTotal = Number(req.body.grandTotal || 0);
+
+//   // Optional image uploads for category items
+//   const files = req.files as UploadedFile[] | undefined;
+
+
+//    const fileMap: Record<number, UploadedFile> = {};
+//     files?.forEach((file) => {
+// const match = file.fieldname?.match(/images\[(\d+)\]/);
+//       if (match) {
+//         const idx = Number(match[1]);
+//         fileMap[idx] = file;
+//       }
+//     });
+
+//   // Map image file to category section by index if available
+//   const updatedCategorySections = categorySections.map((item: any, index: number) => {
+//           const matchedFile = fileMap[index];
+
+
+//     return {
+//       itemName: item.itemName || null,
+//       imageUrl: matchedFile?.location || item?.imageUrl || null,
+//       plywoodNos: Number(item.plywoodNos) || 0,
+//       laminateNos: Number(item.laminateNos) || 0,
+//       carpenters: Number(item.carpenters) || 0,
+//       days: Number(item.days) || 0,
+//       profitOnMaterial: Number(item.profitOnMaterial) || 0,
+//       profitOnLabour: Number(item.profitOnLabour) || 0,
+//       rowTotal: Number(item.rowTotal) || 0,
+//       remarks: item.remarks || null,
+//       itemMaterialId: item.itemMaterialId || null,
+//     };
+//   });
+
+//   const cleanSimpleItems = (sectionItems: any[]) =>
+//     (sectionItems || []).map((item: any) => ({
+//       itemName: item.itemName || null,
+//       description: item.description || null,
+//       quantity: Number(item.quantity) || 0,
+//       cost: Number(item.cost) || 0,
+//       rowTotal: Number(item.rowTotal) || 0,
+//     }));
+
+//   const newQuote = await MaterialQuoteGenerateModel.create({
+//     organizationId,
+//     projectId,
+//     categorySections: updatedCategorySections,
+//     fittings: cleanSimpleItems(fittings),
+//     glues: cleanSimpleItems(glues),
+//     nonBrandedMaterials: cleanSimpleItems(nonBrandedMaterials),
+//     plywoodTotal: Number(plywoodTotal) || 0,
+//     fittingsTotal: Number(fittingsTotal) || 0,
+//     glueTotal: Number(glueTotal) || 0,
+//     nbmTotal: Number(nbmTotal) || 0,
+//     grandTotal: Number(grandTotal) || 0,
+//   });
+
+//   res.status(201).json({
+//     ok: true,
+//     message: "Material Quote Created Successfully",
+//     data: newQuote,
+//   });
+// }
+//  catch (error: any) {
+//     console.error("Error creating quote:", error);
+//     return res.status(500).json({
+//       ok: false,
+//       message: "Internal server error",
+//       error: error.message,
+//     });
+//   }
+// }
+
+// NEW ONE
+
+
 export const createMaterialQuote = async (req: Request, res: Response): Promise<any> => {
-    try{
-  const { organizationId, projectId } = req.params;
+  try {
+    const { organizationId, projectId } = req.params;
 
-  // Validate IDs
-  if (!organizationId || !Types.ObjectId.isValid(organizationId)) {
-    return res.status(400).json({ ok:false, message: "Missing or invalid organizationId" });
-  }
-  if (!projectId || !Types.ObjectId.isValid(projectId)) {
-    return res.status(400).json({ ok:false, message: "Missing or invalid projectId" });
-  }
+    if (!organizationId || !Types.ObjectId.isValid(organizationId)) {
+      return res.status(400).json({ ok: false, message: 'Missing or invalid organizationId' });
+    }
+    if (!projectId || !Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({ ok: false, message: 'Missing or invalid projectId' });
+    }
 
-//   const {
-//     categorySections = [],
-//     fittings = [],
-//     glues = [],
-//     nonBrandedMaterials = [],
-//     plywoodTotal = 0,
-//     fittingsTotal = 0,
-//     glueTotal = 0,
-//     nbmTotal = 0,
-//     grandTotal = 0
-//   } = req.body;
+    // Parse furnitures array from body
+    const furnitures = JSON.parse(req.body.furnitures || '[]');
+    const grandTotal = Number(req.body.grandTotal || 0);
+    const notes = req.body.notes || null;
 
+    // Optional uploaded files from S3
+    const files = req.files as UploadedFile[] | undefined;
 
-
-const categorySections = JSON.parse(req.body.categorySections || "[]");
-const fittings = JSON.parse(req.body.fittings || "[]");
-const glues = JSON.parse(req.body.glues || "[]");
-const nonBrandedMaterials = JSON.parse(req.body.nonBrandedMaterials || "[]");
-
-const plywoodTotal = Number(req.body.plywoodTotal || 0);
-const fittingsTotal = Number(req.body.fittingsTotal || 0);
-const glueTotal = Number(req.body.glueTotal || 0);
-const nbmTotal = Number(req.body.nbmTotal || 0);
-const grandTotal = Number(req.body.grandTotal || 0);
-
-  // Optional image uploads for category items
-  const files = req.files as UploadedFile[] | undefined;
-
-
-   const fileMap: Record<number, UploadedFile> = {};
+    // Map: { 'images[0][1]': fileObj }
+    const fileMap: Record<string, UploadedFile> = {};
     files?.forEach((file) => {
-const match = file.fieldname?.match(/images\[(\d+)\]/);
-      if (match) {
-        const idx = Number(match[1]);
-        fileMap[idx] = file;
+      if (file.fieldname) {
+        fileMap[file.fieldname] = file;
       }
     });
 
-  // Map image file to category section by index if available
-  const updatedCategorySections = categorySections.map((item: any, index: number) => {
-          const matchedFile = fileMap[index];
+    const cleanSimpleItems = (section: any[]): any[] =>
+      (section || []).map((item) => ({
+        itemName: item.itemName || null,
+        description: item.description || null,
+        quantity: Number(item.quantity || 0),
+        cost: Number(item.cost || 0),
+        rowTotal: Number(item.rowTotal || 0),
+      }));
 
+    const processedFurniture = furnitures.map((furniture: any, furnitureIndex: number) => {
+      const coreMaterials = (furniture.coreMaterials || []).map((material: any, materialIndex: number) => {
+        const fieldKey = `images[${furnitureIndex}][${materialIndex}]`;
+        const matchedFile = fileMap[fieldKey];
 
-    return {
-      itemName: item.itemName || null,
-      imageUrl: matchedFile?.location || item?.imageUrl || null,
-      plywoodNos: Number(item.plywoodNos) || 0,
-      laminateNos: Number(item.laminateNos) || 0,
-      carpenters: Number(item.carpenters) || 0,
-      days: Number(item.days) || 0,
-      profitOnMaterial: Number(item.profitOnMaterial) || 0,
-      profitOnLabour: Number(item.profitOnLabour) || 0,
-      rowTotal: Number(item.rowTotal) || 0,
-      remarks: item.remarks || null,
-      itemMaterialId: item.itemMaterialId || null,
-    };
-  });
+        return {
+          itemName: material.itemName || null,
+          imageUrl: matchedFile?.location || material.imageUrl || null,
 
-  const cleanSimpleItems = (sectionItems: any[]) =>
-    (sectionItems || []).map((item: any) => ({
-      itemName: item.itemName || null,
-      description: item.description || null,
-      quantity: Number(item.quantity) || 0,
-      cost: Number(item.cost) || 0,
-      rowTotal: Number(item.rowTotal) || 0,
-    }));
+          plywoodNos: material.plywoodNos
+            ? {
+                quantity: Number(material.plywoodNos.quantity || 0),
+                thickness: Number(material.plywoodNos.thickness || 0),
+              }
+            : null,
 
-  const newQuote = await MaterialQuoteGenerateModel.create({
-    organizationId,
-    projectId,
-    categorySections: updatedCategorySections,
-    fittings: cleanSimpleItems(fittings),
-    glues: cleanSimpleItems(glues),
-    nonBrandedMaterials: cleanSimpleItems(nonBrandedMaterials),
-    plywoodTotal: Number(plywoodTotal) || 0,
-    fittingsTotal: Number(fittingsTotal) || 0,
-    glueTotal: Number(glueTotal) || 0,
-    nbmTotal: Number(nbmTotal) || 0,
-    grandTotal: Number(grandTotal) || 0,
-  });
+          laminateNos: material.laminateNos
+            ? {
+                quantity: Number(material.laminateNos.quantity || 0),
+                thickness: Number(material.laminateNos.thickness || 0),
+              }
+            : null,
 
-  res.status(201).json({
-    ok: true,
-    message: "Material Quote Created Successfully",
-    data: newQuote,
-  });
-}
- catch (error: any) {
-    console.error("Error creating quote:", error);
+          carpenters: Number(material.carpenters || 0),
+          days: Number(material.days || 0),
+          profitOnMaterial: Number(material.profitOnMaterial || 0),
+          profitOnLabour: Number(material.profitOnLabour || 0),
+          rowTotal: Number(material.rowTotal || 0),
+          remarks: material.remarks || null,
+        };
+      });
+
+      return {
+        furnitureName: furniture.furnitureName,
+
+        coreMaterials,
+        fittingsAndAccessories: cleanSimpleItems(furniture.fittingsAndAccessories),
+        glues: cleanSimpleItems(furniture.glues),
+        nonBrandMaterials: cleanSimpleItems(furniture.nonBrandMaterials),
+
+        coreMaterialsTotal: Number(furniture.coreMaterialsTotal || 0),
+        fittingsAndAccessoriesTotal: Number(furniture.fittingsAndAccessoriesTotal || 0),
+        gluesTotal: Number(furniture.gluesTotal || 0),
+        nonBrandMaterialsTotal: Number(furniture.nonBrandMaterialsTotal || 0),
+        furnitureTotal: Number(furniture.furnitureTotal || 0),
+      };
+    });
+
+    const newQuote = await MaterialQuoteGenerateModel.create({
+      organizationId,
+      projectId,
+      quoteNo: req.body.quoteNo || null,
+      furnitures: processedFurniture,
+      grandTotal,
+      notes,
+    });
+
+    return res.status(201).json({
+      ok: true,
+      message: 'Material Quote Created Successfully',
+      data: newQuote,
+    });
+  } catch (error: any) {
+    console.error('Error creating quote:', error);
     return res.status(500).json({
       ok: false,
-      message: "Internal server error",
+      message: 'Internal server error',
       error: error.message,
     });
   }
-}
+};
 
 
-export const getMaterialCategories = async (req: Request, res: Response):Promise<any> => {
+
+      
+export const getMaterialQuoteEntries = async (req: Request, res: Response):Promise<any> => {
   try {
     const { organizationId } = req.params;
 
@@ -131,57 +245,65 @@ export const getMaterialCategories = async (req: Request, res: Response):Promise
     }
 
     
-    const category = await CategoryModel.find({
+    const quotes = await MaterialQuoteGenerateModel.find({
       organizationId
     });
 
     return res.status(200).json({
       ok: true,
       message: "categoes fetched",
-      data: category,
+      data: quotes,
     });
 
   } catch (error: any) {
-    console.error("Error fetching category", error);
+    console.error("Error fetching quotes", error);
     return res.status(500).json({
       ok: false,
-      message: "Failed to fetch category",
+      message: "Failed to fetch quotes entries",
       error: error.message,
     });
   }
 };
 
 
-export const getMaterialItemsByCategoryForQuote = async (req: Request, res: Response):Promise<any> => {
+
+
+export const deleteMaterialQuoteById = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { organizationId, categoryId } = req.params;
+  const { id } = req.params;
 
-    // Optional: Validate inputs
-    if (!organizationId) {
-      return res.status(400).json({ ok: false, message: "Invalid organizationId" });
-    }
-
-    if (!categoryId) {
-      return res.status(400).json({ ok: false, message: "Category (e.g., plywood) is required" });
-    }
-
-    const items = await ItemModel.find({
-      organizationId,
-      categoryId: categoryId
+  // Validate ID format
+  if (!id) {
+    return res.status(400).json({
+      ok: false,
+      message: 'Invalid quote ID format.',
     });
+  }
+
+    const deletedQuote = await MaterialQuoteGenerateModel.findByIdAndDelete(id);
+
+    if (!deletedQuote) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Quote not found.',
+      });
+    }
 
     return res.status(200).json({
       ok: true,
-      message: "Material items fetched",
-      data: items,
+      message: 'Quote deleted successfully.',
+      data: deletedQuote,
     });
-
   } catch (error: any) {
-    console.error("Error fetching material items:", error);
+    console.error('Error deleting quote:', error.message);
     return res.status(500).json({
       ok: false,
-      message: "Failed to fetch material items",
+      message: 'Internal Server Error',
       error: error.message,
     });
   }
 };
+
+
+
+

@@ -29,12 +29,14 @@ export const CategoryModel = mongoose.model<MaterialCategoryDoc>("MaterialCatego
 interface MaterialItemDoc extends Document {
   organizationId: mongoose.Types.ObjectId;
   categoryId: mongoose.Types.ObjectId;
+  categoryName: string | null;
   data: Record<string, any>; // flexible to match fields defined in category
 }
 
 const MaterialItemSchema = new Schema<MaterialItemDoc>({
   organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel",  },
   categoryId: { type: Schema.Types.ObjectId, ref: "MaterialCategoryModel",  },
+  categoryName:{type: String, default:null},
   data: { type: Schema.Types.Mixed,  }, // { brand: "Sharon GOLD-BWP", thickness: "19mm", rate: 159.75, notes: "Waterproof" }
 }, { timestamps: true });
 
