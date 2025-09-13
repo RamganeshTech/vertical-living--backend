@@ -3,7 +3,7 @@ import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3
 import { createMaterialQuote,  deleteMaterialQuoteById,  getMaterialQuoteEntries } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/quoteGenerate.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { getMaterialCategories } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
-import { getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
+import {  createVariantQuotePdfGenerator, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
 
 const QuoteRouter = express.Router();
 
@@ -53,5 +53,23 @@ QuoteRouter.delete(
   multiRoleAuthMiddleware('owner', 'staff', 'CTO'), // if required
   deleteMaterialQuoteById
 );
+
+
+
+QuoteRouter.post(
+  "/generatepdf/:quoteId/create",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"), // if needed
+  createVariantQuotePdfGenerator
+);
+
+
+
+QuoteRouter.get(
+  "/getquotepdf/quote/:projectId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  getVariantQuoteDetails
+);
+
+
 
 export default QuoteRouter;

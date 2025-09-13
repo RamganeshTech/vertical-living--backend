@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import MaterialQuoteGenerateModel from "../../../models/Quote Model/QuoteGenerate Model/QuoteGenerate.model";
 import { CategoryModel, ItemModel } from "../../../models/Quote Model/RateConfigAdmin Model/rateConfigAdmin.model";
+import QuoteVarientGenerateModel from "../../../models/Quote Model/QuoteVariant Model/quoteVarient.model";
+import ProjectModel from "../../../models/project model/project.model";
+import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
+import { generatePdfMaterialPacakgeComparison } from "../../stage controllers/material Room confirmation/materialRoomConfirmation.controller";
+import { generateQuoteVariantPdf } from "./pdfQuoteVarientGenerate";
 
 export const getMaterialQuoteSingle = async (req: Request, res: Response):Promise<any> => {
   try {
@@ -11,9 +16,6 @@ export const getMaterialQuoteSingle = async (req: Request, res: Response):Promis
       return res.status(400).json({ ok: false, message: "Invalid Ids" });
     }
 
-
-
-    
     const quote = await MaterialQuoteGenerateModel.findOne({
       organizationId, _id: id
     });
@@ -48,8 +50,8 @@ export const getMaterialItemsByCategoryForQuote = async (req: Request, res: Resp
     if (!categoryName) {
       return res.status(400).json({ ok: false, message: "Category (e.g., plywood) is required" });
     }
-    console.log("im gettni called")
-console.log("categoryName", categoryName)
+//     console.log("im gettni called")
+// console.log("categoryName", categoryName)
    const items = await ItemModel.find({
   organizationId,
   $expr: {
@@ -76,27 +78,126 @@ console.log("item", items)
     });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
  
+
+
+
+export const generateNextQuoteNumber = async (organizationId: string): Promise<string> => {
+  const variants = await QuoteVarientGenerateModel.find({ organizationId }).select("quoteNo");
+
+  const allQuoteNos = variants.map((doc) => {
+    const num = Number(String(doc.quoteNo)?.replace("Quote-", ""));
+    return isNaN(num) ? 0 : num;
+  });
+
+  const maxQuoteNo = allQuoteNos.length ? Math.max(...allQuoteNos) : 0;
+
+  const nextQuoteNo = maxQuoteNo + 1;
+
+  return `Quote-${nextQuoteNo}`;
+};
+
+
+
+export const createVariantQuotePdfGenerator = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { quoteId }= req.params
+    const {
+      brandName,
+      organizationId,
+      projectId,
+      furnitures,
+      grandTotal,
+      notes = null
+    } = req.body;
+
+    // ✅ Basic validation
+    if (!quoteId) {
+      return res.status(400).json({ ok: false, message: "Invalid or missing quoteId" });
+    }
+
+    if (!organizationId) {
+      return res.status(400).json({ ok: false, message: "Invalid or missing organizationId" });
+    }
+
+    if (!projectId) {
+      return res.status(400).json({ ok: false, message: "Invalid or missing projectId" });
+    }
+
+    if (!furnitures || !Array.isArray(furnitures) || furnitures.length === 0) {
+      return res.status(400).json({ ok: false, message: "Furnitures must be a non-empty array" });
+    }
+
+
+    const quoteNo = await generateNextQuoteNumber(organizationId);
+
+
+    // 🟢 Create DB entry (pdfLink: null for now, will update after PDF gen)
+    const newVariant = await QuoteVarientGenerateModel.create({
+      quoteNo,
+      quoteId,
+      brandName,
+      organizationId,
+      projectId,
+      furnitures,
+      grandTotal,
+      notes,
+      pdfLink: null,
+    });
+// console.log("new varient", newVariant)
+  const pdfResponse = await generateQuoteVariantPdf({ quoteId, projectId, newVariant });
+
+    return res.status(201).json({
+      ok: true,
+      message: "Variant quote created and PDF generated successfully",
+      data: {
+        fileName:pdfResponse.fileName,
+        url: pdfResponse.fileUrl, // ✅ PDF S3 URL
+        data: pdfResponse.updatedDoc, // ✅ Updated DB doc with PDF link
+      },
+    });
+
+  } catch (error: any) {
+    console.error("Error creating variant quote:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Failed to create variant quote",
+      error: error.message,
+    });
+  }
+};
+
+
+export const getVariantQuoteDetails = async (req: Request, res: Response):Promise<any> => {
+  try {
+    const { projectId } = req.params;
+
+    if (!projectId) {
+      return res.status(400).json({
+        ok: false,
+        message: "Quote variant ID is required.",
+      });
+    }
+
+    const quote = await QuoteVarientGenerateModel.find({projectId})
+
+
+    return res.status(200).json({
+      ok: true,
+      message: "Quote variant fetched successfully.",
+      data: quote,
+    });
+  } catch (error: any) {
+    console.error("Error fetching quote variant:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Failed to fetch variant quote.",
+      error: error.message,
+    });
+  }
+};
+
+
 
 // export const getMaterialCategories = async (req: Request, res: Response):Promise<any> => {
 //   try {

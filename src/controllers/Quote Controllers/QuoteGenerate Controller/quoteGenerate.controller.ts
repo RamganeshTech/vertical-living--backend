@@ -123,6 +123,18 @@ interface UploadedFile extends Express.Multer.File {
 
 // NEW ONE
 
+const getNextQuoteNumber = async (organizationId:string): Promise<string> => {
+  const allQuotes = await MaterialQuoteGenerateModel.find({organizationId}).select('quoteNo -_id');
+
+  const maxQuoteNumber = allQuotes.reduce((max, quote) => {
+    const number = Number(quote.quoteNo?.replace('Q-', ''));
+    return !isNaN(number) && number > max ? number : max;
+  }, 0);
+
+  const nextNumber = maxQuoteNumber + 1;
+  return `Q-${nextNumber}`;
+};
+
 
 export const createMaterialQuote = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -139,6 +151,7 @@ export const createMaterialQuote = async (req: Request, res: Response): Promise<
     const furnitures = JSON.parse(req.body.furnitures || '[]');
     const grandTotal = Number(req.body.grandTotal || 0);
     const notes = req.body.notes || null;
+    const quoteNo = await getNextQuoteNumber(organizationId); // ✅ Unique quote number
 
     // Optional uploaded files from S3
     const files = req.files as UploadedFile[] | undefined;
@@ -211,7 +224,7 @@ export const createMaterialQuote = async (req: Request, res: Response): Promise<
     const newQuote = await MaterialQuoteGenerateModel.create({
       organizationId,
       projectId,
-      quoteNo: req.body.quoteNo || null,
+      quoteNo: quoteNo || null,
       furnitures: processedFurniture,
       grandTotal,
       notes,
@@ -238,20 +251,46 @@ export const createMaterialQuote = async (req: Request, res: Response): Promise<
 export const getMaterialQuoteEntries = async (req: Request, res: Response):Promise<any> => {
   try {
     const { organizationId } = req.params;
-
+ const { projectId, createdAt, quoteNo } = req.query;
     // Optional: Validate inputs
     if (!organizationId) {
       return res.status(400).json({ ok: false, message: "Invalid organizationId" });
     }
 
     
-    const quotes = await MaterialQuoteGenerateModel.find({
-      organizationId
-    });
+     const filters: any = { organizationId };
+
+    // ✅ Add project filter (optional)
+    if (projectId) {
+      filters.projectId = projectId;
+    }
+
+    // ✅ Add quote number search (partial match)
+    if (quoteNo) {
+      const q = String(quoteNo).trim();
+      filters.quoteNo = { $regex: q.replace(/Q-/, ''), $options: 'i' };
+    }
+
+    // ✅ Add createdAt filter (match same day)
+     if (createdAt) {
+      const selectedDate = new Date(createdAt as string); // "yyyy-mm-dd"
+      selectedDate.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setDate(endOfDay.getDate() + 1); // next day start
+
+      filters.createdAt = {
+        $gte: selectedDate,
+        $lt: endOfDay,
+      };
+    }
+
+
+    const quotes = await MaterialQuoteGenerateModel.find(filters);
 
     return res.status(200).json({
       ok: true,
-      message: "categoes fetched",
+      message: "quotes fetched successfully",
       data: quotes,
     });
 
