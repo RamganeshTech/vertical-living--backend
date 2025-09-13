@@ -51,7 +51,7 @@ export const getMaterialItemsByCategoryForQuote = async (req: Request, res: Resp
       return res.status(400).json({ ok: false, message: "Category (e.g., plywood) is required" });
     }
 //     console.log("im gettni called")
-// console.log("categoryName", categoryName)
+console.log("categoryName", categoryName)
    const items = await ItemModel.find({
   organizationId,
   $expr: {
@@ -61,7 +61,7 @@ export const getMaterialItemsByCategoryForQuote = async (req: Request, res: Resp
     ]
   }
 });
-console.log("item", items)
+// console.log("item", items)
 
     return res.status(200).json({
       ok: true,
@@ -110,6 +110,11 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
       grandTotal,
       notes = null
     } = req.body;
+
+
+    console.log("furnitures",furnitures)
+    console.log("core mateiral 1",furnitures[0].coreMaterials[0])
+    console.log("core mateiral 1",furnitures[0].coreMaterials[1])
 
     // ✅ Basic validation
     if (!quoteId) {

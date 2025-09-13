@@ -1575,7 +1575,7 @@ export const generateQuoteVariantPdf = async ({
 
 
        
-
+console.log("newVariant", newVariant)
         for (const furniture of newVariant.furnitures) {
             ensureSpace(100);
 
