@@ -286,7 +286,7 @@ export const getMaterialQuoteEntries = async (req: Request, res: Response):Promi
     }
 
 
-    const quotes = await MaterialQuoteGenerateModel.find(filters);
+    const quotes = await MaterialQuoteGenerateModel.find(filters).populate("projectId");
 
     return res.status(200).json({
       ok: true,

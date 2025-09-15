@@ -18,7 +18,7 @@ export const getMaterialQuoteSingle = async (req: Request, res: Response):Promis
 
     const quote = await MaterialQuoteGenerateModel.findOne({
       organizationId, _id: id
-    });
+    }).populate('projectId')
 
     return res.status(200).json({
       ok: true,
@@ -112,9 +112,9 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
     } = req.body;
 
 
-    console.log("furnitures",furnitures)
-    console.log("core mateiral 1",furnitures[0].coreMaterials[0])
-    console.log("core mateiral 1",furnitures[0].coreMaterials[1])
+    // console.log("furnitures",furnitures)
+    // console.log("core mateiral 1",furnitures[0].coreMaterials[0])
+    // console.log("core mateiral 1",furnitures[0].coreMaterials[1])
 
     // ✅ Basic validation
     if (!quoteId) {
