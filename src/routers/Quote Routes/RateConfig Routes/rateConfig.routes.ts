@@ -11,28 +11,28 @@ const RateConfigRoutes = Router();
 
 
 
-RateConfigRoutes.get("/categories/:organizationId",  multiRoleAuthMiddleware("owner","CTO"), getMaterialCategories);
-RateConfigRoutes.get("/categories/:categoryId/items", multiRoleAuthMiddleware("owner","CTO"),  getMaterialItemsByCategory);
+RateConfigRoutes.get("/categories/:organizationId",  multiRoleAuthMiddleware("owner","CTO", "staff"), getMaterialCategories);
+RateConfigRoutes.get("/categories/:categoryId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),  getMaterialItemsByCategory);
 
 /**
  * CATEGORY ROUTES
  */
 // Create category (e.g., Plywood, Adhesive, etc.)
-RateConfigRoutes.post("/categories", multiRoleAuthMiddleware("owner","CTO"), createMaterialCategory);
+RateConfigRoutes.post("/categories", multiRoleAuthMiddleware("owner","CTO", "staff"), createMaterialCategory);
 
 // Delete category and its items
-RateConfigRoutes.delete("/categories/:categoryId",multiRoleAuthMiddleware("owner","CTO"), deleteMaterialCategory);
+RateConfigRoutes.delete("/categories/:categoryId",multiRoleAuthMiddleware("owner","CTO", "staff"), deleteMaterialCategory);
 
 /**
  * ITEM ROUTES
  */
 // Create items under a category
-RateConfigRoutes.post("/categories/:organizationId/:categoryId/items", multiRoleAuthMiddleware("owner","CTO"),createMaterialItems);
+RateConfigRoutes.post("/categories/:organizationId/:categoryId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),createMaterialItems);
 
 // Update single item
-RateConfigRoutes.put("/items/:itemId", multiRoleAuthMiddleware("owner","CTO"),updateMaterialItem);
+RateConfigRoutes.put("/items/:itemId", multiRoleAuthMiddleware("owner","CTO", "staff"),updateMaterialItem);
 
 // Delete single item
-RateConfigRoutes.delete("/items/:itemId",multiRoleAuthMiddleware("owner","CTO"), deleteMaterialItem);
+RateConfigRoutes.delete("/items/:itemId",multiRoleAuthMiddleware("owner","CTO", "staff"), deleteMaterialItem);
 
 export default RateConfigRoutes;
