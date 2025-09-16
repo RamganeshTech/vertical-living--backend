@@ -4,13 +4,17 @@ import { IFurniture, IMaterial, IMaterialQuote, ISimpleItem } from '../QuoteGene
 
 export interface IQuoteVarientCoreItem extends IMaterial {}
 
-export interface IQuoteFurniture extends IFurniture {}
+export interface IQuoteFurniture extends IFurniture {
+    plywoodBrand: string | null;
+    laminateBrand: string | null;
+}
 
 export interface IQuoteVarientMain extends IMaterialQuote {
     quoteId: Types.ObjectId | string
   brandName: string | null;
   pdfLink: IQuoteVarientUpload | null
 }
+
 
 
 export interface IQuoteVarientUpload {
@@ -71,7 +75,7 @@ const QuoteSimpleItemSchema = new Schema<ISimpleItem>(
 );
 
 // Each furniture entry
-const QuoteFurnitureSchema = new mongoose.Schema<IFurniture>({
+const QuoteFurnitureSchema = new mongoose.Schema<IQuoteFurniture>({
     furnitureName: { type: String, default: null},
 
     coreMaterials: [QuoteMaterialSchema],
@@ -85,7 +89,10 @@ const QuoteFurnitureSchema = new mongoose.Schema<IFurniture>({
     gluesTotal: { type: Number, default: 0 },
     nonBrandMaterialsTotal: { type: Number, default: 0 },
 
-    furnitureTotal: { type: Number, default: 0 } // Sum of all the above
+    furnitureTotal: { type: Number, default: 0 }, // Sum of all the above
+     plywoodBrand: {type: String, default: null },
+     laminateBrand: {type: String, default: null },
+     
 }, {_id:true});
 
 const QuoteVarientGenerateSchema = new mongoose.Schema<IQuoteVarientMain>({

@@ -45,8 +45,7 @@ export interface IFurniture {
 
   furnitureTotal: number;
 
-    plywoodBrand: string | null;
-    laminateBrand: string | null;
+    
 }
 
 export interface IMaterialQuote extends Document {
@@ -118,9 +117,6 @@ const FurnitureSchema = new mongoose.Schema<IFurniture>({
     nonBrandMaterialsTotal: { type: Number, default: 0 },
 
     furnitureTotal: { type: Number, default: 0 } ,// Sum of all the above
-     plywoodBrand: {type: String, default: null },
-     laminateBrand: {type: String, default: null },
-     
 }, {_id:true});
 
 const InternalQuoteSchema = new mongoose.Schema<IMaterialQuote>({

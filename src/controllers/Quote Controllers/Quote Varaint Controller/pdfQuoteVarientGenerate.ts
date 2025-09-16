@@ -1048,25 +1048,7 @@ const drawTableWithBorders = async (headers: string[], columnWidths: number[], r
         let rowHeight = baseRowHeight;
         let maxLines = 1;
 
-        // Calculate required row height based on text content
-        // if (!isCoreMaterials) {
-        //     // For description column in non-core materials table
-        //     const description = row.description || "-";
-        //     const descriptionLines = calculateTextLines(description, columnWidths[1] - 10, normalFont, FONT_SIZE);
-        //     maxLines = Math.max(maxLines, descriptionLines);
-            
-        //     // Also check item name
-        //     const itemName = row.itemName || "-";
-        //     const itemNameLines = calculateTextLines(itemName, columnWidths[0] - 10, normalFont, FONT_SIZE);
-        //     maxLines = Math.max(maxLines, itemNameLines);
-        // }
-
-        // // Calculate height for core materials with images
-        // if (isCoreMaterials && row.imageUrl) {
-        //     rowHeight = Math.max(rowHeight, 40); // Minimum height for images
-        // }
-
-
+       
         // Calculate required row height based on text content
 // Calculate required row height based on text content
 if (!isCoreMaterials) {
@@ -1251,6 +1233,424 @@ xPos += columnWidths[columnIndex++];
     yPosition -= 15;
 };
 
+// BELOW ONE IS USED FOR THE CORE MATERIALS
+// const drawCoreMaterialsTable = async (headers: string[], columnWidths: number[], rows: any[]) => {
+//     const headerHeight = 25;
+//     const baseRowHeight = 25;
+//     const lineHeight = FONT_SIZE * 1.2;
+//     const startX = 50;
+//     const tableWidth = width - 100;
+//     const padding = 8;
+
+//     // Calculate total height needed for all rows
+//     let totalHeight = headerHeight + 5; // Start with header height
+//     for (const row of rows) {
+//         let rowHeight = baseRowHeight;
+//         let maxLines = 1;
+        
+//         const itemName = row.itemName || "-";
+//         const itemNameLines = calculateTextLines(itemName, columnWidths[1] - 10, normalFont, FONT_SIZE);
+//         maxLines = Math.max(maxLines, itemNameLines);
+        
+//         if (row.imageUrl) {
+//             rowHeight = Math.max(rowHeight, 40); // Minimum height for images
+//         }
+        
+//         rowHeight = Math.max(rowHeight, baseRowHeight + (maxLines - 1) * lineHeight);
+//         totalHeight += rowHeight;
+//     }
+
+//     // Get the starting Y position for the entire section
+//     const sectionStartY = yPosition;
+    
+//     // Draw header background (only for non-image columns)
+//     currentPage.drawRectangle({
+//         x: startX + columnWidths[0], // Start from itemName column
+//         y: yPosition - headerHeight + 5,
+//         width: tableWidth - columnWidths[0],
+//         height: headerHeight,
+//         color: TABLE_HEADER_BG_COLOR,
+//     });
+
+//     // Draw header text
+//     let xPos = startX;
+//     for (let i = 0; i < headers.length; i++) {
+//         // Skip drawing header for image column if it's not the first row
+//         if (i === 0 && rows.length > 0) {
+//             // Only draw "Image" header if we have an image to show
+//             if (rows[0].imageUrl) {
+//                 const textWidth = boldFont.widthOfTextAtSize(headers[i], FONT_SIZE);
+//                 currentPage.drawText(headers[i], {
+//                     x: xPos + (columnWidths[i] - textWidth) / 2,
+//                     y: yPosition - 15,
+//                     font: boldFont,
+//                     size: FONT_SIZE,
+//                     color: TABLE_HEADER_TEXT_COLOR,
+//                 });
+//             }
+//         } else {
+//             // Draw other headers normally
+//             const textWidth = boldFont.widthOfTextAtSize(headers[i], FONT_SIZE);
+//             currentPage.drawText(headers[i], {
+//                 x: xPos + (columnWidths[i] - textWidth) / 2,
+//                 y: yPosition - 15,
+//                 font: boldFont,
+//                 size: FONT_SIZE,
+//                 color: TABLE_HEADER_TEXT_COLOR,
+//             });
+//         }
+
+//         xPos += columnWidths[i];
+//     }
+
+//     // Draw horizontal border below header (starting from itemName column)
+//     currentPage.drawLine({
+//         start: { x: startX + columnWidths[0], y: yPosition - headerHeight + 5 },
+//         end: { x: startX + tableWidth, y: yPosition - headerHeight + 5 },
+//         thickness: 1,
+//         color: TABLE_HEADER_BG_COLOR,
+//     });
+
+//     yPosition -= headerHeight + 5;
+
+//     // Load and draw the single image for the entire section (from first row)
+//     let sectionImage = null;
+//     let sectionImageDims = { width: 0, height: 0 };
+    
+//     if (rows.length > 0 && rows[0].imageUrl) {
+//         try {
+//             const imageRes = await fetch(rows[0].imageUrl);
+//             if (imageRes.ok) {
+//                 const imageBuffer = await imageRes.arrayBuffer();
+//                 try {
+//                     sectionImage = await pdfDoc.embedPng(imageBuffer);
+//                 } catch (e) {
+//                     try {
+//                         sectionImage = await pdfDoc.embedJpg(imageBuffer);
+//                     } catch (e) {
+//                         console.log("Invalid image format");
+//                     }
+//                 }
+                
+//                 if (sectionImage) {
+//                     const maxImageSize = 35;
+//                     const scale = Math.min(maxImageSize / sectionImage.width, maxImageSize / sectionImage.height);
+//                     sectionImageDims = { 
+//                         width: sectionImage.width * scale, 
+//                         height: sectionImage.height * scale 
+//                     };
+                    
+//                     // Center image vertically in the entire section
+//                     const sectionCenterY = sectionStartY - totalHeight / 2;
+//                     const imageX = startX + (columnWidths[0] - sectionImageDims.width) / 2;
+//                     const imageY = sectionCenterY - sectionImageDims.height / 2;
+                    
+//                     currentPage.drawImage(sectionImage, {
+//                         x: imageX,
+//                         y: imageY,
+//                         width: sectionImageDims.width,
+//                         height: sectionImageDims.height,
+//                     });
+//                 }
+//             }
+//         } catch (error) {
+//             console.log("Error loading image:", error);
+//         }
+//     }
+
+//     // Draw rows
+//     for (const row of rows) {
+//         let rowHeight = baseRowHeight;
+//         let maxLines = 1;
+
+//         // Calculate required row height
+//         const itemName = row.itemName || "-";
+//         const itemNameLines = calculateTextLines(itemName, columnWidths[1] - 10, normalFont, FONT_SIZE);
+//         maxLines = Math.max(maxLines, itemNameLines);
+        
+//         rowHeight = Math.max(rowHeight, baseRowHeight + (maxLines - 1) * lineHeight);
+
+//         ensureSpace(rowHeight + 20);
+
+//         xPos = startX + columnWidths[0]; // Start from itemName column
+//         let columnIndex = 1; // Start from itemName column index
+//         let rowYPosition = yPosition;
+
+//         // Item Name column (left aligned) - PROPERLY CENTERED
+//         const itemNameMaxWidth = columnWidths[1] - 10;
+//         const itemNameLinesCount = calculateTextLines(itemName, itemNameMaxWidth, normalFont, FONT_SIZE);
+//         const itemNameHeight = itemNameLinesCount * lineHeight;
+
+//         // Calculate top position of text block for proper vertical centering
+//         const textTopY = rowYPosition - (rowHeight - itemNameHeight) / 2;
+
+//         drawLeftAlignedText(itemName, xPos, columnWidths[1], textTopY, normalFont, FONT_SIZE);
+//         xPos += columnWidths[columnIndex++];
+
+//         // Quantity column (centered) - center vertically
+//         const quantityText = String(row.plywoodNos?.quantity || 0);
+//         const centerY = rowYPosition - rowHeight / 2;
+//         drawCenteredText(quantityText, xPos, columnWidths[columnIndex], centerY, normalFont, FONT_SIZE);
+//         xPos += columnWidths[columnIndex++];
+
+//         // Cost column (centered) - center vertically
+//         const costText = `${row.rowTotal}`;
+//         drawCenteredText(costText, xPos, columnWidths[columnIndex], centerY, boldFont, FONT_SIZE, rgb(0, 0.4, 0));
+
+//         // Draw horizontal border below this row (starting from itemName column)
+//         currentPage.drawLine({
+//             start: { x: startX + columnWidths[0], y: yPosition - rowHeight },
+//             end: { x: startX + tableWidth, y: yPosition - rowHeight },
+//             thickness: 1,
+//             color: TABLE_HEADER_BG_COLOR,
+//         });
+
+//         // Draw vertical borders for this row (skip image column)
+//         xPos = startX + columnWidths[0];
+//         for (let i = 1; i < headers.length; i++) {
+//             if (i > 1) { // Don't draw border after image column
+//                 currentPage.drawLine({
+//                     start: { x: xPos, y: yPosition },
+//                     end: { x: xPos, y: yPosition - rowHeight },
+//                     thickness: 1,
+//                     color: TABLE_HEADER_BG_COLOR,
+//                 });
+//             }
+//             xPos += columnWidths[i];
+//         }
+
+//         // Draw right border
+//         currentPage.drawLine({
+//             start: { x: startX + tableWidth, y: yPosition },
+//             end: { x: startX + tableWidth, y: yPosition - rowHeight },
+//             thickness: 1,
+//             color: TABLE_HEADER_BG_COLOR,
+//         });
+
+//         yPosition -= rowHeight;
+//     }
+
+//     yPosition -= 15;
+// };
+
+
+const drawCoreMaterialsTable = async (headers: string[], columnWidths: number[], rows: any[]) => {
+    const headerHeight = 25;
+    const baseRowHeight = 25;
+    const lineHeight = FONT_SIZE * 1.2;
+    const startX = 50;
+    const tableWidth = width - 100;
+
+    // Calculate total height needed for all rows
+    let totalRowsHeight = 0;
+    let rowHeights: number[] = [];
+    
+    for (const row of rows) {
+        let rowHeight = baseRowHeight;
+        let maxLines = 1;
+        
+        const itemName = row.itemName || "-";
+        const itemNameLines = calculateTextLines(itemName, columnWidths[1] - 10, normalFont, FONT_SIZE);
+        maxLines = Math.max(maxLines, itemNameLines);
+        
+        rowHeight = Math.max(rowHeight, baseRowHeight + (maxLines - 1) * lineHeight);
+        rowHeights.push(rowHeight);
+        totalRowsHeight += rowHeight;
+    }
+
+    const totalTableHeight = headerHeight + 5 + totalRowsHeight;
+    const sectionStartY = yPosition;
+    
+    // Draw FULL header background (including image column)
+    currentPage.drawRectangle({
+        x: startX,
+        y: yPosition - headerHeight + 5,
+        width: tableWidth,
+        height: headerHeight,
+        color: TABLE_HEADER_BG_COLOR,
+    });
+
+    // Draw header text (ALL headers including Image)
+    let xPos = startX;
+    for (let i = 0; i < headers.length; i++) {
+        const textWidth = boldFont.widthOfTextAtSize(headers[i], FONT_SIZE);
+        currentPage.drawText(headers[i], {
+            x: xPos + (columnWidths[i] - textWidth) / 2,
+            y: yPosition - 15,
+            font: boldFont,
+            size: FONT_SIZE,
+            color: TABLE_HEADER_TEXT_COLOR,
+        });
+
+        // Draw vertical border between ALL headers
+        if (i < headers.length - 1) {
+            currentPage.drawLine({
+                start: { x: xPos + columnWidths[i], y: yPosition - headerHeight + 5 },
+                end: { x: xPos + columnWidths[i], y: yPosition + 5 },
+                thickness: 1,
+                color: rgb(1, 1, 1), // White border
+            });
+        }
+
+        xPos += columnWidths[i];
+    }
+
+    // Draw horizontal border below header (FULL width)
+    currentPage.drawLine({
+        start: { x: startX, y: yPosition - headerHeight + 5 },
+        end: { x: startX + tableWidth, y: yPosition - headerHeight + 5 },
+        thickness: 1,
+        color: TABLE_HEADER_BG_COLOR,
+    });
+
+    yPosition -= headerHeight + 5;
+
+    // Load and position the single image for the entire section
+    let sectionImage = null;
+    let sectionImageDims = { width: 0, height: 0 };
+    const hasImage = rows.length > 0 && rows[0].imageUrl;
+    
+    if (hasImage) {
+        try {
+            const imageRes = await fetch(rows[0].imageUrl);
+            if (imageRes.ok) {
+                const imageBuffer = await imageRes.arrayBuffer();
+                try {
+                    sectionImage = await pdfDoc.embedPng(imageBuffer);
+                } catch (e) {
+                    try {
+                        sectionImage = await pdfDoc.embedJpg(imageBuffer);
+                    } catch (e) {
+                        console.log("Invalid image format");
+                    }
+                }
+                
+                if (sectionImage) {
+                    const maxImageSize = 35;
+                    const scale = Math.min(maxImageSize / sectionImage.width, maxImageSize / sectionImage.height);
+                    sectionImageDims = { 
+                        width: sectionImage.width * scale, 
+                        height: sectionImage.height * scale 
+                    };
+                    
+                    // Center image vertically in the entire rows section
+                    const rowsStartY = sectionStartY - headerHeight - 5;
+                    const imageCenterY = rowsStartY - (totalRowsHeight / 2);
+                    
+                    const imageX = startX + (columnWidths[0] - sectionImageDims.width) / 2;
+                    const imageY = imageCenterY - (sectionImageDims.height / 2);
+                    
+                    currentPage.drawImage(sectionImage, {
+                        x: imageX,
+                        y: imageY,
+                        width: sectionImageDims.width,
+                        height: sectionImageDims.height,
+                    });
+                }
+            }
+        } catch (error) {
+            console.log("Error loading image:", error);
+        }
+    }
+    
+    // If no image available, show "No Image" text centered in the rows section
+    if (!hasImage || !sectionImage) {
+        const rowsStartY = sectionStartY - headerHeight - 5;
+        const textCenterY = rowsStartY - (totalRowsHeight / 2);
+        
+        drawCenteredText(
+            "No Image", 
+            startX, 
+            columnWidths[0], 
+            textCenterY, 
+            normalFont, 
+            FONT_SIZE - 2
+        );
+    }
+
+    // Draw rows with proper borders
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+        const row = rows[rowIndex];
+        const rowHeight = rowHeights[rowIndex];
+
+        ensureSpace(rowHeight + 20);
+
+        xPos = startX + columnWidths[0]; // Start from itemName column (skip image column)
+        let columnIndex = 1; // Start from itemName column index
+        let rowYPosition = yPosition;
+
+        // Item Name column (left aligned)
+        const itemName = row.itemName || "-";
+        const itemNameMaxWidth = columnWidths[1] - 10;
+        const itemNameLinesCount = calculateTextLines(itemName, itemNameMaxWidth, normalFont, FONT_SIZE);
+        const itemNameHeight = itemNameLinesCount * lineHeight;
+        const textTopY = rowYPosition - (rowHeight - itemNameHeight) / 2;
+
+        drawLeftAlignedText(itemName, xPos, columnWidths[1], textTopY, normalFont, FONT_SIZE);
+        xPos += columnWidths[columnIndex++];
+
+        // Quantity column (centered)
+        const quantityText = String(row.plywoodNos?.quantity || 0);
+        const centerY = rowYPosition - rowHeight / 2;
+        drawCenteredText(quantityText, xPos, columnWidths[columnIndex], centerY, normalFont, FONT_SIZE);
+        xPos += columnWidths[columnIndex++];
+
+        // Cost column (centered)
+        const costText = `${row.rowTotal}`;
+        drawCenteredText(costText, xPos, columnWidths[columnIndex], centerY, boldFont, FONT_SIZE, rgb(0, 0.4, 0));
+
+        // Draw horizontal border below this row (START from itemName column, NOT from image column)
+        currentPage.drawLine({
+            start: { x: startX + columnWidths[0], y: yPosition - rowHeight },
+            end: { x: startX + tableWidth, y: yPosition - rowHeight },
+            thickness: 1,
+            color: TABLE_HEADER_BG_COLOR,
+        });
+
+        // Draw ALL vertical borders between data columns (Item Name, Quantity, Cost)
+        xPos = startX + columnWidths[0]; // Start from first vertical border (after image column)
+        for (let i = 1; i < headers.length; i++) {
+            // Draw vertical border for ALL data columns (including between Quantity and Cost)
+            currentPage.drawLine({
+                start: { x: xPos, y: yPosition },
+                end: { x: xPos, y: yPosition - rowHeight },
+                thickness: 1,
+                color: TABLE_HEADER_BG_COLOR,
+            });
+            xPos += columnWidths[i];
+        }
+
+        // Draw left border of image column (full height)
+        currentPage.drawLine({
+            start: { x: startX, y: yPosition },
+            end: { x: startX, y: yPosition - rowHeight },
+            thickness: 1,
+            color: TABLE_HEADER_BG_COLOR,
+        });
+
+        // Draw right border of table
+        currentPage.drawLine({
+            start: { x: startX + tableWidth, y: yPosition },
+            end: { x: startX + tableWidth, y: yPosition - rowHeight },
+            thickness: 1,
+            color: TABLE_HEADER_BG_COLOR,
+        });
+
+        yPosition -= rowHeight;
+    }
+
+    // Draw bottom border of table (FULL width including image column)
+    currentPage.drawLine({
+        start: { x: startX, y: yPosition },
+        end: { x: startX + tableWidth, y: yPosition },
+        thickness: 1,
+        color: TABLE_HEADER_BG_COLOR,
+    });
+
+    yPosition -= 15;
+};
+
+
 // Usage in your furniture loop
 for (const furniture of newVariant.furnitures) {
     ensureSpace(100);
@@ -1276,12 +1676,19 @@ for (const furniture of newVariant.furnitures) {
         });
         yPosition -= 20;
 
-        await drawTableWithBorders(
+        // await drawTableWithBorders(
+        //     ["Image", "Item Name", "Quantity", "Cost"],
+        //     [80, 200, 100, 100],
+        //     coreMaterials,
+        //     true // isCoreMaterials
+        // );
+
+          await drawCoreMaterialsTable(
             ["Image", "Item Name", "Quantity", "Cost"],
             [80, 200, 100, 100],
-            coreMaterials,
-            true // isCoreMaterials
+            coreMaterials
         );
+
 
         // Subtotal
         ensureSpace(30);
