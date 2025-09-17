@@ -10,7 +10,6 @@ import { syncTechnicalConsultantStage } from "../technicalConsultant controllers
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 import { DocUpload, RoleBasedRequest } from "../../../types/types";
-import { syncShortList } from "./shortList.controller";
 import { syncWorkSchedule } from "../workTasksmain controllers/workMain.controller";
 
 
@@ -46,7 +45,7 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: any[])
       additionalNotes: null,
     })
 
-    await syncShortList(projectId)
+    // await syncShortList(projectId)
 
   } else {
     // console.log("coommign to else condition")

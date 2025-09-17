@@ -77,6 +77,7 @@ import procurementNewRoutes from './routers/Department Routes/ProcurementNew Rou
 import accountingRoutes from './routers/Department Routes/Accounting Routes/accounting.routes';
 import RateConfigRoutes from './routers/Quote Routes/RateConfig Routes/rateConfig.routes';
 import QuoteRouter from './routers/Quote Routes/QuoteGenerate Routes/quoteGenerate.routes';
+import shortlistReferenceDesign from './routers/Stage routes/sample desing routes/shortlistReferenceDesign.routes';
 
 
 
@@ -257,6 +258,12 @@ app.use('/api/recyclematerial', recycleMaterialRoutes)
 // SOP
 app.use('/api/adminwall', adminWallroutes)
 app.use('/api/workerwall', workerWallRoutes)
+
+
+
+// SHORTLIST REFERENCE DESIGN
+app.use('/api/shortlist/referencedesign', shortlistReferenceDesign)
+
 
 // SHORTLIST API
 app.use('/api/shortlisteddesign', shortlistedDesignRoutes)

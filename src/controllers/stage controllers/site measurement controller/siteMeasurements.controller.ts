@@ -14,7 +14,7 @@ import { initializeSiteRequirement } from "../../../utils/Stage Utils/siteRequir
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 import { DocUpload, RoleBasedRequest } from "../../../types/types";
-import { syncShortList } from "../sampledesign contorllers/shortList.controller";
+// import { syncShortList } from "../sampledesign contorllers/shortList.controller";
 import { ShortlistedDesignModel } from "../../../models/Stage Models/sampleDesing model/shortListed.model";
 
 
@@ -717,35 +717,35 @@ const updateRoomImageName = async (req: RoleBasedRequest, res: Response): Promis
     await measurement.save();
 
 
-    const shortlisting = await ShortlistedDesignModel.findOne({ projectId })
+    // const shortlisting = await ShortlistedDesignModel.findOne({ projectId })
 
-    if (shortlisting) {
-      if (shortlisting?.shortlistedRooms?.length) {
-        const isRooomAvailble = shortlisting.shortlistedRooms.find(shortlistroom => {
-          console.log("room form site", room.name)
-          console.log("shortlisign roomName", shortlistroom.roomName)
+    // if (shortlisting) {
+    //   if (shortlisting?.shortlistedRooms?.length) {
+    //     const isRooomAvailble = shortlisting.shortlistedRooms.find(shortlistroom => {
+    //       console.log("room form site", room.name)
+    //       console.log("shortlisign roomName", shortlistroom.roomName)
 
-          return shortlistroom.roomName === room.name
-        })
-        // console.log("isRoomAvailabel", isRooomAvailble)
+    //       return shortlistroom.roomName === room.name
+    //     })
+    //     // console.log("isRoomAvailabel", isRooomAvailble)
 
-        if (isRooomAvailble) {
-          const isCategoryAvailable = isRooomAvailble.categories.find(category => {
-            console.log("category availen in shorit", category.categoryId)
-            console.log("category availen in site upload", uploadId)
-            return category.categoryId === uploadId
-          })
+    //     if (isRooomAvailble) {
+    //       const isCategoryAvailable = isRooomAvailble.categories.find(category => {
+    //         console.log("category availen in shorit", category.categoryId)
+    //         console.log("category availen in site upload", uploadId)
+    //         return category.categoryId === uploadId
+    //       })
 
-          // console.log("isCategoryAvailable", isCategoryAvailable)
+    //       // console.log("isCategoryAvailable", isCategoryAvailable)
 
 
-          if (isCategoryAvailable) {
-            isCategoryAvailable.categoryName = categoryName
-            await shortlisting.save()
-          }
-        }
-      }
-    }
+    //       if (isCategoryAvailable) {
+    //         isCategoryAvailable.categoryName = categoryName
+    //         await shortlisting.save()
+    //       }
+    //     }
+    //   }
+    // }
 
     await populateWithAssignedToField({ stageModel: SiteMeasurementModel, projectId, dataToCache: measurement })
 

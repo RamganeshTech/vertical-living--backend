@@ -1,45 +1,46 @@
-// controllers/shortlistedDesign.controller.ts
+// // controllers/shortlistedDesign.controller.ts
 
-import { Request, Response } from "express";
-import { Types } from "mongoose";
-import { ShortlistedDesignModel } from "../../../models/Stage Models/sampleDesing model/shortListed.model";
-import { RoleBasedRequest } from "../../../types/types";
-import ClientModel from "../../../models/client model/client.model";
-import { sendShortlistedDesignsEmail } from "../../../utils/Common Mail Services/ShortListMail";
-import { AsyncLocalStorage } from "async_hooks";
+// import { Request, Response } from "express";
+// import { Types } from "mongoose";
+// import { ShortlistedDesignModel } from "../../../models/Stage Models/sampleDesing model/shortListed.model";
+// import { RoleBasedRequest } from "../../../types/types";
+// import ClientModel from "../../../models/client model/client.model";
+// import { sendShortlistedDesignsEmail } from "../../../utils/Common Mail Services/ShortListMail";
+// import { AsyncLocalStorage } from "async_hooks";
 
 
-const sendShortListMailUtil = async (projectId: Types.ObjectId | string, roomName: string, categoryName: string, images: any[]) => {
-    const client = await ClientModel.findOne({ projectId });
-    if (!client || !client.email) {
-        return;
-    }
+// const sendShortListMailUtil = async (projectId: Types.ObjectId | string, roomName: string, categoryName: string, images: any[]) => {
+//     const client = await ClientModel.findOne({ projectId });
+//     if (!client || !client.email) {
+//         return;
+//     }
 
-    // Step 2: Send email
-    await sendShortlistedDesignsEmail({
-        clientName: client.clientName,
-        clientEmail: client.email,
-        categoryName,
-        roomName,
-        images,
-    });
+//     // Step 2: Send email
+//     await sendShortlistedDesignsEmail({
+//         clientName: client.clientName,
+//         clientEmail: client.email,
+//         categoryName,
+//         roomName,
+//         images,
+//     });
 
-}
+// }
 
-// export const uploadShortlistedRoomImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+
+// export const uploadShortlistedDesignImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
 //     try {
-//         const { projectId, roomName } = req.params;
+//         const { projectId, roomName, categoryName , categoryId} = req.params;
 //         const files = req.files as Express.Multer.File[];
+
+//         if (!projectId || !roomName || !categoryName || !categoryId) {
+//             return res.status(400).json({ message: "Missing projectId, roomName or categoryName", ok: false });
+//         }
 
 //         if (!files?.length) {
 //             return res.status(400).json({ message: "No files uploaded", ok: false });
 //         }
 
 //         const imageFiles = files.filter((file) => file.mimetype.startsWith("image/"));
-
-//         // if (imageFiles.length !== files.length) {
-//         //   res.status(400).json({ message: "Only image files are allowed", ok: false });
-//         // }
 
 //         const uploads = imageFiles.map((file) => ({
 //             _id: new Types.ObjectId(),
@@ -50,140 +51,83 @@ const sendShortListMailUtil = async (projectId: Types.ObjectId | string, roomNam
 //             uploadedAt: new Date(),
 //         }));
 
+//         // 🔍 Find or create the main document
 //         let doc = await ShortlistedDesignModel.findOne({ projectId });
 
-//         // If no document exists for the project, create a new one
 //         if (!doc) {
-//             doc = new ShortlistedDesignModel({
+//             // Create full structure if not exists
+//             doc = await ShortlistedDesignModel.create({
 //                 projectId,
-//                 shortlistedRooms: [{ roomName, designs: uploads }],
+//                 shortlistedRooms: [
+//                     {
+//                         roomName,
+//                         categories: [
+//                             {
+//                                 categoryName,
+//                                 categoryId,
+//                                 designs: uploads,
+//                             },
+//                         ],
+//                     },
+//                 ],
 //             });
 //         } else {
-//             // Find the room entry
-//             const roomEntry = doc.shortlistedRooms.find((room) => room.roomName === roomName);
-
-//             if (roomEntry) {
-//                 roomEntry.designs.push(...uploads);
+//             // Check or insert room
+//             let room = doc.shortlistedRooms.find((r) => r.roomName === roomName);
+//             if (!room) {
+//                 doc.shortlistedRooms.push({
+//                     roomName,
+//                     categories: [{ categoryName, categoryId, designs: uploads }],
+//                 });
 //             } else {
-//                 doc.shortlistedRooms.push({ roomName, designs: uploads });
+//                 // Check or insert category
+//                 let category = room.categories.find((c) => c.categoryId.toString() === categoryId.toString());
+//                 if (!category) {
+//                     room.categories.push({ categoryName, categoryId, designs: uploads });
+//                 } else {
+//                     // Push new designs into existing
+//                     category.designs.push(...uploads);
+//                 }
 //             }
+
+//             await doc.save();
 //         }
 
-//         await doc.save();
+//         // ✅ Refetch updated designs for email
+//         const updated = await ShortlistedDesignModel.findOne({ projectId });
+//         const selectedRoom = updated?.shortlistedRooms.find((r) => r.roomName === roomName);
+//         const selectedCategory = selectedRoom?.categories.find((c) => c.categoryId.toString() === categoryId.toString());
+//         const allImageUrls = selectedCategory?.designs.map((d) => d.url) || [];
 
-//           const imageToclient =  doc.shortlistedRooms.find((room) => room.roomName === roomName)?.designs.map(room=> room.url)
-
-//         // const imageUrls = uploads.map((image: any) => image.url)
-
-//         if(imageToclient){
-//             await sendShortListMailUtil(projectId, roomName, imageToclient)
+//         if (allImageUrls.length) {
+//             await sendShortListMailUtil(
+//                 projectId,
+//                 roomName,
+//                 categoryName,
+//                 allImageUrls,
+//             );
 //         }
-//         res.status(200).json({ message: "Images uploaded successfully", data: uploads, ok: true });
-//     } catch (error) {
-//         console.error("Error uploading images:", error);
-//         res.status(500).json({ message: "Internal server error", ok: false });
+
+//         return res.status(200).json({
+//             message: "Images uploaded and email sent",
+//             urls: allImageUrls,
+//             ok: true,
+//         });
+//     } catch (err) {
+//         console.error("Upload & mail error:", err);
+//         return res.status(500).json({ message: "Internal Server Error", ok: false });
 //     }
 // };
 
 
-export const uploadShortlistedDesignImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
-    try {
-        const { projectId, roomName, categoryName , categoryId} = req.params;
-        const files = req.files as Express.Multer.File[];
 
-        if (!projectId || !roomName || !categoryName || !categoryId) {
-            return res.status(400).json({ message: "Missing projectId, roomName or categoryName", ok: false });
-        }
-
-        if (!files?.length) {
-            return res.status(400).json({ message: "No files uploaded", ok: false });
-        }
-
-        const imageFiles = files.filter((file) => file.mimetype.startsWith("image/"));
-
-        const uploads = imageFiles.map((file) => ({
-            _id: new Types.ObjectId(),
-            type: "image" as const,
-            url: (file as any).location,
-            imageId: null,
-            originalName: file.originalname,
-            uploadedAt: new Date(),
-        }));
-
-        // 🔍 Find or create the main document
-        let doc = await ShortlistedDesignModel.findOne({ projectId });
-
-        if (!doc) {
-            // Create full structure if not exists
-            doc = await ShortlistedDesignModel.create({
-                projectId,
-                shortlistedRooms: [
-                    {
-                        roomName,
-                        categories: [
-                            {
-                                categoryName,
-                                categoryId,
-                                designs: uploads,
-                            },
-                        ],
-                    },
-                ],
-            });
-        } else {
-            // Check or insert room
-            let room = doc.shortlistedRooms.find((r) => r.roomName === roomName);
-            if (!room) {
-                doc.shortlistedRooms.push({
-                    roomName,
-                    categories: [{ categoryName, categoryId, designs: uploads }],
-                });
-            } else {
-                // Check or insert category
-                let category = room.categories.find((c) => c.categoryId.toString() === categoryId.toString());
-                if (!category) {
-                    room.categories.push({ categoryName, categoryId, designs: uploads });
-                } else {
-                    // Push new designs into existing
-                    category.designs.push(...uploads);
-                }
-            }
-
-            await doc.save();
-        }
-
-        // ✅ Refetch updated designs for email
-        const updated = await ShortlistedDesignModel.findOne({ projectId });
-        const selectedRoom = updated?.shortlistedRooms.find((r) => r.roomName === roomName);
-        const selectedCategory = selectedRoom?.categories.find((c) => c.categoryId.toString() === categoryId.toString());
-        const allImageUrls = selectedCategory?.designs.map((d) => d.url) || [];
-
-        if (allImageUrls.length) {
-            await sendShortListMailUtil(
-                projectId,
-                roomName,
-                categoryName,
-                allImageUrls,
-            );
-        }
-
-        return res.status(200).json({
-            message: "Images uploaded and email sent",
-            urls: allImageUrls,
-            ok: true,
-        });
-    } catch (err) {
-        console.error("Upload & mail error:", err);
-        return res.status(500).json({ message: "Internal Server Error", ok: false });
-    }
-};
 
 // export const addSelectedDesignsToShortlist = async (req: RoleBasedRequest, res: Response): Promise<any> => {
 //     try {
-//         const { projectId, roomName } = req.params;
+//         const { projectId, roomName, categoryName, categoryId } = req.params;
 //         const { selectedImages } = req.body;
 
-//         if (!roomName || !Array.isArray(selectedImages) || !selectedImages.length) {
+//         if (!roomName || !categoryName || !Array.isArray(selectedImages) || !selectedImages.length) {
 //             return res.status(400).json({ message: "Invalid data", ok: false });
 //         }
 
@@ -193,235 +137,336 @@ export const uploadShortlistedDesignImages = async (req: RoleBasedRequest, res: 
 //             return res.status(404).json({ message: "Shortlist not found", ok: false });
 //         }
 
-//         const room = shortlist.shortlistedRooms.find((room) => room.roomName === roomName);
-//         // Always generate newDesigns
+//         // Convert selected images into design format
 //         const newDesigns = selectedImages.map((img: any) => ({
 //             _id: new Types.ObjectId(),
 //             type: "image" as const,
 //             url: img.url,
-//             originalName: img.originalName,
+//             originalName: img.originalName || "",
 //             imageId: img._id || null,
-//             uploadedAt: new Date()
+//             uploadedAt: new Date(),
 //         }));
 
-
+//         // Step 1: Find room or create it
+//         let room = shortlist.shortlistedRooms.find((r) => r.roomName === roomName);
 //         if (!room) {
-//             // If room does not exist, create it and push selected designs
 //             shortlist.shortlistedRooms.push({
 //                 roomName,
-//                 designs: newDesigns
+//                 categories: [{ categoryName, categoryId, designs: newDesigns }],
 //             });
 //         } else {
-//             // Push to existing room but avoid duplicates based on imageId or url
-//             const existingUrls = new Set(room.designs.map((d) => d.url));
-//             const filteredDesigns = newDesigns.filter((d) => !existingUrls.has(d.url));
+//             // Step 2: Find category or create it
+//             let category = room.categories.find((c) => {
+//                 console.log("c", c.categoryId)
+//                 console.log("categoryd", categoryId)
+//                 return c?.categoryId?.toString() === categoryId?.toString()
+//             });
+//             if (!category) {
+//                 room.categories.push({ categoryName, categoryId, designs: newDesigns });
+//             } else {
+//                 // Step 3: Append new designs to existing
+//                 // Step 3: Append only non-duplicate designs
+//                 const existingUrls = new Set(category.designs.map((design) => design.url));
+//                 const filteredNewDesigns = newDesigns.filter((design) => !existingUrls.has(design.url));
 
-//             // newDesigns = selectedImages
-//             //     .filter((img: any) => !existingUrls.has(img.url))
-//             //     .map((img: any) => ({
-//             //         _id: new Types.ObjectId(),
-//             //         type: "image" as const,
-//             //         url: img.url,
-//             //         originalName: img.originalName,
-//             //         imageId: img._id || null,
-//             //         uploadedAt: new Date()
-//             //     }));
-
-//             room.designs.push(...filteredDesigns);
+//                 if (filteredNewDesigns.length > 0) {
+//                     category.designs.push(...filteredNewDesigns);
+//                 }
+//                 // const nonDuplicateDesigns = new Set()
+//                 // category.designs.push(...newDesigns);
+//             }
 //         }
 
 //         await shortlist.save();
 
-//           const imageToclient =  shortlist.shortlistedRooms.find((room) => room.roomName === roomName)?.designs.map(room=> room.url)
+//         // ✅ Refetch updated designs for email
+//         const updated = await ShortlistedDesignModel.findOne({ projectId });
+//         const selectedRoom = updated?.shortlistedRooms.find((r) => r.roomName === roomName);
+//         const selectedCategory = selectedRoom?.categories.find((c) => c.categoryId.toString() === categoryId.toString());
+//         const allImageUrls = selectedCategory?.designs.map((d) => d.url) || [];
 
-
-//         // const imageUrls = newDesigns.map((image: any) => image.url)
-//         if(imageToclient){
-//             await sendShortListMailUtil(projectId, roomName, imageToclient)
+//         if (allImageUrls.length) {
+//             await sendShortListMailUtil(
+//                 projectId,
+//                 roomName,
+//                 categoryName,
+//                 allImageUrls,
+//             );
 //         }
 
-//         return res.status(200).json({ message: "Designs added successfully", ok: true });
+//         return res.status(200).json({
+//             message: "Designs added to shortlist and email sent",
+//             urls: allImageUrls,
+//             ok: true,
+//         });
 //     } catch (error) {
-//         console.error("Error adding selected designs", error);
-//         return res.status(500).json({ message: "Server error", ok: false });
+//         console.error("Error adding designs:", error);
+//         return res.status(500).json({ message: "Internal server error", ok: false });
 //     }
 // };
 
 
+// export const syncShortList = async (projectId: string | Types.ObjectId) => {
+//     await ShortlistedDesignModel.create({
+//         projectId,
+//         shortlistedRooms: []
+//     })
+// }
 
 
-export const addSelectedDesignsToShortlist = async (req: RoleBasedRequest, res: Response): Promise<any> => {
-    try {
-        const { projectId, roomName, categoryName, categoryId } = req.params;
-        const { selectedImages } = req.body;
-
-        if (!roomName || !categoryName || !Array.isArray(selectedImages) || !selectedImages.length) {
-            return res.status(400).json({ message: "Invalid data", ok: false });
-        }
-
-        const shortlist = await ShortlistedDesignModel.findOne({ projectId });
-
-        if (!shortlist) {
-            return res.status(404).json({ message: "Shortlist not found", ok: false });
-        }
-
-        // Convert selected images into design format
-        const newDesigns = selectedImages.map((img: any) => ({
-            _id: new Types.ObjectId(),
-            type: "image" as const,
-            url: img.url,
-            originalName: img.originalName || "",
-            imageId: img._id || null,
-            uploadedAt: new Date(),
-        }));
-
-        // Step 1: Find room or create it
-        let room = shortlist.shortlistedRooms.find((r) => r.roomName === roomName);
-        if (!room) {
-            shortlist.shortlistedRooms.push({
-                roomName,
-                categories: [{ categoryName, categoryId, designs: newDesigns }],
-            });
-        } else {
-            // Step 2: Find category or create it
-            let category = room.categories.find((c) => {
-                console.log("c", c.categoryId)
-                console.log("categoryd", categoryId)
-                return c?.categoryId?.toString() === categoryId?.toString()
-            });
-            if (!category) {
-                room.categories.push({ categoryName, categoryId, designs: newDesigns });
-            } else {
-                // Step 3: Append new designs to existing
-                // Step 3: Append only non-duplicate designs
-                const existingUrls = new Set(category.designs.map((design) => design.url));
-                const filteredNewDesigns = newDesigns.filter((design) => !existingUrls.has(design.url));
-
-                if (filteredNewDesigns.length > 0) {
-                    category.designs.push(...filteredNewDesigns);
-                }
-                // const nonDuplicateDesigns = new Set()
-                // category.designs.push(...newDesigns);
-            }
-        }
-
-        await shortlist.save();
-
-        // ✅ Refetch updated designs for email
-        const updated = await ShortlistedDesignModel.findOne({ projectId });
-        const selectedRoom = updated?.shortlistedRooms.find((r) => r.roomName === roomName);
-        const selectedCategory = selectedRoom?.categories.find((c) => c.categoryId.toString() === categoryId.toString());
-        const allImageUrls = selectedCategory?.designs.map((d) => d.url) || [];
-
-        if (allImageUrls.length) {
-            await sendShortListMailUtil(
-                projectId,
-                roomName,
-                categoryName,
-                allImageUrls,
-            );
-        }
-
-        return res.status(200).json({
-            message: "Designs added to shortlist and email sent",
-            urls: allImageUrls,
-            ok: true,
-        });
-    } catch (error) {
-        console.error("Error adding designs:", error);
-        return res.status(500).json({ message: "Internal server error", ok: false });
-    }
-};
-
-
-export const syncShortList = async (projectId: string | Types.ObjectId) => {
-    await ShortlistedDesignModel.create({
-        projectId,
-        shortlistedRooms: []
-    })
-}
-
-
-// export const removeShortlistedDesign = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+// export const deleteShortlistedDesign = async (req: RoleBasedRequest, res: Response): Promise<any> => {
 //     try {
-//         const { projectId, roomName, _id } = req.params;
+//         const { projectId, roomName, categoryId, imageId } = req.params;
 
-
-//         if (!_id) {
-//             return res.status(400).json({ message: "_id of the image is required", ok: false });
+//         if (!projectId || !roomName || !categoryId || !imageId) {
+//             return res.status(400).json({ message: "Missing required data", ok: false });
 //         }
 
-//         const doc = await ShortlistedDesignModel.findOneAndUpdate(
-//             { projectId, "shortlistedRooms.roomName": roomName },
-//             {
-//                 $pull: {
-//                     "shortlistedRooms.$.designs": { _id },
-//                 },
-//             },
-//             { new: true }
+//         const shortlist = await ShortlistedDesignModel.findOne({ projectId });
+
+//         if (!shortlist) {
+//             return res.status(404).json({ message: "Shortlist not found", ok: false });
+//         }
+
+//         console.log("room name", roomName)
+
+//         const room = shortlist.shortlistedRooms.find(r => r.roomName === roomName);
+//         if (!room) {
+//             return res.status(404).json({ message: "Room not found", ok: false });
+//         }
+
+//         const category = room.categories.find(c => c.categoryId === categoryId);
+//         if (!category) {
+//             return res.status(404).json({ message: "Category not found", ok: false });
+//         }
+
+//         const imageObjectId = new Types.ObjectId(imageId);
+
+//         category.designs = category.designs.filter(
+//             (design: any) => !(design._id.equals(imageObjectId) && design.type === "image")
 //         );
 
+//         await shortlist.save();
+
+//         return res.status(200).json({ message: "Image deleted successfully", ok: true });
+//     } catch (error) {
+//         console.error("Error deleting shortlisted image:", error);
+//         return res.status(500).json({ message: "Internal server error", ok: false });
+//     }
+// };
+
+// export const getShortlistedRoomDesigns = async (req: Request, res: Response): Promise<any> => {
+//     try {
+//         const { projectId, roomName } = req.params;
+
+//         const doc = await ShortlistedDesignModel.findOne({ projectId });
+
 //         if (!doc) {
-//             return res.status(404).json({ message: "Shortlist record not found", ok: false });
+//             return res.status(404).json({ message: "No shortlisted designs found", ok: false });
 //         }
 
-//         return res.status(200).json({ message: "Design removed successfully", ok: true, data: doc });
+//         // const room = doc.shortlistedRooms.find((r) => r.roomName === roomName);
+
+//         // if (!room) {
+//         //   return res.status(404).json({ message: "Room not found in shortlist", ok: false });
+//         // }
+
+//         return res.status(200).json({ ok: true, data: doc });
 //     } catch (error) {
-//         console.error("Error removing design:", error);
+//         console.error("Error fetching shortlisted room designs:", error);
 //         return res.status(500).json({ message: "Internal server error", ok: false });
 //     }
 // };
 
 
 
+
+
+// SECOND VERSION 
+
 // controllers/shortlistedDesign.controller.ts
+import { Request, Response } from "express";
+import mongoose, { Types } from "mongoose";
+import { ShortlistedDesignModel } from "../../../models/Stage Models/sampleDesing model/shortListed.model";
+import { RoleBasedRequest } from "../../../types/types";
+import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
+import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
+import { generateShortlistPdf } from "./pdfShortListDesignsController";
 
 
+// const sendShortListMailUtil = async (projectId: Types.ObjectId | string, roomName: string, categoryName: string, images: any[]) => {
+//     const client = await ClientModel.findOne({ projectId });
+//     if (!client || !client.email) {
+//         return;
+//     }
 
-export const deleteShortlistedDesign = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+//     // Step 2: Send email
+//     await sendShortlistedDesignsEmail({
+//         clientName: client.clientName,
+//         clientEmail: client.email,
+//         categoryName,
+//         roomName,
+//         images,
+//     });
+
+// }
+
+
+export const getAllSiteImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { projectId, roomName, categoryId, imageId } = req.params;
 
-        if (!projectId || !roomName || !categoryId || !imageId) {
-            return res.status(400).json({ message: "Missing required data", ok: false });
+        const { projectId } = req.params
+        const [requirement, sitemeasurement] = await Promise.all([RequirementFormModel.findOne({ projectId }), SiteMeasurementModel.findOne({ projectId })])
+
+        let allImages: any = [];
+        if (requirement) {
+            if (Array.isArray(requirement.uploads) && requirement.uploads.length > 0) {
+                allImages.push(...requirement.uploads);
+            }
+
+            // ✅ RequirementFormModel room uploads
+            if (Array.isArray(requirement.rooms) && requirement.rooms.length > 0) {
+                requirement.rooms.forEach((room: any) => {
+                    if (Array.isArray(room.uploads) && room.uploads.length > 0) {
+                        // allImages.push(...room.uploads.map((img: any) => ({
+                        //     ...img,
+                        //     // roomName: room.roomName, // 🔍 attach room context
+                        // })));
+                        allImages.push(...room.uploads);
+                    }
+                });
+            }
         }
 
-        const shortlist = await ShortlistedDesignModel.findOne({ projectId });
 
-        if (!shortlist) {
-            return res.status(404).json({ message: "Shortlist not found", ok: false });
+
+
+        // ✅ SiteMeasurementModel
+        if (sitemeasurement) {
+            if (Array.isArray(sitemeasurement.uploads) && sitemeasurement.uploads.length > 0) {
+                allImages.push(...sitemeasurement.uploads);
+            }
+
+            if (Array.isArray(sitemeasurement.rooms) && sitemeasurement.rooms.length > 0) {
+                sitemeasurement.rooms.forEach((room: any) => {
+                    if (Array.isArray(room.uploads) && room.uploads.length > 0) {
+                        allImages.push(...room.uploads);
+                    }
+                });
+            }
         }
 
-        console.log("room name", roomName)
+        return res.status(200).json({
+            message: "Images get fetched",
+            data: allImages,
+            ok: true,
+        });
 
-        const room = shortlist.shortlistedRooms.find(r => r.roomName === roomName);
-        if (!room) {
-            return res.status(404).json({ message: "Room not found", ok: false });
+    }
+    catch (error: any) {
+        console.error("Upload & mail error:", error);
+        return res.status(500).json({ message: "Internal Server Error", ok: false });
+    }
+}
+
+// ✅ Controller to bulk add shortlisted designs
+export const addShortlistedDesigns = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params;
+        const { selections } = req.body;
+
+        /**
+         * Body Format Example:
+         * {
+         *   selections: [
+         *     {
+         *       siteImage: {
+         *         _id: "650fa...", // original image id
+         *         url: "https://s3...",
+         *         originalName: "room1.jpg",
+         *         type: "image"
+         *       },
+         *       referenceImages: [
+         *         {
+         *           _id: "650fb...",
+         *           url: "https://s3...",
+         *           originalName: "ref1.jpg",
+         *           type: "image"
+         *         }
+         *       ]
+         *     }
+         *   ]
+         * }
+         */
+
+        if (!selections || !Array.isArray(selections)) {
+            return res.status(400).json({ ok: false, message: "Selections must be an array" });
         }
 
-        const category = room.categories.find(c => c.categoryId === categoryId);
-        if (!category) {
-            return res.status(404).json({ message: "Category not found", ok: false });
-        }
+        const formattedSelections = selections.map((sel: any) => {
+            return {
+                siteImage: {
+                    url: sel.siteImage.url,
+                    originalName: sel.siteImage.originalName,
+                    type: "image",
+                    imageId: new mongoose.Types.ObjectId(sel.siteImage._id), // store original _id
+                    uploadedAt: new Date(),
+                },
+                referenceImages: (sel.referenceImages || []).map((ref: any) => ({
+                    url: ref.url,
+                    originalName: ref.originalName,
+                    type: "image",
+                    imageId: new mongoose.Types.ObjectId(ref._id),
+                    uploadedAt: new Date(),
+                })),
+            };
+        });
 
-        const imageObjectId = new Types.ObjectId(imageId);
+        // let doc = await ShortlistedDesignModel.findOne({ projectId });
 
-        category.designs = category.designs.filter(
-            (design: any) => !(design._id.equals(imageObjectId) && design.type === "image")
-        );
+        // if (!doc) {
+        //   // Create new entry
+        //   doc = new ShortlistedDesignModel({
+        //     projectId,
+        //     shortListedDesigns: formattedSelections,
+        //   });
+        // } else {
+        //   // Append to existing shortlist
+        //   doc.shortListedDesigns.push(...formattedSelections);
+        // }
 
-        await shortlist.save();
+        // await doc.save();
 
-        return res.status(200).json({ message: "Image deleted successfully", ok: true });
+        let doc = await ShortlistedDesignModel.create({
+            projectId,
+            shortListedDesigns: formattedSelections,
+        })
+
+        doc = await doc.populate("projectId");
+
+        const data = await generateShortlistPdf({doc})
+
+        return res.status(200).json({
+            ok: true,
+            message: "Shortlisted designs added successfully",
+            data: {
+                url: data.url,
+                fileName:data.pdfName
+            },
+        });
     } catch (error) {
-        console.error("Error deleting shortlisted image:", error);
-        return res.status(500).json({ message: "Internal server error", ok: false });
+        console.error("Error adding shortlisted designs:", error);
+        return res.status(500).json({ ok: false, message: "Internal server error" });
     }
 };
 
+
+
+
+
 export const getShortlistedRoomDesigns = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { projectId, roomName } = req.params;
+        const { projectId } = req.params;
 
         const doc = await ShortlistedDesignModel.findOne({ projectId });
 

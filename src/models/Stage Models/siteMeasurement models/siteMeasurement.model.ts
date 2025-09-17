@@ -102,8 +102,6 @@ const SiteMeasurementSchema = new Schema<ISiteMeasurement>({
                 uploads: { type: [uploadSchema], default: [] },
         }
     ],
-
-
 }, {
     timestamps: true
 });
