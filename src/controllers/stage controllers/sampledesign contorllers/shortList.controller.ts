@@ -321,7 +321,8 @@ export const getAllSiteImages = async (req: RoleBasedRequest, res: Response): Pr
         let allImages: any = [];
         if (requirement) {
             if (Array.isArray(requirement.uploads) && requirement.uploads.length > 0) {
-                allImages.push(...requirement.uploads);
+                let arr = requirement.uploads.filter((file: any) => file.type === "image");
+                allImages.push(...arr);
             }
 
             // ✅ RequirementFormModel room uploads
@@ -332,7 +333,8 @@ export const getAllSiteImages = async (req: RoleBasedRequest, res: Response): Pr
                         //     ...img,
                         //     // roomName: room.roomName, // 🔍 attach room context
                         // })));
-                        allImages.push(...room.uploads);
+                        let arr = room.uploads.filter((file:any)=> file.type === "image")
+                        allImages.push(...arr);
                     }
                 });
             }
@@ -344,18 +346,23 @@ export const getAllSiteImages = async (req: RoleBasedRequest, res: Response): Pr
         // ✅ SiteMeasurementModel
         if (sitemeasurement) {
             if (Array.isArray(sitemeasurement.uploads) && sitemeasurement.uploads.length > 0) {
-                allImages.push(...sitemeasurement.uploads);
+                // allImages.push(...sitemeasurement.uploads);
+                 let arr = sitemeasurement.uploads.filter((file: any) => file.type === "image");
+                allImages.push(...arr);
             }
 
             if (Array.isArray(sitemeasurement.rooms) && sitemeasurement.rooms.length > 0) {
                 sitemeasurement.rooms.forEach((room: any) => {
                     if (Array.isArray(room.uploads) && room.uploads.length > 0) {
-                        allImages.push(...room.uploads);
+                        let arr = room.uploads.filter((file:any)=> file.type === "image")
+                        allImages.push(...arr);
                     }
                 });
             }
         }
 
+
+        console.log("all images without pdf and video", allImages)
         return res.status(200).json({
             message: "Images get fetched",
             data: allImages,
@@ -464,11 +471,31 @@ export const addShortlistedDesigns = async (req: Request, res: Response): Promis
 
 
 
+export const deleteShortListedDesign = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const {  id} = req.params;
+
+        const doc = await ShortlistedDesignModel.findByIdAndDelete(id)
+
+        if (!doc) {
+            return res.status(404).json({ message: "No shortlisted designs found", ok: false });
+        }
+
+       
+        return res.status(200).json({ ok: true, message:"deleted successfully", data: doc });
+    } catch (error) {
+        console.error("Error fetching shortlisted room designs:", error);
+        return res.status(500).json({ message: "Internal server error", ok: false });
+    }
+};
+
+
+
 export const getShortlistedRoomDesigns = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
 
-        const doc = await ShortlistedDesignModel.findOne({ projectId });
+        const doc = await ShortlistedDesignModel.find({ projectId });
 
         if (!doc) {
             return res.status(404).json({ message: "No shortlisted designs found", ok: false });

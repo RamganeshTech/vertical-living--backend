@@ -78,6 +78,7 @@ import accountingRoutes from './routers/Department Routes/Accounting Routes/acco
 import RateConfigRoutes from './routers/Quote Routes/RateConfig Routes/rateConfig.routes';
 import QuoteRouter from './routers/Quote Routes/QuoteGenerate Routes/quoteGenerate.routes';
 import shortlistReferenceDesign from './routers/Stage routes/sample desing routes/shortlistReferenceDesign.routes';
+import workReportRoutes from './routers/Stage routes/workReport Routes/workReport.routes';
 
 
 
@@ -260,6 +261,9 @@ app.use('/api/adminwall', adminWallroutes)
 app.use('/api/workerwall', workerWallRoutes)
 
 
+// REPORTS
+
+app.use('/api/workreports', workReportRoutes)
 
 // SHORTLIST REFERENCE DESIGN
 app.use('/api/shortlist/referencedesign', shortlistReferenceDesign)
