@@ -1,6 +1,4 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
-
-
 export interface IWorkReportUpload {
     _id?: Types.ObjectId;
     type: "image" | "pdf";
@@ -8,9 +6,6 @@ export interface IWorkReportUpload {
     originalName?: string;
     uploadedAt?: Date
 }
-
-
-
 
 export interface IWorkReport extends Document {
     workerName: string;
@@ -29,14 +24,12 @@ export interface IWorkReport extends Document {
     images?: IWorkReportUpload[];
     organizationId?: string;
     projectId?: string;
-    imageLink?: string;
+    imageLink?: IWorkReportUpload;
 }
-
-
 
 const uploadSchema = new Schema<IWorkReportUpload>({
     type: { type: String, enum: ["image", "pdf"], },
-    url: { type: String,},
+    url: { type: String, },
     originalName: { type: String , default:null},
     uploadedAt: {type: Date, default:new Date()}
 }, { _id: true });
@@ -66,5 +59,5 @@ const WorkReportSchema = new Schema<IWorkReport>(
 );
 
 
-const WorkReportModel = mongoose.models.WorkLog || mongoose.model<IWorkReport>("WorkReportModel", WorkReportSchema);
+const WorkReportModel = mongoose.model<IWorkReport>("WorkReportModel", WorkReportSchema);
 export default WorkReportModel

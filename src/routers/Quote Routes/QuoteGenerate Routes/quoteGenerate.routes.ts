@@ -1,6 +1,6 @@
 import express from "express";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
-import { createMaterialQuote,  deleteMaterialQuoteById,  getMaterialQuoteEntries } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/quoteGenerate.controller";
+import { createMaterialQuote,  deleteMaterialQuoteById,  editQuoteMaterial,  getMaterialQuoteEntries } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/quoteGenerate.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { getMaterialCategories } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
 import {  createVariantQuotePdfGenerator, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
@@ -14,6 +14,14 @@ QuoteRouter.post(
   processUploadFiles,              // Optional: Normalize any req.files array if needed
   createMaterialQuote              // ✅ Your TS controller
 );
+
+
+QuoteRouter.put(
+  "/editquote/:organizationId/:projectId/:id",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  editQuoteMaterial  
+);
+
 
 QuoteRouter.get(
   "/getquotes/:organizationId",

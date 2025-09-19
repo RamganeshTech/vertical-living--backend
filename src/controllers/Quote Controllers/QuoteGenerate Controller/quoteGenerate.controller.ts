@@ -246,6 +246,115 @@ export const createMaterialQuote = async (req: Request, res: Response): Promise<
 };
 
 
+export const editQuoteMaterial = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { organizationId, projectId, id } = req.params;
+
+    if (!organizationId || !Types.ObjectId.isValid(organizationId)) {
+      return res.status(400).json({ ok: false, message: 'Missing or invalid organizationId' });
+    }
+
+    if (!projectId || !Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({ ok: false, message: 'Missing or invalid projectId' });
+    }
+
+    if (!id || !Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ ok: false, message: 'Missing or invalid quote id' });
+    }
+
+    // Parse data
+    const furnitures = req?.body?.furnitures;
+    const grandTotal = Number(req?.body?.grandTotal || 0);
+    const notes = req?.body?.notes || null;
+    const quoteNo = req?.body?.quoteNo || null;
+
+    const cleanSimpleItems = (section: any[]): any[] =>
+      (section || []).map((item) => ({
+        itemName: item.itemName || null,
+        description: item.description || null,
+        quantity: Number(item.quantity || 0),
+        cost: Number(item.cost || 0),
+        rowTotal: Number(item.rowTotal || 0),
+      }));
+
+    const processedFurniture = (furnitures || []).map((furniture: any) => {
+      const coreMaterials = (furniture.coreMaterials || []).map((material: any) => {
+        return {
+          itemName: material.itemName || null,
+          imageUrl: material.imageUrl || null, // 💡 not changing, only preserving
+
+          plywoodNos: material.plywoodNos
+            ? {
+                quantity: Number(material.plywoodNos.quantity || 0),
+                thickness: Number(material.plywoodNos.thickness || 0),
+              }
+            : null,
+
+          laminateNos: material.laminateNos
+            ? {
+                quantity: Number(material.laminateNos.quantity || 0),
+                thickness: Number(material.laminateNos.thickness || 0),
+              }
+            : null,
+
+          carpenters: Number(material.carpenters || 0),
+          days: Number(material.days || 0),
+          profitOnMaterial: Number(material.profitOnMaterial || 0),
+          profitOnLabour: Number(material.profitOnLabour || 0),
+          rowTotal: Number(material.rowTotal || 0),
+          remarks: material.remarks || null,
+        };
+      });
+
+      return {
+        furnitureName: furniture.furnitureName,
+
+        coreMaterials,
+        fittingsAndAccessories: cleanSimpleItems(furniture.fittingsAndAccessories),
+        glues: cleanSimpleItems(furniture.glues),
+        nonBrandMaterials: cleanSimpleItems(furniture.nonBrandMaterials),
+
+        coreMaterialsTotal: Number(furniture.coreMaterialsTotal || 0),
+        fittingsAndAccessoriesTotal: Number(furniture.fittingsAndAccessoriesTotal || 0),
+        gluesTotal: Number(furniture.gluesTotal || 0),
+        nonBrandMaterialsTotal: Number(furniture.nonBrandMaterialsTotal || 0),
+        furnitureTotal: Number(furniture.furnitureTotal || 0),
+      };
+    });
+
+    const updatedQuote = await MaterialQuoteGenerateModel.findByIdAndUpdate(
+      id,
+      {
+        quoteNo,
+        furnitures: processedFurniture,
+        grandTotal,
+        notes,
+        organizationId,
+        projectId
+      },
+      { new: true }
+    );
+
+    if (!updatedQuote) {
+      return res.status(404).json({ ok: false, message: 'Quote not found' });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: 'Material Quote Updated Successfully',
+      data: updatedQuote,
+    });
+  } catch (error: any) {
+    console.error('Error editing material quote:', error);
+    return res.status(500).json({
+      ok: false,
+      message: 'Internal server error',
+      error: error.message,
+    });
+  }
+};
+
+
 
       
 export const getMaterialQuoteEntries = async (req: Request, res: Response):Promise<any> => {
