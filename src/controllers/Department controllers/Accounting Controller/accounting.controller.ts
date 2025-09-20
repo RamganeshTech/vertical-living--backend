@@ -111,7 +111,6 @@ export const updateAccountingTransaction = async (req: RoleBasedRequest, res: Re
 };
 
 
-
 export const deleteAccounting = async (
   req: RoleBasedRequest,
   res: Response
@@ -136,14 +135,12 @@ export const deleteAccounting = async (
   }
 };
 
-
-
 export const getAccounting = async (
   req: RoleBasedRequest,
   res: Response
 ): Promise<any> => {
   try {
-    const { projectId, fromDept, status, organizationId } = req.query;
+    const { projectId, fromDept, status, organizationId , search} = req.query;
 
     if (!organizationId) {
       return res.status(400).json({ message: "organizationId is required" , ok:false});
@@ -154,6 +151,21 @@ export const getAccounting = async (
     if (projectId) filter.projectId = projectId;
     if (fromDept) filter.fromDept = fromDept;
     if (status) filter.status = status;
+
+
+    // 🔍 Search functionality
+    if (search && typeof search === "string") {
+      const searchRegex = new RegExp(search, "i"); // case-insensitive match
+
+      filter.$or = [
+        { transactionNumber: searchRegex },
+        { transactionType: searchRegex },
+        { fromDept: searchRegex },
+        { upiId: searchRegex },
+        { status: searchRegex },
+        { notes: searchRegex },
+      ];
+    }
 
     const records = await AccountingModel.find(filter);
 
