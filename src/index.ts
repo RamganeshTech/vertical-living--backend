@@ -46,7 +46,7 @@ import workerWallRoutes from './routers/WallPainting routes/workerWallPainting.r
 import downloadRouter from './routers/Download Routes/download.routes';
 import profileRoutes from './routers/Profile Role Routes/ProfileRole.routes';
 import preRequiretiesRoutes from './routers/PreRequireties Routes/preRequireties.routes';
-import utilAiRoutes from './routers/Util routes/util.routes';
+import utilAiRoutes from './routers/Util routes/utilAi.routes';
 import modularUnitRoutes from './routers/Modular Unit routes/modularUnit.routes';
 import stageSelectetionRoutes from './routers/Modular Unit routes/SelectionStage Routes/selectionStage.routes';
 import SelectedModularUnitRoutes from './routers/Modular Unit routes/SelectedModularUnit Routes/selectedModularUnit.routes';
@@ -79,6 +79,7 @@ import RateConfigRoutes from './routers/Quote Routes/RateConfig Routes/rateConfi
 import QuoteRouter from './routers/Quote Routes/QuoteGenerate Routes/quoteGenerate.routes';
 import shortlistReferenceDesign from './routers/Stage routes/sample desing routes/shortlistReferenceDesign.routes';
 import workReportRoutes from './routers/Stage routes/workReport Routes/workReport.routes';
+import staffTaskRoutes from './routers/StaffTask Routes/staffTask.routes';
 
 
 
@@ -262,7 +263,6 @@ app.use('/api/workerwall', workerWallRoutes)
 
 
 // REPORTS
-
 app.use('/api/workreports', workReportRoutes)
 
 // SHORTLIST REFERENCE DESIGN
@@ -286,7 +286,8 @@ app.use('/api/department/accounting', accountingRoutes)
 app.use('/api/quote/rateconfig', RateConfigRoutes)
 app.use('/api/quote/quotegenerate', QuoteRouter)
 
-
+// STAFF TASKS API
+app.use("/api/stafftasks/", staffTaskRoutes)
 
 // SHORTLIST API
 // app.use('/api/shortlist', shortlistedDesignRoutes)
@@ -316,10 +317,6 @@ app.use('/api/profile', profileRoutes)
 
 // AI ROUTES FOR BRANDNAMES , MATIERAISL, AND OTHER EXTRA THINGS...
 app.use('/api/ai', utilAiRoutes)
-
-
-
-
 
 
 
