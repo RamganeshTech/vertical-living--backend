@@ -78,11 +78,11 @@ export const getAllTasks = async (req: Request, res: Response): Promise<any> => 
             createdAt
         } = req.query;
 
-
+        const {organizationId} = req.params
         
 
         const query: any = {};
-
+        if(organizationId) query.organizationId = new Types.ObjectId(organizationId)
         if (status) query.status = status;
         if (priority) query.priority = priority;
         if (assigneeId) query.assigneeId = new Types.ObjectId(assigneeId as string);

@@ -55,7 +55,7 @@ staffTaskRoutes.patch('/tasks/:mainTaskId/subtasks/:subTaskId/history',multiRole
 
 // Get all tasks using query filters (status, priority, assigneeId, overdue, etc)
 staffTaskRoutes.get('/suggest/subtasks', multiRoleAuthMiddleware("owner", "staff", "CTO"), suggestSubtasks);
-staffTaskRoutes.get('/tasks', multiRoleAuthMiddleware("owner", "staff", "CTO"), getAllTasks);
+staffTaskRoutes.get('/:organizationId/tasks', multiRoleAuthMiddleware("owner", "staff", "CTO"), getAllTasks);
 staffTaskRoutes.get('/singletask/:id', multiRoleAuthMiddleware("owner", "staff", "CTO"), getSingleTask);
 
 export default staffTaskRoutes;
