@@ -1,10 +1,15 @@
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { RoleBasedRequest } from '../../types/types';
-import StaffMainTaskModel, { IStaffTask } from '../../models/Staff Task Models/staffTask.model';
+import StaffMainTaskModel, { IStaffTask, ISTaskSchema } from '../../models/Staff Task Models/staffTask.model';
+// import { getEmbedding } from '../utils/embedder';
+// import {  } from '../utils/cosine';
+import { getEmbedding } from '../../utils/embedder/embedder';
+import { cosineSimilarity } from '../../utils/embedder/cosine';
+import TaskTemplateModel from '../../models/Staff Task Models/TaskTemplate Model/taskTemplate.model';
 
 const ALLOWED_MODELS = ["UserModel", "StaffModel", "CTOModel", "WorkerModel"];
-const VALID_STATUSES = ['queued', 'in_progress', 'paused', 'done'];
+const VALID_STATUSES = ['queued', 'in_progress', 'paused', 'done', "start"];
 
 
 const mapRoleToModel = (role: string): string => {
@@ -23,6 +28,44 @@ const mapRoleToModel = (role: string): string => {
 };
 
 
+export const suggestSubtasks = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { title } = req.query;
+
+        if (!title || typeof title !== 'string' || title.length < 3) {
+            return res.status(400).json({ ok: false, message: 'Valid task title is required' });
+        }
+
+        const inputEmbedding = await getEmbedding(title);
+        const templates = await TaskTemplateModel.find(); // Optional: add limit
+
+        let bestMatch = null;
+        let bestScore = 0;
+
+        for (const template of templates) {
+            const matchScore = cosineSimilarity(inputEmbedding, template.embedding);
+            if (matchScore > bestScore) {
+                bestScore = matchScore;
+                bestMatch = template;
+            }
+        }
+
+        if (bestScore >= 0.85 && bestMatch) {
+            return res.status(200).json({
+                ok: true,
+                matched: true,
+                steps: bestMatch.steps
+            });
+        }
+
+        return res.status(200).json({ ok: true, matched: false, steps: [] });
+
+    } catch (err) {
+        console.error('Error in suggestSubtasks:', err);
+        return res.status(500).json({ ok: false, message: 'Internal server error' });
+    }
+};
+
 export const getAllTasks = async (req: Request, res: Response): Promise<any> => {
     try {
         const {
@@ -31,8 +74,12 @@ export const getAllTasks = async (req: Request, res: Response): Promise<any> => 
             assigneeId,
             projectId,
             department,
-            overdue
+            overdue,
+            createdAt
         } = req.query;
+
+
+        
 
         const query: any = {};
 
@@ -46,7 +93,17 @@ export const getAllTasks = async (req: Request, res: Response): Promise<any> => 
             query.due = { $lt: new Date() }; // due < now
         }
 
-        const tasks = await StaffMainTaskModel.find(query);
+         if (createdAt) {
+            const date = new Date(createdAt as string);
+
+            // Create a range for that day: start -> end
+            const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+            const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+
+            query.due = { $gte: startOfDay, $lte: endOfDay };
+        }
+
+        const tasks = await StaffMainTaskModel.find(query).populate("assigneeId");
 
         return res.status(200).json({
             ok: true,
@@ -146,9 +203,6 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
                 });
             }
 
-
-           
-
             const newTask = new StaffMainTaskModel({
                 title,
                 description,
@@ -167,17 +221,31 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
                 assignedByModel,
                 tasks: subTasks, // [{ taskName }]
                 dependentTaskId: dependentTaskId || null,
-                history: [
-                    //   {
-                    //     status,
-                    //     changedAt: new Date(),
-                    //     changedBy: assignedById,
-                    //     userModel: assignedByModel
-                    //   }
-                ]
+                history: []
             });
 
             newTasks.push(newTask);
+
+            const existingTemplate = await TaskTemplateModel.findOne({ taskText: title });
+
+            const validSubTasks = Array.isArray(subTasks)
+                    ? subTasks.map((s: ISTaskSchema) => s.taskName?.trim()).filter(Boolean)
+                    : [];
+
+            if (!existingTemplate && validSubTasks?.length > 0) {
+                const embedding = await getEmbedding(title);
+                const plainEmbedding = Array.from(embedding);
+
+                await TaskTemplateModel.create({
+                    taskText: title,
+                    steps: validSubTasks,
+                    embedding: plainEmbedding
+                });
+
+                console.log(`✅ Template stored for task: "${title}"`);
+            } else {
+                console.log(`⚠️ Template not stored for "${title}" — No valid steps.`);
+            }
         }
 
         // Insert all at once
@@ -194,6 +262,8 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
         return res.status(500).json({ ok: false, message: 'Internal server error' });
     }
 };
+
+
 
 
 // PATCH /tasks/:mainTaskId/subtasks/:subTaskId
@@ -363,7 +433,7 @@ export const deleteMainTask = async (req: Request, res: Response): Promise<any> 
 export const updateTaskHistory = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { mainTaskId, subTaskId } = req.params;
-        const { status , task} = req.body;
+        const { status, task } = req.body;
         const user = req.user;
 
         if (!status || !VALID_STATUSES.includes(status)) {
@@ -399,7 +469,7 @@ export const updateTaskHistory = async (req: RoleBasedRequest, res: Response): P
             {
                 $push: {
                     history: {
-                        subTask:task,
+                        subTask: task,
                         status,
                         changedAt: new Date(),
                         changedBy: user._id,

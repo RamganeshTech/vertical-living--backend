@@ -51,7 +51,7 @@ const HistorySchema = new Schema<TaskHistory>(
         },
         changedBy: {
             type: Schema.Types.ObjectId,
-            ref: 'history.userModel',
+            refPath: 'history.userModel',
         },
         userModel: {
             type: String,
@@ -77,6 +77,7 @@ const StaffMainTaskSchema = new Schema<IStaffTask>(
 
         due: {
             type: Date,
+            default: new Date()
         },
         status: {
             type: String,
@@ -100,7 +101,7 @@ const StaffMainTaskSchema = new Schema<IStaffTask>(
 
         assigneeId: {
             type: Schema.Types.ObjectId,
-            ref: 'assigneModel',
+            refPath: 'assigneModel',
         },
         assigneModel: {
             type: String,
