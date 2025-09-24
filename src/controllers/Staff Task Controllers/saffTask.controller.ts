@@ -419,6 +419,7 @@ export const updateMainTask = async (req: Request, res: Response): Promise<any> 
         title,
         description,
         due,
+        status,
         priority,
         department,
         projectId,
@@ -438,7 +439,9 @@ export const updateMainTask = async (req: Request, res: Response): Promise<any> 
                     ...(department && { department }),
                     ...(projectId && { projectId }),
                     ...(dependentTaskId && { dependentTaskId }),
-                    ...(assigneeId && { assigneeId })
+                    ...(assigneeId && { assigneeId }),
+                    ...(status && { status })
+
                 }
             },
             { new: true }
