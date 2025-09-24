@@ -17,7 +17,8 @@ import {
   // 5. Filters
   getAllTasks,
   getSingleTask,
-  suggestSubtasks
+  suggestSubtasks,
+  getAssociatedStaffsTask
 } from '../../controllers/Staff Task Controllers/saffTask.controller';
 import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
 import { staffTaskAccess } from '../../middlewares/staffTaskAccess';
@@ -57,5 +58,6 @@ staffTaskRoutes.patch('/tasks/:mainTaskId/subtasks/:subTaskId/history',multiRole
 staffTaskRoutes.get('/suggest/subtasks', multiRoleAuthMiddleware("owner", "staff", "CTO"), suggestSubtasks);
 staffTaskRoutes.get('/:organizationId/tasks', multiRoleAuthMiddleware("owner", "staff", "CTO"), getAllTasks);
 staffTaskRoutes.get('/singletask/:id', multiRoleAuthMiddleware("owner", "staff", "CTO"), getSingleTask);
+staffTaskRoutes.get('/associatedstaffstask/:organizationId', multiRoleAuthMiddleware("owner", "staff", "CTO"), getAssociatedStaffsTask);
 
 export default staffTaskRoutes;

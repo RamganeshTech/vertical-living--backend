@@ -78,11 +78,11 @@ export const getAllTasks = async (req: Request, res: Response): Promise<any> => 
             createdAt
         } = req.query;
 
-        const {organizationId} = req.params
-        
+        const { organizationId } = req.params
+
 
         const query: any = {};
-        if(organizationId) query.organizationId = new Types.ObjectId(organizationId)
+        if (organizationId) query.organizationId = new Types.ObjectId(organizationId)
         if (status) query.status = status;
         if (priority) query.priority = priority;
         if (assigneeId) query.assigneeId = new Types.ObjectId(assigneeId as string);
@@ -93,7 +93,7 @@ export const getAllTasks = async (req: Request, res: Response): Promise<any> => 
             query.due = { $lt: new Date() }; // due < now
         }
 
-         if (createdAt) {
+        if (createdAt) {
             const date = new Date(createdAt as string);
 
             // Create a range for that day: start -> end
@@ -131,7 +131,9 @@ export const getSingleTask = async (req: Request, res: Response): Promise<any> =
             return res.status(400).json({ message: "Id not available", ok: false })
         }
 
-        const tasks = await StaffMainTaskModel.findById(id);
+        const tasks = await StaffMainTaskModel.findById(id)
+        .populate("assigneeId", "_id staffName email")     // populate staff fields
+        .populate("projectId", "_id projectName");         // populate project fields
 
         return res.status(200).json({
             ok: true,
@@ -146,6 +148,68 @@ export const getSingleTask = async (req: Request, res: Response): Promise<any> =
         });
     }
 };
+
+
+
+export const getAssociatedStaffsTask = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        let user = req.user 
+        const { organizationId } = req.params
+
+        const {
+            status,
+            priority,
+            projectId,
+            department,
+            overdue,
+            createdAt
+        } = req.query;
+
+        if (!user?._id) {
+            return res.status(400).json({ message: "staff Id not available", ok: false })
+        }
+
+
+         const query: any = {};
+        if (organizationId) query.organizationId = new Types.ObjectId(organizationId)
+        if (status) query.status = status;
+        if (priority) query.priority = priority;
+        if (user?._id) query.assigneeId = new Types.ObjectId(user?._id as string);
+        if (projectId) query.projectId = new Types.ObjectId(projectId as string);
+        if (department) query.department = department;
+
+        if (overdue === 'true') {
+            query.due = { $lt: new Date() }; // due < now
+        }
+
+        if (createdAt) {
+            const date = new Date(createdAt as string);
+
+            // Create a range for that day: start -> end
+            const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+            const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+
+            query.due = { $gte: startOfDay, $lte: endOfDay };
+        }
+
+        const tasks = await StaffMainTaskModel.find(query).populate("assigneeId");
+
+        return res.status(200).json({
+            ok: true,
+            message: 'Tasks fetched successfully',
+            data: tasks || null
+        });
+    } catch (error) {
+        console.error('Error fetching tasks:', error);
+        return res.status(500).json({
+            ok: false,
+            message: 'Failed to fetch tasks'
+        });
+    }
+};
+
+
+
 
 export const createStaffTask = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
@@ -229,8 +293,8 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
             const existingTemplate = await TaskTemplateModel.findOne({ taskText: title });
 
             const validSubTasks = Array.isArray(subTasks)
-                    ? subTasks.map((s: ISTaskSchema) => s.taskName?.trim()).filter(Boolean)
-                    : [];
+                ? subTasks.map((s: ISTaskSchema) => s.taskName?.trim()).filter(Boolean)
+                : [];
 
             if (!existingTemplate && validSubTasks?.length > 0) {
                 const embedding = await getEmbedding(title);
@@ -358,6 +422,7 @@ export const updateMainTask = async (req: Request, res: Response): Promise<any> 
         priority,
         department,
         projectId,
+        assigneeId,
         dependentTaskId
     } = req.body;
 
@@ -372,7 +437,8 @@ export const updateMainTask = async (req: Request, res: Response): Promise<any> 
                     ...(priority && { priority }),
                     ...(department && { department }),
                     ...(projectId && { projectId }),
-                    ...(dependentTaskId && { dependentTaskId })
+                    ...(dependentTaskId && { dependentTaskId }),
+                    ...(assigneeId && { assigneeId })
                 }
             },
             { new: true }
