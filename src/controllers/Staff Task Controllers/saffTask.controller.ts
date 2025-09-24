@@ -75,7 +75,8 @@ export const getAllTasks = async (req: Request, res: Response): Promise<any> => 
             projectId,
             department,
             overdue,
-            createdAt
+            createdAt,
+            dependecies
         } = req.query;
 
         const { organizationId } = req.params
@@ -88,6 +89,9 @@ export const getAllTasks = async (req: Request, res: Response): Promise<any> => 
         if (assigneeId) query.assigneeId = new Types.ObjectId(assigneeId as string);
         if (projectId) query.projectId = new Types.ObjectId(projectId as string);
         if (department) query.department = department;
+         if (dependecies === 'true') {
+            query.dependentTaskId = { $exists: true, $ne: [] };
+        }
 
         if (overdue === 'true') {
             query.due = { $lt: new Date() }; // due < now
@@ -105,10 +109,22 @@ export const getAllTasks = async (req: Request, res: Response): Promise<any> => 
 
         const tasks = await StaffMainTaskModel.find(query).populate("assigneeId");
 
+        let finalTasks = tasks;
+
+        if (dependecies === 'true') {
+            finalTasks = tasks.filter(task => {
+                return (
+                    task?.dependentTaskId && Array.isArray(task?.dependentTaskId) &&
+                    task?.dependentTaskId.length > 0 &&
+                    task.status !== 'done'
+                );
+            });
+        }
+
         return res.status(200).json({
             ok: true,
             message: 'Tasks fetched successfully',
-            data: tasks
+            data: finalTasks 
         });
     } catch (error) {
         console.error('Error fetching tasks:', error);
@@ -132,8 +148,17 @@ export const getSingleTask = async (req: Request, res: Response): Promise<any> =
         }
 
         const tasks = await StaffMainTaskModel.findById(id)
-        .populate("assigneeId", "_id staffName email")     // populate staff fields
-        .populate("projectId", "_id projectName");         // populate project fields
+            .populate("assigneeId", "_id staffName email")     // populate staff fields
+            .populate("projectId", "_id projectName")        // populate project fields
+            .populate({
+                path: "dependentTaskId",
+                select: "_id title assigneeId due status",
+                populate: {
+                    path: "assigneeId",
+                    model: "StaffModel",
+                    select: "_id staffName",  // fields you want from staff
+                },
+            })
 
         return res.status(200).json({
             ok: true,
@@ -153,7 +178,7 @@ export const getSingleTask = async (req: Request, res: Response): Promise<any> =
 
 export const getAssociatedStaffsTask = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        let user = req.user 
+        let user = req.user
         const { organizationId } = req.params
 
         const {
@@ -162,7 +187,8 @@ export const getAssociatedStaffsTask = async (req: RoleBasedRequest, res: Respon
             projectId,
             department,
             overdue,
-            createdAt
+            createdAt,
+            dependecies
         } = req.query;
 
         if (!user?._id) {
@@ -170,17 +196,21 @@ export const getAssociatedStaffsTask = async (req: RoleBasedRequest, res: Respon
         }
 
 
-         const query: any = {};
+        const query: any = {};
         if (organizationId) query.organizationId = new Types.ObjectId(organizationId)
         if (status) query.status = status;
         if (priority) query.priority = priority;
         if (user?._id) query.assigneeId = new Types.ObjectId(user?._id as string);
         if (projectId) query.projectId = new Types.ObjectId(projectId as string);
         if (department) query.department = department;
-
+        // ✅ Filter by "active dependencies" if ?dependencies=true
+        if (dependecies === 'true') {
+            query.dependentTaskId = { $exists: true, $ne: [] };
+        }
         if (overdue === 'true') {
             query.due = { $lt: new Date() }; // due < now
         }
+
 
         if (createdAt) {
             const date = new Date(createdAt as string);
@@ -194,10 +224,22 @@ export const getAssociatedStaffsTask = async (req: RoleBasedRequest, res: Respon
 
         const tasks = await StaffMainTaskModel.find(query).populate("assigneeId");
 
+        let finalTasks = tasks;
+
+        if (dependecies === 'true') {
+            finalTasks = tasks.filter(task => {
+                return (
+                    task?.dependentTaskId && Array.isArray(task?.dependentTaskId) &&
+                    task?.dependentTaskId.length > 0 &&
+                    task.status !== 'done'
+                );
+            });
+        }
+
         return res.status(200).json({
             ok: true,
             message: 'Tasks fetched successfully',
-            data: tasks || null
+            data: finalTasks || null
         });
     } catch (error) {
         console.error('Error fetching tasks:', error);
@@ -284,7 +326,7 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
                 assignedById,
                 assignedByModel,
                 tasks: subTasks, // [{ taskName }]
-                dependentTaskId: dependentTaskId || null,
+                dependentTaskId: dependentTaskId ? (Array.isArray(dependentTaskId) ? Array.from(dependentTaskId) : dependentTaskId) : null,
                 history: []
             });
 

@@ -35,7 +35,7 @@ export interface IStaffTask extends Document {
     assignedById: Types.ObjectId;
     tasks: IStaffTask[]
     history: TaskHistory[];
-    dependentTaskId: Types.ObjectId | null
+    dependentTaskId: string[] | null
 }
 
 const HistorySchema = new Schema<TaskHistory>(
@@ -122,7 +122,7 @@ const StaffMainTaskSchema = new Schema<IStaffTask>(
             enum: ["UserModel", "StaffModel", "CTOModel", "WorkerModel"],
         },
         dependentTaskId: {
-            type: Schema.Types.ObjectId,
+            type: [Schema.Types.ObjectId],
             ref: 'StaffTaskModel', // Referring main task _id which needs to be completed first
             default: null
         },
