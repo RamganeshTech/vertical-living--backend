@@ -25,9 +25,9 @@ import requirementRoutes from './routers/Stage routes/requirement routes/require
 import siteMeasurementRoutes from './routers/Stage routes/siteMeasurement routes/siteMeasurement.route';
 import sampleDesignRoutes from './routers/Stage routes/sample desing routes/sampleDesign.routes';
 import technicalConsultRoutes from './routers/Stage routes/technicalConsultation.routes';
-import materialConfirmationRoutes from './routers/Stage routes/MaterialRoomConfirmation routes/materialRoomConfirmation.routes';
+// import materialConfirmationRoutes from './routers/Stage routes/MaterialRoomConfirmation routes/materialRoomConfirmation.routes';
 import resetRouter from './routers/resetStage Routes/resetStage.routes';
-import costEstimationRoutes from './routers/Stage routes/cost estimation routes/costEstimation.routes';
+// import costEstimationRoutes from './routers/Stage routes/cost estimation routes/costEstimation.routes';
 // import orderMaterialRoutes from './routers/Stage routes/order Material routes/orderMaterial.routes';
 import materialArrivalRoutes from './routers/Stage routes/Material Arrival Routes/MaterialArrival.routes';
 import workTaskRoutes from './routers/Stage routes/workTask routes/workmaintasks.routes';
@@ -47,15 +47,15 @@ import downloadRouter from './routers/Download Routes/download.routes';
 import profileRoutes from './routers/Profile Role Routes/ProfileRole.routes';
 import preRequiretiesRoutes from './routers/PreRequireties Routes/preRequireties.routes';
 import utilAiRoutes from './routers/Util routes/utilAi.routes';
-import modularUnitRoutes from './routers/Modular Unit routes/modularUnit.routes';
-import stageSelectetionRoutes from './routers/Modular Unit routes/SelectionStage Routes/selectionStage.routes';
-import SelectedModularUnitRoutes from './routers/Modular Unit routes/SelectedModularUnit Routes/selectedModularUnit.routes';
+// import modularUnitRoutes from './routers/Modular Unit routes/modularUnit.routes';
+// import stageSelectetionRoutes from './routers/Modular Unit routes/SelectionStage Routes/selectionStage.routes';
+// import SelectedModularUnitRoutes from './routers/Modular Unit routes/SelectedModularUnit Routes/selectedModularUnit.routes';
 import documentaitonRoutes from './routers/Documentation Routes/documentation.routes';
 import shortlistedDesignRoutes from './routers/Stage routes/sample desing routes/shortListed.routes';
 import orderMaterialHistoryRoutes from './routers/Stage routes/order Material routes/orderMaterialHistory.routes';
 import currentActiveStage from './routers/CurrentActiveStage Routes/currentActiveStage.route';
-import externalUnitRoutes from './routers/ExternalUnit Routes/externalUnit.routes';
-import selectedExternalRoutes from './routers/ExternalUnit Routes/selectedExternalUnit.routes';
+// import externalUnitRoutes from './routers/ExternalUnit Routes/externalUnit.routes';
+// import selectedExternalRoutes from './routers/ExternalUnit Routes/selectedExternalUnit.routes';
 
 // CRON JOBs
 import './utils/cronJobs/ReminderEmail/checkDeadLines'
@@ -81,6 +81,7 @@ import shortlistReferenceDesign from './routers/Stage routes/sample desing route
 import workReportRoutes from './routers/Stage routes/workReport Routes/workReport.routes';
 import staffTaskRoutes from './routers/StaffTask Routes/staffTask.routes';
 import LabourRateConfigRoutes from './routers/Quote Routes/RateConfig Routes/laboruRateConfig.routes';
+import projectUtilRoutes from './routers/Util routes/util.routes';
 
 
 
@@ -227,13 +228,16 @@ app.use('/api/starttimer', stageTimerRoutes)
 // PREREQUIRETIES APIS
 app.use('/api/prerequireties', preRequiretiesRoutes)
 
-app.use('/api/externalunits', externalUnitRoutes)
-app.use('/api/selectedexternal', selectedExternalRoutes)
+// EXTERNAL UNITS
+// app.use('/api/externalunits', externalUnitRoutes)
+// app.use('/api/selectedexternal', selectedExternalRoutes)
 
 // MODULAR UNITS APIS
-app.use('/api/modularunit', modularUnitRoutes)
-app.use('/api/selectedmodularunits', SelectedModularUnitRoutes)
-app.use('/api/selectedstage', stageSelectetionRoutes)
+// app.use('/api/modularunit', modularUnitRoutes)
+// app.use('/api/selectedmodularunits', SelectedModularUnitRoutes)
+// app.use('/api/selectedstage', stageSelectetionRoutes)
+
+
 
 // DOCUEMENTATION APIS
 app.use('/api/documentation', documentaitonRoutes)
@@ -243,8 +247,8 @@ app.use('/api/requirementform', requirementRoutes)
 app.use('/api/sitemeasurement', siteMeasurementRoutes)
 app.use('/api/sampledesign', sampleDesignRoutes)
 app.use('/api/technicalconsultation', technicalConsultRoutes)
-app.use('/api/materialconfirmation', materialConfirmationRoutes)
-app.use('/api/costestimation', costEstimationRoutes)
+// app.use('/api/materialconfirmation', materialConfirmationRoutes)
+// app.use('/api/costestimation', costEstimationRoutes)
 app.use('/api/paymentconfirmation', paymentConsentRoutes)
 app.use('/api/orderingmaterial', orderMaterialHistoryRoutes)
 app.use('/api/materialarrivalcheck', materialArrivalRoutes)
@@ -315,6 +319,11 @@ app.use("/api/subscriptionpayment", subscriptionRoutes);
 
 // PROFILE API
 app.use('/api/profile', profileRoutes)
+
+
+
+// UTILS API
+app.use('/api/projectdetails', projectUtilRoutes)
 
 
 // AI ROUTES FOR BRANDNAMES , MATIERAISL, AND OTHER EXTRA THINGS...

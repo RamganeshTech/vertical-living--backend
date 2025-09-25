@@ -1,6 +1,6 @@
 import { Model } from "mongoose";
-import { CostEstimationModel } from "../models/Stage Models/Cost Estimation Model/costEstimation.model";
-import MaterialRoomConfirmationModel from "../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
+// import { CostEstimationModel } from "../models/Stage Models/Cost Estimation Model/costEstimation.model";
+// import MaterialRoomConfirmationModel from "../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
 // import { RequirementFormModel } from "../models/Stage Models/requirment model/requirement.model";
 import { SampleDesignModel } from "../models/Stage Models/sampleDesing model/sampleDesign.model";
 import { SiteMeasurementModel } from "../models/Stage Models/siteMeasurement models/siteMeasurement.model";
@@ -15,9 +15,7 @@ import { CleaningAndSanitationModel } from "../models/Stage Models/Cleaning Mode
 import { ProjectDeliveryModel } from "../models/Stage Models/ProjectDelivery Model/ProjectDelivery.model";
 import MaterialArrivalModel from "../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
 import { OrderMaterialHistoryModel } from "../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
-import { SelectedModularUnitModel } from "../models/Modular Units Models/All Unit Model/SelectedModularUnit Model/selectedUnit.model";
 import { RequirementFormModel } from "../models/Stage Models/requirment model/mainRequirementNew.model";
-import { SelectedExternalModel } from "../models/externalUnit model/SelectedExternalUnit model/selectedExternalUnit.model";
 
 
 export const SUBSCRIPTION_PLANS = {
@@ -52,10 +50,10 @@ export const stageModels: Model<any>[] = [
   SiteMeasurementModel,   // Stage 2
   SampleDesignModel, // Stage 3
   TechnicalConsultationModel,      // Stage 4
-  SelectedModularUnitModel, //stage 5
-  SelectedExternalModel, //stage 6
-  MaterialRoomConfirmationModel,      // Stage 5
-  CostEstimationModel,                // Stage 6    
+  // SelectedModularUnitModel, //stage 5
+  // SelectedExternalModel, //stage 6
+  // MaterialRoomConfirmationModel,      // Stage 5
+  // CostEstimationModel,                // Stage 6    
   PaymentConfirmationModel,    //stage 7
   // OrderingMaterialModel,  
   OrderMaterialHistoryModel, //stage 8

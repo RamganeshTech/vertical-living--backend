@@ -2,8 +2,8 @@ import { Request, Response } from "express";
 import { Model, Types } from "mongoose";
 
 
-import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
-import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
+// import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
+// import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
 import { SampleDesignModel } from "../../../models/Stage Models/sampleDesing model/sampleDesign.model";
 import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
 import { TechnicalConsultationModel } from "../../../models/Stage Models/technical consulatation/technicalconsultation.model";
@@ -27,8 +27,8 @@ export const stageModelMap = new Map<string, Model<Document>>([
   ["SiteMeasurementModel", SiteMeasurementModel as unknown as Model<Document>],
   ["SampleDesignModel", SampleDesignModel as unknown as Model<Document>],
   ["TechnicalConsultationModel", TechnicalConsultationModel as unknown as Model<Document>],
-  ["MaterialRoomConfirmationModel", MaterialRoomConfirmationModel as unknown as Model<Document>],
-  ["CostEstimation", CostEstimationModel as unknown as Model<Document>],
+  // ["MaterialRoomConfirmationModel", MaterialRoomConfirmationModel as unknown as Model<Document>],
+  // ["CostEstimation", CostEstimationModel as unknown as Model<Document>],
   ["PaymentConfirmationModel", PaymentConfirmationModel as unknown as Model<Document>],
   ["OrderMaterialHistoryModel", OrderMaterialHistoryModel as unknown as Model<Document>],
   ["MaterialArrivalModel", MaterialArrivalModel as unknown as Model<Document>],

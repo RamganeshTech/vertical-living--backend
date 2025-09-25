@@ -9,14 +9,9 @@ import { syncWorkSchedule } from "../workTasksmain controllers/workMain.controll
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
 import { generateOrderingToken } from "../../../utils/generateToken";
 import { Types } from "mongoose"
-import { SelectedModularUnitModel } from "../../../models/Modular Units Models/All Unit Model/SelectedModularUnit Model/selectedUnit.model";
-import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
-import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
-import { getStageSelectionUtil } from "../../Modular Units Controllers/StageSelection Controller/stageSelection.controller";
+// import { getStageSelectionUtil } from "../../Modular Units Controllers/StageSelection Controller/stageSelection.controller";
 import { IRoomItemEntry } from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomTypes";
 import { OrderMaterialHistoryModel, OrderSubItems } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
-import { SelectedExternalModel } from "../../../models/externalUnit model/SelectedExternalUnit model/selectedExternalUnit.model";
-import { syncInstallationWork } from "../installation controllers/installation.controller";
 
 
 
@@ -88,132 +83,70 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
         reminderSent: false,
     };
 
-    const stageSelection = await getStageSelectionUtil(projectId);
-    const mode = stageSelection?.mode || "Manual Flow";
+    // const stageSelection = await getStageSelectionUtil(projectId);
+    // const mode = stageSelection?.mode || "Manual Flow";
 
-    // let existing = await MaterialArrivalModel.findOne({ projectId });
+   
+    // if (mode === "Modular Units") {
 
-    // // Map existing entries by customId for preserving image & isVerified
-    // const existingMap = new Map<string, MaterialArrivalSingle>();
-    // ((existing?.materialArrivalList as any) || []).forEach((item: MaterialArrivalSingle) => {
-    //     if (item?.customId) {
-    //         existingMap.set(item.customId, item);
+
+    //     const materialArrival = await MaterialArrivalModel.findOne({ projectId });
+    //     const orderHistory = await OrderMaterialHistoryModel.findOne({ projectId });
+
+    //     let newItems: any[] = [];
+
+    //     if (orderHistory?.selectedUnits?.length) {
+    //         newItems = orderHistory.selectedUnits.flatMap((unit: any) =>
+    //             unit.subItems.map((subItem: OrderSubItems) => ({
+    //                 unitName: subItem.subItemName?.trim(),
+    //                 quantity: 0,          // will be updated by site staff
+    //                 image: null,          // staff will upload
+    //                 isVerified: false,    // verification pending
+    //             }))
+    //         );
     //     }
-    // });
-
-    // const newList: MaterialArrivalSingle[] = [];
-
-    if (mode === "Modular Units") {
-
-        // const materialArrival = await MaterialArrivalModel.findOne({ projectId })
-        // const selected = await SelectedModularUnitModel.findOne({ projectId });
-        // const isExternalExists = await SelectedExternalModel.findOne({ projectId })
 
 
+    //     if (!materialArrival) {
+    //         await MaterialArrivalModel.create({
+    //             projectId,
+    //             status: "pending",
+    //             isEditable: true,
+    //             assignedTo: null,
+    //             materialArrivalList: newItems,
+    //             timer,
+    //             generatedLink: null,
+    //         });
+    //     } else {
+    //         // 🔍 Preserve already verified items
+    //         const existingList = materialArrival?.materialArrivalList || [];
+    //         const existingMap = new Map(
+    //             (existingList as any)?.map((item: any) => [item.unitName?.trim(), item])
+    //         );
 
-        // let newItems: any[] = []
-        // if (isExternalExists?.selectedUnits?.length) {
-        //     const externalUnits = isExternalExists.selectedUnits.map((unit: any) => ({
-        //         unitName: unit.unitCode,
-        //         quantity: 0,
-        //         image: null,
-        //         isVerified: false,
-        //     }));
-        //     newItems = newItems.concat(externalUnits)
-        // }
-        // if (selected?.selectedUnits?.length) {
-        //     const externalUnits = selected.selectedUnits.map((unit: any) => ({
-        //         unitName: unit.customId,
-        //         quantity: 0,
-        //         image: null,
-        //         isVerified: false,
-        //     }));
-        //     newItems = newItems.concat(externalUnits)
-        // }
-        // if (!materialArrival) {
-        //     // ⬇️ Create new document if not exists
-        //     await MaterialArrivalModel.create({
-        //         projectId,
-        //         status: "pending",
-        //         isEditable: true,
-        //         assignedTo: null,
-        //         materialArrivalList: newItems,
-        //         timer,
-        //         generatedLink: null,
-        //     });
-        // } else {
-        //     // ⬇️ Append only new items by filtering duplicates (by customId)
-        //     const existingIds = new Set(
-        //         (materialArrival.materialArrivalList as any || []).map((item: any) => item.unitName)
-        //     );
-        //     const uniqueNewItems = newItems.filter(item => !existingIds.has(item.unitName));
-        //     if (uniqueNewItems.length > 0) {
-        //         (materialArrival.materialArrivalList as any).push(...uniqueNewItems);
-        //         await materialArrival.save();
+    //         const finalItemsToAdd: any[] = [];
 
-        //     }
+    //         for (const item of newItems) {
+    //             if (existingMap.has(item.unitName)) {
+    //                 const existingItem: any = existingMap.get(item.unitName?.trim());
+    //                 if (existingItem.isVerified) {
+    //                     // Preserve entire object if already verified
+    //                     continue;
+    //                 }
+    //             } else {
+    //                 finalItemsToAdd.push(item);
+    //             }
+    //         }
 
-        // }
+    //         if (finalItemsToAdd.length > 0) {
+    //             (materialArrival?.materialArrivalList as any)?.push(...finalItemsToAdd);
 
-
-
-        const materialArrival = await MaterialArrivalModel.findOne({ projectId });
-        const orderHistory = await OrderMaterialHistoryModel.findOne({ projectId });
-
-        let newItems: any[] = [];
-
-        if (orderHistory?.selectedUnits?.length) {
-            newItems = orderHistory.selectedUnits.flatMap((unit: any) =>
-                unit.subItems.map((subItem: OrderSubItems) => ({
-                    unitName: subItem.subItemName?.trim(),
-                    quantity: 0,          // will be updated by site staff
-                    image: null,          // staff will upload
-                    isVerified: false,    // verification pending
-                }))
-            );
-        }
-
-
-        if (!materialArrival) {
-            await MaterialArrivalModel.create({
-                projectId,
-                status: "pending",
-                isEditable: true,
-                assignedTo: null,
-                materialArrivalList: newItems,
-                timer,
-                generatedLink: null,
-            });
-        } else {
-            // 🔍 Preserve already verified items
-            const existingList = materialArrival?.materialArrivalList || [];
-            const existingMap = new Map(
-                (existingList as any)?.map((item: any) => [item.unitName?.trim(), item])
-            );
-
-            const finalItemsToAdd: any[] = [];
-
-            for (const item of newItems) {
-                if (existingMap.has(item.unitName)) {
-                    const existingItem: any = existingMap.get(item.unitName?.trim());
-                    if (existingItem.isVerified) {
-                        // Preserve entire object if already verified
-                        continue;
-                    }
-                } else {
-                    finalItemsToAdd.push(item);
-                }
-            }
-
-            if (finalItemsToAdd.length > 0) {
-                (materialArrival?.materialArrivalList as any)?.push(...finalItemsToAdd);
-
-                materialArrival.timer = timer
-                await materialArrival.save();
-            }
-        }
-    }
-    else if (mode === "Manual Flow") {
+    //             materialArrival.timer = timer
+    //             await materialArrival.save();
+    //         }
+    //     }
+    // }
+    // else if (mode === "Manual Flow") {
         const materialArrival = await MaterialArrivalModel.findOne({ projectId });
         const orderHistory = await OrderMaterialHistoryModel.findOne({ projectId });
 
@@ -268,28 +201,12 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
                 await materialArrival.save();
             }
         }
-    }
+    // }
 
     const redisMainkey = `stage:MaterialArrivalModel:${projectId}`
     await redisClient.del(redisMainkey)
 
-    // // Save or update the MaterialArrivalModel
-    // if (!existing) {
-    //     existing = new MaterialArrivalModel({
-    //         projectId,
-    //         materialArrivalList: newList,
-    //         timer,
-    //         status: "pending",
-    //         isEditable: true,
-    //         assignedTo: null,
-    //         generatedLink: null
-    //     });
-    // } else {
-    //     existing.materialArrivalList = newList;
-    //     existing.timer = timer;
-    // }
-
-    // await existing.save();
+   
 };
 
 

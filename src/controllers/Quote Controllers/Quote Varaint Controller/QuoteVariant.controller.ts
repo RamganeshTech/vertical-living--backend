@@ -4,7 +4,7 @@ import { CategoryModel, ItemModel } from "../../../models/Quote Model/RateConfig
 import QuoteVarientGenerateModel from "../../../models/Quote Model/QuoteVariant Model/quoteVarient.model";
 import ProjectModel from "../../../models/project model/project.model";
 import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
-import { generatePdfMaterialPacakgeComparison } from "../../stage controllers/material Room confirmation/materialRoomConfirmation.controller";
+// import { generatePdfMaterialPacakgeComparison } from "../../stage controllers/material Room confirmation/materialRoomConfirmation.controller";
 import { generateQuoteVariantPdf } from "./pdfQuoteVarientGenerate";
 
 export const getMaterialQuoteSingle = async (req: Request, res: Response):Promise<any> => {

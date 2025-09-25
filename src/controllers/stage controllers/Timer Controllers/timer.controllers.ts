@@ -5,8 +5,8 @@ import mongoose, { Model } from "mongoose";
 import { SampleDesignModel } from "../../../models/Stage Models/sampleDesing model/sampleDesign.model";
 import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
 import { TechnicalConsultationModel } from "../../../models/Stage Models/technical consulatation/technicalconsultation.model";
-import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
-import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
+// import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
+// import { CostEstimationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
 import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
 // import OrderingMaterialModel from "../../../models/Stage Models/Ordering Material Model/orderingMaterial.model";
 // import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheck.model";
@@ -26,8 +26,8 @@ const stageModelMap = new Map<string, Model<Document>>([
     ["sitemeasurement", SiteMeasurementModel as unknown as Model<Document>],
     ["sampledesign", SampleDesignModel as unknown as Model<Document>],
     ["technicalconsultation", TechnicalConsultationModel as unknown as Model<Document>],
-    ["materialconfirmation", MaterialRoomConfirmationModel as unknown as Model<Document>],
-    ["costestimation", CostEstimationModel as unknown as Model<Document>],
+    // ["materialconfirmation", MaterialRoomConfirmationModel as unknown as Model<Document>],
+    // ["costestimation", CostEstimationModel as unknown as Model<Document>],
     ["paymentconfirmation", PaymentConfirmationModel as unknown as Model<Document>],
     ["orderingmaterial", OrderMaterialHistoryModel as unknown as Model<Document>],
     ["materialarrivalcheck", MaterialArrivalModel as unknown as Model<Document>],

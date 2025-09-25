@@ -10,7 +10,7 @@ import { addOrUpdateStageDocumentation } from '../../documentation controller/do
 import { updateProjectCompletionPercentage } from '../../../utils/updateProjectCompletionPercentage ';
 import { syncAdminWall, syncWorkerWall } from '../../Wall Painting controllers/adminWallPainting.controller';
 import redisClient from '../../../config/redisClient';
-import { syncMaterialRoomSelectionStage } from '../material Room confirmation/materialRoomConfirmation.controller';
+// import { syncMaterialRoomSelectionStage } from '../material Room confirmation/materialRoomConfirmation.controller';
 import { syncQualityCheck } from '../QualityCheck controllers/QualityCheck.controller';
 
 
@@ -470,7 +470,7 @@ export const markFormAsCompleted = async (req: RoleBasedRequest, res: Response):
 
         if (form.status === "completed") {
             await syncSiteMeasurement(projectId, form.rooms)
-            await syncMaterialRoomSelectionStage(projectId)
+            // await syncMaterialRoomSelectionStage(projectId)
             await syncQualityCheck(projectId, form.rooms)
 
 

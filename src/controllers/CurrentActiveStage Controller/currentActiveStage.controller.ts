@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getStageSelectionUtil } from '../Modular Units Controllers/StageSelection Controller/stageSelection.controller';
+// import { getStageSelectionUtil } from '../Modular Units Controllers/StageSelection Controller/stageSelection.controller';
 import { stageModels } from '../../constants/BEconstants';
 
 
@@ -11,9 +11,9 @@ const allStageRoutes = [
     "sitemeasurement",
     "sampledesign",
     "technicalconsultant",
-    "modularunits",
-    "materialselection",
-    "costestimation",
+    // "modularunits",
+    // "materialselection",
+    // "costestimation",
     "paymentconfirmation",
     "ordermaterial",
     "materialarrival",
@@ -38,23 +38,24 @@ export const getFirstPendingStageForProject = async (req: Request, res: Response
         }
     }
 
-    const selection = await getStageSelectionUtil(projectId);
-    const selectedMode = selection?.mode;
+    // const selection = await getStageSelectionUtil(projectId);
+    // const selectedMode = selection?.mode;
 
-    if (!selectedMode) {
-        return res.json({ redirectTo: "selectstage", ok: true });
-    }
+    // if (!selectedMode) {
+    //     return res.json({ redirectTo: "selectstage", ok: true });
+    // }
 
     // 3️⃣ Mode-specific stage check
-    let allowedIndexes: number[];
+    // let allowedIndexes: number[];
 
-    if (selectedMode === "Manual Flow") {
-        allowedIndexes = [...Array(15).keys()].slice(5); // indexes 5 to 14
-    } else if (selectedMode === "Modular Units") {
-        allowedIndexes = [...Array(15).keys()].filter(i => i !== 5 && i !== 6 && i >= 4); // skip Material Selection & Cost Estimation
-    } else {
-        return res.status(200).json({ redirectTo: "selectstage",  ok: true });
-    }
+    // if (selectedMode === "Manual Flow") {
+    //     allowedIndexes = [...Array(15).keys()].slice(5); // indexes 5 to 14
+    // } else if (selectedMode === "Modular Units") {
+    //     allowedIndexes = [...Array(15).keys()].filter(i => i !== 5 && i !== 6 && i >= 4); // skip Material Selection & Cost Estimation
+    // } else {
+    //     return res.status(200).json({ redirectTo: "selectstage",  ok: true });
+    // }
+    let allowedIndexes= [...Array(12).keys()].slice(5)
 
     for (const i of allowedIndexes) {
         const model = stageModels[i];

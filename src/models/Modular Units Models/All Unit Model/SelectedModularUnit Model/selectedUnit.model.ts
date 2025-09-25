@@ -44,4 +44,4 @@ const SelectedModularUnitSchema = new Schema<ISelectedModularUnit>({
   status: { type: String, enum: ["pending", "completed"], default: "pending" },
 }, { timestamps: true });
 
-export const SelectedModularUnitModel = model("SelectedModularUnitModel", SelectedModularUnitSchema);
+// export const SelectedModularUnitModel = model("SelectedModularUnitModel", SelectedModularUnitSchema);

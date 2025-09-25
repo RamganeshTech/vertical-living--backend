@@ -29,7 +29,7 @@ export const syncSampleDesignModel = async (projectId: string, siteRooms: any[])
       projectId,
       rooms: siteRooms.map(room => {
         return {
-          roomName:room.name,
+          roomName: room.name,
           files: []
         }
       }),
@@ -225,18 +225,18 @@ const deleteFileFromRoom = async (req: Request, res: Response): Promise<any> => 
     // await design.save();
 
 
-     const room = design.rooms.find(r => r.roomName === roomName);
+    const room = design.rooms.find(r => r.roomName === roomName);
     if (!room) {
       return res.status(404).json({ ok: false, message: "Room not found." });
     }
 
     const filesLength = room.files?.length || 0
-    room.files = room.files.filter((file:any)=>{
+    room.files = room.files.filter((file: any) => {
       return file._id.toString() !== fileId
     })
 
-    if(room.files?.length === filesLength){
-      return res.status(404).json({message:"file not found", ok:false})
+    if (room.files?.length === filesLength) {
+      return res.status(404).json({ message: "file not found", ok: false })
     }
 
     await design.save();
@@ -301,7 +301,6 @@ const sampleDesignCompletionStatus = async (req: Request, res: Response): Promis
 
     if (design.status === "completed") {
       await syncTechnicalConsultantStage(projectId)
-
       await syncWorkSchedule(projectId)
 
       // const uploadedFiles: DocUpload[] = design.rooms.flatMap((room) =>

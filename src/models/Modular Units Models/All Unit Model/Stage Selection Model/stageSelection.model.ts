@@ -18,10 +18,10 @@ const StageSelectionSchema: Schema = new Schema<IStageSelection>({
   },
 }, { timestamps: true });
 
-export const StageSelectionModel = mongoose.model<IStageSelection>(
-  "StageSelection",
-  StageSelectionSchema
-);
+// export const StageSelectionModel = mongoose.model<IStageSelection>(
+//   "StageSelection",
+//   StageSelectionSchema
+// );
 
 
 

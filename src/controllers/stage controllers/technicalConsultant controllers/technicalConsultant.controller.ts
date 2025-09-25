@@ -1,15 +1,11 @@
 import { Request, Response } from "express";
 import { TechnicalConsultationModel } from "../../../models/Stage Models/technical consulatation/technicalconsultation.model";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
-import MaterialRoomConfirmationModel from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomConfirmation.model";
-import { syncMaterialRoomSelectionStage } from "../material Room confirmation/materialRoomConfirmation.controller";
 import redisClient from "../../../config/redisClient";
 import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
-import { Model } from "mongoose";
-import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
-import { DocUpload } from "../../../types/types";
+import { syncPaymentConfirationModel } from "../PaymentConfirmation controllers/PaymentMain.controllers";
 
 
 export const syncTechnicalConsultantStage = async (projectId: string) => {
@@ -146,22 +142,22 @@ const getConsultationMessages = async (req: Request, res: Response): Promise<any
     }
 
 
-const doc = await TechnicalConsultationModel.findOne({ projectId })
- .populate({
-    path: "messages.sender",
-  });
-  // .populate({ // thsi code is alos working 
-  //   path: 'messages',
-  //   populate: {
-  //     path: 'sender'
-  //   }
-  // });
-      
+    const doc = await TechnicalConsultationModel.findOne({ projectId })
+      .populate({
+        path: "messages.sender",
+      });
+    // .populate({ // thsi code is alos working 
+    //   path: 'messages',
+    //   populate: {
+    //     path: 'sender'
+    //   }
+    // });
+
 
     if (doc) {
-  await doc.populate('messages.sender');
-  console.log("After populate:", JSON.stringify(doc, null, 2));
-}
+      await doc.populate('messages.sender');
+      console.log("After populate:", JSON.stringify(doc, null, 2));
+    }
 
     console.log("Raw doc before population:", JSON.stringify(doc, null, 2));
 
@@ -323,6 +319,10 @@ const tehnicalConsultantCompletionStatus = async (req: Request, res: Response): 
     techDoc.isEditable = false;
 
     if (techDoc.status === "completed") {
+      // await syncPaymentConfirationModel(projectId, totalCost)
+      await syncPaymentConfirationModel(projectId, 0)
+
+
       // await initializeMaterialSelection(projectId)
       // await syncMaterialRoomSelectionStage(projectId)
 
@@ -360,7 +360,8 @@ const tehnicalConsultantCompletionStatus = async (req: Request, res: Response): 
 
 
     res.status(200).json({ ok: true, message: "Technical consultant marked as completed", data: techDoc });
-    updateProjectCompletionPercentage(projectId);
+    updateProjectCompletionPercentage(projectId)
+    // .catch(error=> console.log("error form technical consulstaion prject completion", error))
 
   } catch (err) {
     console.error("Technical consultant Complete Error:", err);
