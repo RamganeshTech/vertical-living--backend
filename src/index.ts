@@ -80,6 +80,7 @@ import QuoteRouter from './routers/Quote Routes/QuoteGenerate Routes/quoteGenera
 import shortlistReferenceDesign from './routers/Stage routes/sample desing routes/shortlistReferenceDesign.routes';
 import workReportRoutes from './routers/Stage routes/workReport Routes/workReport.routes';
 import staffTaskRoutes from './routers/StaffTask Routes/staffTask.routes';
+import LabourRateConfigRoutes from './routers/Quote Routes/RateConfig Routes/laboruRateConfig.routes';
 
 
 
@@ -284,6 +285,7 @@ app.use('/api/department/accounting', accountingRoutes)
 
 // QUOTES API
 app.use('/api/quote/rateconfig', RateConfigRoutes)
+app.use('/api/quote/labour/rateconfig', LabourRateConfigRoutes)
 app.use('/api/quote/quotegenerate', QuoteRouter)
 
 // STAFF TASKS API

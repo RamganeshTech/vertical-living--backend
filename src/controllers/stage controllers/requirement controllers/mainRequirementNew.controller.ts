@@ -208,7 +208,7 @@ export const updateRoomItem = async (req: RoleBasedRequest, res: Response): Prom
         const { itemName, quantity, unit } = req.body;
 
         if (!projectId || !roomId || !itemId) {
-            return res.status(400).json({ message: "projectId, roomId, itemId  are required required" });
+            return res.status(400).json({ message: "projectId, roomId, itemId  are required required", ok:false });
         }
 
 

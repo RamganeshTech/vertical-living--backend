@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-interface MaterialCategoryDoc extends Document {
+export interface MaterialCategoryDoc extends Document {
   organizationId: mongoose.Types.ObjectId;
   name: string; // e.g., "Plywood", "Adhesive"
   fields: {
@@ -26,7 +26,7 @@ export const CategoryModel = mongoose.model<MaterialCategoryDoc>("MaterialCatego
 
 
 
-interface MaterialItemDoc extends Document {
+export interface MaterialItemDoc extends Document {
   organizationId: mongoose.Types.ObjectId;
   categoryId: mongoose.Types.ObjectId;
   categoryName: string | null;
