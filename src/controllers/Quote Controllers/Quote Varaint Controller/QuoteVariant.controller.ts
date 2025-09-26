@@ -7,9 +7,9 @@ import { RequirementFormModel } from "../../../models/Stage Models/requirment mo
 // import { generatePdfMaterialPacakgeComparison } from "../../stage controllers/material Room confirmation/materialRoomConfirmation.controller";
 import { generateQuoteVariantPdf } from "./pdfQuoteVarientGenerate";
 
-export const getMaterialQuoteSingle = async (req: Request, res: Response):Promise<any> => {
+export const getMaterialQuoteSingle = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { organizationId , id} = req.params;
+    const { organizationId, id } = req.params;
 
     // Optional: Validate inputs
     if (!organizationId || !id) {
@@ -38,7 +38,7 @@ export const getMaterialQuoteSingle = async (req: Request, res: Response):Promis
 
 
 
-export const getMaterialItemsByCategoryForQuote = async (req: Request, res: Response):Promise<any> => {
+export const getMaterialItemsByCategoryForQuote = async (req: Request, res: Response): Promise<any> => {
   try {
     const { organizationId, categoryName } = req.params;
 
@@ -50,18 +50,18 @@ export const getMaterialItemsByCategoryForQuote = async (req: Request, res: Resp
     if (!categoryName) {
       return res.status(400).json({ ok: false, message: "Category (e.g., plywood) is required" });
     }
-//     console.log("im gettni called")
-console.log("categoryName", categoryName)
-   const items = await ItemModel.find({
-  organizationId,
-  $expr: {
-    $eq: [
-      { $toLower: "$categoryName" },
-      categoryName.toLowerCase().trim()
-    ]
-  }
-});
-// console.log("item", items)
+    //     console.log("im gettni called")
+    console.log("categoryName", categoryName)
+    const items = await ItemModel.find({
+      organizationId,
+      $expr: {
+        $eq: [
+          { $toLower: "$categoryName" },
+          categoryName.toLowerCase().trim()
+        ]
+      }
+    });
+    // console.log("item", items)
 
     return res.status(200).json({
       ok: true,
@@ -78,7 +78,7 @@ console.log("categoryName", categoryName)
     });
   }
 };
- 
+
 
 
 
@@ -101,7 +101,7 @@ export const generateNextQuoteNumber = async (organizationId: string): Promise<s
 
 export const createVariantQuotePdfGenerator = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { quoteId }= req.params
+    const { quoteId } = req.params
     const {
       brandName,
       organizationId,
@@ -149,14 +149,14 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
       notes,
       pdfLink: null,
     });
-// console.log("new varient", newVariant)
-  const pdfResponse = await generateQuoteVariantPdf({ quoteId, projectId, newVariant });
+    // console.log("new varient", newVariant)
+    const pdfResponse = await generateQuoteVariantPdf({ quoteId, projectId, newVariant });
 
     return res.status(201).json({
       ok: true,
       message: "Variant quote created and PDF generated successfully",
       data: {
-        fileName:pdfResponse.fileName,
+        fileName: pdfResponse.fileName,
         url: pdfResponse.fileUrl, // ✅ PDF S3 URL
         data: pdfResponse.updatedDoc, // ✅ Updated DB doc with PDF link
       },
@@ -173,7 +173,7 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
 };
 
 
-export const getVariantQuoteDetails = async (req: Request, res: Response):Promise<any> => {
+export const getVariantQuoteDetails = async (req: Request, res: Response): Promise<any> => {
   try {
     const { projectId } = req.params;
 
@@ -184,7 +184,7 @@ export const getVariantQuoteDetails = async (req: Request, res: Response):Promis
       });
     }
 
-    const quote = await QuoteVarientGenerateModel.find({projectId})
+    const quote = await QuoteVarientGenerateModel.find({ projectId })
 
 
     return res.status(200).json({
@@ -202,34 +202,3 @@ export const getVariantQuoteDetails = async (req: Request, res: Response):Promis
   }
 };
 
-
-
-// export const getMaterialCategories = async (req: Request, res: Response):Promise<any> => {
-//   try {
-//     const { organizationId } = req.params;
-
-//     // Optional: Validate inputs
-//     if (!organizationId) {
-//       return res.status(400).json({ ok: false, message: "Invalid organizationId" });
-//     }
-
-    
-//     const category = await CategoryModel.find({
-//       organizationId
-//     });
-
-//     return res.status(200).json({
-//       ok: true,
-//       message: "categoes fetched",
-//       data: category,
-//     });
-
-//   } catch (error: any) {
-//     console.error("Error fetching category", error);
-//     return res.status(500).json({
-//       ok: false,
-//       message: "Failed to fetch category",
-//       error: error.message,
-//     });
-//   }
-// };

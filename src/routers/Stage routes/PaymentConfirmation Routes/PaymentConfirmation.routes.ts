@@ -12,6 +12,7 @@ import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confi
 import { notToUpdateIfStageCompleted } from "../../../middlewares/notToUpdateIfStageCompleted";
 import { checkIfStaffIsAssignedToStage } from "../../../middlewares/checkIfStaffIsAssignedToStage";
 import { TechnicalConsultationModel } from "../../../models/Stage Models/technical consulatation/technicalconsultation.model";
+import { getPaymentAllQuotes, getPaymentSingleQuote } from "../../../controllers/stage controllers/PaymentConfirmation controllers/QuotePayment controllers/QuotePayment.controller";
 
 // import { createPaymentConfirmationOrder, getPaymentTransaction, verifyPaymentConfirmation } from "../../../controllers/stage controllers/PaymentConfirmation controllers/Payment Transaction/paymentTransaction.controller";
 
@@ -48,6 +49,10 @@ paymentConsentRoutes.post("/createorder/:projectId", multiRoleAuthMiddleware("cl
 paymentConsentRoutes.post("/verifypayment/:projectId", multiRoleAuthMiddleware("client", "owner" ,"CTO", "staff"), checkPreviousStageCompleted(TechnicalConsultationModel), notToUpdateIfStageCompleted(PaymentConfirmationModel), verifyPaymentConfirmation);
 paymentConsentRoutes.get("/gettransaction/:projectId", multiRoleAuthMiddleware("CTO", "owner", "staff", "client"), checkPreviousStageCompleted(TechnicalConsultationModel), getPaymentTransaction);
 
+
+// STEP 4 (QUOTE ROUTES)
+paymentConsentRoutes.get("/getallquotes/:projectId", multiRoleAuthMiddleware("CTO", "owner", "staff", "client"), checkPreviousStageCompleted(TechnicalConsultationModel), getPaymentAllQuotes);
+paymentConsentRoutes.get("/getsinglequotes/:projectId/:id", multiRoleAuthMiddleware("CTO", "owner", "staff", "client"), checkPreviousStageCompleted(TechnicalConsultationModel), getPaymentSingleQuote);
 
 
 // COMMON ROUTES

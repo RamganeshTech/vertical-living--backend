@@ -41,14 +41,23 @@ export interface IPaymentScheduleItem {
 
 // STEP 3
 export interface IPaymentTransaction {
-  clientId: Types.ObjectId;              // 👈 your user ID for tracking
-  paymentGateway: string;
-  gatewayOrderId: string;                       // Razorpay Order ID
-  gatewayPaymentId: string | null;              // Razorpay Payment ID (transaction ID)
-  status: "created" | "attempted" | "successful" | "failed" | null;
-  amount: number;
-  currency: string;
-  paidAt: Date | null;
+    clientId: Types.ObjectId;              // 👈 your user ID for tracking
+    paymentGateway: string;
+    gatewayOrderId: string;                       // Razorpay Order ID
+    gatewayPaymentId: string | null;              // Razorpay Payment ID (transaction ID)
+    status: "created" | "attempted" | "successful" | "failed" | null;
+    amount: number;
+    currency: string;
+    paidAt: Date | null;
+}
+
+
+
+export interface IClientQuotesSelected {
+    quoteId: Types.ObjectId;              // 👈 your user ID for tracking
+    quoteModel: string;
+    quoteNo: string;
+    status: "selected" | "rejected" | "draft" | null;
 }
 
 export interface IPaymentConfirmation {
@@ -64,6 +73,7 @@ export interface IPaymentConfirmation {
     paymentClientConsent: IPaymentClientConsent
     paymentSchedule: IPaymentScheduleItem; //milestone approvals
     paymentTransaction: IPaymentTransaction
+    quoteSelected: IClientQuotesSelected[]
 }
 
 
@@ -78,11 +88,11 @@ const TimerSchema = new Schema<IPaymentTimer>({
 
 // STEP 1
 const PaymentClientConsentSchema = new Schema<IPaymentClientConsent>({
-    content: { type: String,  }, // the terms, payment schedules, conditions
+    content: { type: String, }, // the terms, payment schedules, conditions
     // agreedByClientId: { type: Schema.Types.ObjectId, default:null },
-    isAgreed: {type:Boolean, default:null},
+    isAgreed: { type: Boolean, default: null },
     agreedAt: { type: Date, default: null },
-    link: {type:String, default:null},
+    link: { type: String, default: null },
     // agreedByName: { type: String, default: null },
     // agreedByEmail: { type: String, default: null },
     agreementToken: { type: String, default: null },
@@ -92,7 +102,7 @@ const PaymentClientConsentSchema = new Schema<IPaymentClientConsent>({
 
 // STEP 2
 const PaymentScheduleItemSchema = new Schema<IPaymentScheduleItem>({
-    dueDate: { type: Date, default:null },
+    dueDate: { type: Date, default: null },
 
     clientApprovalStatus: {
         type: String,
@@ -113,23 +123,32 @@ const PaymentScheduleItemSchema = new Schema<IPaymentScheduleItem>({
 
 
 const PaymentTransactionSchema = new Schema<IPaymentTransaction>(
-  {
-    clientId: { type: Schema.Types.ObjectId, ref: "ClientModel", default:null },
-    paymentGateway: { type: String,  },
-    gatewayOrderId: { type: String, },
-    gatewayPaymentId: { type: String, default: null },
-    
-    status: {
-      type: String,
-      enum: ["created", "attempted", "successful", "failed", null],
-      default: null,
+    {
+        clientId: { type: Schema.Types.ObjectId, ref: "ClientModel", default: null },
+        paymentGateway: { type: String, },
+        gatewayOrderId: { type: String, },
+        gatewayPaymentId: { type: String, default: null },
+
+        status: {
+            type: String,
+            enum: ["created", "attempted", "successful", "failed", null],
+            default: null,
+        },
+        amount: { type: Number },
+        currency: { type: String, default: "INR" },
+        paidAt: { type: Date, default: null },
     },
-    amount: { type: Number },
-    currency: { type: String, default: "INR" },
-    paidAt: { type: Date, default: null },
-  },
-  {_id:false}
+    { _id: false }
 );
+
+
+
+const ClientQuotesSelected = new Schema<IClientQuotesSelected>({
+    quoteId: { type: Schema.Types.ObjectId, default: null, refPath: "quoteSelected.quoteModel" },        // 👈 your user ID for tracking
+  quoteModel: { type: String, default: "QuoteVarientGenerateModel" },
+    quoteNo: { type: String, default: null },
+    status: { type: String, default: null },
+}, { _id: true })
 
 const PaymentConfirmationSchema = new Schema<IPaymentConfirmation>({
 
@@ -139,13 +158,14 @@ const PaymentConfirmationSchema = new Schema<IPaymentConfirmation>({
     assignedTo: { type: Schema.Types.ObjectId, ref: "StaffModel", default: null },
     isConsentRequired: { type: Boolean, default: true },
     timer: { type: TimerSchema, },
-    totalAmount :{type:Number, default: 0},
+    totalAmount: { type: Number, default: 0 },
     // step1
-    paymentClientConsent: { type: PaymentClientConsentSchema,},
+    paymentClientConsent: { type: PaymentClientConsentSchema, },
     // step2
     paymentSchedule: { type: PaymentScheduleItemSchema },
     // step3
-    paymentTransaction : {type: PaymentTransactionSchema},
+    paymentTransaction: { type: PaymentTransactionSchema },
+    quoteSelected: { type: [ClientQuotesSelected], default:[] },
 }, { timestamps: true })
 
 

@@ -4,6 +4,7 @@ import { createMaterialQuote,  deleteMaterialQuoteById,  editQuoteMaterial,  get
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { getMaterialCategories } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
 import {  createVariantQuotePdfGenerator, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
+import { getAllClientQuotes, getSingleClientQuote, storeQuoteToPaymentStage, toggleBlurring } from "../../../controllers/Quote Controllers/Client Quote Controllers/clientQuote.controller";
 
 const QuoteRouter = express.Router();
 
@@ -79,5 +80,30 @@ QuoteRouter.get(
 );
 
 
+
+
+// client quote routes
+QuoteRouter.get(
+  "/getallquotevarients/:organizationId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  getAllClientQuotes
+);
+
+
+QuoteRouter.get("/getsingleclientquote/:organizationId/:id",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  getSingleClientQuote)
+
+
+  
+QuoteRouter.put("/storetopaymentstage/:organizationId/:id",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  storeQuoteToPaymentStage)
+
+QuoteRouter.patch("/toggleblur/:organizationId/:id",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  toggleBlurring)
+
+  
 
 export default QuoteRouter;

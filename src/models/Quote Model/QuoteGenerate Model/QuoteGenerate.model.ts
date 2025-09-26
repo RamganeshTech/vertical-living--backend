@@ -27,6 +27,7 @@ export interface ISimpleItem {
   description: string | null;
   quantity: number;
   cost: number;
+  profitOnMaterial?:number
   rowTotal: number;
 }
 
@@ -95,6 +96,7 @@ const SimpleItemSchema = new Schema<ISimpleItem>(
         itemName: { type: String, default: null },
         description: { type: String, default: null },
         quantity: { type: Number, default: 0 },
+        profitOnMaterial: { type: Number, default: 0 },
         cost: { type: Number, default: 0 },
         rowTotal: { type: Number, default: 0 },
     },
