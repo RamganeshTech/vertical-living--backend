@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
-import { deleteShortlistedReferenceDesign, getShortlistedReferenceDesigns, uploadShortlistedReferenceDesignImages } from "../../../controllers/stage controllers/sampledesign contorllers/shortListReferenceDesign.controller";
+import { deleteShortlistedReferenceDesign, getAllShortlistedReferenceDesigns, uploadShortlistedReferenceDesignImages } from "../../../controllers/stage controllers/sampledesign contorllers/shortListReferenceDesign.controller";
 
 const shortlistReferenceDesign = Router();
 
@@ -19,7 +19,7 @@ shortlistReferenceDesign.post(
  * @route   GET /shortlist/:organizationId
  * @desc    Get shortlisted designs for an organization
  */
-shortlistReferenceDesign.get("/getdesigns/:organizationId", getShortlistedReferenceDesigns);
+shortlistReferenceDesign.get("/getdesigns/:organizationId", getAllShortlistedReferenceDesigns);
 
 /**
  * @route   DELETE /shortlist/:organizationId/:imageId

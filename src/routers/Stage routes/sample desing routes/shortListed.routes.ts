@@ -2,7 +2,7 @@ import express from "express";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
 // import { addSelectedDesignsToShortlist, deleteShortlistedDesign, getShortlistedRoomDesigns, uploadShortlistedDesignImages } from "../../../controllers/stage controllers/sampledesign contorllers/shortList.controller";
-import {  addShortlistedDesigns, deleteShortListedDesign, getAllSiteImages, getShortlistedRoomDesigns,  } from "../../../controllers/stage controllers/sampledesign contorllers/shortList.controller";
+import {  addShortlistedDesigns, deleteShortListedDesign, getAllSiteImages, getShortlistedReferenceDesigns, getShortlistedRoomDesigns,  } from "../../../controllers/stage controllers/sampledesign contorllers/shortList.controller";
 import { notToUpdateIfStageCompleted } from "../../../middlewares/notToUpdateIfStageCompleted";
 import { SampleDesignModel } from "../../../models/Stage Models/sampleDesing model/sampleDesign.model";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
@@ -66,6 +66,13 @@ shortlistedDesignRoutes.get(
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   getAllSiteImages
 );
+
+shortlistedDesignRoutes.get(
+  "/getreferencedesigns/:organizationId/",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  getShortlistedReferenceDesigns
+);
+
 
 shortlistedDesignRoutes.delete(
   "/deletepdf/:id/",

@@ -6,6 +6,7 @@ import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 export interface ShortlistReferenceDesign {
     url: string;
     originalName: string,
+    tags: string[],
     type: "image";
     uploadedAt: Date;
 }
@@ -19,6 +20,7 @@ export interface ShortlistedDesignDocument extends Document {
 
 const ShortlistUploadSchema = new Schema<ShortlistReferenceDesign>({
     type: { type: String, enum: ["image"] },
+    tags: {type:[String], default:[]},
     url: { type: String, },
     originalName: String,
     // imageId: { type: Schema.Types.ObjectId, requried: false, default: null },

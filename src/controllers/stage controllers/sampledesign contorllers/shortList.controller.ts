@@ -292,6 +292,7 @@ import { RoleBasedRequest } from "../../../types/types";
 import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
 import { SiteMeasurementModel } from "../../../models/Stage Models/siteMeasurement models/siteMeasurement.model";
 import { generateShortlistPdf } from "./pdfShortListDesignsController";
+import { ShortlistedReferenceDesignModel } from "../../../models/Stage Models/sampleDesing model/shortlistReferenceDesign.model";
 
 
 // const sendShortListMailUtil = async (projectId: Types.ObjectId | string, roomName: string, categoryName: string, images: any[]) => {
@@ -333,7 +334,7 @@ export const getAllSiteImages = async (req: RoleBasedRequest, res: Response): Pr
                         //     ...img,
                         //     // roomName: room.roomName, // 🔍 attach room context
                         // })));
-                        let arr = room.uploads.filter((file:any)=> file.type === "image")
+                        let arr = room.uploads.filter((file: any) => file.type === "image")
                         allImages.push(...arr);
                     }
                 });
@@ -347,14 +348,14 @@ export const getAllSiteImages = async (req: RoleBasedRequest, res: Response): Pr
         if (sitemeasurement) {
             if (Array.isArray(sitemeasurement.uploads) && sitemeasurement.uploads.length > 0) {
                 // allImages.push(...sitemeasurement.uploads);
-                 let arr = sitemeasurement.uploads.filter((file: any) => file.type === "image");
+                let arr = sitemeasurement.uploads.filter((file: any) => file.type === "image");
                 allImages.push(...arr);
             }
 
             if (Array.isArray(sitemeasurement.rooms) && sitemeasurement.rooms.length > 0) {
                 sitemeasurement.rooms.forEach((room: any) => {
                     if (Array.isArray(room.uploads) && room.uploads.length > 0) {
-                        let arr = room.uploads.filter((file:any)=> file.type === "image")
+                        let arr = room.uploads.filter((file: any) => file.type === "image")
                         allImages.push(...arr);
                     }
                 });
@@ -376,7 +377,207 @@ export const getAllSiteImages = async (req: RoleBasedRequest, res: Response): Pr
     }
 }
 
+
+// export const getShortlistedReferenceDesigns = async (req: Request, res: Response): Promise<any> => {
+//     try {
+//         const { organizationId } = req.params;
+//         const { tags } = req.query;
+
+//         if (!organizationId) {
+//             return res.status(400).json({ ok: false, message: "Missing organizationId" });
+//         }
+
+//         let filterTags: string[] = [];
+
+//         if (tags) {
+//             if (typeof tags === "string") {
+//                 // Either "general" or comma-separated string
+//                 filterTags = tags === "general" ? ["general"] : tags.split(",").map(tag => tag.trim());
+//             } else if (Array.isArray(tags)) {
+//                 filterTags = tags as string[];
+//             }
+//         }
+
+//         // Build filter logic for images
+//         let imageFilter: any = [];
+
+//         if (filterTags.length > 0) {
+//             imageFilter.push(
+//                 { "referenceImages.tags": { $in: filterTags } }
+//             );
+
+//             // Special case if "general" is one of provided tags
+//             if (filterTags.includes("general")) {
+//                 imageFilter.push(
+//                     { "referenceImages.tags": { $exists: false } },
+//                     { "referenceImages.tags": { $size: 0 } }
+//                 );
+//             }
+//         } else {
+//             // No tags: include only general (tags missing or empty)
+//             imageFilter.push(
+//                 { "referenceImages.tags": { $exists: false } },
+//                 { "referenceImages.tags": { $size: 0 } }
+//             );
+//         }
+
+
+
+//         const designs = await ShortlistedReferenceDesignModel.aggregate([
+//             { $match: { organizationId: new mongoose.Types.ObjectId(organizationId) } },
+//             {
+//                 $project: {
+//                     referenceImages: {
+//                         $filter: {
+//                             input: "$referenceImages",
+//                             as: "image",
+//                             cond: {
+//                                 $or: [
+//                                     {
+//                                         $in: [{ $literal: true }, filterTags.includes('general') ? [
+//                                             { $eq: [{ $size: "$$image.tags" }, 0] },
+//                                             { $not: ["$$image.tags"] }
+//                                         ] : []]
+//                                     }, // general case
+//                                     ...(filterTags.length > 0 ? [
+//                                         {
+//                                             $gt: [
+//                                                 {
+//                                                     $size: {
+//                                                         $filter: {
+//                                                             input: "$$image.tags",
+//                                                             as: "tag",
+//                                                             cond: { $in: ["$$tag", filterTags] }
+//                                                         }
+//                                                     }
+//                                                 },
+//                                                 0
+//                                             ]
+//                                         }
+//                                     ] : []) // tags match
+//                                 ]
+//                             }
+//                         }
+//                     }
+//                 }
+//             },
+//             { $match: { referenceImages: { $not: { $size: 0 } } } } // remove empty
+//         ]);
+
+//         return res.status(200).json({
+//             ok: true,
+//             referenceImages: designs.flatMap(d => d.referenceImages),
+//         });
+
+//     } catch (err) {
+//         console.error("Error fetching designs:", err);
+//         return res.status(500).json({ ok: false, message: "Server error" });
+//     }
+// };
+
+
+
 // ✅ Controller to bulk add shortlisted designs
+
+export const getShortlistedReferenceDesigns = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { organizationId } = req.params;
+        const { tags } = req.query;
+
+
+        if (!organizationId) {
+            return res.status(400).json({ ok: false, message: "Missing organizationId" });
+        }
+
+        // let filterTags: string[] = [];
+
+        // if (tags) {
+        //   if (typeof tags === "string") {
+        //     filterTags = tags === "all" ? [] : tags.split(",").map(tag => tag.trim());
+        //   } else if (Array.isArray(tags)) {
+        //     filterTags = tags as string[];
+        //   }
+        // }
+
+        let filterTags: string[] = [];
+
+        if (tags) {
+            if (typeof tags === "string") {
+                filterTags = tags === "all" ? [] : [tags.trim()];
+            } else if (Array.isArray(tags)) {
+                filterTags = (tags as string[]).map(tag => tag.trim());
+            }
+        }
+
+        const matchObj: any = { organizationId: new mongoose.Types.ObjectId(organizationId) };
+
+        const aggregationPipeline: any[] = [
+            { $match: matchObj }
+        ];
+
+        // ✅ Tag filtering logic
+        if (filterTags.length > 0) {
+            aggregationPipeline.push({
+                $project: {
+                    referenceImages: {
+                        $filter: {
+                            input: "$referenceImages",
+                            as: "image",
+                            cond: {
+                                $or: [
+                                    // ✅ Match tags
+                                    {
+                                        $gt: [
+                                            {
+                                                $size: {
+                                                    $filter: {
+                                                        input: { $ifNull: ["$$image.tags", []] }, // ✅ Fallback to []
+                                                        as: "tag",
+                                                        cond: { $in: ["$$tag", filterTags] }
+                                                    }
+                                                }
+                                            },
+                                            0
+                                        ]
+                                    },
+                                    // ✅ Special case if "general" included
+                                    ...(filterTags.includes("general") ? [
+                                        { $not: ["$$image.tags"] },
+                                        {
+                                            $eq: [
+                                                { $size: { $ifNull: ["$$image.tags", []] } },
+                                                0
+                                            ]
+                                        }
+                                    ] : [])
+                                ]
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        const designs = await ShortlistedReferenceDesignModel.aggregate([
+            ...aggregationPipeline,
+            // Remove documents with no matching images
+            { $match: { referenceImages: { $not: { $size: 0 } } } }
+        ]);
+
+        const referenceImages = designs.flatMap(doc => doc.referenceImages);
+
+        return res.status(200).json({
+            ok: true,
+            data: referenceImages,
+            message: "references images fetched for comparison "
+        });
+
+    } catch (err) {
+        console.error("Error fetching designs:", err);
+        return res.status(500).json({ ok: false, message: "Server error" });
+    }
+};
+
 export const addShortlistedDesigns = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
@@ -451,14 +652,14 @@ export const addShortlistedDesigns = async (req: Request, res: Response): Promis
 
         doc = await doc.populate("projectId");
 
-        const data = await generateShortlistPdf({doc})
+        const data = await generateShortlistPdf({ doc })
 
         return res.status(200).json({
             ok: true,
             message: "Shortlisted designs added successfully",
             data: {
                 url: data.url,
-                fileName:data.pdfName
+                fileName: data.pdfName
             },
         });
     } catch (error) {
@@ -473,7 +674,7 @@ export const addShortlistedDesigns = async (req: Request, res: Response): Promis
 
 export const deleteShortListedDesign = async (req: Request, res: Response): Promise<any> => {
     try {
-        const {  id} = req.params;
+        const { id } = req.params;
 
         const doc = await ShortlistedDesignModel.findByIdAndDelete(id)
 
@@ -481,8 +682,8 @@ export const deleteShortListedDesign = async (req: Request, res: Response): Prom
             return res.status(404).json({ message: "No shortlisted designs found", ok: false });
         }
 
-       
-        return res.status(200).json({ ok: true, message:"deleted successfully", data: doc });
+
+        return res.status(200).json({ ok: true, message: "deleted successfully", data: doc });
     } catch (error) {
         console.error("Error fetching shortlisted room designs:", error);
         return res.status(500).json({ message: "Internal server error", ok: false });

@@ -9,6 +9,28 @@ export const uploadShortlistedReferenceDesignImages = async (req: RoleBasedReque
         const { organizationId } = req.params;
         const files = req.files as Express.Multer.File[];
 
+        let tags: string[] = [];
+
+
+        if (req.body?.tags) {
+            try {
+                if (typeof req.body.tags === "string") {
+                    // support JSON string or comma-separated string
+                    if (req.body.tags.startsWith("[")) {
+                        tags = JSON.parse(req.body.tags);
+                    } else {
+                        tags = req.body.tags.split(",").map((tag:string) => tag.trim());
+                    }
+                } else if (Array.isArray(req.body.tags)) {
+                    tags = req.body.tags;
+                }
+
+                if (!Array.isArray(tags)) throw new Error("Tags must be an array");
+            } catch (err) {
+                return res.status(400).json({ message: "Invalid tags format", ok: false });
+            }
+        }
+
         if (!organizationId) {
             return res.status(400).json({ message: "Missing organizaion Id", ok: false });
         }
@@ -24,6 +46,7 @@ export const uploadShortlistedReferenceDesignImages = async (req: RoleBasedReque
             type: "image" as const,
             url: (file as any).location,
             // imageId: null,
+                        tags: tags || [],
             originalName: file.originalname,
             uploadedAt: new Date(),
         }));
@@ -69,7 +92,7 @@ export const uploadShortlistedReferenceDesignImages = async (req: RoleBasedReque
 };
 
 
-export const getShortlistedReferenceDesigns = async (req: Request, res: Response): Promise<any> => {
+export const getAllShortlistedReferenceDesigns = async (req: Request, res: Response): Promise<any> => {
     try {
         const { organizationId } = req.params;
 
