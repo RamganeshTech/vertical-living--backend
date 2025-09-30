@@ -363,7 +363,7 @@ export const getAllSiteImages = async (req: RoleBasedRequest, res: Response): Pr
         }
 
 
-        console.log("all images without pdf and video", allImages)
+        // console.log("all images without pdf and video", allImages)
         return res.status(200).json({
             message: "Images get fetched",
             data: allImages,
@@ -377,107 +377,6 @@ export const getAllSiteImages = async (req: RoleBasedRequest, res: Response): Pr
     }
 }
 
-
-// export const getShortlistedReferenceDesigns = async (req: Request, res: Response): Promise<any> => {
-//     try {
-//         const { organizationId } = req.params;
-//         const { tags } = req.query;
-
-//         if (!organizationId) {
-//             return res.status(400).json({ ok: false, message: "Missing organizationId" });
-//         }
-
-//         let filterTags: string[] = [];
-
-//         if (tags) {
-//             if (typeof tags === "string") {
-//                 // Either "general" or comma-separated string
-//                 filterTags = tags === "general" ? ["general"] : tags.split(",").map(tag => tag.trim());
-//             } else if (Array.isArray(tags)) {
-//                 filterTags = tags as string[];
-//             }
-//         }
-
-//         // Build filter logic for images
-//         let imageFilter: any = [];
-
-//         if (filterTags.length > 0) {
-//             imageFilter.push(
-//                 { "referenceImages.tags": { $in: filterTags } }
-//             );
-
-//             // Special case if "general" is one of provided tags
-//             if (filterTags.includes("general")) {
-//                 imageFilter.push(
-//                     { "referenceImages.tags": { $exists: false } },
-//                     { "referenceImages.tags": { $size: 0 } }
-//                 );
-//             }
-//         } else {
-//             // No tags: include only general (tags missing or empty)
-//             imageFilter.push(
-//                 { "referenceImages.tags": { $exists: false } },
-//                 { "referenceImages.tags": { $size: 0 } }
-//             );
-//         }
-
-
-
-//         const designs = await ShortlistedReferenceDesignModel.aggregate([
-//             { $match: { organizationId: new mongoose.Types.ObjectId(organizationId) } },
-//             {
-//                 $project: {
-//                     referenceImages: {
-//                         $filter: {
-//                             input: "$referenceImages",
-//                             as: "image",
-//                             cond: {
-//                                 $or: [
-//                                     {
-//                                         $in: [{ $literal: true }, filterTags.includes('general') ? [
-//                                             { $eq: [{ $size: "$$image.tags" }, 0] },
-//                                             { $not: ["$$image.tags"] }
-//                                         ] : []]
-//                                     }, // general case
-//                                     ...(filterTags.length > 0 ? [
-//                                         {
-//                                             $gt: [
-//                                                 {
-//                                                     $size: {
-//                                                         $filter: {
-//                                                             input: "$$image.tags",
-//                                                             as: "tag",
-//                                                             cond: { $in: ["$$tag", filterTags] }
-//                                                         }
-//                                                     }
-//                                                 },
-//                                                 0
-//                                             ]
-//                                         }
-//                                     ] : []) // tags match
-//                                 ]
-//                             }
-//                         }
-//                     }
-//                 }
-//             },
-//             { $match: { referenceImages: { $not: { $size: 0 } } } } // remove empty
-//         ]);
-
-//         return res.status(200).json({
-//             ok: true,
-//             referenceImages: designs.flatMap(d => d.referenceImages),
-//         });
-
-//     } catch (err) {
-//         console.error("Error fetching designs:", err);
-//         return res.status(500).json({ ok: false, message: "Server error" });
-//     }
-// };
-
-
-
-// ✅ Controller to bulk add shortlisted designs
 
 export const getShortlistedReferenceDesigns = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -576,6 +475,44 @@ export const getShortlistedReferenceDesigns = async (req: Request, res: Response
         console.error("Error fetching designs:", err);
         return res.status(500).json({ ok: false, message: "Server error" });
     }
+};
+
+
+export const getAllReferenceTags = async (req: Request, res: Response):Promise<any> => {
+  try {
+    const { q } = req.query; // optional: e.g. ?q=mod
+
+    const tagsAggregation = await ShortlistedReferenceDesignModel.aggregate([
+      { $unwind: "$referenceImages" },
+      { $unwind: "$referenceImages.tags" },
+      {
+        $group: {
+          _id: null,
+          allTags: { $addToSet: "$referenceImages.tags" }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          tags: "$allTags"
+        }
+      }
+    ]);
+
+    let tags: string[] = tagsAggregation[0]?.tags || [];
+
+    // Optional filtering if query is passed
+    if (q) {
+      tags = tags.filter(tag =>
+        tag.toLowerCase().includes((q as string).toLowerCase())
+      );
+    }
+
+    return res.status(200).json({ tags });
+  } catch (err) {
+    console.error("Error fetching reference tags", err);
+    return res.status(500).json({ message: "Failed to get tags", err });
+  }
 };
 
 export const addShortlistedDesigns = async (req: Request, res: Response): Promise<any> => {
