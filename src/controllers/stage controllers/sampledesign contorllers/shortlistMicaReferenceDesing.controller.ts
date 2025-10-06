@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
 import { RoleBasedRequest } from "../../../types/types";
-import { Types } from "mongoose"
-import { ShortlistedDesignModel } from "../../../models/Stage Models/sampleDesing model/shortListed.model";
-import { ShortlistedReferenceDesignModel } from "../../../models/Stage Models/sampleDesing model/shortlistReferenceDesign.model";
 
-export const uploadShortlistedReferenceDesignImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+import {Types} from "mongoose"
+import { ShortlistedMicaReferenceDesignModel } from "../../../models/Stage Models/sampleDesing model/shortListeMicaReference.model";
+
+
+export const uploadShortlistedMicaDesignImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { organizationId } = req.params;
         const files = req.files as Express.Multer.File[];
@@ -68,7 +69,7 @@ export const uploadShortlistedReferenceDesignImages = async (req: RoleBasedReque
 
 
 
-        const doc = await ShortlistedReferenceDesignModel.findOneAndUpdate(
+        const doc = await ShortlistedMicaReferenceDesignModel.findOneAndUpdate(
             { organizationId }, // match condition
             {
                 $push: { referenceImages: { $each: uploads } }, // append images
@@ -92,11 +93,11 @@ export const uploadShortlistedReferenceDesignImages = async (req: RoleBasedReque
 };
 
 
-export const getAllShortlistedReferenceDesigns = async (req: Request, res: Response): Promise<any> => {
+export const getAllShortlistedMicaDesigns = async (req: Request, res: Response): Promise<any> => {
     try {
         const { organizationId } = req.params;
 
-        const doc = await ShortlistedReferenceDesignModel.findOne({ organizationId });
+        const doc = await ShortlistedMicaReferenceDesignModel.findOne({ organizationId });
 
         if (!doc) {
             return res.status(200).json({ message: "No shortlisted designs found", ok: true, data: null });
@@ -112,7 +113,7 @@ export const getAllShortlistedReferenceDesigns = async (req: Request, res: Respo
 
 
 
-export const deleteShortlistedReferenceDesign = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const deleteShortlistedMicaDesign = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { organizationId, imageId } = req.params;
 
@@ -120,14 +121,13 @@ export const deleteShortlistedReferenceDesign = async (req: RoleBasedRequest, re
             return res.status(400).json({ message: "Missing required data", ok: false });
         }
 
-        const shortlist = await ShortlistedReferenceDesignModel.findOneAndUpdate({ organizationId }, { $pull: { referenceImages: { _id: imageId } } }, { new: true } );
+        const shortlist = await ShortlistedMicaReferenceDesignModel.findOneAndUpdate({ organizationId }, { $pull: { referenceImages: { _id: imageId } } }, { new: true } );
 
         if (!shortlist) {
             return res.status(404).json({ message: "Shortlist not found", ok: false });
         }
 
 
-        console.log("shortlist", shortlist)
 
         // optional: check if image still exists to confirm deletion
         const stillExists = shortlist.referenceImages.some((img: any) => img._id.toString() === imageId);

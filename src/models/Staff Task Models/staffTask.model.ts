@@ -1,11 +1,16 @@
 import { Schema, model, Document, Types } from 'mongoose';
+import { IFileItem } from '../Stage Models/sampleDesing model/sampleDesign.model';
 
 export type TaskStatus = 'queued' | 'in_progress' | 'paused' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high';
 export type DepartmentType = 'site' | 'procurement' | 'design' | 'accounts';
 
+
+
+export interface IStaffTaskFile extends IFileItem { }
+
 export interface TaskHistory {
-    subTask:string | null
+    subTask: string | null
     status: TaskStatus;
     changedAt: Date;
     changedBy: Types.ObjectId;
@@ -18,6 +23,7 @@ export interface ISTaskSchema {
 }
 
 export interface IStaffTask extends Document {
+    images: IStaffTaskFile[],
     title: string;
     description: string;
     due: Date;
@@ -40,7 +46,7 @@ export interface IStaffTask extends Document {
 
 const HistorySchema = new Schema<TaskHistory>(
     {
-     subTask:{type:String, default:null},
+        subTask: { type: String, default: null },
         status: {
             type: String,
             enum: ['queued', 'in_progress', 'paused', 'done', "start"],
@@ -65,8 +71,21 @@ const StaffTaskSchema = new Schema<ISTaskSchema>({
     taskName: { type: String, default: null },
 }, { _id: true })
 
+
+
+const staffImageSchema = new Schema<IFileItem>({
+    type: { type: String, enum: ["image", "pdf"] },
+    url: { type: String, },
+    originalName: String,
+    uploadedAt: { type: Date, default: new Date() }
+}, { _id: true });
+
 const StaffMainTaskSchema = new Schema<IStaffTask>(
     {
+        images: {
+            type: [staffImageSchema],
+            default: []
+        },
         title: {
             type: String,
         },

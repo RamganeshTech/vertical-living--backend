@@ -82,6 +82,10 @@ import workReportRoutes from './routers/Stage routes/workReport Routes/workRepor
 import staffTaskRoutes from './routers/StaffTask Routes/staffTask.routes';
 import LabourRateConfigRoutes from './routers/Quote Routes/RateConfig Routes/laboruRateConfig.routes';
 import projectUtilRoutes from './routers/Util routes/util.routes';
+// import { loadDetectionModel } from './controllers/stage controllers/sampledesign contorllers/shortListMica.contorller';
+// import micaDeletectionRoutes from './routers/Stage routes/sample desing routes/shortListMica.routes';
+import shortlistMicaReferenceDesignRoutes from './routers/Stage routes/sample desing routes/shortListMicaReferenceDesign.routes';
+import workLibRoutes from './routers/WorkLibrary Routes/workLibrary.routes';
 
 
 
@@ -272,12 +276,17 @@ app.use('/api/workreports', workReportRoutes)
 
 // SHORTLIST REFERENCE DESIGN
 app.use('/api/shortlist/referencedesign', shortlistReferenceDesign)
+// uncomment this for using the mica design (but not working)
+// app.use('/api/shortlist/micadesign', shortlistMicaReferenceDesignRoutes)
 
 
+app.use('/api/worklib', workLibRoutes)
 // SHORTLIST API
 app.use('/api/shortlisteddesign', shortlistedDesignRoutes)
-app.use('/api/currentactivestage', currentActiveStage)
+// SHORLIST MICA API
+// app.use('/api/detection', micaDeletectionRoutes);
 
+app.use('/api/currentactivestage', currentActiveStage)
 
 // PROCUREMENT API
 app.use('/api/procurement', procurementRoutes)
@@ -436,6 +445,13 @@ const PORT = process.env.PORT || 4000
 //   console.log("error from DB connection", error.message)
 // })
 
+
+// Load model when server starts (add this before app.listen)
+// loadDetectionModel().then(() => {
+//   console.log('Detection system ready');
+// }).catch(error => {
+//   console.error('Failed to load detection model:', error);
+// });
 
 
 connectDB()

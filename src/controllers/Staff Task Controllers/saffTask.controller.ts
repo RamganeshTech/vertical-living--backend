@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { RoleBasedRequest } from '../../types/types';
-import StaffMainTaskModel, { IStaffTask, ISTaskSchema } from '../../models/Staff Task Models/staffTask.model';
+import StaffMainTaskModel, { IStaffTask, IStaffTaskFile, ISTaskSchema } from '../../models/Staff Task Models/staffTask.model';
 // import { getEmbedding } from '../utils/embedder';
 // import {  } from '../utils/cosine';
 import { getEmbedding } from '../../utils/embedder/embedder';
@@ -89,7 +89,7 @@ export const getAllTasks = async (req: Request, res: Response): Promise<any> => 
         if (assigneeId) query.assigneeId = new Types.ObjectId(assigneeId as string);
         if (projectId) query.projectId = new Types.ObjectId(projectId as string);
         if (department) query.department = department;
-         if (dependecies === 'true') {
+        if (dependecies === 'true') {
             query.dependentTaskId = { $exists: true, $ne: [] };
         }
 
@@ -124,7 +124,7 @@ export const getAllTasks = async (req: Request, res: Response): Promise<any> => 
         return res.status(200).json({
             ok: true,
             message: 'Tasks fetched successfully',
-            data: finalTasks 
+            data: finalTasks
         });
     } catch (error) {
         console.error('Error fetching tasks:', error);
@@ -255,7 +255,7 @@ export const getAssociatedStaffsTask = async (req: RoleBasedRequest, res: Respon
 
 export const createStaffTask = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const {
+        let {
             tasks,
             assigneRole
         }: {
@@ -263,13 +263,24 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
             assigneRole: string;
         } = req.body;
 
+
+        // ✅ Parse tasks if it's a JSON string (which it will be when using FormData)
+        if (typeof tasks === "string") {
+            try {
+                tasks = JSON.parse(tasks);
+            } catch (e) {
+                return res.status(400).json({ ok: false, message: "Invalid tasks JSON format" });
+            }
+        }
+
+
         const user = req.user;
 
         if (!user || !user?.role || !user?._id) {
             return res.status(401).json({ ok: false, message: 'Unauthorized request (user not found)' });
         }
 
-        if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+        if (!tasks || !Array.isArray(tasks) || tasks?.length === 0) {
             return res.status(400).json({ ok: false, message: 'No tasks provided for creation' });
         }
 
@@ -282,6 +293,18 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
         if (!ALLOWED_MODELS.includes(assigneeModel) || !ALLOWED_MODELS.includes(assignedByModel)) {
             return res.status(400).json({ ok: false, message: 'Invalid model mapping for assignee or assigner' });
         }
+
+        const files = req.files as (Express.Multer.File & { location: string })[];
+
+        const mappedFiles: IStaffTaskFile[] = files.map(file => {
+            const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
+            return {
+                type,
+                url: file.location,
+                originalName: file.originalname,
+                uploadedAt: new Date()
+            };
+        });
 
 
         const newTasks: IStaffTask[] = [];
@@ -302,15 +325,16 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
             } = taskData;
 
             // Validation: Required fields per task
-            if (!title) {
-                return res.status(400).json({
-                    ok: false,
-                    message: 'Task title is required',
-                });
-            }
+            // if (!title) {
+            //     return res.status(400).json({
+            //         ok: false,
+            //         message: 'Task title is required',
+            //     });
+            // }
 
             const newTask = new StaffMainTaskModel({
-                title,
+                images: mappedFiles || [],
+                title: title?.trim() || "",
                 description,
                 due,
                 status,
@@ -338,7 +362,7 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
                 ? subTasks.map((s: ISTaskSchema) => s.taskName?.trim()).filter(Boolean)
                 : [];
 
-            if (!existingTemplate && validSubTasks?.length > 0) {
+            if (!existingTemplate && validSubTasks?.length > 0 && title?.trim()) {
                 const embedding = await getEmbedding(title);
                 const plainEmbedding = Array.from(embedding);
 

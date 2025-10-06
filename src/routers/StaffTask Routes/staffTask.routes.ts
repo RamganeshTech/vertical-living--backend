@@ -22,11 +22,12 @@ import {
 } from '../../controllers/Staff Task Controllers/saffTask.controller';
 import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
 import { staffTaskAccess } from '../../middlewares/staffTaskAccess';
+import { imageUploadToS3, processUploadFiles } from '../../utils/s3Uploads/s3upload';
 
 const staffTaskRoutes = Router();
 
 
-staffTaskRoutes.post('/tasks/bulk', multiRoleAuthMiddleware("owner", "staff", "CTO") , createStaffTask); 
+staffTaskRoutes.post('/tasks/bulk', multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("files"), processUploadFiles, createStaffTask); 
 
 // 📝 2. UPDATE / DELETE SUB-TASKS ----------------------------------
 
