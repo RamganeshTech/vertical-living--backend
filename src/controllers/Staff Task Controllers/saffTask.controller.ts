@@ -394,6 +394,130 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
 };
 
 
+export const createStaffTaskFromWork = async (
+  req: RoleBasedRequest,
+  res: Response
+): Promise<any> => {
+  try {
+    let {
+      tasks,
+      assigneRole
+    }: {
+      tasks: Array<Partial<IStaffTask> & { tasks: { taskName: string }[] }>;
+      assigneRole: string;
+    } = req.body;
+
+    if (typeof tasks === "string") {
+      try {
+        tasks = JSON.parse(tasks);
+      } catch (e) {
+        return res.status(400).json({ ok: false, message: "Invalid tasks JSON format" });
+      }
+    }
+
+    const user = req.user;
+
+    if (!user || !user?.role || !user?._id) {
+      return res.status(401).json({ ok: false, message: "Unauthorized request (user not found)" });
+    }
+
+    if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+      return res.status(400).json({ ok: false, message: "No tasks provided for creation" });
+    }
+
+    // Validate roles ⇒ get model mappings
+    const assigneeModel = mapRoleToModel(assigneRole);
+    const assignedByModel = mapRoleToModel(user.role);
+    const assignedById = user._id;
+
+    if (!ALLOWED_MODELS.includes(assigneeModel) || !ALLOWED_MODELS.includes(assignedByModel)) {
+      return res.status(400).json({ ok: false, message: "Invalid role model mapping" });
+    }
+
+    const files = req.files as (Express.Multer.File & { location: string })[];
+
+    const mappedFiles: IStaffTaskFile[] = files.map(file => {
+      const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
+      return {
+        type,
+        url: file.location,
+        originalName: file.originalname,
+        uploadedAt: new Date()
+      };
+    });
+
+    const savedTasks: IStaffTask[] = [];
+
+    let previousTaskId: Types.ObjectId | null = null;
+
+    for (const taskData of tasks) {
+      const {
+        title,
+        description,
+        due,
+        status = "queued",
+        priority = "medium",
+        projectId,
+        organizationId,
+        assigneeId,
+        department,
+        tasks: subTasks = []
+      } = taskData;
+
+      const newTask:any = new StaffMainTaskModel({
+        images: mappedFiles || [],
+        title: title?.trim() || "",
+        description,
+        due,
+        status,
+        priority,
+        department,
+        projectId: projectId || null,
+        organizationId,
+        assigneeId: assigneeId || null,
+        assigneModel: assigneeModel,
+        assignedById,
+        assignedByModel,
+        tasks: subTasks?.filter((st) => st?.taskName)?.map(st => ({
+          taskName: st.taskName?.trim(),
+          comments: null
+        })) || [],
+        dependentTaskId: previousTaskId ? [previousTaskId] : null, // 👈 key point
+        history: []
+      });
+
+      const savedTask = await newTask.save(); // ⏳ Save immediately to get _id
+
+      savedTasks.push(savedTask); // Push to response list
+      previousTaskId = savedTask._id; // ☑️ Chain to next task
+
+      // Optionally, generate a template
+      const existingTemplate = await TaskTemplateModel.findOne({ taskText: title });
+      const validSubTasks = subTasks?.map(sub => sub.taskName?.trim()).filter(Boolean) || [];
+
+      if (!existingTemplate && validSubTasks?.length > 0 && title?.trim()) {
+        const embedding = await getEmbedding(title);
+        await TaskTemplateModel.create({
+          taskText: title,
+          steps: validSubTasks,
+          embedding: Array.from(embedding)
+        });
+
+        console.log(`✅ Created template for "${title}"`);
+      }
+    }
+
+    return res.status(201).json({
+      ok: true,
+      message: `${savedTasks.length} chained task(s) created successfully.`,
+      data: savedTasks
+    });
+
+  } catch (error) {
+    console.error("❌ Error in createStaffTaskFromWork:", error);
+    return res.status(500).json({ ok: false, message: "Internal Server Error" });
+  }
+};
 
 
 // PATCH /tasks/:mainTaskId/subtasks/:subTaskId
@@ -535,7 +659,53 @@ export const updateMainTask = async (req: Request, res: Response): Promise<any> 
 };
 
 
+export const updateStaffTaskComments = async (req: Request, res: Response):Promise<any> => {
+  try {
+    const { mainTaskId, subTaskId } = req.params;
+    const { comment } = req.body;
 
+    if (!comment.trim() || typeof comment !== "string") {
+      return res.status(400).json({
+        ok: false,
+        message: "Comment is required and must be a string."
+      });
+    }
+
+    const task = await StaffMainTaskModel.findById(mainTaskId);
+
+    if (!task) {
+      return res.status(404).json({
+        ok: false,
+        message: "Main task not found."
+      });
+    }
+
+    const subTask = (task.tasks as any).id(subTaskId);
+    if (!subTask) {
+      return res.status(404).json({
+        ok: false,
+        message: "Subtask not found."
+      });
+    }
+
+    subTask.comments = comment;
+
+    await task.save();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Comment updated successfully.",
+      data: subTask
+    });
+
+  } catch (error) {
+    console.error("❌ Error updating subtask comment:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal Server Error"
+    });
+  }
+};
 // DELETE /tasks/:mainTaskId
 export const deleteMainTask = async (req: Request, res: Response): Promise<any> => {
     const { mainTaskId } = req.params;

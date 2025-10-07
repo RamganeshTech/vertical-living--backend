@@ -18,7 +18,9 @@ import {
   getAllTasks,
   getSingleTask,
   suggestSubtasks,
-  getAssociatedStaffsTask
+  getAssociatedStaffsTask,
+  createStaffTaskFromWork,
+  updateStaffTaskComments
 } from '../../controllers/Staff Task Controllers/saffTask.controller';
 import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
 import { staffTaskAccess } from '../../middlewares/staffTaskAccess';
@@ -29,10 +31,13 @@ const staffTaskRoutes = Router();
 
 staffTaskRoutes.post('/tasks/bulk', multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("files"), processUploadFiles, createStaffTask); 
 
+staffTaskRoutes.post('/tasks/taskfromwork', multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("files"), processUploadFiles, createStaffTaskFromWork);
 // 📝 2. UPDATE / DELETE SUB-TASKS ----------------------------------
 
 // Update subtask name
 staffTaskRoutes.patch('/tasks/:mainTaskId/subtasks/:subTaskId', multiRoleAuthMiddleware("owner", "staff", "CTO"), staffTaskAccess, updateSubTaskName);
+
+staffTaskRoutes.patch('/tasks/:mainTaskId/:subTaskId/updatecomments', multiRoleAuthMiddleware("owner", "staff", "CTO"), staffTaskAccess, updateStaffTaskComments);
 
 // Delete a subtask
 staffTaskRoutes.delete('/tasks/:mainTaskId/subtasks/:subTaskId', multiRoleAuthMiddleware("owner", "staff", "CTO"), staffTaskAccess, deleteSubTask);

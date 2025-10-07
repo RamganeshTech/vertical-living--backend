@@ -20,6 +20,7 @@ export interface TaskHistory {
 
 export interface ISTaskSchema {
     taskName: string
+    comments: string | null
 }
 
 export interface IStaffTask extends Document {
@@ -39,7 +40,7 @@ export interface IStaffTask extends Document {
     department: DepartmentType;
 
     assignedById: Types.ObjectId;
-    tasks: IStaffTask[]
+    tasks: ISTaskSchema[]
     history: TaskHistory[];
     dependentTaskId: string[] | null
 }
@@ -69,6 +70,7 @@ const HistorySchema = new Schema<TaskHistory>(
 
 const StaffTaskSchema = new Schema<ISTaskSchema>({
     taskName: { type: String, default: null },
+    comments: { type: String, default: null }
 }, { _id: true })
 
 

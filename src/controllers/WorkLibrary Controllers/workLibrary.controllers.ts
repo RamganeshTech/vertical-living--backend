@@ -139,7 +139,7 @@ export const updateWorkLibrary = async (req: Request, res: Response): Promise<an
                     // description: task.description || null,
                     // category: task.category || null,
                     subtasks: Array.isArray(task.subtasks)
-                        ? task.subtasks.map((st:ISubtask) => ({
+                        ? task.subtasks.map((st: ISubtask) => ({
                             title: st.title,
                             // description: st.description || null,
                             // estimatedTimeInMinutes: st.estimatedTimeInMinutes || null
@@ -157,6 +157,10 @@ export const updateWorkLibrary = async (req: Request, res: Response): Promise<an
                     if (update.title !== undefined) task.title = update.title;
                     if (update.description !== undefined) task.description = update.description;
                     if (update.category !== undefined) task.category = update.category;
+                    // ✅ Fix: Include estimatedTimeInMinutes
+                    if (update.estimatedTimeInMinutes !== undefined) {
+                        task.estimatedTimeInMinutes = Number(update.estimatedTimeInMinutes);
+                    }
                 }
             });
         }
@@ -167,7 +171,7 @@ export const updateWorkLibrary = async (req: Request, res: Response): Promise<an
                 const task = (workLibrary.tasks as any).id(taskId);
                 if (task) {
                     task.subtasks = task.subtasks.filter(
-                        (st:ISubtask) => (st as any)._id.toString() !== subtaskId
+                        (st: ISubtask) => (st as any)._id.toString() !== subtaskId
                     );
                 }
             });
