@@ -22,6 +22,6 @@ workLibRoutes.get('/getsinglework/:id',multiRoleAuthMiddleware("CTO", "staff", "
 workLibRoutes.get('/getallwork/:orgId',multiRoleAuthMiddleware("CTO", "staff", "owner"), getWorkLibrariesByOrgId);
 
 // 🔸 Delete a work library completely
-workLibRoutes.delete('/delete/:id',multiRoleAuthMiddleware("CTO", "staff", "owner"), deleteWorkLibrary);
+workLibRoutes.delete('/delete/:organizationId/:id',multiRoleAuthMiddleware("CTO", "staff", "owner"), deleteWorkLibrary);
 
 export default workLibRoutes;

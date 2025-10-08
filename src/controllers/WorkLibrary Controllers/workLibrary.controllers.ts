@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import { RoleBasedRequest } from "../../types/types";
 import { Request, Response } from "express";
 import { ISubtask, WorkLibraryModel } from "../../models/Staff Task Models/Library of works/libraryOfWorks.model";
+import redisClient from "../../config/redisClient";
 
 
 
@@ -45,11 +46,25 @@ export const createWorkLibrary = async (req: Request, res: Response): Promise<an
 
         const saved = await newLibrary.save();
 
+        // const singleKey = `workLibSingle:${saved._id}`
+        // await redisClient.set(singleKey, JSON.stringify(saved.toObject()), { EX: 60 * 10 })
+
+        // ✅ Cache single item
+        const singleKey = `workLibSingle:${saved._id}`;
+        await redisClient.set(singleKey, JSON.stringify(saved.toObject()), { EX: 600 });
+
+        // ✅ Invalidate organization list cache
+        const mainKey = `workLibMain:${organizationId}`;
+        await redisClient.del(mainKey);
+
         return res.status(201).json({
             ok: true,
             message: 'Work library created successfully',
             data: saved
         });
+
+
+
     } catch (error) {
         console.error('Error creating WorkLibrary:', error);
         return res.status(500).json({
@@ -136,6 +151,8 @@ export const updateWorkLibrary = async (req: Request, res: Response): Promise<an
             addTasks.forEach(task => {
                 workLibrary.tasks.push({
                     title: task.title,
+                    estimatedTimeInMinutes: task.estimatedTimeInMinutes || null,
+
                     // description: task.description || null,
                     // category: task.category || null,
                     subtasks: Array.isArray(task.subtasks)
@@ -211,6 +228,17 @@ export const updateWorkLibrary = async (req: Request, res: Response): Promise<an
         /** -------------------- ✅ Save the updated document -------------------- **/
         const saved = await workLibrary.save();
 
+
+        // const singleKey = `workLibSingle:${saved._id}`
+        // await redisClient.set(singleKey, JSON.stringify(saved.toObject()), { EX: 60 * 10 })
+
+
+        // ✅ CORRECT - Invalidate both single and list caches
+        const singleKey = `workLibSingle:${saved._id}`;
+        const mainKey = `workLibMain:${saved.organizationId}`;
+        await redisClient.set(singleKey, JSON.stringify(saved.toObject()), { EX: 60 * 10 });
+        await redisClient.del(mainKey); // Invalidate list cache
+
         return res.status(200).json({
             ok: true,
             message: 'WorkLibrary updated successfully',
@@ -229,7 +257,7 @@ export const updateWorkLibrary = async (req: Request, res: Response): Promise<an
 
 
 export const deleteWorkLibrary = async (req: Request, res: Response): Promise<any> => {
-    const { id } = req.params;
+    const { id, organizationId } = req.params;
 
     try {
         const deleted = await WorkLibraryModel.findByIdAndDelete(id);
@@ -240,6 +268,12 @@ export const deleteWorkLibrary = async (req: Request, res: Response): Promise<an
                 message: 'WorkLibrary not found'
             });
         }
+
+        // ✅ CORRECT - Delete both single and list caches
+        const singleKey = `workLibSingle:${id}`;
+        const mainKey = `workLibMain:${organizationId}`;
+        await redisClient.del(singleKey);
+        await redisClient.del(mainKey);
 
         return res.status(200).json({
             ok: true,
@@ -258,17 +292,30 @@ export const deleteWorkLibrary = async (req: Request, res: Response): Promise<an
 
 
 export const getWorkLibrariesByOrgId = async (req: RoleBasedRequest, res: Response): Promise<any> => {
-    const { orgId } = req.params;
-
-    if (!orgId || !isValidObjectId(orgId)) {
-        return res.status(400).json({
-            ok: false,
-            message: 'Invalid organizationId'
-        });
-    }
-
     try {
+        const { orgId } = req.params;
+
+        if (!orgId || !isValidObjectId(orgId)) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Invalid organizationId'
+            });
+        }
+
+
+
+        const mainKey = `workLibMain:${orgId}`
+
+        const redisCache = await redisClient.get(mainKey)
+
+        if (redisCache) {
+            return res.json({ ok: true, message: "data fetched form the redis", data: JSON.parse(redisCache) })
+        }
+
         const works = await WorkLibraryModel.find({ organizationId: orgId });
+
+        await redisClient.set(mainKey, JSON.stringify(works), { EX: 60 * 10 });
+
 
         return res.status(200).json({
             ok: true,
@@ -287,9 +334,19 @@ export const getWorkLibrariesByOrgId = async (req: RoleBasedRequest, res: Respon
 
 
 export const getWorkLibraryById = async (req: Request, res: Response): Promise<any> => {
-    const { id } = req.params;
-
     try {
+        const { id } = req.params;
+
+
+        const singleKey = `workLibSingle:${id}`
+
+
+        const redisCache = await redisClient.get(singleKey)
+
+        if (redisCache) {
+            return res.json({ ok: true, message: "data fetched form the redis for single", data: JSON.parse(redisCache) })
+        }
+
         const work = await WorkLibraryModel.findById(id);
 
         if (!work) {
@@ -298,6 +355,9 @@ export const getWorkLibraryById = async (req: Request, res: Response): Promise<a
                 message: 'WorkLibrary not found'
             });
         }
+
+        await redisClient.set(singleKey, JSON.stringify(work), { EX: 60 * 10 });
+
 
         return res.status(200).json({
             ok: true,

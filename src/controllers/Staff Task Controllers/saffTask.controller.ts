@@ -7,9 +7,12 @@ import StaffMainTaskModel, { IStaffTask, IStaffTaskFile, ISTaskSchema } from '..
 import { getEmbedding } from '../../utils/embedder/embedder';
 import { cosineSimilarity } from '../../utils/embedder/cosine';
 import TaskTemplateModel from '../../models/Staff Task Models/TaskTemplate Model/taskTemplate.model';
+import { CACHE_TTL, deleteCachedData, generateFilterHash, getCachedData, getCacheKey, invalidateTrackedKeys, setCachedData, trackCacheKey } from './staffTaskRedisUtil';
 
 const ALLOWED_MODELS = ["UserModel", "StaffModel", "CTOModel", "WorkerModel"];
 const VALID_STATUSES = ['queued', 'in_progress', 'paused', 'done', "start"];
+
+
 
 
 const mapRoleToModel = (role: string): string => {
@@ -36,6 +39,19 @@ export const suggestSubtasks = async (req: Request, res: Response): Promise<any>
             return res.status(400).json({ ok: false, message: 'Valid task title is required' });
         }
 
+
+        // Check cache first
+        const cacheKey = getCacheKey.taskSuggestion(title);
+        const cached = await getCachedData<{ matched: boolean; steps: string[] }>(cacheKey);
+
+        if (cached) {
+            return res.status(200).json({
+                ok: true,
+                cached: true,
+                ...cached
+            });
+        }
+
         const inputEmbedding = await getEmbedding(title);
         const templates = await TaskTemplateModel.find(); // Optional: add limit
 
@@ -50,15 +66,24 @@ export const suggestSubtasks = async (req: Request, res: Response): Promise<any>
             }
         }
 
-        if (bestScore >= 0.85 && bestMatch) {
-            return res.status(200).json({
-                ok: true,
-                matched: true,
-                steps: bestMatch.steps
-            });
-        }
+        // if (bestScore >= 0.85 && bestMatch) {
+        //     return res.status(200).json({
+        //         ok: true,
+        //         matched: true,
+        //         steps: bestMatch.steps
+        //     });
+        // }
 
-        return res.status(200).json({ ok: true, matched: false, steps: [] });
+        //  res.status(200).json({ ok: true, matched: false, steps: [] });
+
+        const result = bestScore >= 0.85 && bestMatch
+            ? { matched: true, steps: bestMatch.steps }
+            : { matched: false, steps: [] };
+
+        // Cache the result
+        await setCachedData(cacheKey, result, CACHE_TTL.SUGGESTION);
+
+        return res.status(200).json({ ok: true, ...result });
 
     } catch (err) {
         console.error('Error in suggestSubtasks:', err);
@@ -107,6 +132,23 @@ export const getAllTasks = async (req: Request, res: Response): Promise<any> => 
             query.due = { $gte: startOfDay, $lte: endOfDay };
         }
 
+
+
+        // Generate cache key with filters
+        const filterHash = generateFilterHash(req.query);
+        const cacheKey = getCacheKey.taskList(organizationId, filterHash);
+
+        // Check cache
+        const cached = await getCachedData<IStaffTask[]>(cacheKey);
+        if (cached) {
+            return res.status(200).json({
+                ok: true,
+                message: 'Tasks fetched from cache',
+                cached: true,
+                data: cached
+            });
+        }
+
         const tasks = await StaffMainTaskModel.find(query).populate("assigneeId");
 
         let finalTasks = tasks;
@@ -120,6 +162,12 @@ export const getAllTasks = async (req: Request, res: Response): Promise<any> => 
                 );
             });
         }
+
+
+        // Cache the result and track it
+        await setCachedData(cacheKey, finalTasks, CACHE_TTL.TASK_LIST);
+        await trackCacheKey(getCacheKey.taskTrackingSet(organizationId), cacheKey);
+
 
         return res.status(200).json({
             ok: true,
@@ -147,7 +195,21 @@ export const getSingleTask = async (req: Request, res: Response): Promise<any> =
             return res.status(400).json({ message: "Id not available", ok: false })
         }
 
-        const tasks = await StaffMainTaskModel.findById(id)
+        // Check cache
+        const cacheKey = getCacheKey.task(id);
+        const cached = await getCachedData<IStaffTask>(cacheKey);
+
+        if (cached) {
+            return res.status(200).json({
+                ok: true,
+                message: 'Task fetched from cache',
+                cached: true,
+                data: cached
+            });
+        }
+
+
+        const task = await StaffMainTaskModel.findById(id)
             .populate("assigneeId", "_id staffName email")     // populate staff fields
             .populate("projectId", "_id projectName")        // populate project fields
             .populate({
@@ -160,11 +222,29 @@ export const getSingleTask = async (req: Request, res: Response): Promise<any> =
                 },
             })
 
+        if (!task) {
+            return res.status(404).json({
+                ok: false,
+                message: 'Task not found'
+            });
+        }
+
+        await setCachedData(cacheKey, task.toObject(), CACHE_TTL.TASK_SINGLE);
+
         return res.status(200).json({
             ok: true,
-            message: 'Tasks fetched successfully',
-            data: tasks || null
+            message: 'Task fetched successfully',
+            data: task
         });
+
+
+        // return res.status(200).json({
+        //     ok: true,
+        //     message: 'Tasks fetched successfully',
+        //     data: task || null
+        // });
+
+
     } catch (error) {
         console.error('Error fetching tasks:', error);
         return res.status(500).json({
@@ -222,6 +302,22 @@ export const getAssociatedStaffsTask = async (req: RoleBasedRequest, res: Respon
             query.due = { $gte: startOfDay, $lte: endOfDay };
         }
 
+
+        // Generate cache key
+        const filterHash = generateFilterHash(req.query);
+        const cacheKey = getCacheKey.staffTasks(user._id.toString(), organizationId, filterHash);
+
+        // Check cache
+        const cached = await getCachedData<IStaffTask[]>(cacheKey);
+        if (cached) {
+            return res.status(200).json({
+                ok: true,
+                message: 'Tasks fetched from cache',
+                cached: true,
+                data: cached
+            });
+        }
+
         const tasks = await StaffMainTaskModel.find(query).populate("assigneeId");
 
         let finalTasks = tasks;
@@ -236,6 +332,14 @@ export const getAssociatedStaffsTask = async (req: RoleBasedRequest, res: Respon
             });
         }
 
+        // Cache and track
+        await setCachedData(cacheKey, finalTasks, CACHE_TTL.TASK_LIST);
+        await trackCacheKey(
+            getCacheKey.staffTaskTrackingSet(user._id.toString(), organizationId),
+            cacheKey
+        );
+
+
         return res.status(200).json({
             ok: true,
             message: 'Tasks fetched successfully',
@@ -249,8 +353,6 @@ export const getAssociatedStaffsTask = async (req: RoleBasedRequest, res: Respon
         });
     }
 };
-
-
 
 
 export const createStaffTask = async (req: RoleBasedRequest, res: Response): Promise<any> => {
@@ -308,6 +410,9 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
 
 
         const newTasks: IStaffTask[] = [];
+        const organizationsToInvalidate = new Set<string>();
+        const assigneesToInvalidate = new Set<string>();
+
 
         for (const taskData of tasks) {
             const {
@@ -356,6 +461,14 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
 
             newTasks.push(newTask);
 
+            // Track which caches need invalidation
+            if (organizationId) {
+                organizationsToInvalidate.add(organizationId.toString());
+            }
+            if (assigneeId) {
+                assigneesToInvalidate.add(assigneeId.toString());
+            }
+
             const existingTemplate = await TaskTemplateModel.findOne({ taskText: title });
 
             const validSubTasks = Array.isArray(subTasks)
@@ -381,6 +494,29 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
         // Insert all at once
         const savedTasks = await StaffMainTaskModel.insertMany(newTasks);
 
+
+        // ✅ INVALIDATE ALL RELATED CACHES
+        const invalidationPromises: Promise<void>[] = [];
+
+        // Invalidate organization task lists
+        for (const orgId of organizationsToInvalidate) {
+            invalidationPromises.push(
+                invalidateTrackedKeys(getCacheKey.taskTrackingSet(orgId))
+            );
+        }
+
+        // Invalidate staff-specific task lists
+        for (const staffId of assigneesToInvalidate) {
+            for (const orgId of organizationsToInvalidate) {
+                invalidationPromises.push(
+                    invalidateTrackedKeys(getCacheKey.staffTaskTrackingSet(staffId, orgId))
+                );
+            }
+        }
+
+        await Promise.all(invalidationPromises);
+
+
         return res.status(201).json({
             ok: true,
             message: `${savedTasks.length} task(s) created successfully.`,
@@ -395,128 +531,159 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
 
 
 export const createStaffTaskFromWork = async (
-  req: RoleBasedRequest,
-  res: Response
+    req: RoleBasedRequest,
+    res: Response
 ): Promise<any> => {
-  try {
-    let {
-      tasks,
-      assigneRole
-    }: {
-      tasks: Array<Partial<IStaffTask> & { tasks: { taskName: string }[] }>;
-      assigneRole: string;
-    } = req.body;
+    try {
+        let {
+            tasks,
+            assigneRole
+        }: {
+            tasks: Array<Partial<IStaffTask> & { tasks: { taskName: string }[] }>;
+            assigneRole: string;
+        } = req.body;
 
-    if (typeof tasks === "string") {
-      try {
-        tasks = JSON.parse(tasks);
-      } catch (e) {
-        return res.status(400).json({ ok: false, message: "Invalid tasks JSON format" });
-      }
-    }
+        if (typeof tasks === "string") {
+            try {
+                tasks = JSON.parse(tasks);
+            } catch (e) {
+                return res.status(400).json({ ok: false, message: "Invalid tasks JSON format" });
+            }
+        }
 
-    const user = req.user;
+        const user = req.user;
 
-    if (!user || !user?.role || !user?._id) {
-      return res.status(401).json({ ok: false, message: "Unauthorized request (user not found)" });
-    }
+        if (!user || !user?.role || !user?._id) {
+            return res.status(401).json({ ok: false, message: "Unauthorized request (user not found)" });
+        }
 
-    if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
-      return res.status(400).json({ ok: false, message: "No tasks provided for creation" });
-    }
+        if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+            return res.status(400).json({ ok: false, message: "No tasks provided for creation" });
+        }
 
-    // Validate roles ⇒ get model mappings
-    const assigneeModel = mapRoleToModel(assigneRole);
-    const assignedByModel = mapRoleToModel(user.role);
-    const assignedById = user._id;
+        // Validate roles ⇒ get model mappings
+        const assigneeModel = mapRoleToModel(assigneRole);
+        const assignedByModel = mapRoleToModel(user.role);
+        const assignedById = user._id;
 
-    if (!ALLOWED_MODELS.includes(assigneeModel) || !ALLOWED_MODELS.includes(assignedByModel)) {
-      return res.status(400).json({ ok: false, message: "Invalid role model mapping" });
-    }
+        if (!ALLOWED_MODELS.includes(assigneeModel) || !ALLOWED_MODELS.includes(assignedByModel)) {
+            return res.status(400).json({ ok: false, message: "Invalid role model mapping" });
+        }
 
-    const files = req.files as (Express.Multer.File & { location: string })[];
+        const files = req.files as (Express.Multer.File & { location: string })[];
 
-    const mappedFiles: IStaffTaskFile[] = files.map(file => {
-      const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
-      return {
-        type,
-        url: file.location,
-        originalName: file.originalname,
-        uploadedAt: new Date()
-      };
-    });
-
-    const savedTasks: IStaffTask[] = [];
-
-    let previousTaskId: Types.ObjectId | null = null;
-
-    for (const taskData of tasks) {
-      const {
-        title,
-        description,
-        due,
-        status = "queued",
-        priority = "medium",
-        projectId,
-        organizationId,
-        assigneeId,
-        department,
-        tasks: subTasks = []
-      } = taskData;
-
-      const newTask:any = new StaffMainTaskModel({
-        images: mappedFiles || [],
-        title: title?.trim() || "",
-        description,
-        due,
-        status,
-        priority,
-        department,
-        projectId: projectId || null,
-        organizationId,
-        assigneeId: assigneeId || null,
-        assigneModel: assigneeModel,
-        assignedById,
-        assignedByModel,
-        tasks: subTasks?.filter((st) => st?.taskName)?.map(st => ({
-          taskName: st.taskName?.trim(),
-          comments: null
-        })) || [],
-        dependentTaskId: previousTaskId ? [previousTaskId] : null, // 👈 key point
-        history: []
-      });
-
-      const savedTask = await newTask.save(); // ⏳ Save immediately to get _id
-
-      savedTasks.push(savedTask); // Push to response list
-      previousTaskId = savedTask._id; // ☑️ Chain to next task
-
-      // Optionally, generate a template
-      const existingTemplate = await TaskTemplateModel.findOne({ taskText: title });
-      const validSubTasks = subTasks?.map(sub => sub.taskName?.trim()).filter(Boolean) || [];
-
-      if (!existingTemplate && validSubTasks?.length > 0 && title?.trim()) {
-        const embedding = await getEmbedding(title);
-        await TaskTemplateModel.create({
-          taskText: title,
-          steps: validSubTasks,
-          embedding: Array.from(embedding)
+        const mappedFiles: IStaffTaskFile[] = files.map(file => {
+            const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
+            return {
+                type,
+                url: file.location,
+                originalName: file.originalname,
+                uploadedAt: new Date()
+            };
         });
 
-        console.log(`✅ Created template for "${title}"`);
-      }
+        const savedTasks: IStaffTask[] = [];
+        const organizationsToInvalidate = new Set<string>();
+        const assigneesToInvalidate = new Set<string>();
+
+        let previousTaskId: Types.ObjectId | null = null;
+
+        for (const taskData of tasks) {
+            const {
+                title,
+                description,
+                due,
+                status = "queued",
+                priority = "medium",
+                projectId,
+                organizationId,
+                assigneeId,
+                department,
+                tasks: subTasks = []
+            } = taskData;
+
+            const newTask: any = new StaffMainTaskModel({
+                images: mappedFiles || [],
+                title: title?.trim() || "",
+                description,
+                due,
+                status,
+                priority,
+                department,
+                projectId: projectId || null,
+                organizationId,
+                assigneeId: assigneeId || null,
+                assigneModel: assigneeModel,
+                assignedById,
+                assignedByModel,
+                tasks: subTasks?.filter((st) => st?.taskName)?.map(st => ({
+                    taskName: st.taskName?.trim(),
+                    comments: null
+                })) || [],
+                dependentTaskId: previousTaskId ? [previousTaskId] : null, // 👈 key point
+                history: []
+            });
+
+            const savedTask = await newTask.save(); // ⏳ Save immediately to get _id
+
+            savedTasks.push(savedTask); // Push to response list
+            previousTaskId = savedTask._id; // ☑️ Chain to next task
+
+            // Track caches to invalidate
+            if (organizationId) {
+                organizationsToInvalidate.add(organizationId.toString());
+            }
+            if (assigneeId) {
+                assigneesToInvalidate.add(assigneeId.toString());
+            }
+
+
+            // Optionally, generate a template
+            // const existingTemplate = await TaskTemplateModel.findOne({ taskText: title });
+            // const validSubTasks = subTasks?.map(sub => sub.taskName?.trim()).filter(Boolean) || [];
+
+            // if (!existingTemplate && validSubTasks?.length > 0 && title?.trim()) {
+            //     const embedding = await getEmbedding(title);
+            //     await TaskTemplateModel.create({
+            //         taskText: title,
+            //         steps: validSubTasks,
+            //         embedding: Array.from(embedding)
+            //     });
+
+            //     console.log(`✅ Created template for "${title}"`);
+            // }
+        }
+
+
+        // ✅ INVALIDATE ALL RELATED CACHES
+        const invalidationPromises: Promise<void>[] = [];
+
+        for (const orgId of organizationsToInvalidate) {
+            invalidationPromises.push(
+                invalidateTrackedKeys(getCacheKey.taskTrackingSet(orgId))
+            );
+        }
+
+        for (const staffId of assigneesToInvalidate) {
+            for (const orgId of organizationsToInvalidate) {
+                invalidationPromises.push(
+                    invalidateTrackedKeys(getCacheKey.staffTaskTrackingSet(staffId, orgId))
+                );
+            }
+        }
+
+        await Promise.all(invalidationPromises);
+
+        return res.status(201).json({
+            ok: true,
+            message: `${savedTasks.length} chained task(s) created successfully.`,
+            data: savedTasks
+        });
+
+    } catch (error) {
+        console.error("❌ Error in createStaffTaskFromWork:", error);
+        return res.status(500).json({ ok: false, message: "Internal Server Error" });
     }
-
-    return res.status(201).json({
-      ok: true,
-      message: `${savedTasks.length} chained task(s) created successfully.`,
-      data: savedTasks
-    });
-
-  } catch (error) {
-    console.error("❌ Error in createStaffTaskFromWork:", error);
-    return res.status(500).json({ ok: false, message: "Internal Server Error" });
-  }
 };
 
 
@@ -550,6 +717,30 @@ export const updateSubTaskName = async (req: Request, res: Response): Promise<an
                 message: 'Main task or sub-task not found'
             });
         }
+
+
+        // ✅ INVALIDATE CACHES
+        const invalidationPromises = [
+            // Invalidate single task cache
+            deleteCachedData(getCacheKey.task(mainTaskId)),
+
+            // Invalidate organization task lists
+            invalidateTrackedKeys(getCacheKey.taskTrackingSet(updated.organizationId.toString()))
+        ];
+
+        // Invalidate staff-specific caches if task is assigned
+        if (updated.assigneeId) {
+            invalidationPromises.push(
+                invalidateTrackedKeys(
+                    getCacheKey.staffTaskTrackingSet(
+                        updated.assigneeId.toString(),
+                        updated.organizationId.toString()
+                    )
+                )
+            );
+        }
+
+        await Promise.all(invalidationPromises);
 
         return res.status(200).json({
             ok: true,
@@ -587,6 +778,27 @@ export const deleteSubTask = async (req: Request, res: Response): Promise<any> =
             });
         }
 
+
+        // ✅ INVALIDATE CACHES
+        const invalidationPromises = [
+            deleteCachedData(getCacheKey.task(mainTaskId)),
+            invalidateTrackedKeys(getCacheKey.taskTrackingSet(updated.organizationId.toString()))
+        ];
+
+        if (updated.assigneeId) {
+            invalidationPromises.push(
+                invalidateTrackedKeys(
+                    getCacheKey.staffTaskTrackingSet(
+                        updated.assigneeId.toString(),
+                        updated.organizationId.toString()
+                    )
+                )
+            );
+        }
+
+        await Promise.all(invalidationPromises);
+
+
         return res.status(200).json({
             ok: true,
             message: 'Sub-task deleted successfully',
@@ -604,20 +816,32 @@ export const deleteSubTask = async (req: Request, res: Response): Promise<any> =
 
 // PATCH /tasks/:mainTaskId
 export const updateMainTask = async (req: Request, res: Response): Promise<any> => {
-    const { mainTaskId } = req.params;
-    const {
-        title,
-        description,
-        due,
-        status,
-        priority,
-        department,
-        projectId,
-        assigneeId,
-        dependentTaskId
-    } = req.body;
-
     try {
+        const { mainTaskId } = req.params;
+        const {
+            title,
+            description,
+            due,
+            status,
+            priority,
+            department,
+            projectId,
+            assigneeId,
+            dependentTaskId
+        } = req.body;
+
+
+        // Get the old task first to check if assigneeId changed
+        const oldTask = await StaffMainTaskModel.findById(mainTaskId);
+
+        if (!oldTask) {
+            return res.status(404).json({
+                ok: false,
+                message: 'Main task not found'
+            });
+        }
+
+
         const updated = await StaffMainTaskModel.findByIdAndUpdate(
             mainTaskId,
             {
@@ -644,6 +868,42 @@ export const updateMainTask = async (req: Request, res: Response): Promise<any> 
             });
         }
 
+
+        // ✅ INVALIDATE CACHES
+        const invalidationPromises = [
+            // Invalidate single task cache
+            deleteCachedData(getCacheKey.task(mainTaskId)),
+
+            // Invalidate organization task lists
+            invalidateTrackedKeys(getCacheKey.taskTrackingSet(updated.organizationId.toString()))
+        ];
+
+        // Invalidate old assignee's cache
+        if (oldTask.assigneeId) {
+            invalidationPromises.push(
+                invalidateTrackedKeys(
+                    getCacheKey.staffTaskTrackingSet(
+                        oldTask.assigneeId.toString(),
+                        updated.organizationId.toString()
+                    )
+                )
+            );
+        }
+
+        // Invalidate new assignee's cache (if assigneeId changed)
+        if (assigneeId && assigneeId.toString() !== oldTask.assigneeId?.toString()) {
+            invalidationPromises.push(
+                invalidateTrackedKeys(
+                    getCacheKey.staffTaskTrackingSet(
+                        assigneeId.toString(),
+                        updated.organizationId.toString()
+                    )
+                )
+            );
+        }
+
+        await Promise.all(invalidationPromises);
+
         return res.status(200).json({
             ok: true,
             message: 'Main task updated successfully',
@@ -659,58 +919,82 @@ export const updateMainTask = async (req: Request, res: Response): Promise<any> 
 };
 
 
-export const updateStaffTaskComments = async (req: Request, res: Response):Promise<any> => {
-  try {
-    const { mainTaskId, subTaskId } = req.params;
-    const { comment } = req.body;
+export const updateStaffTaskComments = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { mainTaskId, subTaskId } = req.params;
+        const { comment } = req.body;
 
-    if (!comment.trim() || typeof comment !== "string") {
-      return res.status(400).json({
-        ok: false,
-        message: "Comment is required and must be a string."
-      });
+        if (!comment.trim() || typeof comment !== "string") {
+            return res.status(400).json({
+                ok: false,
+                message: "Comment is required and must be a string."
+            });
+        }
+
+        const task = await StaffMainTaskModel.findById(mainTaskId);
+
+        if (!task) {
+            return res.status(404).json({
+                ok: false,
+                message: "Main task not found."
+            });
+        }
+
+        const subTask = (task.tasks as any).id(subTaskId);
+        if (!subTask) {
+            return res.status(404).json({
+                ok: false,
+                message: "Subtask not found."
+            });
+        }
+
+        subTask.comments = comment;
+
+        await task.save();
+
+
+        // ✅ INVALIDATE CACHES
+        const invalidationPromises = [
+            // Invalidate single task cache
+            deleteCachedData(getCacheKey.task(mainTaskId)),
+
+            // Invalidate organization task lists
+            invalidateTrackedKeys(getCacheKey.taskTrackingSet(task.organizationId.toString()))
+        ];
+
+        // Invalidate staff-specific caches if task is assigned
+        if (task.assigneeId) {
+            invalidationPromises.push(
+                invalidateTrackedKeys(
+                    getCacheKey.staffTaskTrackingSet(
+                        task.assigneeId.toString(),
+                        task.organizationId.toString()
+                    )
+                )
+            );
+        }
+
+        await Promise.all(invalidationPromises);
+
+        return res.status(200).json({
+            ok: true,
+            message: "Comment updated successfully.",
+            data: subTask
+        });
+
+    } catch (error) {
+        console.error("❌ Error updating subtask comment:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Internal Server Error"
+        });
     }
-
-    const task = await StaffMainTaskModel.findById(mainTaskId);
-
-    if (!task) {
-      return res.status(404).json({
-        ok: false,
-        message: "Main task not found."
-      });
-    }
-
-    const subTask = (task.tasks as any).id(subTaskId);
-    if (!subTask) {
-      return res.status(404).json({
-        ok: false,
-        message: "Subtask not found."
-      });
-    }
-
-    subTask.comments = comment;
-
-    await task.save();
-
-    return res.status(200).json({
-      ok: true,
-      message: "Comment updated successfully.",
-      data: subTask
-    });
-
-  } catch (error) {
-    console.error("❌ Error updating subtask comment:", error);
-    return res.status(500).json({
-      ok: false,
-      message: "Internal Server Error"
-    });
-  }
 };
 // DELETE /tasks/:mainTaskId
 export const deleteMainTask = async (req: Request, res: Response): Promise<any> => {
-    const { mainTaskId } = req.params;
-
     try {
+        const { mainTaskId } = req.params;
+
         const deleted = await StaffMainTaskModel.findByIdAndDelete(mainTaskId);
 
         if (!deleted) {
@@ -719,6 +1003,31 @@ export const deleteMainTask = async (req: Request, res: Response): Promise<any> 
                 message: 'Main task not found'
             });
         }
+
+
+        // ✅ INVALIDATE CACHES
+        const invalidationPromises = [
+            // Delete single task cache
+            deleteCachedData(getCacheKey.task(mainTaskId)),
+
+            // Invalidate organization task lists
+            invalidateTrackedKeys(getCacheKey.taskTrackingSet(deleted.organizationId.toString()))
+        ];
+
+        // Invalidate staff-specific caches if task was assigned
+        if (deleted.assigneeId) {
+            invalidationPromises.push(
+                invalidateTrackedKeys(
+                    getCacheKey.staffTaskTrackingSet(
+                        deleted.assigneeId.toString(),
+                        deleted.organizationId.toString()
+                    )
+                )
+            );
+        }
+
+        await Promise.all(invalidationPromises);
+
 
         return res.status(200).json({
             ok: true,
@@ -784,6 +1093,37 @@ export const updateTaskHistory = async (req: RoleBasedRequest, res: Response): P
             },
             { new: true }
         );
+
+
+        if (!updated) {
+            return res.status(404).json({
+                ok: false,
+                message: 'Task not found'
+            });
+        }
+
+        // ✅ INVALIDATE CACHES
+        const invalidationPromises = [
+            // Invalidate single task cache
+            deleteCachedData(getCacheKey.task(mainTaskId)),
+
+            // Invalidate organization task lists
+            invalidateTrackedKeys(getCacheKey.taskTrackingSet(updated.organizationId.toString()))
+        ];
+
+        // Invalidate staff-specific caches if task is assigned
+        if (updated.assigneeId) {
+            invalidationPromises.push(
+                invalidateTrackedKeys(
+                    getCacheKey.staffTaskTrackingSet(
+                        updated.assigneeId.toString(),
+                        updated.organizationId.toString()
+                    )
+                )
+            );
+        }
+
+        await Promise.all(invalidationPromises);
 
         return res.status(200).json({
             ok: true,
