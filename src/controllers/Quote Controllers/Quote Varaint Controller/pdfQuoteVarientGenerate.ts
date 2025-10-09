@@ -1655,7 +1655,7 @@ const drawCoreMaterialsTable = async (headers: string[], columnWidths: number[],
 for (const furniture of newVariant.furnitures) {
     ensureSpace(100);
 
-    currentPage.drawText(`Furniture: ${furniture.furnitureName}`, {
+    currentPage.drawText(`Product: ${furniture.furnitureName}`, {
         x: 50,
         y: yPosition,
         font: boldFont,
@@ -1743,7 +1743,7 @@ for (const furniture of newVariant.furnitures) {
 
      // Furniture Total
             ensureSpace(40);
-            currentPage.drawText(`Furniture Total: Rs: ${furniture.furnitureTotal}`, {
+            currentPage.drawText(`Product Total: Rs: ${furniture.furnitureTotal}`, {
                 x: width - 250,
                 y: yPosition,
                 font: boldFont,
