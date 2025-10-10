@@ -22,7 +22,7 @@ const MaterialInventorySchema = new mongoose.Schema(
     // model: { type: String },
     // itemCode: { type: String, index: true },
     // description: { type: String },
-    // watt: { type: Number },
+    // watt: { type: Number }, 
     // cct: { type: String },
     // mrp: { type: Number },
 

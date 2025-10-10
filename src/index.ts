@@ -86,6 +86,7 @@ import projectUtilRoutes from './routers/Util routes/util.routes';
 // import micaDeletectionRoutes from './routers/Stage routes/sample desing routes/shortListMica.routes';
 import shortlistMicaReferenceDesignRoutes from './routers/Stage routes/sample desing routes/shortListMicaReferenceDesign.routes';
 import workLibRoutes from './routers/WorkLibrary Routes/workLibrary.routes';
+import materialInventoryRoutes from './routers/Material Inventory Routes/materialInventory.routes';
 
 
 
@@ -303,6 +304,11 @@ app.use('/api/quote/quotegenerate', QuoteRouter)
 
 // STAFF TASKS API
 app.use("/api/stafftasks/", staffTaskRoutes)
+
+
+// MATERIAL INVENTORY API
+app.use("/api/materialinventory", materialInventoryRoutes)
+
 
 // SHORTLIST API
 // app.use('/api/shortlist', shortlistedDesignRoutes)
