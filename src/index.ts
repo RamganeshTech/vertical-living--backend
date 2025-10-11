@@ -87,6 +87,7 @@ import projectUtilRoutes from './routers/Util routes/util.routes';
 import shortlistMicaReferenceDesignRoutes from './routers/Stage routes/sample desing routes/shortListMicaReferenceDesign.routes';
 import workLibRoutes from './routers/WorkLibrary Routes/workLibrary.routes';
 import materialInventoryRoutes from './routers/Material Inventory Routes/materialInventory.routes';
+import materialInventoryCartRoutes from './routers/Material Inventory Routes/materialInventoryCart.routes';
 
 
 
@@ -308,6 +309,7 @@ app.use("/api/stafftasks/", staffTaskRoutes)
 
 // MATERIAL INVENTORY API
 app.use("/api/materialinventory", materialInventoryRoutes)
+app.use("/api/materialinventory/cart", materialInventoryCartRoutes)
 
 
 // SHORTLIST API

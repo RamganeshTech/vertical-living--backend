@@ -148,6 +148,7 @@ export const getMaterialInventories = async (req: Request, res: Response): Promi
             watt,
             itemCode,
             search,
+            brand
         } = req.query;
 
         if (!organizationId || typeof organizationId !== 'string') {
@@ -157,6 +158,7 @@ export const getMaterialInventories = async (req: Request, res: Response): Promi
         const query: any = { organizationId };
         if (category) query['specification.category'] = category;
         if (subcategory) query['specification.subcategory'] = subcategory;
+        if (brand) query['specification.brand'] = brand;
         // if (mrp) query['specification.mrp'] = Number(mrp);
         if (minMrp || maxMrp) {
             query['specification.mrp'] = {};
@@ -171,11 +173,12 @@ export const getMaterialInventories = async (req: Request, res: Response): Promi
                 { 'specification.itemCode': { $regex: search, $options: 'i' } },
                 { 'specification.subcategory': { $regex: search, $options: 'i' } },
                 { 'specification.model': { $regex: search, $options: 'i' } },
+                { 'specification.brand': { $regex: search, $options: 'i' } },
             ];
         }
 
         const skip = (Number(page) - 1) * Number(limit);
-        const cacheKey = `materialInventory:${organizationId}:page:${page}:limit:${limit}:cat:${category || ''}:subcat:${subcategory || ''}:minMrp:${minMrp || ''}:maxMrp:${maxMrp || ''}:model:${model || ''}:watt:${watt || ''}:itemCode:${itemCode || ''}:search:${search || ''}`;
+        const cacheKey = `materialInventory:${organizationId}:page:${page}:limit:${limit}:cat:${category || ''}:subcat:${subcategory || ''}:brand:${brand || ""}:minMrp:${minMrp || ''}:maxMrp:${maxMrp || ''}:model:${model || ''}:watt:${watt || ''}:itemCode:${itemCode || ''}:search:${search || ''}`;
         // Try Redis cache first
         const cached = await redisClient.get(cacheKey);
         if (cached) {
