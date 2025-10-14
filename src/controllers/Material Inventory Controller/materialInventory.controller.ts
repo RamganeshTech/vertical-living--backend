@@ -216,7 +216,7 @@ export const getMaterialInventories = async (req: Request, res: Response): Promi
 
 
         const cacheKey = `materialInventory:${organizationId}:page:${page}:limit:${limit}:cat:${category || ''}:type:${type || ""}:subcat:${subcategory || ''}:brand:${brand || ""}:minMrp:${minMrp || ''}:maxMrp:${maxMrp || ''}:model:${model || ''}:watt:${watt || ''}:itemCode:${itemCode || ''}:search:${search || ''}`;
-        await redisClient.del(cacheKey)
+        // await redisClient.del(cacheKey)
         // Try Redis cache first
         const cached = await redisClient.get(cacheKey);
         if (cached) {
