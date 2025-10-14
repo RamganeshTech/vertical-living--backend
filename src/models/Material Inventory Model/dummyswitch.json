@@ -1,0 +1,1057 @@
+[
+    {
+        "brand": "jaquar",
+        "description": "16AX One gang one way switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "materialType": "polycarbonate",
+        "styleType": "karbonic",
+        "type": "switch",
+        "variants": [
+            {
+                "color": "grey",
+                "itemCode": "SWG-GRY-PC16A1G01",
+                "mrp": 285,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/d87f4a2b-4784-4a43-a5a3-736dd3990511.png"
+            },
+            {
+                "color": "white",
+                "itemCode": "SWG-WHT-PC16A1G01",
+                "mrp": 285,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/acd218f4-ad26-46f2-a680-0fe302f4d57e.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PC16A1G01",
+                "mrp": 285,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/a51d07d3-f6ed-4729-82d7-38e3ea650226.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "16AX Two gang two way switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "materialType": "polycarbonate",
+        "styleType": "karbonic",
+        "type": "switch",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SWG-WHT-PC16A2G02",
+                "mrp": 405,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/08066ca7-1446-4e0b-83d7-8e6657368ab0.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PC16A2G02",
+                "mrp": 500,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/04fc18b7-c02e-425c-b970-c9588dea9f71.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SWG-GRY-PC16A2G02",
+                "mrp": 500,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/ab9169fc-1ab3-4bc4-815a-376cbafa664a.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "16AX One gang two way switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SWG-WHT-PC16A1G02",
+                "mrp": 285,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/76dc2668-7add-4ac0-a7f4-bd83c4674d2d.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PC16A1G02",
+                "mrp": 370,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/3c5ea602-1c19-4884-abf2-490bd463e156.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SWG-GRY-PC16A1G02",
+                "mrp": 370,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/1fd58255-08ed-4a70-ab25-5a4d2619dc74.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "16AX Three gang one way switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SWG-WHT-PC16A3G01",
+                "mrp": 415,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/cefd27b8-93d5-4f93-be02-21fd8be6053d.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PC16A3G01",
+                "mrp": 540,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/35e2a56c-3953-42d8-8c3e-9d1e9117fe83.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SWG-GRY-PC16A3G01",
+                "mrp": 540,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/22771955-af87-4c6f-b444-6f33ad35dbc8.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "16AX Two gang one way switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SWG-WHT-PC16A2G01",
+                "mrp": 330,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/22771955-af87-4c6f-b444-6f33ad35dbc8.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PC16A2G01",
+                "mrp": 425,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/18a496f1-dcd1-46e0-9f54-6da247c7dacb.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SWG-GRY-PC16A2G01",
+                "mrp": 425,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/dc9836a1-3867-43ae-bc43-5bbf9089d2fd.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "16AX Three gang two way switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SWG-WHT-PC16A3G02",
+                "mrp": 510,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/d41b7784-f28a-403e-ad50-edbbf1600d4f.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PC16A3G02",
+                "mrp": 640,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/8f3fa4b6-ba1e-4d31-81ab-7f8f2d9e8f87.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SWG-GRY-PC16A3G02",
+                "mrp": 640,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/fc047215-cc99-4aa5-8a93-7c24331f9c10.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "16AX Four gang one way switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SWG-WHT-PC16A4G01",
+                "mrp": 500,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/7306ffef-67d0-4493-8762-a63871a275e8.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PC16A4G01",
+                "mrp": 630,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/40e05ac1-0ea9-405d-a916-3906c41a3cd6.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SWG-GRY-PC16A4G01",
+                "mrp": 630,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/102d69ee-059d-41db-88eb-3cfdd2c5f695.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "Mult-point control switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": " SWG-WHT-PC16A1GM2",
+                "mrp": 400,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/d3d24172-5d9f-491f-8419-08b34870fc6d.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PC16A1GM2",
+                "mrp": 490,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/e169b450-a9b9-4388-9988-d0f799915336.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": " SWG-GRY-PC16A1GM2",
+                "mrp": 490,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/e7127290-aabb-4088-b88f-9255ef417262.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "16AX Four gang two way switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SWG-WHT-PC16A4G02",
+                "mrp": 610,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/1504380c-6125-48a6-b9f8-5f485120e1c4.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PC16A4G02",
+                "mrp": 750,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/48c400c1-ac19-4b68-9131-64eb0df3b131.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SWG-GRY-PC16A4G02",
+                "mrp": 750,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/bb0e2c2f-5335-40c1-aa72-8ca0e45ae02c.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "One way TV socket",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "television-socket",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SCO-WHT-PCMTV01",
+                "mrp": 385,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/ab9881e9-cf05-44c6-bcaa-69ad6cabf3c4.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SCO-GLD-PCMTV01",
+                "mrp": 500,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/fdad5875-9d91-4540-9825-eb7e2e0193bb.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SCO-GRY-PCMTV01",
+                "mrp": 500,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/103bd8d5-3209-4bb1-9f16-aacc0ffd959b.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "16A Door bell one way switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "doorbell",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SWG-WHT-PC16A1GB1",
+                "mrp": 280,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/9992a420-f1b5-4d4a-bed0-d2ba19e14724.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PC16A1GB1",
+                "mrp": 360,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/be74022e-95f7-459b-a40f-0176ae3de3bc.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SWG-GRY-PC16A1GB1",
+                "mrp": 360,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/abe31a31-3565-447b-9474-ad27cfb935e0.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "One way telephone socket",
+        "category": "socket",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "telephone-socket",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SCO-WHT-PCMTL01",
+                "mrp": 265,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/f20fd17d-1979-49e5-a5c0-22317cd73319.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SCO-GLD-PCMTL01",
+                "mrp": 340,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/dc249eee-5101-44a1-b186-5565f109505f.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SCO-GRY-PCMTL01",
+                "mrp": 340,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/5e82e0c5-3ebf-420c-820b-9d783dbd6db3.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "One way computer socket cat6",
+        "category": "socket",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "computer-socket",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SCO-WHT-PCMCS01",
+                "mrp": 375,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/fa8e8cd8-4cf9-41e7-88a0-05631cab7e53.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SCO-GLD-PCMCS01",
+                "mrp": 455,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/9d5b0d7e-44b3-4491-80ec-24df3f7a1b67.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SCO-GRY-PCMCS01",
+                "mrp": 455,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/25ddf55a-5625-49f2-9fd3-558920a43a61.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "Telephone & computer socket cat6",
+        "category": "socket",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "television-computer-socket",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SCO-WHT-PCMTLC01",
+                "mrp": 500,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/dc68c507-2aaf-4e91-a8ee-6d175c1f7c04.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SCO-GLD-PCMTLC01",
+                "mrp": 600,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/04053dd8-7add-4da1-a4a7-37910e1447e3.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SCO-GRY-PCMTLC01",
+                "mrp": 600,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/17c4d545-e3aa-4fb8-9a65-c1da730749de.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "Television & telephone socket",
+        "category": "socket",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "television-telephone-socket",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SCO-WHT-PCMTVTL01",
+                "mrp": 510,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/b4cdd187-6066-4577-8652-b56c1f90d0b8.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SCO-GLD-PCMTVTL01",
+                "mrp": 580,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/aa3c96d5-3494-4f4f-8f44-8d5acea61c13.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SCO-GRY-PCMTVTL01",
+                "mrp": 580,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/549bb8c0-dade-4b75-baae-8cc2af83b5a5.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "Double computer socket cat6",
+        "category": "socket",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "computer-socket",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SCO-WHT-PCMCC01",
+                "mrp": 600,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/2958cec0-1403-4888-8f80-e77359f46298.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SCO-GLD-PCMCC01",
+                "mrp": 700,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/b5700f15-8db8-4841-8c05-e72de8235f2d.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SCO-GRY-PCMCC01",
+                "mrp": 700,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/a04a214e-a07b-46c2-bbed-4e0dc2a87e14.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "Television & computer socket cat6",
+        "category": "socket",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "television-computer-socket",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SCO-WHT-PCMTVC01",
+                "mrp": 620,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/af66220b-a1c0-4112-9b10-e369bfd65b65.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SCO-GLD-PCMTVC01",
+                "mrp": 710,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/e88f1e28-5e5c-4161-9662-d42a782a3864.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SCO-GRY-PCMTVC01",
+                "mrp": 710,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/bbf76211-9844-4407-b9ee-1e133d7ca57a.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "0.005A PIR motion sensor switch with light",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "motion-sensor-switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SFH-WHT-PCMAPRL0H",
+                "mrp": 1510,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/4f7923f4-2b8d-4fad-b797-f3ffea84ce66.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SFH-GLD-PCMAPRL0H",
+                "mrp": 1760,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/3783d2aa-3725-4444-817b-24f25537df79.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SFH-GRY-PCMAPRL0H",
+                "mrp": 1760,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/17345615-8db2-45cf-a524-c966334c2ce5.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "0.5A PIR motion sensor switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "motion-sensor-switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SFH-WHT-PCMAPR0H",
+                "mrp": 2050,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/a4a0547c-e581-4147-bae4-f2fdf0adac90.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SFH-GLD-PCMAPR0H",
+                "mrp": 2350,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/ff4cb695-7a6c-42d5-b219-9e9f728a8fd6.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SFH-GRY-PCMAPR0H",
+                "mrp": 2350,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/5dc413e0-1d58-4a01-bd18-ae4a67833ed4.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "1 Gang 32A DP one way switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SWG-WHT-PC32A1G01",
+                "mrp": 870,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/00a2cecd-46fd-4eb7-bd49-2e4fa9f783be.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PC32A1G01",
+                "mrp": 980,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/cd00a130-4dcb-469e-b363-2f209a8a586b.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SWG-GRY-PC32A1G01",
+                "mrp": 980,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/5fe0bf67-7a21-42e9-8278-2cd2e99f065c.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "16A Energy saving card switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "card-switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SFH-WHT-PC16AES0H",
+                "mrp": 2225,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/6bb401f1-27fb-4df9-9f44-b75458e9d9f0.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SFH-GLD-PC16AES0H",
+                "mrp": 2550,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/69327469-4a82-4386-9419-078eaf28e613.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SFH-GRY-PC16AES0H",
+                "mrp": 2550,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/35576dc1-b9c8-4d6b-9245-0f6dff43552e.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "1 Gang 45A DP one way switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SWG-WHT-PC45A1G01",
+                "mrp": 960,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/2fa3f521-6b23-40b8-9062-9a8de8d5dcbb.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PC45A1G01",
+                "mrp": 1070,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/abc4f980-f4e3-431b-a43c-86aa7edf8dbf.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SWG-GRY-PC45A1G01",
+                "mrp": 1070,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/6d4e3863-a23d-4897-8fed-ae5c9d461254.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "1 Gang 20A DP one way switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SWG-WHT-PC20A1G01",
+                "mrp": 790,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/4360aea6-a5f9-422c-bacc-16df3cff3290.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PC20A1G01",
+                "mrp": 900,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/d24d6723-7d8f-4753-bd29-e88c42315172.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SWG-GRY-PC20A1G01",
+                "mrp": 900,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/e7550335-57a5-46b0-b313-7f9d6b83acf9.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "1 Gang 16A switched socket one way with indicator",
+        "category": "socket",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "socket",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SKG-WHT-PC16ASC1GS1",
+                "mrp": 445,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/9c4858a6-67c2-40e5-8e5f-b111acda82f3.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SKG-GLD-PC16ASC1GS1",
+                "mrp": 510,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/2697a3e7-0354-4bf5-aa7d-29dfa7a4d0f2.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SKG-GRY-PC16ASC1GS1",
+                "mrp": 510,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/58f832ce-2d32-482a-8afc-46dc9e9c0de0.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "1 Gang universal switched socket one way with indicator",
+        "category": "socket",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "socket",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SKG-WHT-PC16AUS1GS1",
+                "mrp": 440,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/86cb93e6-09ea-4374-af32-82843012396f.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SKG-GLD-PC16AUS1GS1",
+                "mrp": 500,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/a9bda122-ed58-4691-a42d-4907a75d50ae.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SKG-GRY-PC16AUS1GS1",
+                "mrp": 500,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/83cba5b1-77f3-4589-bc41-adaeae6ea850.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "2 & 3 Pins universal socket with indicator with double USB 2.1A",
+        "category": "socket",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "television-telephone-socket",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SUB-WHT-PC16AUSD2B00",
+                "mrp": 1730,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/7ff43059-32fd-44ad-8f76-96060dbf9265.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SUB-GLD-PC16AUSD2B00",
+                "mrp": 1930,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/6a93024e-2ae2-48a4-8c66-9964927a6a9a.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SUB-GRY-PC16AUSD2B00",
+                "mrp": 1930,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/08412a22-4c34-431c-90f8-a2f2e3c40b94.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "1 Gang switched universal socket one way with 2 USB port",
+        "category": "socket",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "socket",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SUB-WHT-PC16AUS2BS1",
+                "mrp": 1760,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/e422ea3b-733c-403a-a207-f27f699d7a1d.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SUB-GLD-PC16AUS2BS1",
+                "mrp": 1980,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/127da990-2826-43e6-8139-387d558a1fde.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SUB-GRY-PC16AUS2BS1",
+                "mrp": 1980,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/9e4bfb1a-b3cd-495e-b3eb-8819c720eb3d.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "2 Gang 13A universal switched socket with indicator",
+        "category": "socket",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "socket",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SKG-WHT-PC13AUS2GS1",
+                "mrp": 1180,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/724aeaf8-4dd4-4dbc-bdb2-95640852dad5.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SKG-GLD-PC13AUS2GS1",
+                "mrp": 1300,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/455c252e-1507-4677-9619-93b099e49f9c.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SKG-GRY-PC13AUS2GS1",
+                "mrp": 1300,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/b0dfd6bf-bfab-4d15-87c0-e4e517c04cec.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "2 & 3 Pins universal switched socket with indicator",
+        "category": "socket",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "socket",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SKG-WHT-PC16AUSDS1",
+                "mrp": 485,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/cf5ecd7c-30f6-4c33-b4c7-ea2c0117d7ea.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SKG-GLD-PC16AUSDS1",
+                "mrp": 550,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/40ac613f-04dc-4676-bf3e-a54673807bc8.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SKG-GRY-PC16AUSDS1",
+                "mrp": 550,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/2fec5a0e-e148-4713-b830-c0ec6ff984e7.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "2 Gang 13A universal switched socket with indicator with 2 USB",
+        "category": "socket",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "socket",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SUB-WHT-PC13AUS2B2GS1",
+                "mrp": 2775,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/bc361d21-fe96-43e3-b65e-0573ad4f8ade.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SUB-GLD-PC13AUS2B2GS1",
+                "mrp": 3100,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/f7372cde-63b9-4efd-aebb-f27b495f1521.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SUB-GRY-PC13AUS2B2GS1",
+                "mrp": 3100,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/3936ec49-7a11-44ea-9539-f65b3c5b6aee.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "Rotatable dimmer switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "dimmer-switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SWG-WHT-PCMARD0S",
+                "mrp": 1910,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/a9fb3f3b-2ccb-4ec9-a473-29b65eca48cf.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PCMARD0S",
+                "mrp": 2125,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/97f78c9e-fdf4-4272-ba1c-aa64eb750dfb.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SWG-GRY-PCMARD0S",
+                "mrp": 2125,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/98698227-dbc3-4e1c-8c90-1bf68593709c.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "Fan speed controller switch",
+        "category": "regulator",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "regulator",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SWG-WHT-PC1ARF0S",
+                "mrp": 1040,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/8461b30a-afa7-498d-b5e4-7700f87c7a83.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SWG-GLD-PC1ARF0S",
+                "mrp": 1190,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/44a4ba16-485c-44b2-8709-3626fa18585f.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SWG-GRY-PC1ARF0S",
+                "mrp": 1190,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/87aa1f1c-e39a-493f-be32-7e0ac9012073.png"
+                
+            }
+        ]
+    },
+    {
+        "brand": "jaquar",
+        "description": "Do not disturb, make up room & wait a moment indicator bell switch",
+        "category": "switches",
+        "HSN": "8536500090",
+        "styleType": "karbonic",
+        "type": "notify-switch",
+        "materialType": "polycarbonate",
+        "variants": [
+            {
+                "color": "white",
+                "itemCode": "SFH-WHT-PC3ADD0H",
+                "mrp": 2100,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/7198d2a4-1a45-4ff6-aff2-fd508ed0b11c.png"
+                
+            },
+            {
+                "color": "gold",
+                "itemCode": "SFH-GLD-PC3ADD0H",
+                "mrp": 2475,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/2c5cf270-52c9-49ef-a027-d1e437bb9c4d.png"
+                
+            },
+            {
+                "color": "grey",
+                "itemCode": "SFH-GRY-PC3ADD0H",
+                "mrp": 2475,
+                "image": "https://verticalliving-files.s3.ap-south-1.amazonaws.com/images/uploads/3849bcb4-85d0-4a74-88a8-8e20fa61072c.png"
+                
+            }
+        ]
+    }
+]

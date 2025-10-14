@@ -11,21 +11,15 @@ export const addToCart = async (req: Request, res: Response): Promise<any> => {
     try {
         const { organizationId, projectId, productId, quantity, specification } = req.body;
 
-        if (!organizationId || !projectId || !productId || !quantity) {
+console.log("specififcaton", specification)
+
+
+        if (!organizationId || !projectId || !productId || !quantity || !specification?.itemCode) {
             return res.status(400).json({
                 ok: false,
                 message: "Missing required fields"
             });
         }
-
-        // // Get the product details
-        // const product = await MaterialInventoryModel.findById(productId);
-        // if (!product) {
-        //     return res.status(404).json({
-        //         ok: false,
-        //         message: "Product not found"
-        //     });
-        // }
 
         // Check for existing cart or need to create new one
         const { shouldCreate, existingCart } = await cartUtils.findOrShouldCreateCart(organizationId, projectId);
@@ -44,7 +38,7 @@ export const addToCart = async (req: Request, res: Response): Promise<any> => {
 
         // Check if item already exists in cart
         const existingItemIndex = cart?.items?.findIndex(
-            item => item.productId.toString() === productId
+            item => item.specification.itemCode.toString() === specification?.itemCode
         );
 
         if (existingItemIndex > -1) {
@@ -110,7 +104,7 @@ export const getCart = async (req: Request, res: Response): Promise<any> => {
             ]
         })
         // .populate('items.productId');
-        console.log("sorted things", cart)
+        // console.log("sorted things", cart)
 
         if (!cart) {
             return res.status(200).json({
@@ -137,12 +131,20 @@ export const getCart = async (req: Request, res: Response): Promise<any> => {
 // Update cart item quantity
 export const updateCartItemQuantity = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { cartId, productId, quantity } = req.body;
+        const { cartId, itemCode, quantity } = req.body;
 
-        if (!cartId || !productId || !quantity) {
+        if (!cartId || !itemCode || !quantity) {
             return res.status(400).json({
                 ok: false,
                 message: "Missing required fields"
+            });
+        }
+
+
+           if (quantity < 1) {
+            return res.status(400).json({
+                ok: false,
+                message: "Quantity must be at least 1"
             });
         }
 
@@ -156,7 +158,7 @@ export const updateCartItemQuantity = async (req: Request, res: Response): Promi
 
         // Find item in cart
         const itemIndex = cart.items.findIndex(
-            item => item.productId.toString() === productId
+            item => item.specification.itemCode.toString() === itemCode
         );
 
         if (itemIndex === -1) {
@@ -194,9 +196,9 @@ export const updateCartItemQuantity = async (req: Request, res: Response): Promi
 // Remove item from cart
 export const removeCartItem = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { cartId, productId } = req.body;
+        const { cartId, itemCode } = req.body;
 
-        if (!cartId || !productId) {
+        if (!cartId || !itemCode) {
             return res.status(400).json({
                 ok: false,
                 message: "Cart ID and Product ID are required"
@@ -213,7 +215,7 @@ export const removeCartItem = async (req: Request, res: Response): Promise<any> 
 
         // Remove item
         cart.items = cart.items.filter(item =>
-            item.productId.toString() !== productId
+            item.specification.itemCode.toString() !== itemCode
         );
 
         // Recalculate total cost (sum of all singleItemCosts)

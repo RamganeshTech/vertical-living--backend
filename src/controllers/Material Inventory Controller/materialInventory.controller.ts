@@ -148,26 +148,51 @@ export const getMaterialInventories = async (req: Request, res: Response): Promi
             watt,
             itemCode,
             search,
-            brand
+            brand,
+            type
         } = req.query;
 
         if (!organizationId || typeof organizationId !== 'string') {
             return res.status(400).json({ message: 'organizationId is required', ok: false });
         }
-
+        console.log("called once ")
         const query: any = { organizationId };
         if (category) query['specification.category'] = category;
         if (subcategory) query['specification.subcategory'] = subcategory;
         if (brand) query['specification.brand'] = brand;
         // if (mrp) query['specification.mrp'] = Number(mrp);
-        if (minMrp || maxMrp) {
-            query['specification.mrp'] = {};
-            if (minMrp) query['specification.mrp'].$gte = Number(minMrp);
-            if (maxMrp) query['specification.mrp'].$lte = Number(maxMrp);
+
+        // if (minMrp || maxMrp) {
+        //     query['specification.mrp'] = {};
+        //     if (minMrp) query['specification.mrp'].$gte = Number(minMrp);
+        //     if (maxMrp) query['specification.mrp'].$lte = Number(maxMrp);
+        // }
+
+
+        if (minMrp !== undefined || maxMrp !== undefined) {
+            const hasRealMinMrp = minMrp !== undefined && Number(minMrp) >= 0;
+            const hasRealMaxMrp = maxMrp !== undefined && Number(maxMrp) <= 100000;
+                       
+            if (hasRealMinMrp || hasRealMaxMrp) {
+                const mrpCondition: any = {};
+                if (hasRealMinMrp) mrpCondition.$gte = Number(minMrp);
+                if (hasRealMaxMrp) mrpCondition.$lte = Number(maxMrp);
+
+                   // Query BOTH locations: specification.mrp (lights) OR specification.variants.mrp (switches/sockets)
+                query.$or = [
+                    { 'specification.mrp': mrpCondition },  // For lights
+                    {
+                        'specification.variants': {
+                            $elemMatch: { mrp: mrpCondition }
+                        }
+                    }  // For switches/sockets/regulators - using $elemMatch for array
+                ];
+            }
         }
         if (model) query['specification.model'] = model;
         if (watt) query['specification.watt'] = Number(watt);
         if (itemCode) query['specification.itemCode'] = itemCode;
+        if (type) query['specification.type'] = type;
         if (search && typeof search === 'string') {
             query.$or = [
                 { 'specification.itemCode': { $regex: search, $options: 'i' } },
@@ -178,7 +203,20 @@ export const getMaterialInventories = async (req: Request, res: Response): Promi
         }
 
         const skip = (Number(page) - 1) * Number(limit);
-        const cacheKey = `materialInventory:${organizationId}:page:${page}:limit:${limit}:cat:${category || ''}:subcat:${subcategory || ''}:brand:${brand || ""}:minMrp:${minMrp || ''}:maxMrp:${maxMrp || ''}:model:${model || ''}:watt:${watt || ''}:itemCode:${itemCode || ''}:search:${search || ''}`;
+
+
+        // Add logging
+        console.log('Query params:', {
+            page: Number(page),
+            limit: Number(limit),
+            skip,
+            queryFilters: JSON.stringify(query)
+        });
+
+
+
+        const cacheKey = `materialInventory:${organizationId}:page:${page}:limit:${limit}:cat:${category || ''}:type:${type || ""}:subcat:${subcategory || ''}:brand:${brand || ""}:minMrp:${minMrp || ''}:maxMrp:${maxMrp || ''}:model:${model || ''}:watt:${watt || ''}:itemCode:${itemCode || ''}:search:${search || ''}`;
+        await redisClient.del(cacheKey)
         // Try Redis cache first
         const cached = await redisClient.get(cacheKey);
         if (cached) {
@@ -192,12 +230,26 @@ export const getMaterialInventories = async (req: Request, res: Response): Promi
             .sort({ createdAt: -1 });
         const total = await MaterialInventoryModel.countDocuments(query);
 
+        const totalPages = Math.ceil(total / Number(limit));
+        // IMPORTANT: Add detailed logging
+        console.log('Query results:', {
+            docsFound: docs.length,
+            total,
+            currentPage: Number(page),
+            totalPages,
+            hasMorePages: Number(page) < totalPages,
+            calculation: `${total} / ${Number(limit)} = ${totalPages} pages`
+        });
+
+
+
         const response = {
             data: docs,
             total,
             page: Number(page),
             limit: Number(limit),
-            totalPages: Math.ceil(total / Number(limit)),
+            totalPages,
+            hasNextPage: Number(page) < totalPages // Explicitly add this
         };
         await redisClient.set(cacheKey, JSON.stringify(response), { EX: 60 * 10 }); // cache for 5 min
         return res.status(200).json({ ...response, ok: true, message: 'Fetched successfully' });

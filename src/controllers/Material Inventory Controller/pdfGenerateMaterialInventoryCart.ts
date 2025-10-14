@@ -382,7 +382,12 @@ export const generateMaterialInventoryCartPdf = async ({
                 color: TABLE_HEADER_BG_COLOR,
             });
 
-            yPosition -= headerHeight + 5;
+            // yPosition -= headerHeight + 5;
+            // yPosition -= headerHeight;
+
+            // ⭐⭐ FIX: Position the first row directly below the header ⭐⭐
+            yPosition = yPosition - headerHeight + 5; // This puts the first row right below the header
+
 
             // Draw rows
             for (let index = 0; index < items.length; index++) {
@@ -403,6 +408,14 @@ export const generateMaterialInventoryCartPdf = async ({
 
                 xPos = startX;
                 const rowYPosition = yPosition;
+
+                // ⭐⭐ ADD LEFT BORDER FOR THIS ROW ⭐⭐
+                currentPage.drawLine({
+                    start: { x: startX, y: yPosition },
+                    end: { x: startX, y: yPosition - rowHeight },
+                    thickness: 1,
+                    color: TABLE_HEADER_BG_COLOR,
+                });
 
                 // S.No
                 drawCenteredText(String(index + 1), xPos, columnWidths[0], rowYPosition - rowHeight / 2, normalFont, FONT_SIZE);
@@ -566,9 +579,9 @@ export const generateMaterialInventoryCartPdf = async ({
 
         // === TOTAL COST ===
         ensureSpace(50);
-        const totalCostText = `TOTAL COST: Rs: ${material.totalCost}`;
+        const totalCostText = `TOTAL COST Rs: ${material.totalCost.toLocaleString("en-in")}`;
         const totalCostWidth = boldFont.widthOfTextAtSize(totalCostText, 14);
-        currentPage.drawText(`TOTAL COST: Rs: ${material.totalCost}`, {
+        currentPage.drawText(`TOTAL COST Rs: ${material.totalCost.toLocaleString("en-in")}`, {
             // x: 50,
             x: width - totalCostWidth - 50, // Right aligned with 50px margin
             y: yPosition,

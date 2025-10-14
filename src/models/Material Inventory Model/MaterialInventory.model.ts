@@ -25,7 +25,7 @@ const MaterialInventorySchema = new mongoose.Schema(
     // watt: { type: Number }, 
     // cct: { type: String },
     // mrp: { type: Number },
-
+      // image : {type:String}
     // 👇 this allows unlimited custom fields
     specification: {
       type: mongoose.Schema.Types.Mixed,
