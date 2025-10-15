@@ -4,6 +4,7 @@ import MaterialInventoryCartModel from "../../models/Material Inventory Model/ma
 import { COMPANY_LOGO, uploadToS3 } from "../stage controllers/ordering material controller/pdfOrderHistory.controller";
 import ProjectModel from "../../models/project model/project.model";
 import { RequirementFormModel } from "../../models/Stage Models/requirment model/mainRequirementNew.model";
+import { HerbertTokenizer } from "@xenova/transformers";
 
 const FONT_SIZE = 12;
 const HEADER_FONT_SIZE = 18;
@@ -279,10 +280,99 @@ export const generateMaterialInventoryCartPdf = async ({
         };
 
         // Helper function to draw multi-line text
+        // const drawMultiLineText = (text: string, x: number, y: number, maxWidth: number, font: any, size: number, color = rgb(0, 0, 0)) => {
+        //     const textStr = String(text); // Convert to string first
+        //     const lineHeight = size * 1.2;
+        //     let currentY = y;
+        //     let currentLine = '';
+
+        //     for (let i = 0; i < textStr.length; i++) {
+        //         const char = textStr[i];
+        //         const testLine = currentLine + char;
+        //         const testWidth = font.widthOfTextAtSize(testLine, size);
+
+        //         if (testWidth <= maxWidth) {
+        //             currentLine = testLine;
+        //         } else {
+        //             // Draw current line
+        //             currentPage.drawText(currentLine, {
+        //                 x: x,
+        //                 y: currentY,
+        //                 font: font,
+        //                 size: size,
+        //                 color: color,
+        //             });
+        //             currentLine = char;
+        //             currentY -= lineHeight;
+        //         }
+        //     }
+
+        //     // Draw remaining text
+        //     if (currentLine) {
+        //         currentPage.drawText(currentLine, {
+        //             x: x,
+        //             y: currentY,
+        //             font: font,
+        //             size: size,
+        //             color: color,
+        //         });
+        //     }
+
+        //     return Math.max(1, Math.ceil((y - currentY) / lineHeight));
+        // };
+
+        // Helper function to draw multi-line text with proper vertical centering
         const drawMultiLineText = (text: string, x: number, y: number, maxWidth: number, font: any, size: number, color = rgb(0, 0, 0)) => {
-            const textStr = String(text); // Convert to string first
+            const textStr = String(text);
             const lineHeight = size * 1.2;
             let currentY = y;
+            let currentLine = '';
+
+            // First, break text into lines
+            const lines: string[] = [];
+
+            for (let i = 0; i < textStr.length; i++) {
+                const char = textStr[i];
+                const testLine = currentLine + char;
+                const testWidth = font.widthOfTextAtSize(testLine, size);
+
+                if (testWidth <= maxWidth) {
+                    currentLine = testLine;
+                } else {
+                    lines.push(currentLine);
+                    currentLine = char;
+                }
+            }
+
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+
+            // Draw lines from top to bottom
+            const totalHeight = lines.length * lineHeight;
+            const startY = y + (lineHeight / 2); // Start slightly lower to center better
+
+            for (let i = 0; i < lines.length; i++) {
+                currentPage.drawText(lines[i], {
+                    x: x,
+                    y: startY - (i * lineHeight),
+                    font: font,
+                    size: size,
+                    color: color,
+                });
+            }
+
+            return lines.length;
+        };
+
+        // Updated helper function to draw centered multi-line text vertically
+        const drawCenteredMultiLineText = (text: string, x: number, columnWidth: number, rowTopY: number, rowHeight: number, font: any, size: number, color = rgb(0, 0, 0)) => {
+            const textStr = String(text);
+            const lineHeight = size * 1.2;
+            const maxWidth = columnWidth - 10; // 5px padding on each side
+
+            // First, break text into lines
+            const lines: string[] = [];
             let currentLine = '';
 
             for (let i = 0; i < textStr.length; i++) {
@@ -293,31 +383,35 @@ export const generateMaterialInventoryCartPdf = async ({
                 if (testWidth <= maxWidth) {
                     currentLine = testLine;
                 } else {
-                    // Draw current line
-                    currentPage.drawText(currentLine, {
-                        x: x,
-                        y: currentY,
-                        font: font,
-                        size: size,
-                        color: color,
-                    });
+                    lines.push(currentLine);
                     currentLine = char;
-                    currentY -= lineHeight;
                 }
             }
 
-            // Draw remaining text
             if (currentLine) {
-                currentPage.drawText(currentLine, {
-                    x: x,
-                    y: currentY,
+                lines.push(currentLine);
+            }
+
+            // Calculate vertical position for perfect centering
+            const totalTextHeight = lines.length * lineHeight;
+            const startY = rowTopY - (rowHeight - totalTextHeight) / 2 - (lineHeight * 0.3); // Adjusted for better visual centering
+
+            // Draw each line
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const lineWidth = font.widthOfTextAtSize(line, size);
+                const xPos = x + (columnWidth - lineWidth) / 2; // Center horizontally
+
+                currentPage.drawText(line, {
+                    x: xPos,
+                    y: startY - (i * lineHeight),
                     font: font,
                     size: size,
                     color: color,
                 });
             }
 
-            return Math.max(1, Math.ceil((y - currentY) / lineHeight));
+            return lines.length;
         };
 
         // Helper function to draw centered text
@@ -334,8 +428,10 @@ export const generateMaterialInventoryCartPdf = async ({
 
         // Main function to draw items table
         const drawItemsTable = async (items: any[]) => {
-            const headers = ["S.No", "Image", "Item Code", "Brand", "Model", "Watt", "Quantity"];
-            const columnWidths = [40, 60, 80, 80, 80, 60, 60]; // Adjusted widths
+            const headers = ["S.No", "Image", "Item Code", "Brand", "Model", "Watt", "Color", "Quantity"];
+            // const columnWidths = [40, 60, 80, 80, 80, 60, 60]; // Adjusted widths
+            const columnWidths = [40, 60, 80, 70, 80, 40, 60, 70]; // Added 60 for Color column
+
             const headerHeight = 25;
             const baseRowHeight = 35; // Increased base height for images
             const lineHeight = FONT_SIZE * 1.2;
@@ -399,7 +495,8 @@ export const generateMaterialInventoryCartPdf = async ({
                 const maxLines = Math.max(
                     calculateTextLines(String(specification.brand || "-"), columnWidths[3] - 10, normalFont, FONT_SIZE),
                     calculateTextLines(String(specification.model || "-"), columnWidths[4] - 10, normalFont, FONT_SIZE),
-                    calculateTextLines(String(specification.itemCode || "-"), columnWidths[2] - 10, normalFont, FONT_SIZE)
+                    calculateTextLines(String(specification.itemCode || "-"), columnWidths[2] - 10, normalFont, FONT_SIZE),
+                    calculateTextLines(String(specification?.color || "-"), columnWidths[6] - 10, normalFont, FONT_SIZE)
                 );
 
                 rowHeight = Math.max(rowHeight, baseRowHeight + (maxLines - 1) * lineHeight);
@@ -501,21 +598,24 @@ export const generateMaterialInventoryCartPdf = async ({
                 const itemCode = String(specification.itemCode || "-");
                 const itemCodeLines = calculateTextLines(itemCode, columnWidths[2] - 10, normalFont, FONT_SIZE);
                 const itemCodeY = rowYPosition - (rowHeight - (itemCodeLines * lineHeight)) / 2;
-                drawMultiLineText(itemCode, xPos + 5, itemCodeY, columnWidths[2] - 10, normalFont, FONT_SIZE);
+                // drawMultiLineText(itemCode, xPos + 5, itemCodeY, columnWidths[2] - 10, normalFont, FONT_SIZE);
+                drawCenteredMultiLineText(itemCode, xPos, columnWidths[2], rowYPosition, rowHeight, normalFont, FONT_SIZE);
                 xPos += columnWidths[2];
 
                 // Brand (multi-line) - Center vertically
                 const brand = String(specification.brand || "-");
                 const brandLines = calculateTextLines(brand, columnWidths[3] - 10, normalFont, FONT_SIZE);
                 const brandY = rowYPosition - (rowHeight - (brandLines * lineHeight)) / 2;
-                drawMultiLineText(brand, xPos + 5, brandY, columnWidths[3] - 10, normalFont, FONT_SIZE);
+                // drawMultiLineText(brand, xPos + 5, brandY, columnWidths[3] - 10, normalFont, FONT_SIZE);
+                drawCenteredMultiLineText(brand, xPos, columnWidths[3], rowYPosition, rowHeight, normalFont, FONT_SIZE);
                 xPos += columnWidths[3];
 
                 // Model (multi-line) - Center vertically
                 const model = String(specification.model || "-");
                 const modelLines = calculateTextLines(model, columnWidths[4] - 10, normalFont, FONT_SIZE);
                 const modelY = rowYPosition - (rowHeight - (modelLines * lineHeight)) / 2;
-                drawMultiLineText(model, xPos + 5, modelY, columnWidths[4] - 10, normalFont, FONT_SIZE);
+                // drawMultiLineText(model, xPos + 5, modelY, columnWidths[4] - 10, normalFont, FONT_SIZE);
+                drawCenteredMultiLineText(model, xPos, columnWidths[4], rowYPosition, rowHeight, normalFont, FONT_SIZE);
                 xPos += columnWidths[4];
 
                 // Watt
@@ -523,9 +623,18 @@ export const generateMaterialInventoryCartPdf = async ({
                 drawCenteredText(watt, xPos, columnWidths[5], rowYPosition - rowHeight / 2, normalFont, FONT_SIZE);
                 xPos += columnWidths[5];
 
+
+                // ⭐⭐ NEW: Color column - Center vertically ⭐⭐
+                const color = String(specification.color || specification.colour || "-");
+                const colorLines = calculateTextLines(color, columnWidths[6] - 10, normalFont, FONT_SIZE);
+                const colorY = rowYPosition - (rowHeight - (colorLines * lineHeight)) / 2;
+                // drawMultiLineText(color, xPos + 5, colorY, columnWidths[6] - 10, normalFont, FONT_SIZE);
+                drawCenteredMultiLineText(color, xPos, columnWidths[6], rowYPosition, rowHeight, normalFont, FONT_SIZE);
+                xPos += columnWidths[6];
+
                 // Quantity
                 const quantity = String(item.quantity || 0);
-                drawCenteredText(quantity, xPos, columnWidths[6], rowYPosition - rowHeight / 2, normalFont, FONT_SIZE);
+                drawCenteredText(quantity, xPos, columnWidths[7], rowYPosition - rowHeight / 2, normalFont, FONT_SIZE);
 
                 // Draw borders
                 currentPage.drawLine({
@@ -578,17 +687,19 @@ export const generateMaterialInventoryCartPdf = async ({
         await drawItemsTable(material.items || []);
 
         // === TOTAL COST ===
-        ensureSpace(50);
-        const totalCostText = `TOTAL COST Rs: ${material.totalCost.toLocaleString("en-in")}`;
-        const totalCostWidth = boldFont.widthOfTextAtSize(totalCostText, 14);
-        currentPage.drawText(`TOTAL COST Rs: ${material.totalCost.toLocaleString("en-in")}`, {
-            // x: 50,
-            x: width - totalCostWidth - 50, // Right aligned with 50px margin
-            y: yPosition,
-            font: boldFont,
-            size: 14,
-            color: rgb(0.1, 0.5, 0.1),
-        });
+        // ensureSpace(50);
+        // const totalCostText = `TOTAL COST Rs: ${material.totalCost.toLocaleString("en-in")}`;
+        // const totalCostWidth = boldFont.widthOfTextAtSize(totalCostText, 14);
+        // currentPage.drawText(`TOTAL COST Rs: ${material.totalCost.toLocaleString("en-in")}`, {
+        //     // x: 50,
+        //     x: width - totalCostWidth - 50, // Right aligned with 50px margin
+        //     y: yPosition,
+        //     font: boldFont,
+        //     size: 14,
+        //     color: rgb(0.1, 0.5, 0.1),
+        // });
+
+        
         // === SAVE + UPLOAD ===
         const pdfBytes = await pdfDoc.save();
         const projectName = projectData?.projectName ? projectData.projectName.replace(/\s+/g, '-') : ''; // Replace spaces with hyphens
@@ -621,3 +732,7 @@ export const generateMaterialInventoryCartPdf = async ({
     }
 };
 
+
+
+// we need to add the color also here, if the color property si not available or if the color property is available but the value is faly the you can you simply put it as "-"
+// so how cna we do this 
