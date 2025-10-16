@@ -5,13 +5,53 @@ import { Types } from "mongoose";
 import { cartUtils } from "../../utils/cartUtils";
 import { MaterialInventoryModel } from "../../models/Material Inventory Model/MaterialInventory.model";
 import { generateMaterialInventoryCartPdf } from "./pdfGenerateMaterialInventoryCart";
+import redisClient from "../../config/redisClient";
+
+
+
+
+// Cache key generators
+const getCacheKeys = {
+    cart: (organizationId: string, projectId: string) =>
+        `materialcart:${organizationId}:${projectId}`,
+    cartHistory: (organizationId: string, projectId: string) =>
+        `materialcart-history:${organizationId}:${projectId}`,
+    cartById: (cartId: string) =>
+        `materialcart-id:${cartId}`
+};
+
+// Cache TTL (in seconds)
+const CACHE_TTL = {
+    CART: 300, // 5 minutes
+    HISTORY: 600 // 10 minutes
+};
+
+// Helper function to invalidate related cache
+const invalidateCartCache = async (organizationId: string, projectId: string, cartId?: string) => {
+    const keysToDelete = [
+        getCacheKeys.cart(organizationId, projectId),
+        getCacheKeys.cartHistory(organizationId, projectId)
+    ];
+
+    if (cartId) {
+        keysToDelete.push(getCacheKeys.cartById(cartId));
+    }
+
+    try {
+        await Promise.all(keysToDelete.map(key => redisClient.del(key)));
+    } catch (error) {
+        console.error("Error invalidating cache:", error);
+    }
+};
+
+
 
 // Add item to cart
 export const addToCart = async (req: Request, res: Response): Promise<any> => {
     try {
         const { organizationId, projectId, productId, quantity, specification } = req.body;
 
-console.log("specififcaton", specification)
+        // console.log("specififcaton", specification)
 
 
         if (!organizationId || !projectId || !productId || !quantity || !specification?.itemCode) {
@@ -66,6 +106,9 @@ console.log("specififcaton", specification)
 
         await cart.save();
 
+        // Invalidate cache after adding item
+        await invalidateCartCache(organizationId, projectId, (cart as any)._id.toString());
+
         return res.status(200).json({
             ok: true,
             message: "Item added to cart successfully",
@@ -93,6 +136,24 @@ export const getCart = async (req: Request, res: Response): Promise<any> => {
             });
         }
 
+        // Generate cache key
+        const cacheKey = getCacheKeys.cart(String(organizationId), String(projectId));
+
+        // Try to get from cache
+        try {
+            const cachedData = await redisClient.get(cacheKey);
+            if (cachedData) {
+                return res.status(200).json({
+                    ok: true,
+                    message: "Cart retrieved successfully (from cache)",
+                    data: JSON.parse(cachedData)
+                });
+            }
+        } catch (redisError) {
+            console.error("Redis get error:", redisError);
+            // Continue with database query if Redis fails
+        }
+
         // Find active cart (no pdfLink)
         const cart = await MaterialInventoryCart.findOne({
             organizationId,
@@ -107,11 +168,32 @@ export const getCart = async (req: Request, res: Response): Promise<any> => {
         // console.log("sorted things", cart)
 
         if (!cart) {
+
+            try {
+                // await redisClient.setex(cacheKey, CACHE_TTL.CART, JSON.stringify(null));
+                await redisClient.set(cacheKey, JSON.stringify(null), { EX: CACHE_TTL.CART });
+            } catch (redisError) {
+                console.error("Redis set error:", redisError);
+            }
+
             return res.status(200).json({
                 ok: true,
                 message: "No active cart found",
                 data: null
             });
+        }
+
+        // Cache the result
+        try {
+            // await redisClient.setex(cacheKey, CACHE_TTL.CART, JSON.stringify(cart.toObject()));
+            const cartObject = cart.toObject();
+
+            await redisClient.set(cacheKey, JSON.stringify(cartObject), { EX: CACHE_TTL.CART });
+
+            // await redisClient.set(cacheKey, JSON.stringify(doc), { EX: 60 * 10 }); // cache for 10 min
+
+        } catch (redisError) {
+            console.error("Redis set error:", redisError);
         }
 
         return res.status(200).json({
@@ -141,7 +223,7 @@ export const updateCartItemQuantity = async (req: Request, res: Response): Promi
         }
 
 
-           if (quantity < 1) {
+        if (quantity < 1) {
             return res.status(400).json({
                 ok: false,
                 message: "Quantity must be at least 1"
@@ -178,6 +260,14 @@ export const updateCartItemQuantity = async (req: Request, res: Response): Promi
         );
 
         await cart.save();
+
+
+        // Invalidate cache after update
+        await invalidateCartCache(
+            cart.organizationId.toString(),
+            cart.projectId.toString(),
+            cartId
+        );
 
         return res.status(200).json({
             ok: true,
@@ -225,6 +315,13 @@ export const removeCartItem = async (req: Request, res: Response): Promise<any> 
 
         await cart.save();
 
+        // Invalidate cache after removing item
+        await invalidateCartCache(
+            cart.organizationId.toString(),
+            cart.projectId.toString(),
+            cartId
+        );
+
         return res.status(200).json({
             ok: true,
             message: "Item removed from cart successfully",
@@ -251,6 +348,25 @@ export const getCartHistory = async (req: Request, res: Response): Promise<any> 
             });
         }
 
+        // Generate cache key
+        const cacheKey = getCacheKeys.cartHistory(String(organizationId), String(projectId));
+
+
+        try {
+            const cachedData = await redisClient.get(cacheKey);
+            if (cachedData) {
+                return res.status(200).json({
+                    ok: true,
+                    message: "Cart history retrieved successfully (from cache)",
+                    data: JSON.parse(cachedData)
+                });
+            }
+        } catch (redisError) {
+            console.error("Redis get error:", redisError);
+            // Continue with database query if Redis fails
+        }
+
+
         // Find all carts with pdfLink (completed orders)
         const carts = await MaterialInventoryCart.find({
             organizationId,
@@ -262,7 +378,24 @@ export const getCartHistory = async (req: Request, res: Response): Promise<any> 
             ]
         }).sort({ createdAt: -1 });
 
+        // // Cache the result
+        // try {
+        //     await redisClient.setex(cacheKey, CACHE_TTL.HISTORY, JSON.stringify(carts));
+        // } catch (redisError) {
+        //     console.error("Redis set error:", redisError);
+        // }
 
+
+          // Convert to plain objects for caching
+        const cartsObjects = carts.map(cart => cart.toObject());
+
+        // Cache the result using the correct syntax
+        try {
+            await redisClient.set(cacheKey, JSON.stringify(cartsObjects), { EX: CACHE_TTL.HISTORY });
+            console.log("History cached successfully"); // Debug log
+        } catch (redisError) {
+            console.error("Redis set error:", redisError);
+        }
 
         return res.status(200).json({
             ok: true,
@@ -293,10 +426,24 @@ export const generateMaterialInventPdf = async (req: Request, res: Response): Pr
             return res.status(404).json({ message: "cart items not found", ok: false })
         }
 
-        res.status(200).json({ok:success, data: {
-            url: fileUrl,
-            fileName: fileName
-        }})
+
+        // Invalidate cache after PDF generation (as it might update the cart with pdfLink)
+        if (updatedDoc) {
+            await invalidateCartCache(
+                (updatedDoc as any)?.organizationId.toString(),
+                (updatedDoc as any)?.projectId.toString(),
+                id
+            );
+        }
+
+
+
+        res.status(200).json({
+            ok: success, data: {
+                url: fileUrl,
+                fileName: fileName
+            }
+        })
 
     } catch (error) {
         return res.status(500).json({

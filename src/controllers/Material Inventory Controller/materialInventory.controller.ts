@@ -66,6 +66,8 @@ export const updateMaterialInventory = async (req: Request, res: Response): Prom
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ message: 'Invalid id', ok: false });
         }
+
+        console.log("updated specificaion", specification)
         const updated = await MaterialInventoryModel.findByIdAndUpdate(
             id,
             { $set: { specification } },
@@ -119,6 +121,7 @@ export const getMaterialInventoryById = async (req: Request, res: Response): Pro
         // Try Redis cache first
         const cacheKey = `materialInventory:single:${id}`;
         const cached = await redisClient.get(cacheKey);
+        // await redisClient.del(cacheKey)
         if (cached) {
             return res.status(200).json({ data: JSON.parse(cached), ok: true, message: 'Fetched from cache' });
         }
@@ -172,13 +175,13 @@ export const getMaterialInventories = async (req: Request, res: Response): Promi
         if (minMrp !== undefined || maxMrp !== undefined) {
             const hasRealMinMrp = minMrp !== undefined && Number(minMrp) >= 0;
             const hasRealMaxMrp = maxMrp !== undefined && Number(maxMrp) <= 100000;
-                       
+
             if (hasRealMinMrp || hasRealMaxMrp) {
                 const mrpCondition: any = {};
                 if (hasRealMinMrp) mrpCondition.$gte = Number(minMrp);
                 if (hasRealMaxMrp) mrpCondition.$lte = Number(maxMrp);
 
-                   // Query BOTH locations: specification.mrp (lights) OR specification.variants.mrp (switches/sockets)
+                // Query BOTH locations: specification.mrp (lights) OR specification.variants.mrp (switches/sockets)
                 query.$or = [
                     { 'specification.mrp': mrpCondition },  // For lights
                     {
@@ -190,17 +193,35 @@ export const getMaterialInventories = async (req: Request, res: Response): Promi
             }
         }
         if (model) query['specification.model'] = model;
-        if (watt) query['specification.watt'] = Number(watt);
+        // if (watt) query['specification.watt'] = Number(watt);
         if (itemCode) query['specification.itemCode'] = itemCode;
         if (type) query['specification.type'] = type;
+        
         if (search && typeof search === 'string') {
             query.$or = [
                 { 'specification.itemCode': { $regex: search, $options: 'i' } },
                 { 'specification.subcategory': { $regex: search, $options: 'i' } },
                 { 'specification.model': { $regex: search, $options: 'i' } },
                 { 'specification.brand': { $regex: search, $options: 'i' } },
+                { 'specification.category': { $regex: search, $options: 'i' } },
             ];
         }
+
+        // if (search && typeof search === 'string') {
+        //     query.$and = [
+        //         ...(query.$and || []),
+        //         {
+        //             $or: [
+        //                 { 'specification.itemCode': { $regex: search, $options: 'i' } },
+        //                 { 'specification.subcategory': { $regex: search, $options: 'i' } },
+        //                 { 'specification.model': { $regex: search, $options: 'i' } },
+        //                 { 'specification.brand': { $regex: search, $options: 'i' } },
+        //                 { 'specification.category': { $regex: search, $options: 'i' } },
+        //             ]
+        //         }
+        //     ];
+        // }
+
 
         const skip = (Number(page) - 1) * Number(limit);
 
