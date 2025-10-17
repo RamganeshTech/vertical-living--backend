@@ -15,7 +15,7 @@ workerWallRoutes.get("/:projectId/step/:stepId", multiRoleAuthMiddleware("worker
 // ✅ Upload initial files to a step
 workerWallRoutes.post(
   "/:projectId/step/:stepNumber/initial",
-  multiRoleAuthMiddleware("worker", "staff"),
+  multiRoleAuthMiddleware("worker", "staff", "owner", "CTO"),
   imageUploadToS3.array("files"), // For multiple files
   processUploadFiles,
   uploadWorkerInitialFiles
@@ -24,7 +24,7 @@ workerWallRoutes.post(
 // ✅ Upload correction files for a correction round
 workerWallRoutes.post(
   "/:projectId/step/:stepNumber/correction/:correctionRound",
-  multiRoleAuthMiddleware("worker","staff"),
+  multiRoleAuthMiddleware("worker","staff", "owner", "CTO"),
   imageUploadToS3.array("files"),
   processUploadFiles,
   uploadWorkerCorrectionFiles

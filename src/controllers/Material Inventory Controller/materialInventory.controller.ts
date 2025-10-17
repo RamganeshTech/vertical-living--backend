@@ -172,7 +172,7 @@ export const getMaterialInventories = async (req: Request, res: Response): Promi
         // }
 
 
-        if (minMrp !== undefined || maxMrp !== undefined) {
+        if (minMrp !== undefined || maxMrp !== undefined){
             const hasRealMinMrp = minMrp !== undefined && Number(minMrp) >= 0;
             const hasRealMaxMrp = maxMrp !== undefined && Number(maxMrp) <= 100000;
 

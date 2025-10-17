@@ -1,10 +1,10 @@
 import { QualityCheckupModel } from "../../../models/Stage Models/QualityCheck Model/QualityCheck.model";
 import { Request, Response } from "express";
 import { Types } from "mongoose";
-import { validRooms } from "../installation controllers/installation.controller";
+// import { validRooms } from "../installation controllers/installation.controller";
 import { DocUpload, RoleBasedRequest } from "../../../types/types";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
-import { syncCleaningSanitaionStage } from "../Cleaning controller/cleaning.controller";
+import { cleaningStageCompletionStatus, syncCleaningSanitaionStage } from "../Cleaning controller/cleaning.controller";
 import redisClient from "../../../config/redisClient";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
@@ -75,7 +75,11 @@ const createQualityCheckItem = async (req: RoleBasedRequest, res: Response): Pro
         const { projectId, roomName } = req.params;
         const { workName, status, remarks } = req.body;
 
-        if (!projectId || !roomName || !workName) {
+        const decodedRoomName = decodeURIComponent(roomName); // ✅ this fixes it!
+
+        console.log("decodedRoomName", decodedRoomName)
+
+        if (!projectId || !decodedRoomName || !workName) {
             return res.status(400).json({ ok: false, message: "Missing required fields." });
         }
 
@@ -136,27 +140,33 @@ const createQualityCheckItem = async (req: RoleBasedRequest, res: Response): Pro
         //     { new: true }
         // );
 
-
+        console.log("newItem", newItem)
 
         const doc: any = await QualityCheckupModel.findOneAndUpdate(
             { projectId },
-            { $push: { "rooms.$[room].works": newItem } },
+            { $push: { "rooms.$[room].tasks": newItem } },
             {
                 new: true,
-                arrayFilters: [{ "room.name": roomName }],
+                arrayFilters: [{ "room.roomName": decodedRoomName }],
             }
         );
         if (!doc) return res.status(404).json({ ok: false, message: "Quality Checkup record not found." });
 
         // const redisMainKey = `stage:QualityCheckupModel:${projectId}`
-        const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${roomName}`
+        const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${decodedRoomName}`
 
-        const updatedRoom = (doc as any)[roomName]
-        // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
-        await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+        // const updatedRoom = (doc as any)[decodedRoomName]
+        // await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 })
+        const updatedRoom = doc.rooms.find((r: any) => r.roomName === decodedRoomName);
+
+        if (updatedRoom) {
+            await redisClient.set(redisRoomKey, JSON.stringify(updatedRoom), { EX: 60 * 10 });
+        } else {
+            console.warn(`⚠️ No room found for ${decodedRoomName} in QualityCheckupModel`);
+        }
         await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: doc })
 
-        return res.json({ ok: true, data: doc[roomName] });
+        return res.json({ ok: true, data: updatedRoom });
     } catch (err: any) {
         console.error("Create QualityCheckItem:", err);
         return res.status(500).json({ ok: false, message: err.message });
@@ -173,10 +183,7 @@ const editQualityCheckItem = async (req: RoleBasedRequest, res: Response): Promi
             return res.status(400).json({ ok: false, message: "Missing required fields." });
         }
 
-        if (!validRooms.includes(roomName)) {
-            return res.status(400).json({ ok: false, message: "Invalid room name." });
-        }
-
+        const decodedRoomName = decodeURIComponent(roomName); // ✅ this fixes it!
 
         // ✅ Authenticated user sets inspector identity if updated
         const inspectedBy = req.user?._id;
@@ -263,14 +270,14 @@ const editQualityCheckItem = async (req: RoleBasedRequest, res: Response): Promi
         const updatedDoc = await QualityCheckupModel.findOneAndUpdate(
             {
                 projectId,
-                "rooms.roomName": roomName,
+                "rooms.roomName": decodedRoomName,
                 "rooms.tasks._id": taskObjectId,
             },
             { $set: setFields },
             {
                 new: true,
                 arrayFilters: [
-                    { "room.roomName": roomName },
+                    { "room.roomName": decodedRoomName },
                     { "task._id": taskObjectId },
                 ],
             }
@@ -282,7 +289,7 @@ const editQualityCheckItem = async (req: RoleBasedRequest, res: Response): Promi
 
 
         // Pull back the updated room & item to return and cache
-        const room = updatedDoc.rooms.find((r: any) => r.roomName === roomName);
+        const room = updatedDoc.rooms.find((r: any) => r.roomName === decodedRoomName);
         const updatedItem = (room?.tasks as any).id(taskObjectId);
         if (!room || !updatedItem) {
             return res.status(404).json({ ok: false, message: "Item not found after update." });
@@ -290,7 +297,7 @@ const editQualityCheckItem = async (req: RoleBasedRequest, res: Response): Promi
 
 
         // const redisMainKey = `stage:QualityCheckupModel:${projectId}`
-        const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${roomName}`
+        const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${decodedRoomName}`
 
         // const updatedRoom = (doc as any)[roomName]
         // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
@@ -315,6 +322,9 @@ const deleteQualityCheckItem = async (req: Request, res: Response): Promise<any>
             return res.status(400).json({ ok: false, message: "Missing required fields." });
         }
 
+        const decodedRoomName = decodeURIComponent(roomName); // ✅ this fixes it!
+
+
         // if (!validRooms.includes(roomName)) {
         //     return res.status(400).json({ ok: false, message: "Invalid room name." });
         // }
@@ -327,7 +337,7 @@ const deleteQualityCheckItem = async (req: Request, res: Response): Promise<any>
 
 
         const doc = await QualityCheckupModel.findOneAndUpdate(
-            { projectId, "rooms.roomName": roomName },
+            { projectId, "rooms.roomName": decodedRoomName },
             { $pull: { "rooms.$.tasks": { _id: itemId } } },
             { new: true }
         );
@@ -338,9 +348,10 @@ const deleteQualityCheckItem = async (req: Request, res: Response): Promise<any>
 
 
         // const redisMainKey = `stage:QualityCheckupModel:${projectId}`
-        const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${roomName}`
+        const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${decodedRoomName}`
 
-        const updatedRoom = (doc as any)[roomName]
+        const updatedRoom = doc.rooms.find((r: any) => r.roomName === decodedRoomName);
+        // const updatedRoom = (doc as any)[decodedRoomName]
         // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
         await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: doc })
 
@@ -391,14 +402,17 @@ const getQualityCheckRoomItems = async (req: Request, res: Response): Promise<an
             return res.status(400).json({ ok: false, message: "Project ID and room name required." });
         }
 
+        const decodedRoomName = decodeURIComponent(roomName); // ✅ this fixes it!
+
+
         // if (!validRooms.includes(roomName)) {
         //     return res.status(400).json({ ok: false, message: "Invalid room name." });
         // }
 
-        const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${roomName}`
+        const redisRoomKey = `stage:QualityCheckupModel:${projectId}:room:${decodedRoomName}`
 
         const cachedData = await redisClient.get(redisRoomKey)
-
+        // await redisClient.del(redisRoomKey)
         if (cachedData) {
             return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
         }
@@ -411,24 +425,41 @@ const getQualityCheckRoomItems = async (req: Request, res: Response): Promise<an
         //     { "room.$.roomName": roomName } // fetch only that room
         // ).lean();
 
-
-        // Fetch only the matched room (array element) from the rooms array
-        const doc = await QualityCheckupModel.findOne(
-            { projectId, "rooms.roomName": roomName },
-            { rooms: { $elemMatch: { roomName } } } // <- correct projection for nested array
-        ).lean();
+        console.log("roomName", decodedRoomName)
 
 
-        if (!doc) return res.status(404).json({ ok: false, message: "Quality Checkup not found." });
+        // const doc = await QualityCheckupModel.findOne(
+        //     { projectId, "rooms.roomName": decodedRoomName },
+        //     { rooms: { $elemMatch: { roomName: decodedRoomName } } } // ✅ correct
+        // ).lean();
 
-        const room = doc.rooms?.[0] ?? null;
 
+
+        // if (!doc) return res.status(404).json({ ok: false, message: "Quality Checkup not found." });
+        // console.log("doc", doc)
+        // const room = doc.rooms?.[0] ?? null;
+
+        // if (!room) return res.status(404).json({ ok: false, message: "Room not found." });
+
+
+        // // const updatedRoom = (doc as any)[decodedRoomName]
+        // await redisClient.set(redisRoomKey, JSON.stringify(room), { EX: 60 * 10 })
+        // await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: doc })
+
+
+        // Fetch full document once
+        const fullDoc = await QualityCheckupModel.findOne({ projectId }).lean();
+        if (!fullDoc) return res.status(404).json({ ok: false, message: "Quality Checkup not found." });
+
+        // Extract the requested room from the array
+        const room = fullDoc.rooms?.find(r => r.roomName === decodedRoomName) ?? null;
         if (!room) return res.status(404).json({ ok: false, message: "Room not found." });
 
+        // Cache the single room
+        await redisClient.set(redisRoomKey, JSON.stringify(room), { EX: 60 * 10 });
 
-        // const updatedRoom = (doc as any)[roomName]
-        await redisClient.set(redisRoomKey, JSON.stringify(room), { EX: 60 * 10 })
-        await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: doc })
+        // Cache the full document (optional)
+        await populateWithAssignedToField({ stageModel: QualityCheckupModel, projectId, dataToCache: fullDoc });
 
 
         return res.json({ ok: true, data: room || [] });

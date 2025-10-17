@@ -17,7 +17,7 @@ adminWallroutes.get("/:projectId/step/:stepId", multiRoleAuthMiddleware("owner",
 // ✅ Upload admin correction round for a step
 adminWallroutes.post(
   "/:projectId/step/:stepNumber/correction",
-  multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
+  multiRoleAuthMiddleware("owner", "staff", "CTO", ),
   imageUploadToS3.array("files"), // For multiple files
     processUploadFiles,
   uploadAdminCorrectionRound
@@ -26,7 +26,7 @@ adminWallroutes.post(
 // ✅ Approve or reject a step
 adminWallroutes.patch(
   "/:projectId/step/:stepId/approve",
-  multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
+  multiRoleAuthMiddleware("owner", "staff", "CTO", ),
   approveStep
 );
 

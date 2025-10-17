@@ -3,7 +3,6 @@ import InstallationModel from "../../../models/Stage Models/installation model/I
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import redisClient from "../../../config/redisClient";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
-import { syncQualityCheck } from "../QualityCheck controllers/QualityCheck.controller";
 import { updateProjectCompletionPercentage } from "../../../utils/updateProjectCompletionPercentage ";
 import { DocUpload } from "../../../types/types";
 import { addOrUpdateStageDocumentation } from "../../documentation controller/documentation.controller";
