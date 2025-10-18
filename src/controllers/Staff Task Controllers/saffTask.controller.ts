@@ -8,6 +8,8 @@ import { getEmbedding } from '../../utils/embedder/embedder';
 import { cosineSimilarity } from '../../utils/embedder/cosine';
 import TaskTemplateModel from '../../models/Staff Task Models/TaskTemplate Model/taskTemplate.model';
 import { CACHE_TTL, deleteCachedData, generateFilterHash, getCachedData, getCacheKey, invalidateTrackedKeys, setCachedData, trackCacheKey } from './staffTaskRedisUtil';
+import { createNotification } from '../Notification Controller/notification.service';
+import { NotificationType, UserModelType } from '../Notification Controller/notification.controller';
 
 const ALLOWED_MODELS = ["UserModel", "StaffModel", "CTOModel", "WorkerModel"];
 const VALID_STATUSES = ['queued', 'in_progress', 'paused', 'done', "start"];
@@ -517,11 +519,63 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
         await Promise.all(invalidationPromises);
 
 
-        return res.status(201).json({
+         res.status(201).json({
             ok: true,
             message: `${savedTasks.length} task(s) created successfully.`,
             data: savedTasks
         });
+
+
+
+         // ✅ CREATE NOTIFICATIONS IN BACKGROUND (After response)
+        // Group tasks by assigneeId to avoid duplicate notifications
+        const tasksByAssignee = new Map<string, IStaffTask[]>();
+
+        savedTasks.forEach(task => {
+            if (task.assigneeId) {
+                const assigneeIdStr = task.assigneeId.toString();
+                if (!tasksByAssignee.has(assigneeIdStr)) {
+                    tasksByAssignee.set(assigneeIdStr, []);
+                }
+                tasksByAssignee.get(assigneeIdStr)!.push(task);
+            }
+        });
+
+        // Send notification to each assignee
+        const notificationPromises: Promise<any>[] = [];
+
+        for (const [assigneeId, assignedTasks] of tasksByAssignee) {
+            const taskCount = assignedTasks.length;
+            const firstTask = assignedTasks[0];
+
+            const message = taskCount === 1
+                ? `You have been assigned a new task: "${firstTask.title}".`
+                : `You have been assigned ${taskCount} new tasks.`;
+
+            notificationPromises.push(
+                createNotification({
+                    organizationId: firstTask.organizationId?.toString(),
+                    userId: assigneeId,
+                    userModel: assigneeModel as UserModelType,
+                    message,
+                    type: NotificationType.ASSIGNMENT,
+                    navigation: {
+                        // url: taskCount === 1 
+                        //     ? `/staff-tasks/${firstTask._id}` 
+                        //     : `/staff-tasks`,
+                        url: `organizations/${firstTask.organizationId}/projects/associatedstafftask`,
+                        label: taskCount === 1 ? 'View Task' : 'View Tasks',
+                    },
+                    projectId: firstTask.projectId?.toString(),
+                }).catch(err => {
+                    console.error(`❌ Failed to create notification for ${assigneeId}:`, err);
+                })
+            );
+        }
+
+        // Wait for all notifications to be created
+        await Promise.all(notificationPromises);
+        console.log(`✅ Notifications sent to ${tasksByAssignee.size} assignee(s)`);
 
     } catch (error) {
         console.error('Error in createStaffTask:', error);
@@ -674,11 +728,60 @@ export const createStaffTaskFromWork = async (
 
         await Promise.all(invalidationPromises);
 
-        return res.status(201).json({
+        res.status(201).json({
             ok: true,
             message: `${savedTasks.length} chained task(s) created successfully.`,
             data: savedTasks
         });
+
+
+         // ✅ CREATE NOTIFICATIONS IN BACKGROUND
+        const tasksByAssignee = new Map<string, IStaffTask[]>();
+
+        savedTasks.forEach(task => {
+            if (task.assigneeId) {
+                const assigneeIdStr = task.assigneeId.toString();
+                if (!tasksByAssignee.has(assigneeIdStr)) {
+                    tasksByAssignee.set(assigneeIdStr, []);
+                }
+                tasksByAssignee.get(assigneeIdStr)!.push(task);
+            }
+        });
+
+        const notificationPromises: Promise<any>[] = [];
+
+        for (const [assigneeId, assignedTasks] of tasksByAssignee) {
+            const taskCount = assignedTasks.length;
+            const firstTask = assignedTasks[0];
+
+            const message = taskCount === 1
+                ? `You have been assigned a workflow task: "${firstTask.title}".`
+                : `You have been assigned ${taskCount} dependent workflow tasks.`;
+
+            notificationPromises.push(
+                createNotification({
+                    organizationId: firstTask.organizationId?.toString(),
+                    userId: assigneeId,
+                    userModel: assigneeModel as UserModelType,
+                    message,
+                    type: NotificationType.ASSIGNMENT,
+                    navigation: {
+                        // url: taskCount === 1 
+                        //     ? `/staff-tasks/${firstTask._id}` 
+                        //     : `/staff-tasks`,
+                        // label: taskCount === 1 ? 'View Task' : 'View Workflow',
+                         url: `organizations/${firstTask.organizationId}/projects/associatedstafftask`,
+                        label: taskCount === 1 ? 'View Task' : 'View Tasks',
+                    },
+                    projectId: firstTask.projectId?.toString(),
+                }).catch(err => {
+                    console.error(`❌ Failed to create notification for ${assigneeId}:`, err);
+                })
+            );
+        }
+
+        await Promise.all(notificationPromises);
+        console.log(`✅ Workflow notifications sent to ${tasksByAssignee.size} assignee(s)`);
 
     } catch (error) {
         console.error("❌ Error in createStaffTaskFromWork:", error);

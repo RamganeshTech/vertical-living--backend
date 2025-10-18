@@ -88,6 +88,7 @@ import shortlistMicaReferenceDesignRoutes from './routers/Stage routes/sample de
 import workLibRoutes from './routers/WorkLibrary Routes/workLibrary.routes';
 import materialInventoryRoutes from './routers/Material Inventory Routes/materialInventory.routes';
 import materialInventoryCartRoutes from './routers/Material Inventory Routes/materialInventoryCart.routes';
+import notificaitonRoutes from './routers/Notificaiton Routes/notificaiton.routes';
 
 
 
@@ -311,6 +312,10 @@ app.use("/api/stafftasks/", staffTaskRoutes)
 app.use("/api/materialinventory", materialInventoryRoutes)
 app.use("/api/materialinventory/cart", materialInventoryCartRoutes)
 
+// NOTIFICAITON API
+app.use("/api/notification", notificaitonRoutes)
+
+
 
 // SHORTLIST API
 // app.use('/api/shortlist', shortlistedDesignRoutes)
@@ -417,6 +422,28 @@ io.on('connection', (socket:CustomSocket) => {
       
     } catch (error) {
       socket.emit('error', { message: 'Failed to join project room' });
+    }
+  });
+
+
+   // Handle joining user-specific notification room
+  socket.on('join_notifications', async (data: { userId: string }) => {
+    try {
+      const { userId } = data;
+      const notificationRoom = `notifications_${userId}`;
+      
+      await socket.join(notificationRoom);
+      
+      console.log(`User ${userId} joined notification room: ${notificationRoom}`);
+      
+      // Send current unread count
+      const { getUnreadCount } = await import('./controllers/Notification Controller/notification.service.js');
+      const unreadCount = await getUnreadCount(userId);
+      
+      socket.emit("unread_count_update", { count: unreadCount });
+      
+    } catch (error) {
+      socket.emit("error", { message: 'Failed to join notification room' });
     }
   });
   

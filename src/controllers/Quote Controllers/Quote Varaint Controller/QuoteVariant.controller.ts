@@ -108,7 +108,8 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
       projectId,
       furnitures,
       grandTotal,
-      notes = null
+      notes = null,
+      templateType = "type 1"
     } = req.body;
 
 
@@ -150,7 +151,8 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
       pdfLink: null,
     });
     // console.log("new varient", newVariant)
-    const pdfResponse = await generateQuoteVariantPdf({ quoteId, projectId, newVariant });
+    const pdfResponse = await generateQuoteVariantPdf({ quoteId, projectId, newVariant});
+    // const pdfResponse = await generateQuoteVariantPdfWithTemplate({ quoteId, projectId, newVariant , templateType});
 
     return res.status(201).json({
       ok: true,
