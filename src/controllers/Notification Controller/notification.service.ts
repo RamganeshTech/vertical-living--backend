@@ -4,6 +4,9 @@ import redisClient from "../../config/redisClient";
 import { INotification, Notification } from "../../models/Notificaiton Model/notification.model";
 import { CreateNotificationDTO } from "./notification.controller";
 import { SocketService } from "../../config/socketService";
+import mongoose from "mongoose";
+import { RoleBasedRequest } from "../../types/types";
+import { Response } from "express";
 
 /**
  * Reusable function to create notification
@@ -23,14 +26,14 @@ export const createNotification = async (data: CreateNotificationDTO): Promise<I
       },
       projectId: data.projectId || null,
       isRead: false,
-    });       
+    });
 
     await notification.save();
 
     // Invalidate cache for this user
     await invalidateUserCache(data.userId);
 
-     // ✅ Emit real-time notification via SocketService
+    // ✅ Emit real-time notification via SocketService
     SocketService.sendNotification(data.userId, notification.toObject());
 
     // ✅ Emit updated unread count
@@ -38,7 +41,7 @@ export const createNotification = async (data: CreateNotificationDTO): Promise<I
     SocketService.updateUnreadCount(data.userId, unreadCount);
 
     console.log(`✅ Notification created and emitted for user: ${data.userId}`);
-    return notification;   
+    return notification;
 
     // console.log(`✅ Notification created for user: ${data.userId}`);
     // return notification;
@@ -65,7 +68,7 @@ export const getNotificationsByUserId = async (
 
     // Try cache first
     const cached = await redisClient.get(cacheKey);
-     await redisClient.del(cacheKey);
+    // await redisClient.del(cacheKey);
     if (cached) {
       console.log('📦 Fetched notifications from cache');
       return JSON.parse(cached);
@@ -74,11 +77,11 @@ export const getNotificationsByUserId = async (
     // Fetch from database
     const [notifications, total] = await Promise.all([
       Notification.find({ userId })
-        .sort({ createdAt: 1 })
+        .sort({ createdAt: -1 })
         .limit(limit)
         .skip(skip),
-        // .populate('projectId', 'name')
-        // .lean(),
+      // .populate('projectId', 'name')
+      // .lean(),
       Notification.countDocuments({ userId }),
     ]);
 
@@ -145,7 +148,11 @@ export const getUnreadCount = async (userId: string): Promise<number> => {
     const count = await Notification.countDocuments({ userId, isRead: false });
 
     // Cache for 2 minutes
-    await redisClient.set(cacheKey, count.toString(), { EX: 60 * 2 });
+    await redisClient.set(cacheKey, count.toString(), { EX: 60 * 5 });
+
+    // Emit socket update if requested
+      SocketService.updateUnreadCount(userId, count);
+
 
     return count;
   } catch (error) {
@@ -168,7 +175,7 @@ export const markNotificationAsRead = async (
       { new: true }
     );
 
-     if (notification) {
+    if (notification) {
       // Invalidate cache
       await invalidateUserCache(userId);
 
@@ -197,7 +204,7 @@ export const markAllNotificationsAsRead = async (userId: string): Promise<void> 
     // Invalidate cache
     await invalidateUserCache(userId);
 
-     // ✅ Emit socket event via SocketService
+    // ✅ Emit socket event via SocketService
     SocketService.notifyAllNotificationsRead(userId);
 
     // ✅ Emit updated unread count (should be 0)
@@ -219,7 +226,7 @@ export const deleteNotification = async (notificationId: string, userId: string)
     // Invalidate cache
     await invalidateUserCache(userId);
 
-      // ✅ Emit socket event via SocketService
+    // ✅ Emit socket event via SocketService
     SocketService.notifyNotificationDeleted(userId, notificationId);
 
     // ✅ Emit updated unread count
@@ -240,10 +247,44 @@ const invalidateUserCache = async (userId: string): Promise<void> => {
     const keys = await redisClient.keys(pattern);
 
     if (keys.length > 0) {
-      await Promise.all(keys.map((key:any) => redisClient.del(key)));
+      await Promise.all(keys.map((key: any) => redisClient.del(key)));
       console.log(`🗑️ Invalidated ${keys.length} cache keys for user ${userId}`);
     }
   } catch (error) {
     console.error('Error invalidating cache:', error);
   }
 };
+
+
+
+
+
+// ADVANCED TECHS
+
+
+
+// Mark specific notifications as read (for visible items)
+export const markNotificationsAsReadAdvanced = async (userId: string, notificationIds: string[]): Promise<any> => {
+  try {
+    // Convert string IDs to ObjectIds
+    const objectIds = notificationIds.map(id => new mongoose.Types.ObjectId(id));
+
+    // Update only the specified notifications
+    const result = await Notification.updateMany(
+      {
+        _id: { $in: objectIds },
+        userId: new mongoose.Types.ObjectId(userId),
+        isRead: false
+      },
+      {
+        $set: { isRead: true }
+      }
+    );
+
+    return result
+  }
+  catch (error) {
+    console.error('Error mark as read adv:', error);
+    throw error;
+  }
+}

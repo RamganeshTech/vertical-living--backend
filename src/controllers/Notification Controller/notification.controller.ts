@@ -54,6 +54,7 @@ import {
   markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotification,
+  markNotificationsAsReadAdvanced,
 } from './notification.service';
 import { RoleBasedRequest } from '../../types/types';
 
@@ -135,7 +136,7 @@ export const getUserUnreadCount = async (req: RoleBasedRequest, res: Response) =
  * Mark notification as read
  * PATCH /api/notifications/:id/read
  */
-export const markAsRead = async (req: RoleBasedRequest, res: Response):Promise<any> => {
+export const markAsRead = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { id } = req.params;
     const userId = req.user?._id!;
@@ -206,6 +207,48 @@ export const deleteUserNotification = async (req: RoleBasedRequest, res: Respons
       ok: false,
       message: 'Error deleting notification',
       error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+
+// ADVANCED TECHS
+
+// Mark specific notifications as read (for visible items)
+export const markNotificationsAsRead = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+
+    const userId = req.user?._id;
+    const { notificationIds } = req.body; // Array of notification IDs that are visible
+
+    if (!userId) {
+      return res.status(401).json({
+        ok: false,
+        message: "User not authenticated"
+      });
+    }
+
+    if (!notificationIds || !Array.isArray(notificationIds)) {
+      return res.status(400).json({
+        ok: false,
+        message: "Invalid notification IDs"
+      });
+    }
+
+
+   const result = await markNotificationsAsReadAdvanced(userId, notificationIds)
+
+    return res.status(200).json({
+      ok: true,
+      message: "Notifications marked as read",
+      modifiedCount: result
+    });
+
+  } catch (error) {
+    console.error("Error marking notifications as read:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Failed to mark notifications as read"
     });
   }
 };

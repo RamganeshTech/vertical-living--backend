@@ -754,9 +754,13 @@ export const createStaffTaskFromWork = async (
             const taskCount = assignedTasks.length;
             const firstTask = assignedTasks[0];
 
-            const message = taskCount === 1
-                ? `You have been assigned a workflow task: "${firstTask.title}".`
-                : `You have been assigned ${taskCount} dependent workflow tasks.`;
+            // const message = taskCount === 1
+            //     ? `You have been assigned a workflow task: "${firstTask.title}".`
+            //     : `You have been assigned ${taskCount} dependent workflow tasks.`;
+
+                 const message = taskCount === 1
+                ? `You have been assigned a new task: "${firstTask.title}".`
+                : `You have been assigned ${taskCount} new tasks.`;
 
             notificationPromises.push(
                 createNotification({
