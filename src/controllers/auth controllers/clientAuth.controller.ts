@@ -282,7 +282,7 @@ const registerClient = async (req: Request, res: Response) => {
 
 
         res.status(200).json({
-            message: `${client.clientName} account created successfull`, ok: true, error: false, data: {
+            message: `${client.clientName} registered successfully`, ok: true, error: false, data: {
                 _id: client._id,
                 clientName: client.clientName,
                 email: client.email,

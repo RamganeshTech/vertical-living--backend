@@ -1,7 +1,7 @@
 // utils/accountingUtils.ts
 
 import { Request, Response } from "express";
-import { AccountingModel } from "../../../models/Department Models/Accounting Model/accounting.model";
+import { AccountingModel } from "../../../models/Department Models/Accounting Model/accountingMain.model";
 import { RoleBasedRequest } from "../../../types/types";
 
 export async function generateTransactionNumber(organizationId: string): Promise<string> {

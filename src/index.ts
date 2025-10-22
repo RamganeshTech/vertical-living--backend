@@ -89,6 +89,7 @@ import workLibRoutes from './routers/WorkLibrary Routes/workLibrary.routes';
 import materialInventoryRoutes from './routers/Material Inventory Routes/materialInventory.routes';
 import materialInventoryCartRoutes from './routers/Material Inventory Routes/materialInventoryCart.routes';
 import notificaitonRoutes from './routers/Notificaiton Routes/notificaiton.routes';
+import customerAccountingRoutes from './routers/Department Routes/Accounting Routes/customerAccounts.routes';
 
 
 
@@ -297,6 +298,7 @@ app.use('/api/department/hr', HRRoutes)
 app.use('/api/department/logistics', LogisticsRoutes)
 app.use('/api/department/procurement', procurementNewRoutes)
 app.use('/api/department/accounting', accountingRoutes)
+app.use('/api/department/accounting/customer', customerAccountingRoutes)
 
 
 // QUOTES API
