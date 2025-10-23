@@ -332,10 +332,10 @@ const workerIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
 
 
 const workerforgotPassword = async (req: Request, res: Response): Promise<any> => {
+  try {
   const { email } = req.body;
 
   // Check if the email exists in the database
-  try {
     const worker = await WorkerModel.findOne({ email });
 
     if (!worker) {
@@ -369,6 +369,7 @@ const workerforgotPassword = async (req: Request, res: Response): Promise<any> =
 
     return res.status(200).json({
       message: 'Password reset email sent. Please check your registered email inbox.',
+            ok:true
     });
   } catch (error) {
     console.error('Error handling forgot password request: ', error);
@@ -377,6 +378,7 @@ const workerforgotPassword = async (req: Request, res: Response): Promise<any> =
 };
 
 const workerResetForgotPassword = async (req: Request, res: Response): Promise<any> => {
+  try {
   const { token, password } = req.body;
 
   if (!token || !password) {
@@ -384,7 +386,6 @@ const workerResetForgotPassword = async (req: Request, res: Response): Promise<a
   }
 
 
-  try {
     // Hash the received token to match the stored one
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 

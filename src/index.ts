@@ -90,6 +90,7 @@ import materialInventoryRoutes from './routers/Material Inventory Routes/materia
 import materialInventoryCartRoutes from './routers/Material Inventory Routes/materialInventoryCart.routes';
 import notificaitonRoutes from './routers/Notificaiton Routes/notificaiton.routes';
 import customerAccountingRoutes from './routers/Department Routes/Accounting Routes/customerAccounts.routes';
+import invoiceAccountRoutes from './routers/Department Routes/Accounting Routes/invoiceAccounts.routes';
 
 
 
@@ -299,6 +300,7 @@ app.use('/api/department/logistics', LogisticsRoutes)
 app.use('/api/department/procurement', procurementNewRoutes)
 app.use('/api/department/accounting', accountingRoutes)
 app.use('/api/department/accounting/customer', customerAccountingRoutes)
+app.use('/api/department/accounting/invoice', invoiceAccountRoutes)
 
 
 // QUOTES API

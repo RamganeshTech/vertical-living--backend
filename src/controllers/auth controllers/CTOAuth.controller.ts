@@ -315,10 +315,10 @@ const CTOIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
 
 
 const CTOforgotPassword = async (req: Request, res: Response): Promise<any> => {
+    try {
     const { email } = req.body;
 
     // Check if the email exists in the database
-    try {
         const cto = await CTOModel.findOne({ email });
 
         if (!cto) {
@@ -352,6 +352,7 @@ const CTOforgotPassword = async (req: Request, res: Response): Promise<any> => {
 
         return res.status(200).json({
             message: 'Password reset email sent. Please check your registered email inbox.',
+            ok:true
         });
     } catch (error) {
         console.error('Error handling forgot password request: ', error);
@@ -360,6 +361,7 @@ const CTOforgotPassword = async (req: Request, res: Response): Promise<any> => {
 };
 
 const CTOResetForgotPassword = async (req: Request, res: Response): Promise<any> => {
+    try {
     const { token, password } = req.body;
 
     if (!token || !password) {
@@ -367,7 +369,6 @@ const CTOResetForgotPassword = async (req: Request, res: Response): Promise<any>
     }
 
 
-    try {
         // Hash the received token to match the stored one
         const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 

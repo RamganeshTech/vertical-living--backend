@@ -1,6 +1,6 @@
 // src/controllers/customerController.ts
 
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import {
     validateCreateCustomer,
     validateUpdateCustomer,
@@ -81,8 +81,9 @@ export const createCustomer = async (req: RoleBasedRequest, res: Response): Prom
         const customer = new CustomerAccountModel({...req.body, documents});
         await customer.save();
 
-        // Invalidate cache for the project's customer list
-        const cachePattern = `customers:organizationId:${req.body.organizationId}:*`;
+        // Invalidate cache for the organiziaotns's customer list
+        // const cachePattern = `customers:organizationId:${req.body.organizationId}:*`;
+        const cachePattern = `customers:*:organizationId:${req.body.organizationId}*`;
         const keys = await redisClient.keys(cachePattern);
         if (keys.length > 0) {
             await redisClient.del(keys);
@@ -174,7 +175,9 @@ export const updateCustomer = async (req: RoleBasedRequest, res: Response): Prom
         const cacheKey = `customer:${id}`;
         await redisClient.del(cacheKey);
 
-        const cachePattern = `customers:organizationId:${existingCustomer.organizationId}:*`;
+        // const cachePattern = `customers:organizationId:${existingCustomer.organizationId}:*`;
+        const cachePattern = `customers:*:organizationId:${req.body.organizationId}*`;
+
         const keys = await redisClient.keys(cachePattern);
         if (keys.length > 0) {
             await redisClient.del(keys);
@@ -297,7 +300,9 @@ export const deleteCustomer = async (req: RoleBasedRequest, res: Response): Prom
         const cacheKey = `customer:${id}`;
         await redisClient.del(cacheKey);
 
-        const cachePattern = `customers:organizationId:${customer.organizationId}:*`;
+        // const cachePattern = `customers:organizationId:${customer.organizationId}:*`;
+        const cachePattern = `customers:*:organizationId:${req.body.organizationId}*`;
+
         const keys = await redisClient.keys(cachePattern);
         if (keys.length > 0) {
             await redisClient.del(keys);
@@ -347,8 +352,8 @@ export const getCustomer = async (req: RoleBasedRequest, res: Response): Promise
 
         // Fetch from database
         const customer = await CustomerAccountModel.findById(id)
-            .populate('projectId', 'name')
-            .populate('clientId', 'name');
+            // .populate('projectId', 'name')
+            // .populate('clientId', 'name');
 
         if (!customer) {
             return res.status(404).json({
@@ -543,3 +548,79 @@ export const getAllCustomers = async (req: RoleBasedRequest, res: Response): Pro
         });
     }
 };
+
+
+
+
+export const getAllCustomerDropDown = async (req: Request, res: Response): Promise<any> => {
+ try {
+        const {
+            organizationId
+        } = req.query;
+
+       
+        // Validate organizationId if provided
+        if (organizationId && !validateMongoId(organizationId as string)) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Invalid project ID format'
+            });
+        }
+
+       
+
+        // Build filter object
+        const filter: any = {};
+
+        if (organizationId) {
+            filter.organizationId = organizationId;
+        }
+
+       
+        // Create cache key based on filters
+        const cacheKey = `customers:dropdown:organizationId:${organizationId || 'all'}`;
+
+        // Check cache
+        const cachedData = await redisClient.get(cacheKey);
+
+        if (cachedData) {
+            return res.status(200).json({
+                ok: true,
+                message: 'Customers fetched okfully (from cache)',
+                data:JSON.parse(cachedData),
+            });
+        }
+
+     
+        // Fetch customers with pagination
+        const customers = await CustomerAccountModel.find(filter).select('_id firstName lastName email') // Only select needed fields
+            .lean();
+
+        let modifiedCustomer = customers.map(user=> {
+            return {
+                _id: user._id, 
+                customerName: `${user.firstName} ${user.lastName}`,
+                email: user.email
+            }
+        })
+
+
+         // Cache the result
+        await redisClient.set(cacheKey, JSON.stringify(modifiedCustomer), { EX: 60 * 10 }); // 10 min
+
+        
+        return res.status(200).json({
+            ok: true,
+            message: 'Customers fetched okfully',
+            data:modifiedCustomer
+        });
+
+    } catch (error: any) {
+        console.error('Error fetching customers:', error);
+        return res.status(500).json({
+            ok: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+}

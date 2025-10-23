@@ -47,7 +47,7 @@ authRoutes.post('/worker/resetpassword', workerResetForgotPassword as RequestHan
 
 
 
-// CTO ROUTES
+// CTO  
 authRoutes.post('/CTO/login', loginCTO as RequestHandler)
 authRoutes.post('/CTO/registerCTO', registerCTO as RequestHandler)
 authRoutes.post('/CTO/logout', CTOLogout as RequestHandler)

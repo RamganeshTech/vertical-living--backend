@@ -324,10 +324,10 @@ const staffIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
 
 
 const staffforgotPassword = async (req: Request, res: Response): Promise<any> => {
+    try {
     const { email } = req.body;
 
     // Check if the email exists in the database
-    try {
         const staff = await StaffModel.findOne({ email });
 
         if (!staff) {
@@ -361,6 +361,7 @@ const staffforgotPassword = async (req: Request, res: Response): Promise<any> =>
 
         return res.status(200).json({
             message: 'Password reset email sent. Please check your registered email inbox.',
+            ok:true
         });
     } catch (error) {
         console.error('Error handling forgot password request: ', error);
@@ -369,6 +370,7 @@ const staffforgotPassword = async (req: Request, res: Response): Promise<any> =>
 };
 
 const staffResetForgotPassword = async (req: Request, res: Response): Promise<any> => {
+    try {
     const { token, password } = req.body;
 
     if (!token || !password) {
@@ -376,7 +378,6 @@ const staffResetForgotPassword = async (req: Request, res: Response): Promise<an
     }
 
 
-    try {
         // Hash the received token to match the stored one
         const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 

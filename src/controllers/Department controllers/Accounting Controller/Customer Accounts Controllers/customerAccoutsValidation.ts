@@ -15,10 +15,10 @@ export const validateEmail = (email: string): boolean => {
     return emailRegex.test(email);
 };
 
-export const validatePhone = (phone: string): boolean => {
-    const phoneRegex = /^[0-9]{10,15}$/;
-    return phoneRegex.test(phone.replace(/[\s-()]/g, ''));
-};
+// export const validatePhone = (phone: string): boolean => {
+//     const phoneRegex = /^[0-9]{10,15}$/;
+//     return phoneRegex.test(phone.replace(/[\s-()]/g, ''));
+// };
 
 export const validatePAN = (pan: string): boolean => {
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
@@ -36,6 +36,14 @@ export const validateCustomerType = (type: string): boolean => {
 export const validateFileType = (type: string): boolean => {
     return ['image', 'pdf'].includes(type);
 };
+
+export const validatePhone = (phone: string): boolean => {
+  const cleaned = phone.replace(/[\s-()]/g, ''); // remove spaces, dashes, parentheses
+  const phoneRegex = /^[0-9]{10}$/; // only digits, exactly 10
+  return phoneRegex.test(cleaned);
+};
+
+
 
 export const validateCreateCustomer = (data: any): ValidationResult => {
     const errors: ValidationError[] = [];

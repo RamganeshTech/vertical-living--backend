@@ -57,7 +57,7 @@ const userlogin = async (req: Request, res: Response) => {
         )
 
         res.status(200).json({
-            message: `${user.username} loggedin successfully`,
+            message: `${user.username} loggeg in successfully`,
             data: { userId: user._id, role: "owner", userName: user.username, email: user.email, phoneNo: user.phoneNo },
             ok: true,
             error: false
@@ -93,7 +93,7 @@ const userLogout = async (req: Request, res: Response) => {
         });
 
 
-        res.status(200).json({ message: "Logout successful", ok: true, error: false });
+        res.status(200).json({ message: "Logout successfull", ok: true, error: false });
         return;
     }
     catch (error) {
@@ -258,10 +258,10 @@ const isAuthenticated = async (req: RoleBasedRequest, res: Response) => {
 }
 
 const forgotPassword = async (req: Request, res: Response): Promise<any> => {
+    try {
     const { email } = req.body;
 
     // Check if the email exists in the database
-    try {
         const user = await UserModel.findOne({ email });
 
         if (!user) {
@@ -295,6 +295,7 @@ const forgotPassword = async (req: Request, res: Response): Promise<any> => {
 
         return res.status(200).json({
             message: 'Password reset email sent. Please check your registered email inbox.',
+            ok:true
         });
     } catch (error) {
         console.error('Error handling forgot password request: ', error);
