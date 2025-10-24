@@ -11,7 +11,7 @@ orgsRouter.post('/createorganziation', multiRoleAuthMiddleware("owner"), createO
 orgsRouter.get('/getorganizations', multiRoleAuthMiddleware("owner", "CTO", "staff", "client", "worker"), getMyOrganizations as RequestHandler)
 orgsRouter.get('/getsingleorganization/:orgs', multiRoleAuthMiddleware("owner", "CTO", "staff", "client", "worker"), getOrganizationById as RequestHandler)
 orgsRouter.put('/updateorganization/:orgId', multiRoleAuthMiddleware("owner"), updateOrganizationDetails as RequestHandler)
-orgsRouter.put('/deleteorganization/:orgId', multiRoleAuthMiddleware("owner"), deleteOrganization as RequestHandler)
+orgsRouter.delete('/deleteorganization/:orgId', multiRoleAuthMiddleware("owner"), deleteOrganization as RequestHandler)
 
 // inviting staff for organnization
 orgsRouter.get('/getstaffsoforganization/:orgId', multiRoleAuthMiddleware("owner", "CTO", "staff"), getStaffsByOrganization as RequestHandler)

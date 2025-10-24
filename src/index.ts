@@ -91,6 +91,7 @@ import materialInventoryCartRoutes from './routers/Material Inventory Routes/mat
 import notificaitonRoutes from './routers/Notificaiton Routes/notificaiton.routes';
 import customerAccountingRoutes from './routers/Department Routes/Accounting Routes/customerAccounts.routes';
 import invoiceAccountRoutes from './routers/Department Routes/Accounting Routes/invoiceAccounts.routes';
+import retailInvoiceAccountRoutes from './routers/Department Routes/Accounting Routes/retailInvoiceAccounts.routes';
 
 
 
@@ -220,7 +221,6 @@ app.use('/api/labour', labourRoutes )
 
 app.use('/api/orgs/', orgsRouter)
 
-
 app.use('/api/owner', orgOwnerRoutes)
 app.use('/api/staff', staffRoutes)
 app.use('/api/worker', workerRoutes)
@@ -301,6 +301,7 @@ app.use('/api/department/procurement', procurementNewRoutes)
 app.use('/api/department/accounting', accountingRoutes)
 app.use('/api/department/accounting/customer', customerAccountingRoutes)
 app.use('/api/department/accounting/invoice', invoiceAccountRoutes)
+app.use('/api/department/accounting/retailinvoice', retailInvoiceAccountRoutes)
 
 
 // QUOTES API

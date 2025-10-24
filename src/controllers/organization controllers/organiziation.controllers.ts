@@ -68,7 +68,7 @@ const createOrganziation = async (req: RoleBasedRequest, res: Response) => {
         }
 
         res.status(201).json({
-            message: "Organization successfully",
+            message: "Organization successfully created",
             data: organization,
             ok: true
         });
@@ -179,7 +179,7 @@ const updateOrganizationDetails = async (req: RoleBasedRequest, res: Response) =
         );
 
 
-        return res.status(200).json({ ok: true, message: "Organization field updated", data: updatedOrg });
+        return res.status(200).json({ ok: true, message: "Organization updated", data: updatedOrg });
 
     } catch (error) {
         if (error instanceof Error) {
@@ -220,7 +220,7 @@ const deleteOrganization = async (req: RoleBasedRequest, res: Response) => {
 
         return res.status(200).json({
             ok: true,
-            message: "Organization and references removed successfully",
+            message: "Organization deleted successfully",
             data: deletedOrg
         });
     } catch (error) {
@@ -265,11 +265,11 @@ const getStaffsByOrganization = async (req: RoleBasedRequest, res: Response) => 
 // POST /api/staff/invite
 const inviteStaff = async (req: RoleBasedRequest, res: Response) => {
     try {
-        const { organizationId, role, specificRole } = req.body;
+        const { organizationId, specificRole } = req.body;
         const user = req.user
-        if (!organizationId || !role) {
+        if (!organizationId) {
             res.status(400).json({
-                message: "organizationId and role are required",
+                message: "organizationId are required",
                 ok: false
             });
             return
@@ -281,7 +281,7 @@ const inviteStaff = async (req: RoleBasedRequest, res: Response) => {
         // Payload with expiry
         const invitationPayload = {
             organizationId,
-            role,
+            role: "staff",
             specificRole,
             expiresAt,
             ownerId: user?.ownerId || user?._id
@@ -289,7 +289,7 @@ const inviteStaff = async (req: RoleBasedRequest, res: Response) => {
 
 
 
-        console.log("invite", invitationPayload)
+        // console.log("invite", invitationPayload)
         const encodedPayload = Buffer.from(JSON.stringify(invitationPayload)).toString("base64");
 
         const baseUrl = process.env.NODE_ENV === "development"
@@ -381,7 +381,7 @@ const inviteCTO = async (req: RoleBasedRequest, res: Response) => {
 
         if (!organizationId) {
             res.status(400).json({
-                message: "organizationId and role are required",
+                message: "organizationId is required",
                 ok: false
             });
             return
