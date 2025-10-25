@@ -239,11 +239,11 @@ app.use('/api/profile', profileRoutes)
 
 
 // EXTERNAL UNITS
-app.use('/api/externalunits', externalUnitRoutes)
+// app.use('/api/externalunits', externalUnitRoutes)
 // app.use('/api/selectedexternal', selectedExternalRoutes)
 
 // MODULAR UNITS APIS
-app.use('/api/modularunit', modularUnitRoutes)
+// app.use('/api/modularunit', modularUnitRoutes)
 app.use('/api/modularunitnew', modularUnitRoutesNew)
 // app.use('/api/selectedmodularunits', SelectedModularUnitRoutes)
 // app.use('/api/selectedstage', stageSelectetionRoutes)
