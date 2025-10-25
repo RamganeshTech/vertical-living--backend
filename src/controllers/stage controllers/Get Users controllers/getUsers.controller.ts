@@ -7,7 +7,7 @@ import { WorkerModel } from "../../../models/worker model/worker.model";
 import redisClient from "../../../config/redisClient";
 import { Model } from "mongoose";
 
-const getUsers = async (req: Request, res: Response): Promise<any> => {
+const  getUsers = async (req: Request, res: Response): Promise<any> => {
     try {
         const { role, organizationId } = req.params;
 

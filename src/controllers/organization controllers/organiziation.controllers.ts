@@ -464,7 +464,7 @@ const removeCTOFromOrganization = async (req: RoleBasedRequest, res: Response) =
 const inviteWorkerByStaff = async (req: RoleBasedRequest, res: Response): Promise<void> => {
 
     try {
-        const { projectId, role, organizationId } = req.body;
+        const { projectId, organizationId } = req.body;
         const user = req.user
 
         if (!projectId) {
@@ -479,7 +479,7 @@ const inviteWorkerByStaff = async (req: RoleBasedRequest, res: Response): Promis
         const inviteLink = generateWorkerInviteLink({
             projectId,
             organizationId: organizationId,
-            role,
+            role: "worker",
             expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
             invitedBy: user?.ownerId! || user?._id!,
             invitedByModel: user!.role === "staff" ? "StaffModel" : (user!.role === "CTO" ? "CTOModel" : "UserModel")
@@ -549,7 +549,7 @@ const getWorkersByProject = async (req: RoleBasedRequest, res: Response): Promis
 
         const workers = await getWorkerUtils({ projectId })
 
-        console.log("workers", workers)
+        // console.log("workers", workers)
         res.status(200).json({
             message: "Workers fetched successfully",
             data: workers,

@@ -47,14 +47,14 @@ import downloadRouter from './routers/Download Routes/download.routes';
 import profileRoutes from './routers/Profile Role Routes/ProfileRole.routes';
 import preRequiretiesRoutes from './routers/PreRequireties Routes/preRequireties.routes';
 import utilAiRoutes from './routers/Util routes/utilAi.routes';
-// import modularUnitRoutes from './routers/Modular Unit routes/modularUnit.routes';
+import modularUnitRoutes from './routers/Modular Unit routes/modularUnit.routes';
 // import stageSelectetionRoutes from './routers/Modular Unit routes/SelectionStage Routes/selectionStage.routes';
 // import SelectedModularUnitRoutes from './routers/Modular Unit routes/SelectedModularUnit Routes/selectedModularUnit.routes';
 import documentaitonRoutes from './routers/Documentation Routes/documentation.routes';
 import shortlistedDesignRoutes from './routers/Stage routes/sample desing routes/shortListed.routes';
 import orderMaterialHistoryRoutes from './routers/Stage routes/order Material routes/orderMaterialHistory.routes';
 import currentActiveStage from './routers/CurrentActiveStage Routes/currentActiveStage.route';
-// import externalUnitRoutes from './routers/ExternalUnit Routes/externalUnit.routes';
+import externalUnitRoutes from './routers/ExternalUnit Routes/externalUnit.routes';
 // import selectedExternalRoutes from './routers/ExternalUnit Routes/selectedExternalUnit.routes';
 
 // CRON JOBs
@@ -92,6 +92,7 @@ import notificaitonRoutes from './routers/Notificaiton Routes/notificaiton.route
 import customerAccountingRoutes from './routers/Department Routes/Accounting Routes/customerAccounts.routes';
 import invoiceAccountRoutes from './routers/Department Routes/Accounting Routes/invoiceAccounts.routes';
 import retailInvoiceAccountRoutes from './routers/Department Routes/Accounting Routes/retailInvoiceAccounts.routes';
+import modularUnitRoutesNew from './routers/Modular Unit routes/modularUnitNew.routes';
 
 
 
@@ -231,22 +232,27 @@ app.use('/api/CTO', CTORoutes)
 app.use('/api/getusers', getUsersRoutes)
 
 
-// Timer routes for starting for all stages
-app.use('/api/starttimer', stageTimerRoutes)
 
-// PREREQUIRETIES APIS
-app.use('/api/prerequireties', preRequiretiesRoutes)
+// PROFILE API
+app.use('/api/profile', profileRoutes)
+
+
 
 // EXTERNAL UNITS
-// app.use('/api/externalunits', externalUnitRoutes)
+app.use('/api/externalunits', externalUnitRoutes)
 // app.use('/api/selectedexternal', selectedExternalRoutes)
 
 // MODULAR UNITS APIS
-// app.use('/api/modularunit', modularUnitRoutes)
+app.use('/api/modularunit', modularUnitRoutes)
+app.use('/api/modularunitnew', modularUnitRoutesNew)
 // app.use('/api/selectedmodularunits', SelectedModularUnitRoutes)
 // app.use('/api/selectedstage', stageSelectetionRoutes)
 
 
+// Timer routes for starting for all stages
+app.use('/api/starttimer', stageTimerRoutes)
+// PREREQUIRETIES APIS
+app.use('/api/prerequireties', preRequiretiesRoutes)
 
 // DOCUEMENTATION APIS
 app.use('/api/documentation', documentaitonRoutes)
@@ -274,6 +280,9 @@ app.use('/api/recyclematerial', recycleMaterialRoutes)
 // SOP
 app.use('/api/adminwall', adminWallroutes)
 app.use('/api/workerwall', workerWallRoutes)
+
+// ASSIGN STAFF 
+app.use('/api/assignstafftostage', assignRoutes)
 
 
 // REPORTS
@@ -338,14 +347,10 @@ app.use('/api', resetRouter)
 app.use(downloadRouter)
 
 
-// ASSIGN STAFF 
-app.use('/api/assignstafftostage', assignRoutes)
 
 // SUBSCRIPTION API
 app.use("/api/subscriptionpayment", subscriptionRoutes);
 
-// PROFILE API
-app.use('/api/profile', profileRoutes)
 
 
 
