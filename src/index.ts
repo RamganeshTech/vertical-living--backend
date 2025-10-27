@@ -93,6 +93,7 @@ import customerAccountingRoutes from './routers/Department Routes/Accounting Rou
 import invoiceAccountRoutes from './routers/Department Routes/Accounting Routes/invoiceAccounts.routes';
 import retailInvoiceAccountRoutes from './routers/Department Routes/Accounting Routes/retailInvoiceAccounts.routes';
 import modularUnitRoutesNew from './routers/Modular Unit routes/modularUnitNew.routes';
+import SelectedModularUnitNewRoutes from './routers/Modular Unit routes/SelectedModularUnit Routes New/selectedModularUnitNew.routes';
 
 
 
@@ -245,6 +246,7 @@ app.use('/api/profile', profileRoutes)
 // MODULAR UNITS APIS
 // app.use('/api/modularunit', modularUnitRoutes)
 app.use('/api/modularunitnew', modularUnitRoutesNew)
+app.use('/api/selectedmodularunitsnew', SelectedModularUnitNewRoutes)
 // app.use('/api/selectedmodularunits', SelectedModularUnitRoutes)
 // app.use('/api/selectedstage', stageSelectetionRoutes)
 

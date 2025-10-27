@@ -44,7 +44,7 @@ const uploadSchema = new Schema<IModularUnitUpload>({
 }, { _id: true });
 
 
-const dimentionSchema = new Schema({
+export const dimentionModularSchema = new Schema({
       height: { type: Number, default:null },
       width: { type: Number, default:null },
       depth: { type: Number, default:null },
@@ -57,7 +57,7 @@ export const ModularUnitSchemaNew = new Schema<IModularUnit>(
     productName: { type: String, default:null },
     attributes: { type: [String], default: [] },
     serialNo: { type: String, default:null },
-    dimention: {type:dimentionSchema, default:{}},
+    dimention: {type:dimentionModularSchema, default:{}},
     description: { type: String, default: null },
     totalAreaSqFt: { type: Number, default:null },
     materialsNeeded: { type: String, default:null },

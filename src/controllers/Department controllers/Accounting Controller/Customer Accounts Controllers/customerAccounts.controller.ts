@@ -301,7 +301,7 @@ export const deleteCustomer = async (req: RoleBasedRequest, res: Response): Prom
         await redisClient.del(cacheKey);
 
         // const cachePattern = `customers:organizationId:${customer.organizationId}:*`;
-        const cachePattern = `customers:*:organizationId:${req.body.organizationId}*`;
+        const cachePattern = `customers:organizationId:${customer?.organizationId?.toString()}*`;
 
         const keys = await redisClient.keys(cachePattern);
         if (keys.length > 0) {
@@ -476,6 +476,7 @@ export const getAllCustomers = async (req: RoleBasedRequest, res: Response): Pro
 
         // Check cache
         const cachedData = await redisClient.get(cacheKey);
+        //  await redisClient.del(cacheKey);
 
         if (cachedData) {
             return res.status(200).json({

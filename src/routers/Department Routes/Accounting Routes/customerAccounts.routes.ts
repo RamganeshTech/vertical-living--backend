@@ -11,7 +11,7 @@ customerAccountingRoutes
 .post("/createcustomer",multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("files"), processUploadFiles,  createCustomer)
 .put("/updatecustomer/:id/document",multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("files"), processUploadFiles,  updateCustomerDoc)
 .put("/updatecustomer/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"),updateCustomer)
-.delete("/deletecustomercustomer/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"),deleteCustomer)
+.delete("/deletecustomer/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"),deleteCustomer)
 .get("/singlecustomer/:id",multiRoleAuthMiddleware("owner", "staff", "CTO"),getCustomer)
 .get("/getallcustomername/:organizationId",multiRoleAuthMiddleware("owner", "staff", "CTO"),getAllCustomerDropDown);
 

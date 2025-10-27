@@ -73,7 +73,7 @@ const createOrganziation = async (req: RoleBasedRequest, res: Response) => {
             ok: true
         });
 
-        await syncAllMixedRoutes((organization._id as string))
+        // await syncAllMixedRoutes((organization._id as string))
     }
     catch (error) {
         if (error instanceof Error) {
