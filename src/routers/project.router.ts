@@ -11,6 +11,7 @@ router.post('/createproject/:organizationId', multiRoleAuthMiddleware("owner", "
 router.get('/getprojects/:organizationId', multiRoleAuthMiddleware('owner', "staff", "CTO", "client", "worker"), getProjects as RequestHandler)
 router.delete('/deleteproject/:projectId', multiRoleAuthMiddleware("owner", "CTO"), deleteProject as RequestHandler)
 router.put('/updateproject/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), updateProject as RequestHandler)
+// belwo api not used
 router.patch('/assignprojectclient/:projectId/:clientId', multiRoleAuthMiddleware("owner", "CTO", "staff"), assignClient as RequestHandler)
 
 export default router;

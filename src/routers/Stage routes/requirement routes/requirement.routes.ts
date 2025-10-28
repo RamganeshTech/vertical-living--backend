@@ -1,15 +1,9 @@
 import express from 'express';
 import {  createRoomRequirement, deleteRequirementSectionFileController, deleteRequirementStageFile, deleteRoomItemController, deleteRoomRequirement, generateShareableFormLink, getAllInfo, getSingleRoom, markFormAsCompleted, setRequirementStageDeadline, submitRequirementForm, updateRoomItem, uploadRequirementSectionFilesController } from '../../../controllers/stage controllers/requirement controllers/mainRequirementNew.controller';
-import ClientAuthMiddleware from '../../../middlewares/clientAuthMiddleware';
-// import { updateBedroomSection, updateKitchenSection, updateLivingHallSection, updateWardrobeSection } from '../../../controllers/client controllers/clientRequirement.controller';
 import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware';
 import { uploadGenericController } from '../../../utils/common features/uploadFiles';
 import { RequirementFormModel } from '../../../models/Stage Models/requirment model/mainRequirementNew.model';
-// import { imageUploadToS3 } from '../../../utils/s3Uploads/s3ImageUploader';
-// import { updateBedroomSection, updateKitchenSection, updateLivingHallSection, updateWardrobeSection } from '../../../controllers/stage controllers/requirement controllers/subRoom.controller';
 import {imageUploadToS3, processUploadFiles}  from '../../../utils/s3Uploads/s3upload';
-import { checkPreviousStageCompleted } from '../../../middlewares/checkPreviousStageMiddleware';
-import { notToUpdateIfStageCompleted } from '../../../middlewares/notToUpdateIfStageCompleted';
 import { checkIfStaffIsAssignedToStage } from '../../../middlewares/checkIfStaffIsAssignedToStage';
 
 

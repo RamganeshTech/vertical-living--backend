@@ -174,7 +174,7 @@ const ProjectSchema: Schema<IProject> = new Schema({
 
 ProjectSchema.index({ projectName: 1, userId: 1 });
 
-ProjectSchema.plugin(procurementLogger);
+// ProjectSchema.plugin(procurementLogger);
 
 
 const ProjectModel = mongoose.model<IProject>("ProjectModel", ProjectSchema)

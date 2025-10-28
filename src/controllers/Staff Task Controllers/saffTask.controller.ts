@@ -10,6 +10,7 @@ import TaskTemplateModel from '../../models/Staff Task Models/TaskTemplate Model
 import { CACHE_TTL, deleteCachedData, generateFilterHash, getCachedData, getCacheKey, invalidateTrackedKeys, setCachedData, trackCacheKey } from './staffTaskRedisUtil';
 import { createNotification } from '../Notification Controller/notification.service';
 import { NotificationType, UserModelType } from '../Notification Controller/notification.controller';
+import redisClient from '../../config/redisClient';
 
 const ALLOWED_MODELS = ["UserModel", "StaffModel", "CTOModel", "WorkerModel"];
 const VALID_STATUSES = ['queued', 'in_progress', 'paused', 'done', "start"];
@@ -380,7 +381,7 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
 
         const user = req.user;
 
-        if (!user || !user?.role || !user?._id) {
+        if (!user || !user?._id) {
             return res.status(401).json({ ok: false, message: 'Unauthorized request (user not found)' });
         }
 
@@ -439,6 +440,17 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
             //     });
             // }
 
+            // 👇 Filter out empty images for safety
+            const hasImages = (mappedFiles && mappedFiles.length > 0);
+            const hasTitle = !!(title && title.trim().length > 0);
+
+            // ✅ Validation: must have at least one of title or image
+            if (!hasTitle && !hasImages) {
+                console.warn(`⚠️ Skipped task - missing both title and image`);
+                continue; // skip creating this empty task
+            }
+
+
             const newTask = new StaffMainTaskModel({
                 images: mappedFiles || [],
                 title: title?.trim() || "",
@@ -493,6 +505,14 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
             }
         }
 
+        if (newTasks.length === 0) {
+            return res.status(400).json({
+                ok: false,
+                message: "No valid tasks to create. Each task must have either a title or at least one image.",
+            });
+        }
+
+
         // Insert all at once
         const savedTasks = await StaffMainTaskModel.insertMany(newTasks);
 
@@ -519,7 +539,7 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
         await Promise.all(invalidationPromises);
 
 
-         res.status(201).json({
+        res.status(201).json({
             ok: true,
             message: `${savedTasks.length} task(s) created successfully.`,
             data: savedTasks
@@ -527,7 +547,7 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
 
 
 
-         // ✅ CREATE NOTIFICATIONS IN BACKGROUND (After response)
+        // ✅ CREATE NOTIFICATIONS IN BACKGROUND (After response)
         // Group tasks by assigneeId to avoid duplicate notifications
         const tasksByAssignee = new Map<string, IStaffTask[]>();
 
@@ -575,7 +595,7 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
 
         // Wait for all notifications to be created
         await Promise.all(notificationPromises);
-        console.log(`✅ Notifications sent to ${tasksByAssignee.size} assignee(s)`);
+        // console.log(`✅ Notifications sent to ${tasksByAssignee.size} assignee(s)`);
 
     } catch (error) {
         console.error('Error in createStaffTask:', error);
@@ -584,6 +604,221 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
 };
 
 
+// OLD VERSION 
+// export const createStaffTaskFromWork = async (
+//     req: RoleBasedRequest,
+//     res: Response
+// ): Promise<any> => {
+//     try {
+//         let {
+//             tasks,
+//             assigneRole
+//         }: {
+//             tasks: Array<Partial<IStaffTask> & { tasks: { taskName: string }[] }>;
+//             assigneRole: string;
+//         } = req.body;
+
+//         if (typeof tasks === "string") {
+//             try {
+//                 tasks = JSON.parse(tasks);
+//             } catch (e) {
+//                 return res.status(400).json({ ok: false, message: "Invalid tasks JSON format" });
+//             }
+//         }
+
+//         const user = req.user;
+
+//         if (!user || !user?.role || !user?._id) {
+//             return res.status(401).json({ ok: false, message: "Unauthorized request (user not found)" });
+//         }
+
+//         if (!tasks || !Array.isArray(tasks) || tasks?.length === 0) {
+//             return res.status(400).json({ ok: false, message: "No tasks provided for creation" });
+//         }
+
+//         // Validate roles ⇒ get model mappings
+//         const assigneeModel = mapRoleToModel(assigneRole);
+//         const assignedByModel = mapRoleToModel(user.role);
+//         const assignedById = user._id;
+
+//         if (!ALLOWED_MODELS.includes(assigneeModel) || !ALLOWED_MODELS.includes(assignedByModel)) {
+//             return res.status(400).json({ ok: false, message: "Invalid role model mapping" });
+//         }
+
+//         const files = req.files as (Express.Multer.File & { location: string })[];
+
+//         const mappedFiles: IStaffTaskFile[] = files.map(file => {
+//             const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
+//             return {
+//                 type,
+//                 url: file.location,
+//                 originalName: file.originalname,
+//                 uploadedAt: new Date()
+//             };
+//         });
+
+//         const savedTasks: IStaffTask[] = [];
+//         const organizationsToInvalidate = new Set<string>();
+//         const assigneesToInvalidate = new Set<string>();
+
+//         let previousTaskId: Types.ObjectId | null = null;
+
+//         for (const taskData of tasks) {
+//             const {
+//                 title,
+//                 description,
+//                 due,
+//                 status = "queued",
+//                 priority = "medium",
+//                 projectId,
+//                 organizationId,
+//                 assigneeId,
+//                 department,
+//                 tasks: subTasks = []
+//             } = taskData;
+
+//             const newTask: any = new StaffMainTaskModel({
+//                 images: mappedFiles || [],
+//                 title: title?.trim() || "",
+//                 description,
+//                 due,
+//                 status,
+//                 priority,
+//                 department,
+//                 projectId: projectId || null,
+//                 organizationId,
+//                 assigneeId: assigneeId || null,
+//                 assigneModel: assigneeModel,
+//                 assignedById,
+//                 assignedByModel,
+//                 tasks: subTasks?.filter((st) => st?.taskName)?.map(st => ({
+//                     taskName: st.taskName?.trim(),
+//                     comments: null
+//                 })) || [],
+//                 dependentTaskId: previousTaskId ? [previousTaskId] : null, // 👈 key point
+//                 history: []
+//             });
+
+//             const savedTask = await newTask.save(); // ⏳ Save immediately to get _id
+
+//             savedTasks.push(savedTask); // Push to response list
+//             previousTaskId = savedTask._id; // ☑️ Chain to next task
+
+//             // Track caches to invalidate
+//             if (organizationId) {
+//                 organizationsToInvalidate.add(organizationId.toString());
+//             }
+//             if (assigneeId) {
+//                 assigneesToInvalidate.add(assigneeId.toString());
+//             }
+
+
+//             // Optionally, generate a template
+//             // const existingTemplate = await TaskTemplateModel.findOne({ taskText: title });
+//             // const validSubTasks = subTasks?.map(sub => sub.taskName?.trim()).filter(Boolean) || [];
+
+//             // if (!existingTemplate && validSubTasks?.length > 0 && title?.trim()) {
+//             //     const embedding = await getEmbedding(title);
+//             //     await TaskTemplateModel.create({
+//             //         taskText: title,
+//             //         steps: validSubTasks,
+//             //         embedding: Array.from(embedding)
+//             //     });
+
+//             //     console.log(`✅ Created template for "${title}"`);
+//             // }
+//         }
+
+
+//         // ✅ INVALIDATE ALL RELATED CACHES
+//         const invalidationPromises: Promise<void>[] = [];
+
+//         for (const orgId of organizationsToInvalidate) {
+//             invalidationPromises.push(
+//                 invalidateTrackedKeys(getCacheKey.taskTrackingSet(orgId))
+//             );
+//         }
+
+//         for (const staffId of assigneesToInvalidate) {
+//             for (const orgId of organizationsToInvalidate) {
+//                 invalidationPromises.push(
+//                     invalidateTrackedKeys(getCacheKey.staffTaskTrackingSet(staffId, orgId))
+//                 );
+//             }
+//         }
+
+//         await Promise.all(invalidationPromises);
+
+//         res.status(201).json({
+//             ok: true,
+//             message: `${savedTasks.length} chained task(s) created successfully.`,
+//             data: savedTasks
+//         });
+
+
+//          // ✅ CREATE NOTIFICATIONS IN BACKGROUND
+//         const tasksByAssignee = new Map<string, IStaffTask[]>();
+
+//         savedTasks.forEach(task => {
+//             if (task.assigneeId) {
+//                 const assigneeIdStr = task.assigneeId.toString();
+//                 if (!tasksByAssignee.has(assigneeIdStr)) {
+//                     tasksByAssignee.set(assigneeIdStr, []);
+//                 }
+//                 tasksByAssignee.get(assigneeIdStr)!.push(task);
+//             }
+//         });
+
+//         const notificationPromises: Promise<any>[] = [];
+
+//         for (const [assigneeId, assignedTasks] of tasksByAssignee) {
+//             const taskCount = assignedTasks.length;
+//             const firstTask = assignedTasks[0];
+
+//             // const message = taskCount === 1
+//             //     ? `You have been assigned a workflow task: "${firstTask.title}".`
+//             //     : `You have been assigned ${taskCount} dependent workflow tasks.`;
+
+//                  const message = taskCount === 1
+//                 ? `You have been assigned a new task: "${firstTask.title}".`
+//                 : `You have been assigned ${taskCount} new tasks.`;
+
+//             notificationPromises.push(
+//                 createNotification({
+//                     organizationId: firstTask.organizationId?.toString(),
+//                     userId: assigneeId,
+//                     userModel: assigneeModel as UserModelType,
+//                     message,
+//                     type: NotificationType.ASSIGNMENT,
+//                     navigation: {
+//                         // url: taskCount === 1 
+//                         //     ? `/staff-tasks/${firstTask._id}` 
+//                         //     : `/staff-tasks`,
+//                         // label: taskCount === 1 ? 'View Task' : 'View Workflow',
+//                          url: `organizations/${firstTask.organizationId}/projects/associatedstafftask`,
+//                         label: taskCount === 1 ? 'View Task' : 'View Tasks',
+//                     },
+//                     projectId: firstTask.projectId?.toString(),
+//                 }).catch(err => {
+//                     console.error(`❌ Failed to create notification for ${assigneeId}:`, err);
+//                 })
+//             );
+//         }
+
+//         await Promise.all(notificationPromises);
+//         console.log(`✅ Workflow notifications sent to ${tasksByAssignee.size} assignee(s)`);
+
+//     } catch (error) {
+//         console.error("❌ Error in createStaffTaskFromWork:", error);
+//         return res.status(500).json({ ok: false, message: "Internal Server Error" });
+//     }
+// };
+
+
+// PATCH /tasks/:mainTaskId/subtasks/:subTaskId
+
+
+//  NEW VERSION
 export const createStaffTaskFromWork = async (
     req: RoleBasedRequest,
     res: Response
@@ -611,7 +846,7 @@ export const createStaffTaskFromWork = async (
             return res.status(401).json({ ok: false, message: "Unauthorized request (user not found)" });
         }
 
-        if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+        if (!tasks || !Array.isArray(tasks) || tasks?.length === 0) {
             return res.status(400).json({ ok: false, message: "No tasks provided for creation" });
         }
 
@@ -642,6 +877,29 @@ export const createStaffTaskFromWork = async (
 
         let previousTaskId: Types.ObjectId | null = null;
 
+        // ✅ STEP 1: Get last known due time once
+        const firstTask = tasks[0];
+        const { assigneeId, organizationId } = firstTask;
+
+        const redisStaffTaskLastDue = `staff:task:lastDue:${assigneeId}:${organizationId}`;
+        let lastDue: Date | null = null;
+
+        const cachedLastDue = await redisClient.get(redisStaffTaskLastDue);
+        if (cachedLastDue) {
+            lastDue = new Date(cachedLastDue);
+        } else {
+            // fallback from DB only once
+            const lastTask = await StaffMainTaskModel.findOne(
+                { assigneeId, organizationId },
+                { due: 1 },
+                { sort: { due: -1 } }
+            ).lean();
+
+            lastDue = lastTask?.due ? new Date(lastTask.due) : new Date();
+        }
+
+
+        // ✅ STEP 2: Loop through tasks and calculate new due dates manually
         for (const taskData of tasks) {
             const {
                 title,
@@ -656,11 +914,21 @@ export const createStaffTaskFromWork = async (
                 tasks: subTasks = []
             } = taskData;
 
+
+            // Convert estimatedTime (due) → actual Date
+            const estimatedMinutes = Number(due || 0);
+
+            // Add minutes to lastDue manually without external libs
+            const nextDue: Date = new Date(lastDue!.getTime() + estimatedMinutes * 60 * 1000);
+
+            // Update lastDue for next task
+            lastDue = nextDue;
+
             const newTask: any = new StaffMainTaskModel({
                 images: mappedFiles || [],
                 title: title?.trim() || "",
                 description,
-                due,
+                due: nextDue,
                 status,
                 priority,
                 department,
@@ -708,6 +976,12 @@ export const createStaffTaskFromWork = async (
             // }
         }
 
+        // ✅ STEP 3: Store the latest due in Redis for next chaining
+        if (lastDue) {
+            await redisClient.set(redisStaffTaskLastDue, lastDue.toISOString());
+        }
+
+
 
         // ✅ INVALIDATE ALL RELATED CACHES
         const invalidationPromises: Promise<void>[] = [];
@@ -735,7 +1009,7 @@ export const createStaffTaskFromWork = async (
         });
 
 
-         // ✅ CREATE NOTIFICATIONS IN BACKGROUND
+        // ✅ CREATE NOTIFICATIONS IN BACKGROUND
         const tasksByAssignee = new Map<string, IStaffTask[]>();
 
         savedTasks.forEach(task => {
@@ -758,7 +1032,7 @@ export const createStaffTaskFromWork = async (
             //     ? `You have been assigned a workflow task: "${firstTask.title}".`
             //     : `You have been assigned ${taskCount} dependent workflow tasks.`;
 
-                 const message = taskCount === 1
+            const message = taskCount === 1
                 ? `You have been assigned a new task: "${firstTask.title}".`
                 : `You have been assigned ${taskCount} new tasks.`;
 
@@ -774,7 +1048,7 @@ export const createStaffTaskFromWork = async (
                         //     ? `/staff-tasks/${firstTask._id}` 
                         //     : `/staff-tasks`,
                         // label: taskCount === 1 ? 'View Task' : 'View Workflow',
-                         url: `organizations/${firstTask.organizationId}/projects/associatedstafftask`,
+                        url: `organizations/${firstTask.organizationId}/projects/associatedstafftask`,
                         label: taskCount === 1 ? 'View Task' : 'View Tasks',
                     },
                     projectId: firstTask.projectId?.toString(),
@@ -793,8 +1067,6 @@ export const createStaffTaskFromWork = async (
     }
 };
 
-
-// PATCH /tasks/:mainTaskId/subtasks/:subTaskId
 export const updateSubTaskName = async (req: Request, res: Response): Promise<any> => {
     const { mainTaskId, subTaskId } = req.params;
     const { taskName } = req.body;

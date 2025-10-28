@@ -261,11 +261,12 @@ export const createRetailInvoice = async (req: RoleBasedRequest, res: Response):
 // GET All Invoices (with optional filters)
 export const getRetailInvoices = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { organizationId, customerId, page = 1, limit = 10, date, search } = req.query;
+        const { organizationId, customerId, page = 1, limit = 10, date, search, sortBy = 'createdAt',
+            sortOrder = 'desc' } = req.query;
 
 
         // Build cache key based on query parameters
-        const cacheKey = `retailinvoices:org:${organizationId || 'all'}:customer:${customerId || 'all'}:page:${page}:limit:${limit}:date:${date || 'all'}:search${search || "all"}`;
+        const cacheKey = `retailinvoices:org:${organizationId || 'all'}:customer:${customerId || 'all'}:page:${page}:limit:${limit}:date:${date || 'all'}:search${search || "all"}:sort:${sortBy}:${sortOrder}`;
 
         // Try to get from cache
         const cachedData = await redisClient.get(cacheKey);
@@ -326,6 +327,12 @@ export const getRetailInvoices = async (req: RoleBasedRequest, res: Response): P
             ];
         }
 
+
+         // Build sort object
+        const sort: any = {};
+        sort[sortBy as string] = sortOrder === 'asc' ? 1 : -1;
+
+
         // Calculate pagination
         const pageNum = parseInt(page as string);
         const limitNum = parseInt(limit as string);
@@ -334,7 +341,7 @@ export const getRetailInvoices = async (req: RoleBasedRequest, res: Response): P
         // Get invoices with pagination
         const [invoices, total] = await Promise.all([
             RetailInvoiceAccountModel.find(filter)
-                .sort({ createdAt: -1 })
+                .sort(sort)
                 .skip(skip)
                 .limit(limitNum),
             RetailInvoiceAccountModel.countDocuments(filter)

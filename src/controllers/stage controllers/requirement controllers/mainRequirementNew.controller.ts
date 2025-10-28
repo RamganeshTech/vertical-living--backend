@@ -94,9 +94,9 @@ export const submitRequirementForm = async (req: Request, res: Response,): Promi
 
 
         form.clientData = {
-            clientName: clientData.clientName,
-            email: clientData.email || null,
-            whatsapp: clientData.whatsapp,
+            clientName: clientData?.clientName,
+            email: clientData?.email || null,
+            whatsapp: clientData?.whatsapp,
             location: clientData?.location || "",
         };
         form.clientConfirmed = true;
@@ -532,7 +532,7 @@ export const deleteRequirementStageFile = async (req: RoleBasedRequest, res: Res
         await populateWithAssignedToField({ stageModel: RequirementFormModel, projectId, dataToCache: doc })
 
 
-        return res.status(200).json({ ok: true, message: "File deleted successfully" });
+        return res.status(200).json({ data:doc,  ok: true, message: "File deleted successfully" });
     } catch (err) {
         console.error("Error deleting uploaded file:", err);
         return res.status(500).json({ ok: false, message: "Internal server error" });
@@ -607,7 +607,7 @@ export const uploadRequirementSectionFilesController = async (
 
         return res.status(200).json({
             ok: true,
-            message: "Files uploaded to section",
+            message: "Files uploaded to section successfully",
             count: files.length,
         });
     } catch (err) {

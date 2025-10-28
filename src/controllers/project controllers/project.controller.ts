@@ -52,6 +52,22 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
             return res.status(400).json({ message: "start date is required", ok: false })
         }
 
+
+        // Optional: validate tags
+        if (tags && !Array.isArray(tags)) {
+            return res.status(400).json({ ok: false, message: "Tags must be an array of strings" });
+        }
+
+        // Validate dates if provided
+        if (startDate && isNaN(Date.parse(startDate))) {
+            return res.status(400).json({ ok: false, message: "Start date must be a valid date" });
+        }
+
+        if (endDate && isNaN(Date.parse(endDate))) {
+            return res.status(400).json({ ok: false, message: "End date must be a valid date" });
+        }
+
+
         if (endDate && startDate > endDate) {
             res.status(400).json({ message: "end date should be after start date" })
             return
@@ -67,6 +83,19 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
         );
 
 
+        // Optional: validate priority
+        const allowedPriority = ["none", "low", "medium", "high"];
+        if (priority && !allowedPriority.includes(priority)) {
+            return res.status(400).json({ ok: false, message: `Priority must be one of ${allowedPriority.join(", ")}` });
+        }
+
+        // Optional: validate status
+        const allowedStatus = ["Active", "Delayed", "In Progress", "In Testing", "On Track", "On Hold", "Approved", "Cancelled", "Planning", "Invoice"];
+        if (status && !allowedStatus.includes(status)) {
+            return res.status(400).json({ ok: false, message: `Status must be one of ${allowedStatus.join(", ")}` });
+        }
+
+
         const project = await ProjectModel.findOne({
             projectName,
             userId: user?.role === "owner" ? user?._id : user?.ownerId
@@ -74,7 +103,7 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
 
 
         if (!project) {
-            console.log("project crated wiht new ", project)
+            // console.log("project crated wiht new ", project)
 
             // const existingCustomProjectId = project 
 
@@ -86,7 +115,7 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
                 organizationId,
                 projectInformation: {
                     owner: user?.role === "owner" ? user?._id : user?.ownerId,
-                    tags,
+                    tags: tags || [],
                     startDate,
                     endDate,
                     dueDate,
@@ -332,6 +361,24 @@ const updateProject = async (req: RoleBasedRequest, res: Response): Promise<void
             return
         }
 
+
+        // Optional: validate tags
+        if (tags && !Array.isArray(tags)) {
+            res.status(400).json({ ok: false, message: "Tags must be an array of strings" });
+            return;
+        }
+
+        // Validate dates if provided
+        if (startDate && isNaN(Date.parse(startDate))) {
+            res.status(400).json({ ok: false, message: "Start date must be a valid date" });
+            return;
+        }
+
+        if (endDate && isNaN(Date.parse(endDate))) {
+            res.status(400).json({ ok: false, message: "End date must be a valid date" });
+            return;
+        }
+
         if (endDate && startDate > endDate) {
             res.status(400).json({ message: "end date should be after start date" })
             return
@@ -345,6 +392,20 @@ const updateProject = async (req: RoleBasedRequest, res: Response): Promise<void
         const durationInDays = Math.ceil(
             (new Date(dueDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)
         );
+
+        // Optional: validate priority
+        const allowedPriority = ["none", "low", "medium", "high"];
+        if (priority && !allowedPriority.includes(priority)) {
+             res.status(400).json({ ok: false, message: `Priority must be one of ${allowedPriority.join(", ")}` });
+             return;
+        }
+
+        // Optional: validate status
+        const allowedStatus = ["Active", "Delayed", "In Progress", "In Testing", "On Track", "On Hold", "Approved", "Cancelled", "Planning", "Invoice"];
+        if (status && !allowedStatus.includes(status)) {
+             res.status(400).json({ ok: false, message: `Status must be one of ${allowedStatus.join(", ")}` });
+             return;
+        }
 
         const data = await ProjectModel.findByIdAndUpdate(projectId, {
             projectName,

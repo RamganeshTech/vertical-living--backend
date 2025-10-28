@@ -54,7 +54,7 @@ const assignStageStaffByName = async (req: Request, res: Response): Promise<any>
       return res.status(400).json({ message: "select the staff to assign", ok: false });
     }
 
-    console.log("staff", staffId)
+    // console.log("staff", staffId)
 
     const StageModel = stageModelMap.get(stageName);
 

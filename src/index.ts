@@ -94,6 +94,7 @@ import invoiceAccountRoutes from './routers/Department Routes/Accounting Routes/
 import retailInvoiceAccountRoutes from './routers/Department Routes/Accounting Routes/retailInvoiceAccounts.routes';
 import modularUnitRoutesNew from './routers/Modular Unit routes/modularUnitNew.routes';
 import SelectedModularUnitNewRoutes from './routers/Modular Unit routes/SelectedModularUnit Routes New/selectedModularUnitNew.routes';
+import salesAccountsRoutes from './routers/Department Routes/Accounting Routes/salesOrderAccounts.route';
 
 
 
@@ -313,6 +314,7 @@ app.use('/api/department/accounting', accountingRoutes)
 app.use('/api/department/accounting/customer', customerAccountingRoutes)
 app.use('/api/department/accounting/invoice', invoiceAccountRoutes)
 app.use('/api/department/accounting/retailinvoice', retailInvoiceAccountRoutes)
+app.use('/api/department/accounting/salesorder', salesAccountsRoutes)
 
 
 // QUOTES API

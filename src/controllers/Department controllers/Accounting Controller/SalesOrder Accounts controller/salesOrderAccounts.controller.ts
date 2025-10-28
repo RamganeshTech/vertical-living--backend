@@ -1,46 +1,46 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { InvoiceAccountModel } from "../../../../models/Department Models/Accounting Model/invoiceAccount.model";
 import { RoleBasedRequest } from "../../../../types/types";
 import redisClient from "../../../../config/redisClient";
+import { SalesAccountModel } from "../../../../models/Department Models/Accounting Model/salesOrder.model";
 
-// Helper function to generate unique invoice number
-const generateInvoiceNumber = async (organizationId: string): Promise<string> => {
-    try {
-        const orgId = organizationId.toString();
+// // Helper function to generate unique invoice number
+// const generateInvoiceNumber = async (organizationId: string): Promise<string> => {
+//     try {
+//         const orgId = organizationId.toString();
 
-        // Get all invoices for this organization
-        const invoices = await InvoiceAccountModel.find(
-            { organizationId: new mongoose.Types.ObjectId(orgId) },
-            { invoiceNumber: 1 }
-        ).lean();
-console.log("invoices", invoices)
-        if (invoices.length === 0) {
-            return `INV-${orgId.slice(0, 5)}-1`;
-        }
+//         // Get all invoices for this organization
+//         const invoices = await SalesAccountModel.find(
+//             { organizationId: new mongoose.Types.ObjectId(orgId) },
+//             { invoiceNumber: 1 }
+//         ).lean();
+// console.log("invoices", invoices)
+//         if (invoices.length === 0) {
+//             return `INV-${orgId.slice(0, 5)}-1`;
+//         }
 
-        // Extract the unique numbers from all invoice numbers
-        const numbers = invoices
-            .map(invoice => {
-                if (!invoice.invoiceNumber) return 0;
-                const parts = invoice.invoiceNumber.split('-');
-                const lastPart = parts[parts.length - 1];
-                return parseInt(lastPart) || 0;
-            })
-            .filter(num => num > 0);
+//         // Extract the unique numbers from all invoice numbers
+//         const numbers = invoices
+//             .map(invoice => {
+//                 if (!invoice.invoiceNumber) return 0;
+//                 const parts = invoice.invoiceNumber.split('-');
+//                 const lastPart = parts[parts.length - 1];
+//                 return parseInt(lastPart) || 0;
+//             })
+//             .filter(num => num > 0);
 
-        // Find the maximum number
-        const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
+//         // Find the maximum number
+//         const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
 
-        // Return new invoice number with incremented value
-        return `INV-${orgId.slice(0, 5)}-${maxNumber + 1}`;
-    } catch (error) {
-        throw new Error("Error generating invoice number");
-    }
-};
+//         // Return new invoice number with incremented value
+//         return `INV-${orgId.slice(0, 5)}-${maxNumber + 1}`;
+//     } catch (error) {
+//         throw new Error("Error generating invoice number");
+//     }
+// };
 
 // Helper function to calculate invoice totals
-const calculateInvoiceTotals = (
+const calculateSalesTotals = (
     items: any[],
     discountPercentage: number = 0,
     taxPercentage: number = 0
@@ -71,12 +71,21 @@ const calculateInvoiceTotals = (
 };
 
 // Manual validation function
-const validateInvoiceData = (data: any): { isValid: boolean; errors: string[] } => {
+const validateSaleData = (data: any): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
     // Check mandatory fields
     if (!data.customerName || data.customerName.trim() === '') {
         errors.push("Customer name is required");
+    }
+
+
+    if (data.salesOrderDate && isNaN(new Date(data.salesOrderDate).getTime())) {
+        errors.push("salesOrder Date is invalid")
+    }
+
+    if (data.expectedShipmentDate && isNaN(new Date(data.expectedShipmentDate).getTime())) {
+        errors.push("expectedShipment Date is invalid")
     }
 
     // if (!data.customerId) {
@@ -149,13 +158,13 @@ const invalidateInvoiceCache = async (organizationId?: string, customerId?: stri
         const keysToDelete: string[] = [];
 
         // Delete all invoice list caches (with different filters)
-        const pattern = 'invoices:*';
+        const pattern = 'salesorder:*';
         const keys = await redisClient.keys(pattern);
         keysToDelete.push(...keys);
 
         // Delete specific invoice cache if invoiceId provided
         if (invoiceId) {
-            keysToDelete.push(`invoice:${invoiceId}`);
+            keysToDelete.push(`salesorder:${invoiceId}`);
         }
 
         // Delete all keys
@@ -169,19 +178,16 @@ const invalidateInvoiceCache = async (organizationId?: string, customerId?: stri
 
 
 // CREATE Invoice
-export const createInvoice = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const createSalesOrder = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const {
             customerId,
             organizationId,
             customerName,
-            orderNumber,
-            accountsReceivable,
+            salesOrderDate,
+            expectedShipmentDate,
             salesPerson,
             subject,
-            invoiceDate,
-            terms,
-            dueDate,
             items,
             totalAmount,
             discountPercentage,
@@ -193,9 +199,11 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
             termsAndConditions } = req.body;
 
         // Validate invoice data
-        const validation = validateInvoiceData({
-            customerId, organizationId, customerName, orderNumber, accountsReceivable, salesPerson,
-            subject, invoiceDate, terms, dueDate, items, totalAmount, discountPercentage, discountAmount,
+        const validation = validateSaleData({
+            customerId, organizationId, customerName, salesPerson,
+            salesOrderDate,
+            expectedShipmentDate,
+            subject, items, totalAmount, discountPercentage, discountAmount,
             taxPercentage, taxAmount, grandTotal, customerNotes, termsAndConditions
         });
 
@@ -214,29 +222,28 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
             totalCost: (item.quantity || 0) * (item.rate || 0)
         }));
 
-        // Calculate invoice totals
-        const totals = calculateInvoiceTotals(
+        // Calculate salesorder totals
+        const totals = calculateSalesTotals(
             processedItems,
             discountPercentage || 0,
             taxPercentage || 0
         );
 
-        // Generate unique invoice number
-        const invoiceNumber = await generateInvoiceNumber(organizationId);
+        // Generate unique salesorder number
+        // const salesorderNumber = await generatesalesorderNumber(organizationId);
 
-        // Create invoice object
-        const newInvoice = await InvoiceAccountModel.create({
+        // Create salesorder object
+        const newsalesorder = await SalesAccountModel.create({
             organizationId,
             customerId: customerId || null,
             customerName: customerName?.trim(),
-            orderNumber: orderNumber || null,
-            accountsReceivable: accountsReceivable || null,
+            // orderNumber: orderNumber || null,
+            // accountsReceivable: accountsReceivable || null,
+            salesOrderDate,
+            expectedShipmentDate,
             salesPerson: salesPerson || null,
             subject: subject || null,
-            invoiceDate,
-            terms: terms || null,
-            dueDate,
-            invoiceNumber,
+
             items: processedItems,
             totalAmount: totals.totalAmount,
             discountPercentage,
@@ -256,8 +263,8 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
 
         return res.status(201).json({
             ok: true,
-            message: "Invoice created successfully",
-            data: newInvoice
+            message: "salesorder created successfully",
+            data: newsalesorder
         });
     } catch (error: any) {
         console.error("Error creating invoice:", error);
@@ -270,14 +277,14 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
 };
 
 // GET All Invoices (with optional filters)
-export const getInvoices = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const getSalesorder = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { organizationId, customerId, page = 1, limit = 10, date, search , sortBy = 'createdAt',
-            sortOrder = 'desc'} = req.query;
+        const { organizationId, customerId, page = 1, limit = 10, date, search, salesOrderDate, sortBy = 'createdAt',
+            sortOrder = 'desc' } = req.query;
 
 
         // Build cache key based on query parameters
-        const cacheKey = `invoices:org:${organizationId || 'all'}:customer:${customerId || 'all'}:page:${page}:limit:${limit}:date:${date || 'all'}:search${search || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
+        const cacheKey = `salesorder:org:${organizationId || 'all'}:customer:${customerId || 'all'}:page:${page}:limit:${limit}:date:${date || 'all'}:salesOrderDate:${salesOrderDate || "all"}:search${search || "all"}:${sortBy}:${sortOrder}`;
 
         // Try to get from cache
         const cachedData = await redisClient.get(cacheKey);
@@ -331,10 +338,29 @@ export const getInvoices = async (req: RoleBasedRequest, res: Response): Promise
             filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
         }
 
+        if (salesOrderDate) {
+            const selectedsalesOrderDate = new Date(salesOrderDate as string);
+            if (isNaN(selectedsalesOrderDate.getTime())) {
+                res.status(400).json({
+                    ok: false,
+                    message: "Invalid salesOrderDate format. Use ISO string (e.g. 2025-10-23)."
+                });
+                return;
+            }
+
+            // Create a range covering the entire day
+            const startOfDay = new Date(selectedsalesOrderDate);
+            startOfDay.setHours(0, 0, 0, 0);
+
+            const endOfDay = new Date(selectedsalesOrderDate);
+            endOfDay.setHours(23, 59, 59, 999);
+
+            filter.salesOrderDate = { $gte: startOfDay, $lte: endOfDay };
+        }
+
         if (search && typeof search === 'string' && search.trim() !== '') {
             filter.$or = [
                 { customerName: { $regex: search, $options: 'i' } },
-                { invoiceNumber: { $regex: search, $options: 'i' } },
             ];
         }
 
@@ -349,19 +375,19 @@ export const getInvoices = async (req: RoleBasedRequest, res: Response): Promise
         const skip = (pageNum - 1) * limitNum;
 
         // Get invoices with pagination
-        const [invoices, total] = await Promise.all([
-            InvoiceAccountModel.find(filter)
-                .sort(sort)
+        const [sales, total] = await Promise.all([
+            SalesAccountModel.find(filter)
+                .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limitNum),
-            InvoiceAccountModel.countDocuments(filter)
+            SalesAccountModel.countDocuments(filter)
         ])
 
 
         const response = {
             ok: true,
-            message: "Invoices retrieved successfully",
-            data: invoices,
+            message: "Sales order retrieved successfully",
+            data: sales,
             pagination: {
                 total,
                 page: pageNum,
@@ -377,17 +403,17 @@ export const getInvoices = async (req: RoleBasedRequest, res: Response): Promise
         return res.status(200).json(response);
 
     } catch (error: any) {
-        console.error("Error getting invoices:", error);
+        console.error("Error getting salesorder:", error);
         res.status(500).json({
             ok: false,
-            message: "Error retrieving invoices",
+            message: "Error retrieving salesorder",
             error: error.message
         });
     }
 };
 
 // GET Single Invoice by ID
-export const getInvoiceById = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const getSalesorderById = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
 
@@ -395,13 +421,13 @@ export const getInvoiceById = async (req: RoleBasedRequest, res: Response): Prom
         if (!mongoose.Types.ObjectId.isValid(id)) {
             res.status(400).json({
                 ok: false,
-                message: "Invalid invoice ID format"
+                message: "Invalid salesorder ID format"
             });
             return;
         }
 
-            // Build cache key
-        const cacheKey = `invoice:${id}`;
+        // Build cache key
+        const cacheKey = `salesorder:${id}`;
 
         // Try to get from cache
         const cachedData = await redisClient.get(cacheKey);
@@ -409,22 +435,22 @@ export const getInvoiceById = async (req: RoleBasedRequest, res: Response): Prom
             return res.status(200).json(JSON.parse(cachedData));
         }
 
-        const invoice = await InvoiceAccountModel.findById(id)
+        const salesorder = await SalesAccountModel.findById(id)
         // .populate('customerId', 'name email phone')
         // .populate('organizationId', 'name');
 
-        if (!invoice) {
+        if (!salesorder) {
             res.status(404).json({
                 ok: false,
-                message: "Invoice not found"
+                message: "salesorder not found"
             });
             return;
         }
 
         const response = {
             ok: true,
-            message: "Invoice retrieved successfully",
-            data: invoice
+            message: "Salesorder retrieved successfully",
+            data: salesorder
         };
 
         // Cache the response for 10 minutes
@@ -433,17 +459,17 @@ export const getInvoiceById = async (req: RoleBasedRequest, res: Response): Prom
         return res.status(200).json(response);
 
     } catch (error: any) {
-        console.error("Error getting invoice:", error);
+        console.error("Error getting salesorder:", error);
         res.status(500).json({
             ok: false,
-            message: "Error retrieving invoice",
+            message: "Error retrieving salesorder",
             error: error.message
         });
     }
 };
 
-// UPDATE Invoice
-// export const updateInvoice = async (req: Request, res: Response): Promise<any> => {
+// UPDATE salesorder
+// export const updatesalesorder = async (req: Request, res: Response): Promise<any> => {
 //     try {
 //         const { id } = req.params;
 //         const updateData = req.body;
@@ -452,24 +478,24 @@ export const getInvoiceById = async (req: RoleBasedRequest, res: Response): Prom
 //         if (!mongoose.Types.ObjectId.isValid(id)) {
 //             res.status(400).json({
 //                 ok: false,
-//                 message: "Invalid invoice ID format"
+//                 message: "Invalid salesorder ID format"
 //             });
 //             return;
 //         }
 
-//         // Check if invoice exists
-//         const existingInvoice = await InvoiceAccountModel.findById(id);
-//         if (!existingInvoice) {
+//         // Check if salesorder exists
+//         const existingsalesorder = await SalesAccountModel.findById(id);
+//         if (!existingsalesorder) {
 //             res.status(404).json({
 //                 ok: false,
-//                 message: "Invoice not found"
+//                 message: "salesorder not found"
 //             });
 //             return;
 //         }
 
 //         // Validate update data
-//         const validation = validateInvoiceData({
-//             ...existingInvoice.toObject(),
+//         const validation = validatesalesorderData({
+//             ...existingsalesorder.toObject(),
 //             ...updateData
 //         });
 
@@ -489,10 +515,10 @@ export const getInvoiceById = async (req: RoleBasedRequest, res: Response): Prom
 //                 totalCost: (item.quantity || 0) * (item.rate || 0)
 //             }));
 
-//             const totals = calculateInvoiceTotals(
+//             const totals = calculatesalesorderTotals(
 //                 processedItems,
-//                 updateData.discountPercentage ?? existingInvoice.discountPercentage ?? 0,
-//                 updateData.taxPercentage ?? existingInvoice.taxPercentage ?? 0
+//                 updateData.discountPercentage ?? existingsalesorder.discountPercentage ?? 0,
+//                 updateData.taxPercentage ?? existingsalesorder.taxPercentage ?? 0
 //             );
 
 //             updateData.items = processedItems;
@@ -502,10 +528,10 @@ export const getInvoiceById = async (req: RoleBasedRequest, res: Response): Prom
 //             updateData.grandTotal = totals.grandTotal;
 //         } else if (updateData.discountPercentage !== undefined || updateData.taxPercentage !== undefined) {
 //             // Recalculate if discount or tax percentage changed
-//             const totals = calculateInvoiceTotals(
-//                 existingInvoice.items,
-//                 updateData.discountPercentage ?? existingInvoice.discountPercentage ?? 0,
-//                 updateData.taxPercentage ?? existingInvoice.taxPercentage ?? 0
+//             const totals = calculatesalesorderTotals(
+//                 existingsalesorder.items,
+//                 updateData.discountPercentage ?? existingsalesorder.discountPercentage ?? 0,
+//                 updateData.taxPercentage ?? existingsalesorder.taxPercentage ?? 0
 //             );
 
 //             updateData.totalAmount = totals.totalAmount;
@@ -514,8 +540,8 @@ export const getInvoiceById = async (req: RoleBasedRequest, res: Response): Prom
 //             updateData.grandTotal = totals.grandTotal;
 //         }
 
-//         // Update invoice
-//         const updatedInvoice = await InvoiceAccountModel.findByIdAndUpdate(
+//         // Update salesorder
+//         const updatedsalesorder = await SalesAccountModel.findByIdAndUpdate(
 //             id,
 //             updateData,
 //             { new: true, runValidators: true }
@@ -524,63 +550,63 @@ export const getInvoiceById = async (req: RoleBasedRequest, res: Response): Prom
 
 //         res.status(200).json({
 //             ok: true,
-//             message: "Invoice updated successfully",
-//             data: updatedInvoice
+//             message: "salesorder updated successfully",
+//             data: updatedsalesorder
 //         });
 //     } catch (error: any) {
-//         console.error("Error updating invoice:", error);
+//         console.error("Error updating salesorder:", error);
 //         res.status(500).json({
 //             ok: false,
-//             message: "Error updating invoice",
+//             message: "Error updating salesorder",
 //             error: error.message
 //         });
 //     }
 // };
 
-// DELETE Invoice
+// DELETE salesorder
 
 
 
-export const deleteInvoice = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const deleteSalesorder = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
 
         // Validate ID format
         if (!mongoose.Types.ObjectId.isValid(id)) {
-           return res.status(400).json({
+            return res.status(400).json({
                 ok: false,
-                message: "Invalid invoice ID format"
+                message: "Invalid salesorder ID format"
             });
         }
 
-        const deletedInvoice = await InvoiceAccountModel.findByIdAndDelete(id);
+        const deletedSalesorder = await SalesAccountModel.findByIdAndDelete(id);
 
-        if (!deletedInvoice) {
-           return res.status(404).json({
+        if (!deletedSalesorder) {
+            return res.status(404).json({
                 ok: false,
-                message: "Invoice not found"
+                message: "salesorder not found"
             });
-            
+
         }
 
 
-         // Invalidate related caches
+        // Invalidate related caches
         await invalidateInvoiceCache(
-            deletedInvoice.organizationId?.toString(),
-            deletedInvoice.customerId?.toString(),
+            deletedSalesorder.organizationId?.toString(),
+            deletedSalesorder.customerId?.toString(),
             id
         );
 
         return res.status(200).json({
             ok: true,
-            message: "Invoice deleted successfully",
-            data: deletedInvoice
+            message: "salesorder deleted successfully",
+            data: deletedSalesorder
         });
     } catch (error: any) {
-        console.error("Error deleting invoice:", error);
+        console.error("Error deleting salesorder:", error);
         res.status(500).json({
             ok: false,
-            message: "Error deleting invoice",
+            message: "Error deleting salesorder",
             error: error.message
         });
     }
