@@ -140,9 +140,13 @@ export interface IOrderedMaterialHistory {
     projectId: Types.ObjectId;
     status: "pending" | "completed";
     deliveryLocationDetails: OrderMaterialSiteDetail,
-    shopDetails:OrderMaterialShopDetails, 
+    shopDetails: OrderMaterialShopDetails,
     isEditable: boolean;
     selectedUnits: OrderedMaterialSingle[];
+    publicUnits: OrderSubItems[];
+    publicUnitsVersion: number
+    needsStaffReview: boolean
+
     totalCost: number;
     assignedTo: Types.ObjectId;
     timer: IOrderHistorytimer;
@@ -198,7 +202,7 @@ export const pdfGeneratorSchema = new Schema<IPdfGenerator>({
     url: { type: String, default: null },
     refUniquePdf: { type: String, default: null },
     pdfName: { type: String, default: null },
-    status: {type: String, default:"pending"} //delivered, shipped, ordered, cancelled, yet to order
+    status: { type: String, default: "pending" } //delivered, shipped, ordered, cancelled, yet to order
 }, { _id: true })
 
 
@@ -236,6 +240,13 @@ const OrderHistorySchema = new Schema<IOrderedMaterialHistory>({
     deliveryLocationDetails: DeliveryLocationDetailsSchema,
     timer: { type: TimerSchema, required: true },
     selectedUnits: { type: [orderedUnits], default: [] },
+
+    publicUnits: { type: [OrderSubItemSchema], default: [] },
+
+    // ✨ NEW: Simple change tracking ✨
+    publicUnitsVersion: { type: Number, default: 0 }, // Increment on each public change
+    needsStaffReview: { type: Boolean, default: false }, // Flag for staff
+
     totalCost: { type: Number, },
     generatedLink: { type: [pdfGeneratorSchema], default: [] }
 }, { timestamps: true });

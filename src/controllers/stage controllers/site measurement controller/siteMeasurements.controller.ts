@@ -142,7 +142,7 @@ const createSiteMeasurement = async (req: Request, res: Response): Promise<any> 
       }
       // console.log("gettiing isndeht esit3crete else condiiton")
       form.siteDetails = siteDetails;
-      form.rooms = initializeSiteRequirement
+      // form.rooms = initializeSiteRequirement
       // form.set('rooms', initializeSiteRequirement);
     }
 
@@ -176,7 +176,7 @@ const createRoom = async (req: Request, res: Response): Promise<any> => {
     if (name === null || typeof name !== "string" || !name?.trim()) {
       return res.status(400).json({ ok: false, message: `Room name must be a provided` });
     }
-    console.log("lenght", length, "height", height, "bredth", breadth)
+    // console.log("lenght", length, "height", height, "bredth", breadth)
     if (length === null || typeof length !== "number" || length < 0) {
       return res.status(400).json({ ok: false, message: `Room length must be a number or non-negative number.` });
     }
@@ -340,7 +340,7 @@ const updateCommonSiteMeasurements = async (req: Request, res: Response): Promis
 
     await siteDoc.save();
 
-    console.log("siteDocc", siteDoc)
+    // console.log("siteDocc", siteDoc)
 
     // await redisClient.set(`stage:SiteMeasurementModel:${projectId}`, JSON.stringify(siteDoc.toObject()), { EX: 60 * 15 }); // 15min
 
@@ -373,9 +373,20 @@ const updateRoomSiteMeasurements = async (req: Request, res: Response): Promise<
     //   return res.status(400).json({ ok: false, message: "Site measurement is not editable" });
     // }
 
-    if (!room.name) {
+    if (!room?.name?.trim()) {
       return res.status(400).json({ message: `name must be provided`, ok: false })
     }
+
+     if (room?.length === null || typeof room?.length !== "number" || room?.length < 0) {
+      return res.status(400).json({ ok: false, message: `Room length must be a number or non-negative number.` });
+    }
+    if (room?.breadth === null || typeof room?.breadth !== "number" || room?.breadth < 0) {
+      return res.status(400).json({ ok: false, message: `Room breadth must be a number or non-negative number.` });
+    }
+    if (room?.height === null || typeof room?.height !== "number" || room?.height < 0) {
+      return res.status(400).json({ ok: false, message: `Room height must be a number or non-negative number.` });
+    }
+
 
     if (!room.length || !room.breadth || !room.height) {
       return res.status(400).json({ message: `negative values were not allowed `, ok: false })
@@ -480,7 +491,7 @@ const deleteSiteMeasurement = async (req: Request, res: Response): Promise<any> 
 
 
 
-    return res.status(200).json({ message: "Site details deleted adn timer restarted successfully", data: siteDoc, ok: true });
+    return res.status(200).json({ message: "Site details resetted and timer restarted successfully", data: siteDoc, ok: true });
   } catch (err) {
     console.error("Delete site Error:", err);
     return res.status(500).json({ message: "Internal server error", ok: false });

@@ -2,6 +2,8 @@
 import { Request, Response } from "express";
 import { RoleBasedRequest } from "../../../types/types";
 import { SelectedModularUnitNewModel } from "../../../models/Modular Units Models/Modular Unit New/SelectedModularUnitNew  Model/selectedUnitNew.model";
+import generatePdfModularUnits from "./pdfGenerateModularUnits";
+import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 
 // ADD A UNIT
 export const addSelectedUnitNew = async (req: RoleBasedRequest, res: Response): Promise<any> => {
@@ -148,75 +150,36 @@ export const deleteSelectedUnitNew = async (req: RoleBasedRequest, res: Response
 
 
 
-export const completeModularUnitSelection = async (req: RoleBasedRequest, res: Response): Promise<any> => {
-  try {
-    const { projectId } = req.params;
 
-    const modularSelection = await SelectedModularUnitNewModel.findOne({ projectId });
+// Controller function
+export const generateModularUnitsPDFController = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, organizationId } = req.params;
 
+        if (!projectId) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Project ID is required'
+            });
+        }
 
-    // if (!modularSelection) {
-    //   return res.status(400).json({
-    //     ok: false,
-    //     message: "No modular unit section available.",
-    //   });
-    // }
-
-    // let recalculatedTotalCost = 0;
-    // if (modularSelection.selectedUnits.length) {
-    //   // ✅ Recalculate totalCost in case it's outdated
-    //   recalculatedTotalCost = modularSelection.selectedUnits.reduce((sum, unit) => {
-    //     return sum + (unit.singleUnitCost * unit.quantity);
-    //   }, 0);
-
-    //   // ✅ Update total cost in the modular unit record
-    //   modularSelection.totalCost = recalculatedTotalCost;
-    //   modularSelection.status = "completed"
-
-
-    //   const selectedExternal = await SelectedExternalModel.findOne({ projectId });
-    //   let finalTotalAmount = 0;
-    //   finalTotalAmount += selectedExternal?.totalCost || 0
-    //   finalTotalAmount += recalculatedTotalCost
-    //   await syncPaymentConfirationModel(projectId, finalTotalAmount)
-
-    //   await modularSelection.save();
-    // }
+        const result = await generatePdfModularUnits(projectId, organizationId);
 
 
 
-    // OLD ONE
-    // const updatedPayment = await syncPaymentConfirationModel(projectId, recalculatedTotalCost)
+        res.status(200).json(result);
 
-    // // ✅ Mark MaterialRoomConfirmationModel as completed
-    // const materialDoc = await MaterialRoomConfirmationModel.findOneAndUpdate(
-    //   { projectId },
-    //   { status: "completed" },
-    //   { returnDocument: "after" }
-    // ).populate(assignedTo, selectedFields)
-
-    // // console.log("mateiraldoc", materialDoc)
-    // await generateCostEstimationFromMaterialSelection({}, projectId)
-    // await syncCostEstimation({}, projectId)   // use this newly crated right now
-
-
-    // // ✅ Mark CostEstimationModel as completed
-    // await CostEstimationModel.findOneAndUpdate(
-    //   { projectId },
-    //   { status: "completed" }
-    // );
-    // await populateWithAssignedToField({ stageModel: MaterialRoomConfirmationModel, projectId, dataToCache: materialDoc })
-
-    return res.status(200).json({
-      ok: true,
-      message: "Modular unit completion finalized and totals updated.",
-      data: modularSelection
-    });
-  } catch (error) {
-    console.error("Error in completeModularUnitSelection:", error);
-    return res.status(500).json({
-      ok: false,
-      message: "Internal server error while finalizing modular unit selection.",
-    });
-  }
+    } catch (error: any) {
+        console.error('PDF generation controller error:', error);
+        res.status(500).json({
+            ok: false,
+            message: error.message || 'Internal server error'
+        });
+    }
 };
+
+
+
+
+
+

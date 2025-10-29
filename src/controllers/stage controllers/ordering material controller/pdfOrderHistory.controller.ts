@@ -615,6 +615,428 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
 
 
 
+
+// Main PDF generation function
+export const generatePublicOrderHistoryPdf = async (projectId: string, organizationId: string) => {
+    try {
+        // Fetch order history data
+        const orderHistory = await OrderMaterialHistoryModel.findOne({ projectId })
+            .populate('projectId', 'projectName')
+
+
+        if (!orderHistory) {
+            throw new Error('Order history not found for the given project ID');
+        }
+
+
+        const isNewPdf = Array.isArray(orderHistory.generatedLink) && orderHistory.generatedLink.length > 0;
+        let nextNumber = 1;
+
+        if (isNewPdf) {
+            // Extract all numbers from refUniquePdf (format: projectName-<number>-pdf)
+            const numbers = orderHistory.generatedLink.map(ele => {
+                const match = ele.refUniquePdf?.match(/-(\d+)-pdf$/);
+                return match ? parseInt(match[1], 10) : 0; // Extract the number part
+            });
+
+            // Find the max number and increment
+            nextNumber = Math.max(...numbers, 0) + 1;
+        }
+
+        // Construct the new refUniquePdf
+        const refUniquePdf = `${(orderHistory.projectId as any).projectName}-${nextNumber}-pdf`;
+
+
+        // Create a new PDF document
+        const pdfDoc = await PDFDocument.create();
+        let page = pdfDoc.addPage([595, 842]); // A4 size
+        const { width, height } = page.getSize();
+
+        // Load fonts
+        const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+        let yPosition = height - 20;
+
+        try {
+            const logoRes = await fetch(COMPANY_LOGO);
+            const logoBuffer = await logoRes.arrayBuffer();
+            const logoImage = await pdfDoc.embedJpg(logoBuffer);
+
+            const logoScale = 0.5;
+            const logoDims = logoImage.scale(logoScale);
+
+            const brandText = "Vertical Living";
+            const brandFontSize = 20;
+            const brandColor = rgb(0.1, 0.4, 0.9);
+            const brandTextWidth = boldFont.widthOfTextAtSize(brandText, brandFontSize);
+
+            const spacing = 10; // space between logo and text
+
+            // Total width = logo + spacing + text
+            const totalWidth = logoDims.width + spacing + brandTextWidth;
+
+            // X and Y to center the whole block horizontally and set a top margin
+            const combinedX = (width - totalWidth) / 2;
+            const topY = yPosition; // use existing yPosition for vertical positioning
+
+            // Draw logo
+            page.drawImage(logoImage, {
+                x: combinedX,
+                y: topY - logoDims.height,
+                width: logoDims.width,
+                height: logoDims.height,
+            });
+
+            // Align text vertically with logo (visually aligned mid-way)
+            const textY = topY - (logoDims.height / 2) - (brandFontSize / 3);
+
+            // Draw text next to logo
+            page.drawText(brandText, {
+                x: combinedX + logoDims.width + spacing,
+                y: textY,
+                size: brandFontSize,
+                font: boldFont,
+                color: brandColor,
+            });
+
+            // Update yPosition to be below the logo
+            yPosition = topY - logoDims.height - 5;
+
+            // Draw horizontal line
+            page.drawLine({
+                start: { x: 50, y: yPosition },
+                end: { x: width - 50, y: yPosition },
+                thickness: 1,
+                color: rgb(0.6, 0.6, 0.6),
+            });
+
+            yPosition -= 30;
+        } catch (err) {
+            console.error("Failed to load company logo:", err);
+        }
+
+        // // Material Order heading
+        // const heading = "MATERIAL ORDER";
+        // page.drawText(heading, {
+        //     x: 50,
+        //     y: yPosition,
+        //     size: 18,
+        //     font: boldFont,
+        //     color: rgb(0.0, 0.2, 0.4),
+        // });
+        // yPosition -= 20;
+
+        const heading = "MATERIAL ORDER";
+
+        const referenceId = `Pdf Reference Id: ${refUniquePdf}`; // e.g. projectName-01-pdf
+
+        // Measure text widths
+        const headingWidth = boldFont.widthOfTextAtSize(heading, 18);
+        const refWidth = boldFont.widthOfTextAtSize(referenceId, 12);
+
+        // Set margins
+        const leftMargin = 50;
+        const rightMargin = 50;
+
+        // Page width
+        const pageWidth = page.getWidth();
+
+        // X positions
+        const headingX = leftMargin;
+        const refX = pageWidth - rightMargin - refWidth;
+
+        // Draw heading (left)
+        page.drawText(heading, {
+            x: headingX,
+            y: yPosition,
+            size: 18,
+            font: boldFont,
+            color: rgb(0.0, 0.2, 0.4),
+        });
+
+        // Draw reference id (right, same y)
+        page.drawText(referenceId, {
+            x: refX,
+            y: yPosition,
+            size: 12,
+            font: boldFont,
+            color: rgb(0.0, 0.2, 0.4),
+        });
+
+        yPosition -= 30; // move down for next content
+
+        // Project details
+        if (orderHistory.projectId) {
+            const projectText = `Project: ${(orderHistory.projectId as any).projectName}`;
+            page.drawText(projectText, {
+                x: 50,
+                y: yPosition,
+                size: 16,
+                font: boldFont,
+                color: rgb(0.3, 0.3, 0.3),
+            });
+            yPosition -= 40;
+        }
+
+
+        // Process each unit and its sub-items
+        let serialNumber = 1;
+
+        // for (const unit of orderHistory?.publicUnits) {
+
+
+
+
+        // Check if we need a new page
+        if (yPosition < 150) {
+            page = pdfDoc.addPage([595, 842]);
+            yPosition = height - 50;
+        }
+
+        // Table headers
+        const tableStartY = yPosition;
+        const rowHeight = 25;
+        // const columnWidths = [60, , 300, 80, 80]; // S.No, Material Item, Quantity, Unit
+        // const columnPositions = [50, 110, 410, 490];
+
+        const columnWidths = [50, 100, 200, 80, 50];
+        const columnPositions = [
+            50,  // S.No
+            100, // Ref ID
+            180, // Material Item
+            420, // Quantity
+            500  // Unit
+        ];
+        // Draw table header background
+        page.drawRectangle({
+            x: 45,
+            y: yPosition - 5,
+            width: 500,
+            height: rowHeight,
+            color: rgb(0.9, 0.9, 0.9),
+        });
+
+        // Table headers
+        const headers = ['S.No', 'Ref ID', 'Material Item', 'Quantity', 'Unit'];
+        headers.forEach((header, index) => {
+            page.drawText(header, {
+                x: columnPositions[index],
+                y: yPosition,
+                size: 12,
+                font: boldFont,
+                color: rgb(0.2, 0.2, 0.2),
+            });
+        });
+
+        yPosition -= rowHeight + 5;
+
+        // Table content - sub items
+        orderHistory?.publicUnits.forEach((subItem, index) => {
+            // Alternate row coloring
+            if (index % 2 === 0) {
+                page.drawRectangle({
+                    x: 45,
+                    y: yPosition - 5,
+                    width: 500,
+                    height: rowHeight,
+                    color: rgb(0.98, 0.98, 0.98),
+                });
+            }
+
+
+            // Table borders
+            page.drawRectangle({
+                x: 45,
+                y: yPosition - 5,
+                width: 500,
+                height: rowHeight,
+                borderColor: rgb(0.8, 0.8, 0.8),
+                borderWidth: 0.5,
+            });
+
+            const rowData = [
+                serialNumber.toString(),
+                subItem.refId || "N/A",
+                subItem.subItemName || 'N/A',
+                (subItem.quantity || 0).toString(),
+                subItem.unit || 'N/A'
+            ];
+
+            rowData.forEach((data, colIndex) => {
+                let displayText = data;
+                // Truncate long text to fit in column
+                if (colIndex === 1 && data.length > 35) {
+                    displayText = data.substring(0, 32) + '...';
+                }
+
+                page.drawText(displayText, {
+                    x: columnPositions[colIndex],
+                    y: yPosition,
+                    size: 10,
+                    font: regularFont,
+                    color: rgb(0.3, 0.3, 0.3),
+                });
+            });
+
+            yPosition -= rowHeight;
+            serialNumber++;
+
+            // Check if we need a new page
+            if (yPosition < 100) {
+                page = pdfDoc.addPage([595, 842]);
+                yPosition = height - 50;
+            }
+        });
+        // } else {
+        //     // No sub items message
+        //     page.drawText('No sub-items available', {
+        //         x: columnPositions[1],
+        //         y: yPosition,
+        //         size: 10,
+        //         font: regularFont,
+        //         color: rgb(0.6, 0.6, 0.6),
+        //     });
+        //     yPosition -= rowHeight;
+        // }
+
+        yPosition -= 20; // Space between units
+        // }
+
+        // // Total cost section
+        // if (orderHistory.totalCost) {
+        //     yPosition -= 20;
+        //     page.drawText(`Total Cost: Rs${orderHistory.totalCost.toLocaleString()}`, {
+        //         x: width - 200,
+        //         y: yPosition,
+        //         size: 14,
+        //         font: boldFont,
+        //         color: rgb(0.2, 0.2, 0.2),
+        //     });
+        // }
+
+        // // Footer
+        // const footerY = 50;
+        // page.drawText(`Generated on: ${new Date().toLocaleDateString()}`, {
+        //     x: 50,
+        //     y: footerY,
+        //     size: 8,
+        //     font: regularFont,
+        //     color: rgb(0.6, 0.6, 0.6),
+        // });
+
+        // Save PDF
+        const pdfBytes = await pdfDoc.save();
+
+        // Upload to AWS S3
+        const fileName = `order-material/order-${projectId}-${Date.now()}.pdf`;
+        const uploadResult = await uploadToS3(pdfBytes, fileName);
+
+        // Update the order history with generated link
+        // await OrderMaterialHistoryModel.findByIdAndUpdate({projectId}, {
+        //     generatedLink: uploadResult.Location
+        // });
+
+        // console.log("generateld dat", uploadResult.Location)
+
+
+        const pdfData = {
+            url: uploadResult.Location,
+            refUniquePdf, // <-- now has projectName-uniquenumber-pdf
+            pdfName: "Order Material",
+            status: "pending",
+            _id: new mongoose.Types.ObjectId()
+        };
+
+        if (Array.isArray(orderHistory.generatedLink)) {
+            orderHistory?.generatedLink?.push(pdfData as IPdfGenerator);
+        } else {
+            orderHistory.generatedLink = []
+            orderHistory?.generatedLink.push(pdfData as IPdfGenerator)
+        }
+
+        console.log("orderHistory.generatedLink", orderHistory.generatedLink)
+
+        // const ProcurementNewItems: any[] = [];
+
+        // // Flatten subItems into one array
+        // orderHistory.selectedUnits.forEach(unit => {
+        //     unit.subItems.forEach((subItem:any) => {
+        //         const { _id, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
+        //         ProcurementNewItems.push({
+        //             ...rest,
+        //             _id: new mongoose.Types.ObjectId() // always refresh ID
+        //         });
+        //     });
+        // });
+
+
+        const ProcurementNewItems: any[] = [];
+        const subItemMap: Record<string, any> = {}; // key = subItemName
+
+            orderHistory.publicUnits.forEach((subItem: any) => {
+                const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
+
+                const name = rest.subItemName?.trim().toLowerCase() || "";
+                const unitKey = rest.unit?.trim().toLowerCase() || "";
+                const key = `${name}__${unitKey}`; // combine name + unit
+
+                if (key) {
+                    if (subItemMap[key]) {
+                        // Already exists with same name+unit → add quantity
+                        subItemMap[key].quantity += rest.quantity || 0;
+                    } else {
+                        // Create fresh entry
+                        subItemMap[key] = {
+                            ...rest,
+                            quantity: rest.quantity || 0,
+                            _id: new mongoose.Types.ObjectId() // always refresh ID
+                        };
+                    }
+                }
+            });
+
+        // Convert map back to array
+        Object.values(subItemMap).forEach((item: any) => ProcurementNewItems.push(item));
+
+        // console.log("procurement", ProcurementNewItems)
+        await ProcurementModelNew.create({
+            organizationId,
+            projectId: projectId,
+            shopDetails: orderHistory.shopDetails,
+            deliveryLocationDetails: orderHistory.deliveryLocationDetails,
+            selectedUnits: ProcurementNewItems,
+            refPdfId: refUniquePdf,
+            totalCost: 0
+        })
+        // Clear subItems from each selectedUnit
+
+        orderHistory.publicUnits = [];
+        orderHistory.needsStaffReview = false;
+
+
+        await orderHistory.save();
+
+        // console.log("orderhisoty", orderHistory)
+
+        return {
+            ok: true,
+            pdfUrl: uploadResult.Location,
+            data: {
+                orderHistory,
+                pdfData: pdfData
+            },
+            message: 'PDF generated successfully'
+        };
+
+    } catch (error: any) {
+        console.error('Error generating PDF:', error);
+        throw new Error(`PDF generation failed: ${error.message}`);
+    }
+};
+
+
+
 export const gerneateCommonOrdersPdf = async (id: string) => {
     try {
         // Fetch order history data

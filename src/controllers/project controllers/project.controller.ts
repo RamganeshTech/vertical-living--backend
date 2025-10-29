@@ -183,6 +183,34 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
 }
 
 
+
+export const getProjectUtil = async (organizationId: string) => {
+    try {
+
+        const cacheKey = `projects:${organizationId}`;
+
+        // await redisClient.del(`projects:${organizationId}`);
+        let cachedData = await redisClient.get(cacheKey);
+
+
+        if (cachedData) {
+            const parsedData = JSON.parse(cachedData);
+            // return res.status(200).json({ message: "Projects retrieved from cache", data: parsedData, ok: true });
+            return { message: "Projects retrieved from cache", data: parsedData, ok: true }
+        }
+
+        const projects = await ProjectModel.find({ organizationId })
+
+        await redisClient.set(cacheKey, JSON.stringify(projects), { EX: 300 }); // expires in 5 mins (put in secondsj)
+        return { message: "Projects retrived successfully", data: projects, ok: true }
+    }
+    catch (error:any) {
+        console.log("error form getProjects", error)
+        throw error
+    }
+
+}
+
 const getProjects = async (req: RoleBasedRequest, res: Response) => {
     try {
 
@@ -193,23 +221,13 @@ const getProjects = async (req: RoleBasedRequest, res: Response) => {
             return
         }
         // console.log("organizationId", organizationId)
-        const cacheKey = `projects:${organizationId}`;
 
-        // await redisClient.del(`projects:${organizationId}`);
-        let cachedData = await redisClient.get(cacheKey);
-
-
-        if (cachedData) {
-            const parsedData = JSON.parse(cachedData);
-            return res.status(200).json({ message: "Projects retrieved from cache", data: parsedData, ok: true });
-        }
-
-        const projects = await ProjectModel.find({ organizationId })
-
-        await redisClient.set(cacheKey, JSON.stringify(projects), { EX: 300 }); // expires in 5 mins (put in secondsj)
+        const data = await getProjectUtil(organizationId)
+        res.status(200).json(data);
 
 
-        res.status(200).json({ message: "Projects retrived successfully", data: projects, ok: true });
+
+        // res.status(200).json({ message: "Projects retrived successfully", data: projects, ok: true });
 
     }
     catch (error) {
@@ -396,15 +414,15 @@ const updateProject = async (req: RoleBasedRequest, res: Response): Promise<void
         // Optional: validate priority
         const allowedPriority = ["none", "low", "medium", "high"];
         if (priority && !allowedPriority.includes(priority)) {
-             res.status(400).json({ ok: false, message: `Priority must be one of ${allowedPriority.join(", ")}` });
-             return;
+            res.status(400).json({ ok: false, message: `Priority must be one of ${allowedPriority.join(", ")}` });
+            return;
         }
 
         // Optional: validate status
         const allowedStatus = ["Active", "Delayed", "In Progress", "In Testing", "On Track", "On Hold", "Approved", "Cancelled", "Planning", "Invoice"];
         if (status && !allowedStatus.includes(status)) {
-             res.status(400).json({ ok: false, message: `Status must be one of ${allowedStatus.join(", ")}` });
-             return;
+            res.status(400).json({ ok: false, message: `Status must be one of ${allowedStatus.join(", ")}` });
+            return;
         }
 
         const data = await ProjectModel.findByIdAndUpdate(projectId, {

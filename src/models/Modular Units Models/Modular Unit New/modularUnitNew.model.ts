@@ -6,7 +6,7 @@ import { model, Schema, Types } from "mongoose";
 
 
 export interface IModularUnitUpload {
-  type: "image";
+  type: "image" | "pdf";
   url: string;
   originalName?: string;
   uploadedAt: Date

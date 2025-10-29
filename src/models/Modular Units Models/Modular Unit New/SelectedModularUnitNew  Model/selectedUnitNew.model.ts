@@ -12,6 +12,7 @@ export interface ISelectedModularUnit {
   _id?: Types.ObjectId;
   projectId: Types.ObjectId;
   selectedUnits: ISelectedUnit[];
+  pdfList: IModularUnitUpload[];
   totalCost: number,
   status: string
 }
@@ -23,6 +24,13 @@ const uploadSchema = new Schema<IModularUnitUpload>({
   uploadedAt: { type: Date, },
 }, { _id: true });
 
+
+const pdfModularSchema = new Schema<IModularUnitUpload>({
+  type: { type: String, enum: ["pdf"] },
+  url: { type: String, default: null },
+  originalName: { type: String },
+  uploadedAt: { type: Date, },
+}, { _id: true });
 
 const selectedUnits = new Schema<ISelectedUnit>({
   productId: { type: Schema.Types.ObjectId, ref: "ModularUnitModelNew" },
@@ -48,6 +56,7 @@ const selectedUnits = new Schema<ISelectedUnit>({
 const SelectedModularUnitSchema = new Schema<ISelectedModularUnit>({
   projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", required: true },
   selectedUnits: { type: [selectedUnits], default: [] },
+  pdfList: { type: [pdfModularSchema], default: [] },
   totalCost: { type: Number, required: true },
   status: { type: String, enum: ["pending", "completed"], default: "pending" },
 }, { timestamps: true });
