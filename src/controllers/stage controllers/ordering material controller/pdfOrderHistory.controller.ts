@@ -780,6 +780,67 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
         }
 
 
+         // Shop Details Section
+        if (orderHistory?.publicUnits?.shopDetails) {
+            page.drawText("Shop Details:", {
+                x: 50,
+                y: yPosition,
+                size: 14,
+                font: boldFont,
+                color: rgb(0.2, 0.2, 0.2),
+            });
+            yPosition -= 20;
+
+            if (orderHistory?.publicUnits?.shopDetails.shopName) {
+                page.drawText(`Shop Name: ${orderHistory?.publicUnits?.shopDetails.shopName}`, {
+                    x: 50,
+                    y: yPosition,
+                    size: 10,
+                    font: regularFont,
+                    color: rgb(0.3, 0.3, 0.3),
+                });
+                yPosition -= 15;
+            }
+
+            if (orderHistory?.publicUnits?.shopDetails.address) {
+                page.drawText(`Address: ${orderHistory?.publicUnits?.shopDetails.address}`, {
+                    x: 50,
+                    y: yPosition,
+                    size: 10,
+                    font: regularFont,
+                    color: rgb(0.3, 0.3, 0.3),
+                });
+                yPosition -= 15;
+            }
+
+            if (orderHistory?.publicUnits?.shopDetails.contactPerson) {
+                page.drawText(`Contact Person: ${orderHistory?.publicUnits?.shopDetails.contactPerson}`, {
+                    x: 50,
+                    y: yPosition,
+                    size: 10,
+                    font: regularFont,
+                    color: rgb(0.3, 0.3, 0.3),
+                });
+                yPosition -= 15;
+            }
+
+            if (orderHistory?.publicUnits?.shopDetails.phoneNumber) {
+                page.drawText(`Phone: ${orderHistory.shopDetails.phoneNumber}`, {
+                    x: 50,
+                    y: yPosition,
+                    size: 10,
+                    font: regularFont,
+                    color: rgb(0.3, 0.3, 0.3),
+                });
+                yPosition -= 15;
+            }
+            yPosition -= 10;
+        }
+
+
+            yPosition -= 20;
+
+
         // Process each unit and its sub-items
         let serialNumber = 1;
 
@@ -832,7 +893,7 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
         yPosition -= rowHeight + 5;
 
         // Table content - sub items
-        orderHistory?.publicUnits.forEach((subItem, index) => {
+        orderHistory?.publicUnits?.subItems.forEach((subItem, index) => {
             // Alternate row coloring
             if (index % 2 === 0) {
                 page.drawRectangle({
@@ -974,7 +1035,7 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
         const ProcurementNewItems: any[] = [];
         const subItemMap: Record<string, any> = {}; // key = subItemName
 
-            orderHistory.publicUnits.forEach((subItem: any) => {
+            orderHistory?.publicUnits?.subItems?.forEach((subItem: any) => {
                 const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
 
                 const name = rest.subItemName?.trim().toLowerCase() || "";
@@ -1003,7 +1064,7 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
         await ProcurementModelNew.create({
             organizationId,
             projectId: projectId,
-            shopDetails: orderHistory.shopDetails,
+            shopDetails: orderHistory.publicUnits.shopDetails,
             deliveryLocationDetails: orderHistory.deliveryLocationDetails,
             selectedUnits: ProcurementNewItems,
             refPdfId: refUniquePdf,
@@ -1011,12 +1072,20 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
         })
         // Clear subItems from each selectedUnit
 
-        orderHistory.publicUnits = [];
+        orderHistory.publicUnits.subItems = [];
+        orderHistory.publicUnits.shopDetails = {
+            shopName: null,
+            address: null,
+            contactPerson: null,
+            phoneNumber: null
+        };
         orderHistory.needsStaffReview = false;
 
 
         await orderHistory.save();
 
+
+        
         // console.log("orderhisoty", orderHistory)
 
         return {

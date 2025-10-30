@@ -96,6 +96,7 @@ import modularUnitRoutesNew from './routers/Modular Unit routes/modularUnitNew.r
 import SelectedModularUnitNewRoutes from './routers/Modular Unit routes/SelectedModularUnit Routes New/selectedModularUnitNew.routes';
 import salesAccountsRoutes from './routers/Department Routes/Accounting Routes/salesOrderAccounts.route';
 import publicOrderMaterialRoutes from './routers/Stage routes/order Material routes/publicOrderMaterial.routes';
+import shopLibRoutes from './routers/Stage routes/order Material routes/shopLibDetails.routes';
 
 
 
@@ -271,6 +272,7 @@ app.use('/api/technicalconsultation', technicalConsultRoutes)
 app.use('/api/paymentconfirmation', paymentConsentRoutes)
 app.use('/api/orderingmaterial', orderMaterialHistoryRoutes)
 app.use('/api/publicordermaterial', publicOrderMaterialRoutes)
+app.use('/api/shoplibdetails', shopLibRoutes)
 app.use('/api/materialarrivalcheck', materialArrivalRoutes)
 app.use('/api/worktasks', workTaskRoutes)
 app.use('/api/installation', installationRoutes)

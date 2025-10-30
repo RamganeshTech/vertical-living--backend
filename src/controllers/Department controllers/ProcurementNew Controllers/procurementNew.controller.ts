@@ -22,7 +22,7 @@ export const getProcurementNewDetails = async (req: Request, res: Response): Pro
         //     return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
         // }
 
-        const doc = await ProcurementModelNew.find(filters);
+        const doc = await ProcurementModelNew.find(filters).sort({createdAt : -1});
         if (!doc) return res.status(200).json({ ok: true, message: "Data not found", data: [] });
 
         // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })

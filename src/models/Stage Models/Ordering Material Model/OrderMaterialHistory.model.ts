@@ -96,17 +96,17 @@ export interface IOrderHistorytimer {
 
 
 export interface OrderMaterialSiteDetail {
-    siteName: String,
-    address: String,
-    siteSupervisor: String,
-    phoneNumber: String,
+    siteName: string,
+    address: string,
+    siteSupervisor: string,
+    phoneNumber: string,
 }
 
 export interface OrderMaterialShopDetails {
-    shopName: String,
-    address: String,
-    contactPerson: String,
-    phoneNumber: String,
+    shopName: string | null,
+    address: string  | null,
+    contactPerson: string  | null,
+    phoneNumber: string  | null,
 }
 
 
@@ -135,6 +135,13 @@ export interface OrderedMaterialSingle {
     singleUnitCost: number
 }
 
+
+export interface IPublicUnits {
+    shopDetails: OrderMaterialShopDetails | null,
+    subItems: OrderSubItems[]
+}
+
+
 export interface IOrderedMaterialHistory {
     _id?: Types.ObjectId;
     projectId: Types.ObjectId;
@@ -143,7 +150,7 @@ export interface IOrderedMaterialHistory {
     shopDetails: OrderMaterialShopDetails,
     isEditable: boolean;
     selectedUnits: OrderedMaterialSingle[];
-    publicUnits: OrderSubItems[];
+    publicUnits: IPublicUnits;
     publicUnitsVersion: number
     needsStaffReview: boolean
 
@@ -215,6 +222,12 @@ export const OrderSubItemSchema = new Schema<OrderSubItems>({
 }, { _id: true })
 
 
+export const PublicUnitsSchema = new Schema<IPublicUnits>({
+    shopDetails: {type: ShopDetailsSchema, default: null},
+    subItems: {type: [OrderSubItemSchema], default: []},
+}, {_id:false})
+
+
 const orderedUnits = new Schema<OrderedMaterialSingle>({
     unitId: { type: Schema.Types.ObjectId }, // ID of BedCot, TVUnit, etc.
     category: { type: String },
@@ -241,7 +254,7 @@ const OrderHistorySchema = new Schema<IOrderedMaterialHistory>({
     timer: { type: TimerSchema, required: true },
     selectedUnits: { type: [orderedUnits], default: [] },
 
-    publicUnits: { type: [OrderSubItemSchema], default: [] },
+    publicUnits: { type: PublicUnitsSchema, default: {} },
 
     // ✨ NEW: Simple change tracking ✨
     publicUnitsVersion: { type: Number, default: 0 }, // Increment on each public change

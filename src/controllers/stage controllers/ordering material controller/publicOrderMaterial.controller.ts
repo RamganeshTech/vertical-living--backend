@@ -36,10 +36,12 @@ export const publicaddSubItemToUnit = async (req: Request, res: Response): Promi
             return res.status(404).json({ ok: false, message: "Order history not found" });
         }
 
-        // Find the unit inside selectedUnits by _id
-        const publicUnits = orderDoc?.publicUnits || []
+       
 
-        const isExists = publicUnits.find((unit: OrderSubItems) => {
+
+        const publicUnits = orderDoc?.publicUnits?.subItems || [];
+
+        const isExists = (publicUnits || []).find((unit: OrderSubItems) => {
             console.log("unit", unit.subItemName)
             return unit?.subItemName?.toLowerCase()?.trim() === subItemName?.toLowerCase()?.trim()
         })
@@ -115,7 +117,7 @@ export const publicupdateSubItemInUnit = async (req: Request, res: Response): Pr
             return res.status(404).json({ ok: false, message: "Order history not found" });
         }
 
-        const publicUnits = orderDoc?.publicUnits || [];
+        const publicUnits = orderDoc?.publicUnits?.subItems || [];
         if (publicUnits?.length === 0) {
             return res.status(404).json({ ok: false, message: "No items to update" });
         }
@@ -228,7 +230,7 @@ export const publicdeleteSubItemFromUnit = async (req: Request, res: Response): 
             return res.status(404).json({ ok: false, message: "Order history not found" });
         }
 
-        const publicUnits: any = orderDoc?.publicUnits || [];
+        const publicUnits: any = orderDoc?.publicUnits?.subItems || [];
         if (publicUnits?.length === 0) {
             return res.status(404).json({ ok: false, message: "No items to delete" });
         }
@@ -300,6 +302,52 @@ export const generatePublicOrderMaterialPDFController = async (req: Request, res
 }
 
 
+
+
+export const updatePublicShopDetails = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params;
+        const { shopName, address, contactPerson, phoneNumber } = req.body;
+
+
+
+        // if (!shopName || !address || !contactPerson || !phoneNumber) {
+        //     return res.status(400).json({ ok: false, message: "All shop details are required." });
+        // }
+
+
+        if (phoneNumber?.trim() && phoneNumber.length !== 10) {
+            return res.status(400).json({ ok: false, message: "Phone Number should be 10 digits" });
+        }
+
+        const orderingDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
+            { projectId },
+            {
+                $set: {
+                    "publicUnits.shopDetails": { shopName, address, contactPerson, phoneNumber },
+                },
+            },
+            { new: true, upsert: true }
+        );
+
+        if (!orderingDoc) {
+            return res.status(400).json({ ok: false, message: "Failed to update shop details." });
+        }
+
+        // const redisMainKey = `stage:OrderingMaterialModel:${projectId}`
+        // await redisClient.set(redisMainKey, JSON.stringify(orderingDoc.toObject()), { EX: 60 * 10 })
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderingDoc })
+
+
+
+        res.status(200).json({ ok: true, message: "Shop details updated", data: orderingDoc.shopDetails });
+    }
+    catch (error: any) {
+        console.error("Error updatinthe shop details form ordering room", error);
+        return res.status(500).json({ message: "Server error", ok: false });
+    }
+};
 
 export const getProjectforPublicUsage = async (req: Request, res: Response): Promise<any> => {
     try {
