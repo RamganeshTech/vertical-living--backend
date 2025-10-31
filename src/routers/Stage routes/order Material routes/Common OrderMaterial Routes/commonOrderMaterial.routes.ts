@@ -12,31 +12,23 @@ commonOrderRoutes.post(
     createCommonOrderProjectName
 );
 
-// Edit project name
-// PUT /api/common-orders/project/:id
+
 commonOrderRoutes.put(
-    "/editcoommonproject/:id",
+    "/editcommonproject/:id",
     multiRoleAuthMiddleware("owner", "staff", "CTO"),
     editCommonOrderProject
 );
 
-// Delete project
-// DELETE /api/common-orders/project/:id
 commonOrderRoutes.delete(
     "/deletecommonproject/:id",
     multiRoleAuthMiddleware("owner", "staff", "CTO"),
     deleteCommonOrderProject
 );
-// Create a new ordering unit for a project
-// POST /api/common-orders/:id/units
+
 commonOrderRoutes.post("/createcommonorder/:id/units", multiRoleAuthMiddleware("owner", "staff", "CTO"), createCommonOrderingUnit);
 
-// Edit an existing ordering unit
-// PUT /api/common-orders/:id/units/:unitId
 commonOrderRoutes.put("/:id/editcommonorder/:unitId", multiRoleAuthMiddleware("owner", "staff", "CTO"), editCommonOrderingUnit);
 
-// Delete an existing ordering unit
-// DELETE /api/common-orders/:id/units/:unitId
 commonOrderRoutes.delete("/:id/deletecommonorder/:unitId", multiRoleAuthMiddleware("owner", "staff", "CTO"), deleteCommonOrderingUnit);
 
 ///////////////////////////
@@ -90,7 +82,7 @@ commonOrderRoutes.get(
 );
 
 
-
+// used to get the particualr common order based on the id 
 commonOrderRoutes.get(
     "/getsingleproject/:id",
     multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),
@@ -100,7 +92,9 @@ commonOrderRoutes.get(
 
 commonOrderRoutes.put('/completionstatus/:id', multiRoleAuthMiddleware("owner", "staff", "CTO",), commonOrderMaterialHistoryCompletionStatus)
 commonOrderRoutes.patch('/generatelink/:id', multiRoleAuthMiddleware("owner", "staff", "CTO",), generateCommonOrderPDFController)
+// delete the pdf 
 commonOrderRoutes.delete('/delete/:id/:pdfId', multiRoleAuthMiddleware("owner", "staff", "CTO",), deleteCommonOrderPdf)
+// update the status of the project
 commonOrderRoutes.patch('/upddatepdfstatus/:id/:pdfId', multiRoleAuthMiddleware("owner", "staff", "CTO",),   updateCommonOrderPdfStatus)
 
 

@@ -190,39 +190,6 @@ export const validRooms = [
 
 
 
-export const updateInstallationTaskStatus = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { projectId, taskId } = req.params;
-    const { status } = req.body;
-    console.log("tasks id", taskId)
-    console.log("projectId", projectId)
-    // Find and update the task
-    const updatedSchedule = await InstallationModel.findOneAndUpdate(
-      {
-        projectId: new mongoose.Types.ObjectId(projectId),
-        "tasks._id": new mongoose.Types.ObjectId(taskId)
-      },
-      { $set: { "tasks.$.status": status } },
-      { new: true }
-    );
-
-    if (!updatedSchedule) {
-      return res.status(404).json({ message: "Task not found", ok: false });
-    }
-
-    await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: updatedSchedule })
-
-
-    res.status(200).json({
-      message: "Task status updated successfully",
-      updatedSchedule,
-      ok: true
-    });
-  } catch (error) {
-    console.error("Error updating task status:", error);
-    res.status(500).json({ message: "Internal server error", ok: false });
-  }
-};
 
 
 // const createInstallationItem = async (req: Request, res: Response): Promise<any> => {
@@ -385,30 +352,7 @@ export const updateInstallationTaskStatus = async (req: Request, res: Response):
 //   }
 // };
 
-const getInstallationDetails = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { projectId } = req.params;
 
-    const redisMainKey = `stage:InstallationModel:${projectId}`
-    await redisClient.del(redisMainKey)
-    const cachedData = await redisClient.get(redisMainKey)
-
-    if (cachedData) {
-      return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
-    }
-
-    const doc = await InstallationModel.findOne({ projectId });
-    if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
-
-    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
-    await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
-
-    return res.status(200).json({ ok: true, data: doc, message: "fetched properly" });
-  } catch (error) {
-    console.error("Error fetching installation details:", error);
-    return res.status(500).json({ ok: false, message: "Server error." });
-  }
-};
 
 // const getInstallationRoomDetails = async (req: Request, res: Response): Promise<any> => {
 //   try {
@@ -445,6 +389,63 @@ const getInstallationDetails = async (req: Request, res: Response): Promise<any>
 // COMMON CONTOROLLER
 
 
+export const updateInstallationTaskStatus = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { projectId, taskId } = req.params;
+    const { status } = req.body;
+    console.log("tasks id", taskId)
+    console.log("projectId", projectId)
+    // Find and update the task
+    const updatedSchedule = await InstallationModel.findOneAndUpdate(
+      {
+        projectId: new mongoose.Types.ObjectId(projectId),
+        "tasks._id": new mongoose.Types.ObjectId(taskId)
+      },
+      { $set: { "tasks.$.status": status } },
+      { new: true }
+    );
+
+    if (!updatedSchedule) {
+      return res.status(404).json({ message: "Task not found", ok: false });
+    }
+
+    await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: updatedSchedule })
+
+
+    res.status(200).json({
+      message: "Task status updated successfully",
+      updatedSchedule,
+      ok: true
+    });
+  } catch (error) {
+    console.error("Error updating task status:", error);
+    res.status(500).json({ message: "Internal server error", ok: false });
+  }
+};
+const getInstallationDetails = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { projectId } = req.params;
+
+    const redisMainKey = `stage:InstallationModel:${projectId}`
+    await redisClient.del(redisMainKey)
+    const cachedData = await redisClient.get(redisMainKey)
+
+    if (cachedData) {
+      return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+    }
+
+    const doc = await InstallationModel.findOne({ projectId });
+    if (!doc) return res.status(404).json({ ok: false, message: "Installation record not found." });
+
+    // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+    await populateWithAssignedToField({ stageModel: InstallationModel, projectId, dataToCache: doc })
+
+    return res.status(200).json({ ok: true, data: doc, message: "fetched properly" });
+  } catch (error) {
+    console.error("Error fetching installation details:", error);
+    return res.status(500).json({ ok: false, message: "Server error." });
+  }
+};
 const setInstallationStageDeadline = (req: Request, res: Response): Promise<any> => {
   return handleSetStageDeadline(req, res, {
     model: InstallationModel,

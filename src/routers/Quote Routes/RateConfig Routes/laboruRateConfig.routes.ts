@@ -21,22 +21,17 @@ LabourRateConfigRoutes.get("/categories/:organizationId/singlesalary", multiRole
 /**
  * CATEGORY ROUTES
  */
-// Create category (e.g., Plywood, Adhesive, etc.)
 LabourRateConfigRoutes.post("/categories", multiRoleAuthMiddleware("owner","CTO", "staff"), createLabourCategory);
 
-// Delete category and its items
 LabourRateConfigRoutes.delete("/categories/:categoryId",multiRoleAuthMiddleware("owner","CTO", "staff"), deleteLabourCategory);
 
 /**
  * ITEM ROUTES
  */
-// Create items under a category
 LabourRateConfigRoutes.post("/categories/:organizationId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),createLabourItems);
 
-// Update single item
 LabourRateConfigRoutes.put("/items/:itemId", multiRoleAuthMiddleware("owner","CTO", "staff"),updateLabourItem);
 
-// Delete single item
 LabourRateConfigRoutes.delete("/items/:itemId",multiRoleAuthMiddleware("owner","CTO", "staff"), deleteLabourItem);
 
 export default LabourRateConfigRoutes;

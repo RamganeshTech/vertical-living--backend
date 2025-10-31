@@ -275,6 +275,11 @@ app.use('/api/publicordermaterial', publicOrderMaterialRoutes)
 app.use('/api/shoplibdetails', shopLibRoutes)
 app.use('/api/materialarrivalcheck', materialArrivalRoutes)
 app.use('/api/worktasks', workTaskRoutes)
+
+// REPORTS
+app.use('/api/workreports', workReportRoutes)
+
+
 app.use('/api/installation', installationRoutes)
 app.use('/api/qualitycheck', qualityCheckRoutes)
 app.use('/api/cleaning', cleaningRoutes)
@@ -292,8 +297,6 @@ app.use('/api/workerwall', workerWallRoutes)
 app.use('/api/assignstafftostage', assignRoutes)
 
 
-// REPORTS
-app.use('/api/workreports', workReportRoutes)
 
 // SHORTLIST REFERENCE DESIGN
 app.use('/api/shortlist/referencedesign', shortlistReferenceDesign)
@@ -301,7 +304,6 @@ app.use('/api/shortlist/referencedesign', shortlistReferenceDesign)
 // app.use('/api/shortlist/micadesign', shortlistMicaReferenceDesignRoutes)
 
 
-app.use('/api/worklib', workLibRoutes)
 // SHORTLIST API
 app.use('/api/shortlisteddesign', shortlistedDesignRoutes)
 // SHORLIST MICA API
@@ -311,6 +313,7 @@ app.use('/api/currentactivestage', currentActiveStage)
 
 // PROCUREMENT API
 app.use('/api/procurement', procurementRoutes)
+
 app.use('/api/department/hr', HRRoutes)
 app.use('/api/department/logistics', LogisticsRoutes)
 app.use('/api/department/procurement', procurementNewRoutes)
@@ -327,6 +330,7 @@ app.use('/api/quote/labour/rateconfig', LabourRateConfigRoutes)
 app.use('/api/quote/quotegenerate', QuoteRouter)
 
 // STAFF TASKS API
+app.use('/api/worklib', workLibRoutes)
 app.use("/api/stafftasks/", staffTaskRoutes)
 
 

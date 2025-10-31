@@ -77,8 +77,8 @@ const verifyPaymentConfirmation = async (req: Request, res: Response): Promise<a
             .update(razorpay_order_id + "|" + razorpay_payment_id)
             .digest("hex");
 
-            console.log("generatedSigneatrue", generated_signature)
-            console.log("razorpay signature", razorpay_signature)
+            // console.log("generatedSigneatrue", generated_signature)
+            // console.log("razorpay signature", razorpay_signature)
 
             
         if (generated_signature !== razorpay_signature) {

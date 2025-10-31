@@ -6,7 +6,6 @@ const recycleMaterialRoutes = express.Router();
 
 
 
-// ✅ Get all inventory details
 recycleMaterialRoutes.put(
   "/updaterecyclemanually/:organizationId/:projectId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
@@ -15,7 +14,6 @@ recycleMaterialRoutes.put(
 
 
 
-// ✅ Get all inventory details
 recycleMaterialRoutes.patch(
   "/updatequantity/:organizationId/:projectId/:itemId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
@@ -23,7 +21,6 @@ recycleMaterialRoutes.patch(
 );
 
 
-// ✅ Get all inventory details
 recycleMaterialRoutes.get(
   "/getglobalmaterials/:organizationId",
   multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
@@ -31,7 +28,6 @@ recycleMaterialRoutes.get(
 );
 
 
-// ✅ Get all inventory details
 recycleMaterialRoutes.get(
   "/getsingleprojectmaterial/:organizationId/:projectId",
   multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),

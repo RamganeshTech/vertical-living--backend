@@ -62,13 +62,13 @@ shortlistedDesignRoutes.post(
 );
 
 shortlistedDesignRoutes.get(
-  "/getsiteimages/:projectId/",
+  "/getsiteimages/:projectId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   getAllSiteImages
 );
 
 shortlistedDesignRoutes.get(
-  "/getreferencedesigns/:organizationId/",
+  "/getreferencedesigns/:organizationId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   getShortlistedReferenceDesigns
 );
@@ -77,7 +77,7 @@ shortlistedDesignRoutes.get(
 shortlistedDesignRoutes.get('/getsuggestedtags', getAllReferenceTags);
 
 shortlistedDesignRoutes.delete(
-  "/deletepdf/:id/",
+  "/deletepdf/:id",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   deleteShortListedDesign
 );

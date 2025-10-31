@@ -18,8 +18,6 @@ import { checkIfStaffIsAssignedToStage } from "../../../middlewares/checkIfStaff
 
 const qualityCheckRoutes = Router();
 
-// === CREATE ===
-// POST /api/quality-check/:projectId/:roomName/item/create
 qualityCheckRoutes.post(
   "/:projectId/:roomName/item/create",
   multiRoleAuthMiddleware("owner", "CTO", "staff"),
@@ -32,8 +30,6 @@ qualityCheckRoutes.post(
   createQualityCheckItem
 );
 
-// === EDIT ===
-// PUT /api/quality-check/:projectId/:roomName/:itemId/item/edit
 qualityCheckRoutes.put(
   "/:projectId/:roomName/:itemId/item/edit",
   multiRoleAuthMiddleware("owner", "CTO", "staff"),
@@ -46,8 +42,6 @@ qualityCheckRoutes.put(
   editQualityCheckItem
 );
 
-// === DELETE ===
-// DELETE /api/quality-check/:projectId/:roomName/:itemId/item/delete
 qualityCheckRoutes.delete(
   "/:projectId/:roomName/:itemId/item/delete",
   multiRoleAuthMiddleware("owner", "CTO", "staff"),
@@ -57,8 +51,6 @@ qualityCheckRoutes.delete(
   deleteQualityCheckItem
 );
 
-// === GET ALL ===
-// GET /api/quality-check/:projectId
 qualityCheckRoutes.get(
   "/:projectId",
   multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
@@ -66,19 +58,12 @@ qualityCheckRoutes.get(
   getQualityCheckup
 );
 
-// === GET SINGLE ROOM ===
-// GET /api/quality-check/:projectId/:roomName
 qualityCheckRoutes.get(
   "/:projectId/:roomName",
   multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
   // checkPreviousStageCompleted(InstallationModel),
   getQualityCheckRoomItems
 );
-
-
-
-
-
   
 qualityCheckRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(QualityCheckupModel), setQualityCheckStageDeadline)
 qualityCheckRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  checkIfStaffIsAssignedToStage(QualityCheckupModel),  qualityCheckCompletionStatus)

@@ -34,25 +34,27 @@ import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCh
 const workTaskRoutes = Router();
 
 // getting the detials of main and sub models
-workTaskRoutes.get("/getworktaksmain/:projectId",
-  multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "staff"),
+workTaskRoutes.get("/getworktaskmain/:projectId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
   // checkPreviousStageCompleted(MaterialArrivalModel),
   getAllWorkMainStageDetails
 );
 
+// not in use
 workTaskRoutes.get("/getworkschedule/:projectId",
   multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
   // checkPreviousStageCompleted(MaterialArrivalModel),
-
   getAllWorkSchedules
 );
 
 workTaskRoutes.get("/getdailyschedule/:projectId",
-  multiRoleAuthMiddleware("owner", "staff", "CTO", "worker", "staff"),
+  multiRoleAuthMiddleware("owner", "staff", "CTO", "worker",),
   // checkPreviousStageCompleted(MaterialArrivalModel),
   getAllDailySchedules
 );
 
+
+//  not in use
 workTaskRoutes.post("/:projectId/work-plan/:workScheduleId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   // checkPreviousStageCompleted(MaterialArrivalModel),
@@ -63,6 +65,8 @@ workTaskRoutes.post("/:projectId/work-plan/:workScheduleId",
   addWorkPlan
 );
 
+//  not in use
+
 workTaskRoutes.put(
   "/:projectId/work-plan/:workScheduleId/:planId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
@@ -71,6 +75,8 @@ workTaskRoutes.put(
   processUploadFiles,
   updateWorkPlan
 );
+
+//  not in use
 
 workTaskRoutes.delete(
   "/:projectId/work-plan/:workScheduleId/:planId",
@@ -218,13 +224,18 @@ workTaskRoutes.put(
 );
 
 
-workTaskRoutes.delete('/deletecorrectedimages/:scheduleId/:comparisonId/:imageId', multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"), deleteWorkCorrectImages)
-workTaskRoutes.delete('/deleteselectimages/:scheduleId/:comparisonId/:selectId',  multiRoleAuthMiddleware("owner", "CTO", "staff"), deleteWorkSelectImage)
+workTaskRoutes.delete('/deletecorrectedimages/:scheduleId/:comparisonId/:imageId',
+   multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
+    deleteWorkCorrectImages)
+    
+workTaskRoutes.delete('/deleteselectimages/:scheduleId/:comparisonId/:selectId', 
+   multiRoleAuthMiddleware("owner", "CTO", "staff"), 
+   deleteWorkSelectImage)
 
 
 // get projectAssinged detials for automatic flled data
 workTaskRoutes.get(
-  "/getprojectassigne/:projectId",
+  "/getprojectwork/:projectId",
   getCurrentProjectDetailsWork
 );
 

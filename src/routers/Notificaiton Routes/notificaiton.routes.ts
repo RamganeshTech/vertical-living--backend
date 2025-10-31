@@ -23,15 +23,15 @@ const notificaitonRoutes = express.Router();
 notificaitonRoutes.use(multiRoleAuthMiddleware("owner", "CTO", "staff"));
 
 // Get all notifications for user
-notificaitonRoutes.get('/getAllNotificaiton', getUserNotifications);
+notificaitonRoutes.get('/getAllNotification', getUserNotifications);
 
-// Get unread notifications
+// Get unread notifications  (not in use)
 notificaitonRoutes.get('/unread', getUserUnreadNotifications);
 
 // Get unread count
 notificaitonRoutes.get('/unread-count', getUserUnreadCount);
 
-// Mark as read
+// Mark as read(not in use)
 notificaitonRoutes.patch('/:id/read', markAsRead);
 
 // Mark all as read

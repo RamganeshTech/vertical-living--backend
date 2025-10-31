@@ -911,7 +911,7 @@ export const deleteAllSubUnits = async (req: Request, res: Response): Promise<an
         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
 
 
-        res.json({ ok: true, message: "SubItem deleted", data: orderDoc.selectedUnits });
+        res.json({ ok: true, message: "All SubItem deleted", data: orderDoc.selectedUnits });
 
 
         // 🔁 Fire-and-forget to restore inventory without blocking response

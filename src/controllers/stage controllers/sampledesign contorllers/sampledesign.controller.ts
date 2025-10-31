@@ -79,7 +79,7 @@ const addRoom = async (req: Request, res: Response): Promise<any> => {
     const { projectId } = req.params;
     const { roomName } = req.body;
 
-    if (!roomName || typeof roomName !== "string") {
+    if (!roomName?.trim() || typeof roomName !== "string") {
       return res.status(400).json({ message: "Room name is required.", ok: false });
     }
 
@@ -211,6 +211,10 @@ const deleteFileFromRoom = async (req: Request, res: Response): Promise<any> => 
       return res.status(400).json({ message: "projectId is requried", ok: false })
     }
 
+     if (!roomName || !fileId) {
+      return res.status(400).json({ message: "roomName and the fileId is requried", ok: false })
+    }
+
     const design = await SampleDesignModel.findOne({ projectId });
     if (!design) {
       return res.status(404).json({ ok: false, message: "Sample design not found." });
@@ -262,6 +266,12 @@ const deleteRoom = async (req: Request, res: Response): Promise<any> => {
     if (!projectId) {
       return res.status(400).json({ message: "projectId is requried", ok: false })
     }
+
+    if (!roomId) {
+      return res.status(400).json({ message: "roomId is requried", ok: false })
+    }
+
+
 
     const design = await SampleDesignModel.findOne({ projectId });
     if (!design) {

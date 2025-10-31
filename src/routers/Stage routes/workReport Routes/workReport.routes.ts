@@ -7,7 +7,7 @@ const workReportRoutes = express.Router()
 
 workReportRoutes.post('/create/:projectId/:organizationId',  createWorkReport)
 workReportRoutes.get("/getreports/:projectId", getWorkReportsByProjectId);
-workReportRoutes.get("/workimages/:projectId/:id/:date/:dailyTaskId", getDailyTaskImagesByDate);
+workReportRoutes.get("/workimages/:projectId/:id/:dailyTaskId", getDailyTaskImagesByDate);
 workReportRoutes.delete("/delete/:id", deleteWorkReportById);
 
 // workReportRoutes.get("/proxyimage", proxyImageFromS3);

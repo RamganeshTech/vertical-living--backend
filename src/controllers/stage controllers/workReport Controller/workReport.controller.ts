@@ -143,7 +143,7 @@ export const deleteWorkReportById = async (req: RoleBasedRequest, res: Response)
 // 📌 Controller: Get grouped daily task images by date
 export const getDailyTaskImagesByDate = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { projectId, id, date, dailyTaskId } = req.params;
+        const { projectId, id, dailyTaskId } = req.params;
 
         if (!projectId) {
             return res.status(400).json({ ok: false, message: "Invalid projectId" });

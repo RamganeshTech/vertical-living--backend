@@ -32,6 +32,7 @@ QuoteRouter.get(
 
 
 
+
 // QuoteRouter.get(
 //   "/getcategories/:organizationId",
 //   multiRoleAuthMiddleware("owner", "staff", "CTO"),
@@ -39,9 +40,15 @@ QuoteRouter.get(
 // );
 
 
-
-
 // QUOTE VARIANT ROUTES
+
+QuoteRouter.delete(
+  '/deletequote/:id',
+  multiRoleAuthMiddleware('owner', 'staff', 'CTO'), // if required
+  deleteMaterialQuoteById
+);
+
+
 QuoteRouter.get(
   "/getquotesingle/:organizationId/:id",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
@@ -55,13 +62,6 @@ QuoteRouter.get(
   getMaterialItemsByCategoryForQuote
 );
 
-
-
-QuoteRouter.delete(
-  '/deletequote/:id',
-  multiRoleAuthMiddleware('owner', 'staff', 'CTO'), // if required
-  deleteMaterialQuoteById
-);
 
 
 

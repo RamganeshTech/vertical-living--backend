@@ -38,28 +38,6 @@ export const createInventorySubItem = async (req: RoleBasedRequest, res: Respons
         createModel = "UserModel"; // fallback
     }
 
-    // Find or create the inventory doc for project
-    // let inventoryDoc = await InventoryModel.findOne({ projectId });
-    // if (!inventoryDoc) {
-    //   inventoryDoc = new InventoryModel({ projectId, subItems: [] });
-    // }
-
-    // // prepare subitem
-    // const newSubItem = {
-    //   itemName,
-    //   unit: unit || null,
-    //   totalQuantity: totalQuantity || 0,
-    //   remainingQuantity: totalQuantity || 0, // initially same
-    //   usedQuantity: 0,
-    //   performedBy:  new Types.ObjectId(user._id),
-    //   createModel,
-    //   note: note || null,
-    // };
-
-    // inventoryDoc.subItems.push(newSubItem);
-    // await inventoryDoc.save();
-
-
 
      // Find or create the inventory doc for project to nsdrte wthout the duplicate items
     let inventoryDoc = await InventoryModel.findOne({ projectId });
@@ -93,22 +71,6 @@ export const createInventorySubItem = async (req: RoleBasedRequest, res: Respons
 
     inventoryDoc.subItems.push(newSubItem);
     await inventoryDoc.save();
-
-
-    // shorter way
-     // Single DB call: only insert if no subItem with same itemName exists
-    // const updatedDoc = await InventoryModel.findOneAndUpdate(
-    //   {
-    //     projectId,
-    //     "subItems.itemName": { $ne: itemName }, // ensures no duplicate itemName
-    //   },
-    //   {
-    //     $push: { subItems: newSubItem },
-    //     $setOnInsert: { projectId }, // create doc if it doesn't exist
-    //   },
-    //   { new: true, upsert: true }
-    // );
-
 
     return res.status(201).json({
       ok: true,
@@ -197,42 +159,6 @@ export const updateInventorySubItem = async (req: RoleBasedRequest, res: Respons
     subItem.createModel = createModel;
 
     await inventoryDoc.save();
-
-
-
-
-    // shorter version in single db call
-    // Build the update object
-    // const updateObj: any = {
-    //   "subItems.$.performedBy": new Types.ObjectId(user._id),
-    //   "subItems.$.createModel": createModel,
-    // };
-
-    // if (note !== undefined) updateObj["subItems.$.note"] = note;
-    // if (totalQuantity !== undefined) {
-    //   // We cannot calculate remainingQuantity directly in Mongo, so fetch used in pipeline style
-    //   // But for simplicity, we assume frontend sends remainingQuantity adjustment separately if needed
-    //   updateObj["subItems.$.totalQuantity"] = totalQuantity;
-    // }
-
-    // if (itemName) updateObj["subItems.$.itemName"] = itemName;
-
-    // // Single DB call
-    // const updatedDoc = await InventoryModel.findOneAndUpdate(
-    //   {
-    //     projectId,
-    //     "subItems._id": subItemId,
-    //     ...(itemName && {
-    //       "subItems": { 
-    //         $not: { $elemMatch: { itemName: itemName, _id: { $ne: subItemId } } } 
-    //       }
-    //     }) // ensure no duplicate name exists
-    //   },
-    //   {
-    //     $set: updateObj,
-    //   },
-    //   { new: true }
-    // );
 
     return res.status(200).json({
       ok: true,
