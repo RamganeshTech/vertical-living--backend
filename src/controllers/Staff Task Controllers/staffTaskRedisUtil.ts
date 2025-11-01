@@ -14,12 +14,16 @@ export const getCacheKey = {
     task: (taskId: string) => `${prefix}:task:${taskId}`,
 
     // Task list with filters
-    taskList: (orgId: string, filters: string = '') => 
+    taskList: (orgId: string, filters: string = '') =>
         `${prefix}:tasks:org:${orgId}${filters ? `:${filters}` : ''}`,
 
     // Staff-specific tasks
-    staffTasks: (staffId: string, orgId: string, filters: string = '') => 
+    staffTasks: (staffId: string, orgId: string, filters: string = '') =>
         `${prefix}:tasks:staff:${staffId}:org:${orgId}${filters ? `:${filters}` : ''}`,
+
+    // other staffs pending tasks
+    otherStaffTasks: (staffId: string, orgId: string, filters: string = '') =>
+        `${prefix}:tasks:otherstaff:${staffId}:org:${orgId}${filters ? `:${filters}` : ''}`,
 
     // Task suggestions (embeddings)
     taskSuggestion: (title: string) => {
@@ -31,8 +35,11 @@ export const getCacheKey = {
     // Tracking sets for invalidation
     taskTrackingSet: (orgId: string) => `${prefix}:tasks:org:${orgId}:tracking`,
 
-    staffTaskTrackingSet: (staffId: string, orgId: string) => 
-        `${prefix}:tasks:staff:${staffId}:org:${orgId}:tracking`
+    staffTaskTrackingSet: (staffId: string, orgId: string) =>
+        `${prefix}:tasks:staff:${staffId}:org:${orgId}:tracking`,
+
+    otherStaffTaskTrackingSet: (orgId: string) => `${prefix}:tasks:otherstaff:org:${orgId}:tracking`
+
 };
 
 // TTL Constants

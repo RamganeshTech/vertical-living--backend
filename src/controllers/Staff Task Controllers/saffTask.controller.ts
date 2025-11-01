@@ -109,7 +109,6 @@ export const getAllTasks = async (req: Request, res: Response): Promise<any> => 
 
         const { organizationId } = req.params
 
-
         const query: any = {};
         if (organizationId) query.organizationId = new Types.ObjectId(organizationId)
         if (status) query.status = status;
@@ -136,6 +135,7 @@ export const getAllTasks = async (req: Request, res: Response): Promise<any> => 
         }
 
 
+        console.log("query", query)
 
         // Generate cache key with filters
         const filterHash = generateFilterHash(req.query);
@@ -358,6 +358,107 @@ export const getAssociatedStaffsTask = async (req: RoleBasedRequest, res: Respon
 };
 
 
+
+export const getOtherStaffPendingTasks = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const {
+            // status,
+            priority,
+            // assigneeId,
+            projectId,
+            department,
+            overdue,
+            createdAt,
+            dependecies
+        } = req.query;
+
+        const { organizationId } = req.params
+
+
+        const query: any = {};
+        query.assigneeId = { $ne: new Types.ObjectId(req.user?._id as string) }
+        if (organizationId) query.organizationId = new Types.ObjectId(organizationId)
+        // if (status) query.status = status;
+        if (priority) query.priority = priority;
+        if (projectId) query.projectId = new Types.ObjectId(projectId as string);
+        if (department) query.department = department;
+
+        query.status = { $ne: "done" }
+
+        if (dependecies === 'true') {
+            query.dependentTaskId = { $exists: true, $ne: [] };
+        }
+
+        if (overdue === 'true') {
+            query.due = { $lt: new Date() }; // due < now
+        }
+
+        if (createdAt) {
+            const date = new Date(createdAt as string);
+
+            // Create a range for that day: start -> end
+            const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+            const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+
+            query.due = { $gte: startOfDay, $lte: endOfDay };
+        }
+
+
+
+        // Generate cache key with filters
+        const filterHash = generateFilterHash(req.query);
+        const cacheKey = getCacheKey.otherStaffTasks(
+            req.user?._id as string,
+            organizationId,
+            filterHash
+        );
+
+        // Check cache
+        const cached = await getCachedData<IStaffTask[]>(cacheKey);
+        if (cached) {
+            return res.status(200).json({
+                ok: true,
+                message: 'pending Tasks fetched from cache',
+                cached: true,
+                data: cached
+            });
+        }
+
+        const tasks = await StaffMainTaskModel.find(query).populate("assigneeId");
+
+        let finalTasks = tasks;
+
+        if (dependecies === 'true') {
+            finalTasks = tasks.filter(task => {
+                return (
+                    task?.dependentTaskId && Array.isArray(task?.dependentTaskId) &&
+                    task?.dependentTaskId.length > 0 &&
+                    task.status !== 'done'
+                );
+            });
+        }
+
+
+        // Cache the result and track it
+        await setCachedData(cacheKey, finalTasks, CACHE_TTL.TASK_LIST);
+        await trackCacheKey(getCacheKey.taskTrackingSet(organizationId), cacheKey);
+
+
+        return res.status(200).json({
+            ok: true,
+            message: 'Pending Tasks fetched successfully',
+            data: finalTasks
+        });
+    } catch (error) {
+        console.error('Error fetching tasks:', error);
+        return res.status(500).json({
+            ok: false,
+            message: 'Failed to fetch tasks'
+        });
+    }
+};
+
+
 export const createStaffTask = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         let {
@@ -533,6 +634,12 @@ export const createStaffTask = async (req: RoleBasedRequest, res: Response): Pro
                 invalidationPromises.push(
                     invalidateTrackedKeys(getCacheKey.staffTaskTrackingSet(staffId, orgId))
                 );
+
+                // ✅ Also invalidate "other staff" views
+                invalidationPromises.push(
+                    invalidateTrackedKeys(getCacheKey.otherStaffTaskTrackingSet(orgId))
+                )
+
             }
         }
 
@@ -997,6 +1104,12 @@ export const createStaffTaskFromWork = async (
                 invalidationPromises.push(
                     invalidateTrackedKeys(getCacheKey.staffTaskTrackingSet(staffId, orgId))
                 );
+
+                // ✅ Also invalidate "other staff" views
+                invalidationPromises.push(
+                    invalidateTrackedKeys(getCacheKey.otherStaffTaskTrackingSet(orgId))
+                )
+
             }
         }
 
@@ -1383,6 +1496,8 @@ export const deleteMainTask = async (req: Request, res: Response): Promise<any> 
             });
         }
 
+        const staffId = deleted?.assigneeId && deleted?.assigneeId?.toString();
+
 
         // ✅ INVALIDATE CACHES
         const invalidationPromises = [
@@ -1402,6 +1517,11 @@ export const deleteMainTask = async (req: Request, res: Response): Promise<any> 
                         deleted.organizationId.toString()
                     )
                 )
+            );
+
+            // “Other staff” views (so it disappears from others’ dashboards)
+            invalidationPromises.push(
+                invalidateTrackedKeys(getCacheKey.staffTaskTrackingSet(`otherstaff-${staffId}`, deleted?.organizationId?.toString()))
             );
         }
 

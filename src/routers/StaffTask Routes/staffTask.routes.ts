@@ -20,7 +20,8 @@ import {
   suggestSubtasks,
   getAssociatedStaffsTask,
   createStaffTaskFromWork,
-  updateStaffTaskComments
+  updateStaffTaskComments,
+  getOtherStaffPendingTasks
 } from '../../controllers/Staff Task Controllers/saffTask.controller';
 import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
 import { staffTaskAccess } from '../../middlewares/staffTaskAccess';
@@ -65,5 +66,6 @@ staffTaskRoutes.get('/suggest/subtasks', multiRoleAuthMiddleware("owner", "staff
 staffTaskRoutes.get('/:organizationId/tasks', multiRoleAuthMiddleware("owner", "staff", "CTO"), getAllTasks);
 staffTaskRoutes.get('/singletask/:id', multiRoleAuthMiddleware("owner", "staff", "CTO"), getSingleTask);
 staffTaskRoutes.get('/associatedstaffstask/:organizationId', multiRoleAuthMiddleware("owner", "staff", "CTO"), getAssociatedStaffsTask);
+staffTaskRoutes.get('/otherpendingstafftask/:organizationId', multiRoleAuthMiddleware("owner", "staff", "CTO"), getOtherStaffPendingTasks);
 
 export default staffTaskRoutes;
