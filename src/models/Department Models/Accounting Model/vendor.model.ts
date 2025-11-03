@@ -8,11 +8,10 @@ export interface IUpload {
     uploadedAt?: Date;
 }
 
-export interface ICustomer extends Document {
-    customerType: "business" | "individual";
-
+export interface IVendor extends Document {
+    // customerType: "business" | "individual";
     organizationId: Types.ObjectId;
-    projectId: Types.ObjectId;
+    // projectId: Types.ObjectId;
     clientId: Types.ObjectId;
     // salutation?: string;
     firstName: string | null;
@@ -24,19 +23,18 @@ export interface ICustomer extends Document {
         work: string | null;
         mobile: string | null;
     };
-    customerLanguage?: string | null;
+    vendorLanguage?: string | null;
 
     // Other Details
     pan?: string | null;
     currency?: string;
-    accountsReceivable?: string | null;
+    accountsPayable?: string | null;
     openingBalance?: number;
     paymentTerms?: string;
-    enablePortal?: boolean;
+    TDS: string;
     documents?: IUpload[];
     // customerOwner?: mongoose.Types.ObjectId;
 }
-
 
 
 const fileSchema = new Schema<IUpload>({
@@ -46,17 +44,10 @@ const fileSchema = new Schema<IUpload>({
     uploadedAt: { type: Date, default: new Date() }
 }, { _id: true });
 
-const CustomerSchema = new Schema<ICustomer>(
+const VendorSchema = new Schema<IVendor>(
     {
-        customerType: {
-            type: String,
-            enum: ["business", "individual"],
-            default: "business",
-        },
-
-        organizationId: {type:Schema.Types.ObjectId, ref:"OrganizationModel"},
-        clientId: {type:Schema.Types.ObjectId, ref:"ClientModel"},
-        projectId: {type:Schema.Types.ObjectId, ref:"ProjectModel"},
+        organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
+        clientId: { type: Schema.Types.ObjectId, ref: "ClientModel" },
         //   salutation: { type: String },
         firstName: { type: String, default: null },
         lastName: { type: String, default: null },
@@ -68,15 +59,16 @@ const CustomerSchema = new Schema<ICustomer>(
             work: { type: String, default: null },
             mobile: { type: String, default: null },
         },
-        customerLanguage: { type: String, default: "English" },
+        vendorLanguage: { type: String, default: "English" },
 
         // Other Details
         pan: { type: String, default: null },
         currency: { type: String, default: "INR - Indian Rupee" },
-        accountsReceivable: { type: String, default: null },
+        accountsPayable: { type: String, default: null },
         openingBalance: { type: Number, default: 0 },
         paymentTerms: { type: String, default: "Due on Receipt" },
-        enablePortal: { type: Boolean, default: false },
+        // enablePortal: { type: Boolean, default: false },
+        TDS: { type: String, default: null },
         documents: { type: [fileSchema], default: [] },
         // customerOwner: {
         //   type: Schema.Types.ObjectId,
@@ -86,5 +78,5 @@ const CustomerSchema = new Schema<ICustomer>(
     { timestamps: true }
 );
 
-const CustomerAccountModel = mongoose.model<ICustomer>("CustomerAccountModel", CustomerSchema);
-export default CustomerAccountModel;
+const VendorAccountModel = mongoose.model<IVendor>("VendorAccountModel", VendorSchema);
+export default VendorAccountModel;

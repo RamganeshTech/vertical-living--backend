@@ -43,13 +43,14 @@ const SalesItemScheam = new Schema<ISalesItem>(
 
 const SalesAccSchema = new Schema<ISalesMain>(
     {
-        customerId: {
-            type: Schema.Types.ObjectId,
-            ref: "CustomerAccountModel",
-        },
+       
         organizationId: {
             type: Schema.Types.ObjectId,
             ref: "OrganizationModel"
+        },
+         customerId: {
+            type: Schema.Types.ObjectId,
+            ref: "CustomerAccountModel",
         },
         customerName: { type: String, default: null },
         salesOrderDate: { type: Date, default: new Date() },

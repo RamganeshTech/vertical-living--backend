@@ -97,6 +97,9 @@ import SelectedModularUnitNewRoutes from './routers/Modular Unit routes/Selected
 import salesAccountsRoutes from './routers/Department Routes/Accounting Routes/salesOrderAccounts.route';
 import publicOrderMaterialRoutes from './routers/Stage routes/order Material routes/publicOrderMaterial.routes';
 import shopLibRoutes from './routers/Stage routes/order Material routes/shopLibDetails.routes';
+import vendorAccountingRoutes from './routers/Department Routes/Accounting Routes/vendorAccounts.routes';
+import ExpenseRoutes from './routers/Department Routes/Accounting Routes/expense.routes';
+import ExpenseAccountingRoutes from './routers/Department Routes/Accounting Routes/expense.routes';
 
 
 
@@ -322,6 +325,8 @@ app.use('/api/department/accounting/customer', customerAccountingRoutes)
 app.use('/api/department/accounting/invoice', invoiceAccountRoutes)
 app.use('/api/department/accounting/retailinvoice', retailInvoiceAccountRoutes)
 app.use('/api/department/accounting/salesorder', salesAccountsRoutes)
+app.use('/api/department/accounting/vendor', vendorAccountingRoutes)
+app.use('/api/department/accounting/expense', ExpenseAccountingRoutes)
 
 
 // QUOTES API
