@@ -382,7 +382,7 @@ export const getAllvendors = async (req: RoleBasedRequest, res: Response): Promi
             page = '1',
             limit = '10',
             organizationId,
-            projectId,
+            // projectId,
             // firstName,
             // lastName,
             // vendorType,
@@ -425,9 +425,9 @@ export const getAllvendors = async (req: RoleBasedRequest, res: Response): Promi
             filter.organizationId = organizationId;
         }
 
-        if (projectId) {
-            filter.projectId = projectId;
-        }
+        // if (projectId) {
+        //     filter.projectId = projectId;
+        // }
 
 
         // if (firstName) {

@@ -16,10 +16,9 @@ const validateExpenseData = (data: any, isUpdate = false) => {
         errors.push("Invalid Organization ID");
     }
 
-    if (!isUpdate && !data.vendorId) {
-        errors.push("Vendor ID is required");
-    }
-
+    // if (!isUpdate && !data.vendorId) {
+    //     errors.push("Vendor ID is required");
+    // }
     if (data.vendorId && !validateMongoId(data.vendorId)) {
         errors.push("Invalid Vendor ID");
     }
@@ -81,7 +80,7 @@ export const createExpense = async (req: Request, res: Response): Promise<any> =
         // Create expense
         const expense = await ExpenseAccountModel.create({
             organizationId,
-            vendorId,
+            vendorId: vendorId || null,
             vendorName,
             dateOfPayment: dateOfPayment || new Date(),
             amount,
@@ -90,7 +89,7 @@ export const createExpense = async (req: Request, res: Response): Promise<any> =
         });
 
         // await expense.save();
-// 
+        // 
         // Clear cache
         const cachePattern = `expenses:page:*organizationId:${organizationId}*`;
         const keys = await redisClient.keys(cachePattern);
@@ -98,7 +97,7 @@ export const createExpense = async (req: Request, res: Response): Promise<any> =
             await redisClient.del(keys);
         }
 
-         // ✅ Also clear statistics cache
+        // ✅ Also clear statistics cache
         const statsCachePattern = `expense-stats:organizationId:${organizationId}*`;
         const statsKeys = await redisClient.keys(statsCachePattern);
         if (statsKeys.length > 0) {
@@ -234,7 +233,7 @@ export const deleteExpense = async (req: Request, res: Response): Promise<any> =
 
         await ExpenseAccountModel.findByIdAndDelete(id);
 
-         // ✅ Clear list cache - Fixed pattern
+        // ✅ Clear list cache - Fixed pattern
         const listCachePattern = `expenses:page:*:organizationId:${organizationId}*`;
         const listKeys = await redisClient.keys(listCachePattern);
         if (listKeys.length > 0) {
@@ -328,9 +327,8 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
         const {
             organizationId,
             vendorId,
-            invoiceNumber,
-            startDate,
-            endDate,
+            search,
+            date,
             minAmount,
             maxAmount,
             paidThrough,
@@ -382,7 +380,7 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
         }
 
         // Create cache key
-        const cacheKey = `expenses:page:${page}:limit:${limit}:organizationId:${organizationId}:vendorId:${vendorId || "all"}:invoice:${invoiceNumber || "all"}:startDate:${startDate || "all"}:endDate:${endDate || "all"}:minAmount:${minAmount || "all"}:maxAmount:${maxAmount || "all"}:paidThrough:${paidThrough || "all"}:sortBy:${sortBy}:sortOrder:${sortOrder}`;
+        const cacheKey = `expenses:page:${page}:limit:${limit}:organizationId:${organizationId}:vendorId:${vendorId || "all"}:search:${search || "all"}:date:${date || "all"}:minAmount:${minAmount || "all"}:maxAmount:${maxAmount || "all"}:paidThrough:${paidThrough || "all"}:sortBy:${sortBy}:sortOrder:${sortOrder}`;
 
         // Check cache
         const cachedData = await redisClient.get(cacheKey);
@@ -402,18 +400,26 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
             filter.vendorId = vendorId;
         }
 
-        if (invoiceNumber) {
-            filter.invoiceNumber = { $regex: invoiceNumber, $options: "i" };
+        console.log("search", search)
+        if (search) {
+            filter.$or = [
+                filter.vendorName = { $regex: search, $options: "i" },
+                filter.invoiceNumber = { $regex: search, $options: "i" },
+            ]
         }
 
-        if (startDate || endDate) {
-            filter.dateOfPayment = {};
-            if (startDate) {
-                filter.dateOfPayment.$gte = new Date(startDate as string);
-            }
-            if (endDate) {
-                filter.dateOfPayment.$lte = new Date(endDate as string);
-            }
+        // Handle single date filter
+        if (date) {
+            const startOfDay = new Date(date as string);
+            startOfDay.setHours(0, 0, 0, 0);
+
+            const endOfDay = new Date(date as string);
+            endOfDay.setHours(23, 59, 59, 999);
+
+            filter.dateOfPayment = {
+                $gte: startOfDay,
+                $lte: endOfDay
+            };
         }
 
         if (minAmount || maxAmount) {
@@ -440,8 +446,7 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
         // Execute query
         const [expenses, totalCount] = await Promise.all([
             ExpenseAccountModel.find(filter)
-                .populate("vendorId", "name email phone")
-                .populate("organizationId", "name")
+                .populate("vendorId", "vendorName")
                 .sort(sort)
                 .skip(skip)
                 .limit(limitNum)
