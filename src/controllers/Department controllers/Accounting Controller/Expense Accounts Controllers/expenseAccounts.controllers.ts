@@ -61,7 +61,7 @@ export const createExpense = async (req: Request, res: Response): Promise<any> =
         const errors = validateExpenseData(req.body);
         if (errors.length > 0) {
             return res.status(400).json({
-                success: false,
+                ok: false,
                 message: "Validation failed",
                 errors,
             });
@@ -105,14 +105,14 @@ export const createExpense = async (req: Request, res: Response): Promise<any> =
         }
 
         return res.status(201).json({
-            success: true,
+            ok: true,
             message: "Expense created successfully",
             data: expense,
         });
     } catch (error: any) {
         console.error("Error creating expense:", error);
         return res.status(500).json({
-            success: false,
+            ok: false,
             message: "Internal server error",
             error: error.message,
         });
@@ -127,7 +127,7 @@ export const updateExpense = async (req: Request, res: Response): Promise<any> =
         // Validate ID
         if (!validateMongoId(id)) {
             return res.status(400).json({
-                success: false,
+                ok: false,
                 message: "Invalid expense ID",
             });
         }
@@ -136,7 +136,7 @@ export const updateExpense = async (req: Request, res: Response): Promise<any> =
         const errors = validateExpenseData(req.body, true);
         if (errors.length > 0) {
             return res.status(400).json({
-                success: false,
+                ok: false,
                 message: "Validation failed",
                 errors,
             });
@@ -157,7 +157,7 @@ export const updateExpense = async (req: Request, res: Response): Promise<any> =
 
         if (!expense) {
             return res.status(404).json({
-                success: false,
+                ok: false,
                 message: "Expense not found",
             });
         }
@@ -192,14 +192,14 @@ export const updateExpense = async (req: Request, res: Response): Promise<any> =
 
 
         return res.status(200).json({
-            success: true,
+            ok: true,
             message: "Expense updated successfully",
             data: expense,
         });
     } catch (error: any) {
         console.error("Error updating expense:", error);
         return res.status(500).json({
-            success: false,
+            ok: false,
             message: "Internal server error",
             error: error.message,
         });
@@ -214,7 +214,7 @@ export const deleteExpense = async (req: Request, res: Response): Promise<any> =
         // Validate ID
         if (!validateMongoId(id)) {
             return res.status(400).json({
-                success: false,
+                ok: false,
                 message: "Invalid expense ID",
             });
         }
@@ -224,7 +224,7 @@ export const deleteExpense = async (req: Request, res: Response): Promise<any> =
 
         if (!expense) {
             return res.status(404).json({
-                success: false,
+                ok: false,
                 message: "Expense not found",
             });
         }
@@ -251,13 +251,13 @@ export const deleteExpense = async (req: Request, res: Response): Promise<any> =
         }
 
         return res.status(200).json({
-            success: true,
+            ok: true,
             message: "Expense deleted successfully",
         });
     } catch (error: any) {
         console.error("Error deleting expense:", error);
         return res.status(500).json({
-            success: false,
+            ok: false,
             message: "Internal server error",
             error: error.message,
         });
@@ -272,7 +272,7 @@ export const getExpenseById = async (req: Request, res: Response): Promise<any> 
         // Validate ID
         if (!validateMongoId(id)) {
             return res.status(400).json({
-                success: false,
+                ok: false,
                 message: "Invalid expense ID",
             });
         }
@@ -283,7 +283,7 @@ export const getExpenseById = async (req: Request, res: Response): Promise<any> 
 
         if (cachedExpense) {
             return res.status(200).json({
-                success: true,
+                ok: true,
                 message: "Expense retrieved from cache",
                 data: JSON.parse(cachedExpense),
                 cached: true,
@@ -297,7 +297,7 @@ export const getExpenseById = async (req: Request, res: Response): Promise<any> 
 
         if (!expense) {
             return res.status(404).json({
-                success: false,
+                ok: false,
                 message: "Expense not found",
             });
         }
@@ -306,7 +306,7 @@ export const getExpenseById = async (req: Request, res: Response): Promise<any> 
         await redisClient.setEx(cacheKey, 3600, JSON.stringify(expense));
 
         return res.status(200).json({
-            success: true,
+            ok: true,
             message: "Expense retrieved successfully",
             data: expense,
             cached: false,
@@ -314,7 +314,7 @@ export const getExpenseById = async (req: Request, res: Response): Promise<any> 
     } catch (error: any) {
         console.error("Error getting expense:", error);
         return res.status(500).json({
-            success: false,
+            ok: false,
             message: "Internal server error",
             error: error.message,
         });
@@ -341,14 +341,14 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
         // Validate organizationId
         if (!organizationId) {
             return res.status(400).json({
-                success: false,
+                ok: false,
                 message: "Organization ID is required",
             });
         }
 
         if (!validateMongoId(organizationId as string)) {
             return res.status(400).json({
-                success: false,
+                ok: false,
                 message: "Invalid Organization ID",
             });
         }
@@ -356,7 +356,7 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
         // Validate vendorId if provided
         if (vendorId && !validateMongoId(vendorId as string)) {
             return res.status(400).json({
-                success: false,
+                ok: false,
                 message: "Invalid Vendor ID",
             });
         }
@@ -367,26 +367,26 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
 
         if (isNaN(pageNum) || pageNum < 1) {
             return res.status(400).json({
-                success: false,
+                ok: false,
                 message: "Invalid page number",
             });
         }
 
         if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
             return res.status(400).json({
-                success: false,
+                ok: false,
                 message: "Invalid limit (must be between 1 and 100)",
             });
         }
 
-        // Create cache key
+        // // Create cache key
         const cacheKey = `expenses:page:${page}:limit:${limit}:organizationId:${organizationId}:vendorId:${vendorId || "all"}:search:${search || "all"}:date:${date || "all"}:minAmount:${minAmount || "all"}:maxAmount:${maxAmount || "all"}:paidThrough:${paidThrough || "all"}:sortBy:${sortBy}:sortOrder:${sortOrder}`;
 
         // Check cache
         const cachedData = await redisClient.get(cacheKey);
         if (cachedData) {
             return res.status(200).json({
-                success: true,
+                ok: true,
                 message: "Expenses retrieved from cache",
                 ...JSON.parse(cachedData),
                 cached: true,
@@ -475,7 +475,7 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
         await redisClient.setEx(cacheKey, 300, JSON.stringify(response));
 
         return res.status(200).json({
-            success: true,
+            ok: true,
             message: "Expenses retrieved successfully",
             ...response,
             cached: false,
@@ -483,7 +483,7 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
     } catch (error: any) {
         console.error("Error getting expenses:", error);
         return res.status(500).json({
-            success: false,
+            ok: false,
             message: "Internal server error",
             error: error.message,
         });
@@ -498,14 +498,14 @@ export const getExpenseStatistics = async (req: Request, res: Response): Promise
         // Validate organizationId
         if (!organizationId) {
             return res.status(400).json({
-                success: false,
+                ok: false,
                 message: "Organization ID is required",
             });
         }
 
         if (!validateMongoId(organizationId as string)) {
             return res.status(400).json({
-                success: false,
+                ok: false,
                 message: "Invalid Organization ID",
             });
         }
@@ -517,7 +517,7 @@ export const getExpenseStatistics = async (req: Request, res: Response): Promise
         const cachedStats = await redisClient.get(cacheKey);
         if (cachedStats) {
             return res.status(200).json({
-                success: true,
+                ok: true,
                 message: "Statistics retrieved from cache",
                 data: JSON.parse(cachedStats),
                 cached: true,
@@ -584,7 +584,7 @@ export const getExpenseStatistics = async (req: Request, res: Response): Promise
         await redisClient.setEx(cacheKey, 600, JSON.stringify(result));
 
         return res.status(200).json({
-            success: true,
+            ok: true,
             message: "Statistics retrieved successfully",
             data: result,
             cached: false,
@@ -592,7 +592,7 @@ export const getExpenseStatistics = async (req: Request, res: Response): Promise
     } catch (error: any) {
         console.error("Error getting expense statistics:", error);
         return res.status(500).json({
-            success: false,
+            ok: false,
             message: "Internal server error",
             error: error.message,
         });

@@ -9,7 +9,7 @@ const invoiceAccountRoutes = Router();
 // ✅ GET all accounting records for an organization (with filters)
 invoiceAccountRoutes
 .get("/getallinvoice",multiRoleAuthMiddleware("owner", "staff", "CTO"), getInvoices)
-.post("/createinvocie",multiRoleAuthMiddleware("owner", "staff", "CTO"),  createInvoice)
+.post("/createinvoice",multiRoleAuthMiddleware("owner", "staff", "CTO"),  createInvoice)
 .delete("/deleteinvoice/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"),deleteInvoice)
 .get("/getsingleinvoice/:id",multiRoleAuthMiddleware("owner", "staff", "CTO"),getInvoiceById);
 

@@ -1,0 +1,551 @@
+import { Request, Response } from "express";
+import mongoose from "mongoose";
+import { RoleBasedRequest } from "../../../../types/types";
+import redisClient from "../../../../config/redisClient";
+import { BillAccountModel } from "../../../../models/Department Models/Accounting Model/billAccount.model";
+
+// Helper function to generate unique bill number
+// Helper function to calculate bill totals
+const calculateBillTotals = (
+    items: any[],
+    discountPercentage: number = 0,
+    taxPercentage: number = 0
+) => {
+    // Calculate total amount from items
+    const totalAmount = items.reduce((sum, item) => {
+        return sum + (item.totalCost || 0);
+    }, 0);
+
+    // Calculate discount amount
+    const discountAmount = (totalAmount * discountPercentage) / 100;
+
+    // Calculate amount after discount
+    const amountAfterDiscount = totalAmount - discountAmount;
+
+    // Calculate tax amount on the discounted amount
+    const taxAmount = (amountAfterDiscount * taxPercentage) / 100;
+
+    // Calculate grand total
+    const grandTotal = amountAfterDiscount + taxAmount;
+
+    return {
+        totalAmount,
+        discountAmount,
+        taxAmount,
+        grandTotal
+    };
+};
+
+// Manual validation function
+const validateBillData = (data: any): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    // Check mandatory fields
+    if (!data.vendorName || data.vendorName.trim() === '') {
+        errors.push("Vendor name is required");
+    }
+
+    // if (!data.vendorId) {
+    //     errors.push("Vendor ID is required");
+    // }
+
+    if (!data.organizationId) {
+        errors.push("Organization ID is required");
+    }
+
+    // Validate vendorId format
+    if (data.vendorId && !mongoose.Types.ObjectId.isValid(data.vendorId)) {
+        errors.push("Invalid vendor ID format");
+    }
+
+    // Validate organizationId format
+    if (data.organizationId && !mongoose.Types.ObjectId.isValid(data.organizationId)) {
+        errors.push("Invalid organization ID format");
+    }
+
+
+
+    if (data?.items && Array.isArray(data.isArray) && data?.items?.length > 0) {
+        data.items.forEach((item: any, index: number) => {
+            if (!item.itemName || item.itemName.trim() === '') {
+                errors.push(`Item ${index + 1}: Item name is required`);
+            }
+
+            if (item.rate === undefined || item.rate === null) {
+                errors.push(`Item ${index + 1}: Rate is required`);
+            }
+
+            if (typeof item.rate === 'number' && item.rate < 0) {
+                errors.push(`Item ${index + 1}: Rate cannot be negative`);
+            }
+
+            if (typeof item.quantity === 'number' && item.quantity < 0) {
+                errors.push(`Item ${index + 1}: Quantity cannot be negative`);
+            }
+
+            if (typeof item.totalCost === 'number' && item.totalCost < 0) {
+                errors.push(`Item ${index + 1}: Total cost cannot be negative`);
+            }
+        });
+    }
+
+    // Validate numeric fields are not negative
+    const numericFields = [
+        'totalAmount', 'discountPercentage', 'discountAmount',
+        'taxPercentage', 'taxAmount', 'grandTotal'
+    ];
+
+    numericFields.forEach(field => {
+        if (data[field] !== undefined && data[field] !== null && typeof data[field] === 'number' && data[field] < 0) {
+            errors.push(`${field} cannot be negative`);
+        }
+    });
+
+    return {
+        isValid: errors.length === 0,
+        errors
+    };
+};
+
+
+
+// Helper function to invalidate cache
+const invalidateBillCache = async (organizationId?: string, vendorId?: string, billId?: string) => {
+    try {
+        const keysToDelete: string[] = [];
+
+        // Delete all bill list caches (with different filters)
+        const pattern = 'billaccount:*';
+        const keys = await redisClient.keys(pattern);
+        keysToDelete.push(...keys);
+
+        // Delete specific bill cache if billId provided
+        if (billId) {
+            keysToDelete.push(`billaccount:${billId}`);
+        }
+
+        // Delete all keys
+        if (keysToDelete.length > 0) {
+            await Promise.all(keysToDelete.map(key => redisClient.del(key)));
+        }
+    } catch (error) {
+        console.error("Error invalidating cache:", error);
+    }
+};
+
+
+// CREATE Bill
+export const createBill = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const {
+            vendorId = null,
+            organizationId,
+            vendorName,
+            accountsPayable,
+            subject,
+            billDate,
+            dueDate,
+            items,
+            totalAmount,
+            discountPercentage,
+            // discountAmount,
+            taxPercentage,
+            // taxAmount,
+            // grandTotal,
+             notes } = req.body;
+
+        // Validate bill data
+        const validation = validateBillData({
+            vendorId, organizationId, vendorName, accountsPayable,
+            subject, dueDate, billDate, items, totalAmount, discountPercentage,
+            taxPercentage, notes,
+        });
+
+        if (!validation.isValid) {
+            res.status(400).json({
+                ok: false,
+                message: "Validation failed",
+                errors: validation.errors
+            });
+            return;
+        }
+
+        // Calculate item totals
+        const processedItems = items.map((item: any) => ({
+            ...item,
+            totalCost: (item.quantity || 0) * (item.rate || 0)
+        }));
+
+        // Calculate bill totals
+        const totals = calculateBillTotals(
+            processedItems,
+            discountPercentage || 0,
+            taxPercentage || 0
+        );
+
+        // Create bill object
+        const newBill = await BillAccountModel.create({
+             organizationId,
+            vendorId: vendorId || null,
+            vendorName: vendorName?.trim(),
+            accountsPayable,
+            subject: subject || null,
+            billDate,
+            dueDate,
+            items: processedItems,
+            totalAmount: totals.totalAmount,
+            discountPercentage,
+            discountAmount: totals.discountAmount,
+            taxPercentage,
+            taxAmount: totals.taxAmount,
+            grandTotal: totals.grandTotal,
+            notes: notes || null
+        });
+
+        // Save to database
+        // const savedBill = await newBill.save();
+
+        // Invalidate related caches
+        await invalidateBillCache(organizationId, vendorId);
+
+        return res.status(201).json({
+            ok: true,
+            message: "Bill created successfully",
+            data: newBill
+        });
+    } catch (error: any) {
+        console.error("Error creating bill:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Error creating bill",
+            error: error.message
+        });
+    }
+};
+
+// GET All bills (with optional filters)
+export const getBills = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { organizationId, vendorId, page = 1, limit = 10, date, search , sortBy = 'createdAt',
+            sortOrder = 'desc'} = req.query;
+
+
+        // Build cache key based on query parameters
+        const cacheKey = `billaccount:org:${organizationId || 'all'}:vendor:${vendorId || 'all'}:page:${page}:limit:${limit}:date:${date || 'all'}:search${search || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
+
+        // Try to get from cache
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) {
+            return res.status(200).json(JSON.parse(cachedData));
+        }
+
+        // Build filter object
+        const filter: any = {};
+
+        if (organizationId) {
+            if (!mongoose.Types.ObjectId.isValid(organizationId as string)) {
+                res.status(400).json({
+                    ok: false,
+                    message: "Invalid organization ID format"
+                });
+                return;
+            }
+            filter.organizationId = new mongoose.Types.ObjectId(organizationId as string);
+        }
+
+        if (vendorId) {
+            if (!mongoose.Types.ObjectId.isValid(vendorId as string)) {
+                res.status(400).json({
+                    ok: false,
+                    message: "Invalid vendor ID format"
+                });
+                return;
+            }
+            filter.vendorId = new mongoose.Types.ObjectId(vendorId as string);
+        }
+
+        // ✅ Filter by single date (createdAt)
+        if (date) {
+            const selectedDate = new Date(date as string);
+            if (isNaN(selectedDate.getTime())) {
+                res.status(400).json({
+                    ok: false,
+                    message: "Invalid date format. Use ISO string (e.g. 2025-10-23)."
+                });
+                return;
+            }
+
+            // Create a range covering the entire day
+            const startOfDay = new Date(selectedDate);
+            startOfDay.setHours(0, 0, 0, 0);
+
+            const endOfDay = new Date(selectedDate);
+            endOfDay.setHours(23, 59, 59, 999);
+
+            filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
+        }
+
+        if (search && typeof search === 'string' && search.trim() !== '') {
+            filter.$or = [
+                { vendorName: { $regex: search, $options: 'i' } },
+                { billNumber: { $regex: search, $options: 'i' } },
+            ];
+        }
+
+         // Build sort object
+        const sort: any = {};
+        sort[sortBy as string] = sortOrder === 'asc' ? 1 : -1;
+
+
+        // Calculate pagination
+        const pageNum = parseInt(page as string);
+        const limitNum = parseInt(limit as string);
+        const skip = (pageNum - 1) * limitNum;
+
+        // Get bills with pagination
+        const [bill, totalCount] = await Promise.all([
+            BillAccountModel.find(filter)
+                .sort(sort)
+                .skip(skip)
+                .limit(limitNum),
+            BillAccountModel.countDocuments(filter)
+        ])
+
+
+         // Calculate pagination info
+        const totalPages = Math.ceil(totalCount / limitNum);
+        const hasNextPage = pageNum < totalPages;
+        const hasPrevPage = pageNum > 1;
+
+
+        const response = {
+            ok: true,
+            message: "Bill retrieved successfully",
+            data: bill,
+            pagination: {
+                total: totalCount,
+                page: pageNum,
+                limit: limitNum,
+                totalPages,
+                hasNextPage,
+                hasPrevPage,
+            }
+        };
+
+
+
+        // Cache the response for 10 minutes
+        await redisClient.set(cacheKey, JSON.stringify(response), { EX: 60 * 10 });
+        return res.status(200).json(response);
+
+    } catch (error: any) {
+        console.error("Error getting bill:", error);
+        res.status(500).json({
+            ok: false,
+            message: "Error retrieving bill",
+            error: error.message
+        });
+    }
+};
+
+// GET Single bill by ID
+export const getBillById = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { id } = req.params;
+
+        // Validate ID format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            res.status(400).json({
+                ok: false,
+                message: "Invalid bill ID format"
+            });
+            return;
+        }
+
+            // Build cache key
+        const cacheKey = `billaccount:${id}`;
+
+        // Try to get from cache
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) {
+            return res.status(200).json(JSON.parse(cachedData));
+        }
+
+        const bill = await BillAccountModel.findById(id)
+        // .populate('vendorId', 'name email phone')
+        // .populate('organizationId', 'name');
+
+        if (!bill) {
+            res.status(404).json({
+                ok: false,
+                message: "bill not found"
+            });
+            return;
+        }
+
+        const response = {
+            ok: true,
+            message: "bill retrieved successfully",
+            data: bill
+        };
+
+        // Cache the response for 10 minutes
+        await redisClient.set(cacheKey, JSON.stringify(response), { EX: 60 * 10 });
+
+        return res.status(200).json(response);
+
+    } catch (error: any) {
+        console.error("Error getting bill:", error);
+        res.status(500).json({
+            ok: false,
+            message: "Error retrieving bill",
+            error: error.message
+        });
+    }
+};
+
+// UPDATE bill
+// export const updatebill = async (req: Request, res: Response): Promise<any> => {
+//     try {
+//         const { id } = req.params;
+//         const updateData = req.body;
+
+//         // Validate ID format
+//         if (!mongoose.Types.ObjectId.isValid(id)) {
+//             res.status(400).json({
+//                 ok: false,
+//                 message: "Invalid bill ID format"
+//             });
+//             return;
+//         }
+
+//         // Check if bill exists
+//         const existingbill = await BillAccountModel.findById(id);
+//         if (!existingbill) {
+//             res.status(404).json({
+//                 ok: false,
+//                 message: "bill not found"
+//             });
+//             return;
+//         }
+
+//         // Validate update data
+//         const validation = validatebillData({
+//             ...existingbill.toObject(),
+//             ...updateData
+//         });
+
+//         if (!validation.isValid) {
+//             res.status(400).json({
+//                 ok: false,
+//                 message: "Validation failed",
+//                 errors: validation.errors
+//             });
+//             return;
+//         }
+
+//         // If items are being updated, recalculate totals
+//         if (updateData.items) {
+//             const processedItems = updateData.items.map((item: any) => ({
+//                 ...item,
+//                 totalCost: (item.quantity || 0) * (item.rate || 0)
+//             }));
+
+//             const totals = calculatebillTotals(
+//                 processedItems,
+//                 updateData.discountPercentage ?? existingbill.discountPercentage ?? 0,
+//                 updateData.taxPercentage ?? existingbill.taxPercentage ?? 0
+//             );
+
+//             updateData.items = processedItems;
+//             updateData.totalAmount = totals.totalAmount;
+//             updateData.discountAmount = totals.discountAmount;
+//             updateData.taxAmount = totals.taxAmount;
+//             updateData.grandTotal = totals.grandTotal;
+//         } else if (updateData.discountPercentage !== undefined || updateData.taxPercentage !== undefined) {
+//             // Recalculate if discount or tax percentage changed
+//             const totals = calculatebillTotals(
+//                 existingbill.items,
+//                 updateData.discountPercentage ?? existingbill.discountPercentage ?? 0,
+//                 updateData.taxPercentage ?? existingbill.taxPercentage ?? 0
+//             );
+
+//             updateData.totalAmount = totals.totalAmount;
+//             updateData.discountAmount = totals.discountAmount;
+//             updateData.taxAmount = totals.taxAmount;
+//             updateData.grandTotal = totals.grandTotal;
+//         }
+
+//         // Update bill
+//         const updatedbill = await BillAccountModel.findByIdAndUpdate(
+//             id,
+//             updateData,
+//             { new: true, runValidators: true }
+//         ).populate('vendorId', 'name email')
+//             .populate('organizationId', 'name');
+
+//         res.status(200).json({
+//             ok: true,
+//             message: "bill updated successfully",
+//             data: updatedbill
+//         });
+//     } catch (error: any) {
+//         console.error("Error updating bill:", error);
+//         res.status(500).json({
+//             ok: false,
+//             message: "Error updating bill",
+//             error: error.message
+//         });
+//     }
+// };
+
+// DELETE bill
+
+
+
+export const deleteBill = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { id } = req.params;
+
+        // Validate ID format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+           return res.status(400).json({
+                ok: false,
+                message: "Invalid bill ID format"
+            });
+        }
+
+        const deletedbill = await BillAccountModel.findByIdAndDelete(id);
+
+        if (!deletedbill) {
+           return res.status(404).json({
+                ok: false,
+                message: "bill not found"
+            });
+            
+        }
+
+
+         // Invalidate related caches
+        await invalidateBillCache(
+            deletedbill.organizationId?.toString(),
+            deletedbill.vendorId?.toString(),
+            id
+        );
+
+        return res.status(200).json({
+            ok: true,
+            message: "bill deleted successfully",
+            data: deletedbill
+        });
+    } catch (error: any) {
+        console.error("Error deleting bill:", error);
+        res.status(500).json({
+            ok: false,
+            message: "Error deleting bill",
+            error: error.message
+        });
+    }
+};
+
+
