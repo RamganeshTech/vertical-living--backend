@@ -102,6 +102,7 @@ import ExpenseRoutes from './routers/Department Routes/Accounting Routes/expense
 import ExpenseAccountingRoutes from './routers/Department Routes/Accounting Routes/expense.routes';
 import BillAccountRoutes from './routers/Department Routes/Accounting Routes/billAccounts.routes';
 import PurchaseAccRoutes from './routers/Department Routes/Accounting Routes/purchaseAcc.routes';
+import VendorPaymentRoutes from './routers/Department Routes/Accounting Routes/vendorPayment.routes';
 
 
 
@@ -331,6 +332,7 @@ app.use('/api/department/accounting/vendor', vendorAccountingRoutes)
 app.use('/api/department/accounting/expense', ExpenseAccountingRoutes)
 app.use('/api/department/accounting/bill', BillAccountRoutes)
 app.use('/api/department/accounting/purchase', PurchaseAccRoutes)
+app.use('/api/department/accounting/vendorpayment', VendorPaymentRoutes)
 
 
 // QUOTES API
