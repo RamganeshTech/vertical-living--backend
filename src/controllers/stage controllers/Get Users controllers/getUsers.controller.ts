@@ -30,23 +30,23 @@ const  getUsers = async (req: Request, res: Response): Promise<any> => {
        switch (role.toLowerCase()) {
       case "staff":
         Model = StaffModel;
-        projection = "_id staffName email";
+        projection = "_id staffName email role";
         break;
       case "owner":
         Model = UserModel;
-        projection = "_id username email";
+        projection = "_id username email role";
         break;
       case "cto":
         Model = CTOModel;
-        projection = "_id CTOName email";
+        projection = "_id CTOName email role";
         break;
       case "client":
         Model = ClientModel;
-        projection = "_id clientName email";
+        projection = "_id clientName email role";
         break;
       case "worker":
         Model = WorkerModel;
-        projection = "_id workerName email";
+        projection = "_id workerName email role";
         break;
       default:
         return res.status(400).json({ message: "Invalid role", ok: false });

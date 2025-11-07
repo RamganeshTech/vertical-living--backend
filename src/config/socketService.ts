@@ -26,6 +26,19 @@ export class SocketService {
     try {
       const organizationId = await this.getOrganizationId(projectId);
       console.log("getti created then what si ", organizationId)
+
+
+
+        console.log("Project ID:", projectId);
+        console.log("Event:", event);
+        console.log("Organization ID:", organizationId);
+        console.log("Data keys:", Object.keys(data));
+        console.log("Has conversation?", !!data.conversation);
+        console.log("Has response?", !!data.response);
+        console.log("ConvoId:", data.convoId);
+
+
+
       if (!organizationId) return;
       
       
@@ -38,6 +51,8 @@ export class SocketService {
       });
       
       console.log(`Emitted ${event} to room: ${roomName}`);
+              console.log("=========================================");
+
     } catch (error) {
       console.error('Socket emission error:', error);
     }

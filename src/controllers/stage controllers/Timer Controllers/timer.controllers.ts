@@ -39,7 +39,6 @@ const stageModelMap = new Map<string, Model<Document>>([
 ]);
 
 
-
 export const startStageTimer = async (req: Request, res: Response): Promise<any> => {
     try {
         const { stageName, projectId } = req.params;

@@ -103,6 +103,8 @@ import ExpenseAccountingRoutes from './routers/Department Routes/Accounting Rout
 import BillAccountRoutes from './routers/Department Routes/Accounting Routes/billAccounts.routes';
 import PurchaseAccRoutes from './routers/Department Routes/Accounting Routes/purchaseAcc.routes';
 import VendorPaymentRoutes from './routers/Department Routes/Accounting Routes/vendorPayment.routes';
+import { setupDiscussionSocket } from './controllers/stage controllers/Issue Discussion Controllers/issueDiscussionSocket';
+import issueDiscussionRoutes from './routers/Stage routes/Issue Discussion Routes/issueDiscussion.routes';
 
 
 
@@ -265,6 +267,11 @@ app.use('/api/starttimer', stageTimerRoutes)
 // PREREQUIRETIES APIS
 app.use('/api/prerequireties', preRequiretiesRoutes)
 
+// ISSUE DISCUSSION
+
+app.use('/api/issuediscussion', issueDiscussionRoutes)
+
+
 // DOCUEMENTATION APIS
 app.use('/api/documentation', documentaitonRoutes)
 
@@ -290,6 +297,8 @@ app.use('/api/installation', installationRoutes)
 app.use('/api/qualitycheck', qualityCheckRoutes)
 app.use('/api/cleaning', cleaningRoutes)
 app.use('/api/projectdelivery', projectDeliveryRoutes)
+
+
 
 app.use('/api/commonorder', commonOrderRoutes)
 app.use('/api/inventory', InventoryRoutes)
@@ -500,6 +509,8 @@ io.on('connection', (socket:CustomSocket) => {
   });
 });
 
+// Add discussion socket setup
+setupDiscussionSocket(io);
 
 const PORT = process.env.PORT || 4000
 
