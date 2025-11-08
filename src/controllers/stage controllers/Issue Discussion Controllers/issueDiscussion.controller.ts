@@ -15,7 +15,7 @@ import { SocketService } from '../../../config/socketService';
  */
 export const createIssue = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const {
+        let {
             organizationId,
             projectId,
             selectStaff,
@@ -27,6 +27,21 @@ export const createIssue = async (req: RoleBasedRequest, res: Response): Promise
             //   attachments
         } = req.body;
 
+        
+    // 🧩 Convert to boolean
+    isMessageRequired = isMessageRequired === "true" || isMessageRequired === true;
+
+    // 🧩 Parse dropdownOptions if it was sent as JSON string
+    if (typeof dropdownOptions === "string") {
+      try {
+        dropdownOptions = JSON.parse(dropdownOptions);
+      } catch (e) {
+        console.warn("Failed to parse dropdownOptions:", dropdownOptions);
+        dropdownOptions = [];
+      }
+    }
+
+
         // Get user info from auth middleware
         if (!req.user) {
             return res.status(401).json({
@@ -34,7 +49,7 @@ export const createIssue = async (req: RoleBasedRequest, res: Response): Promise
                 message: 'Unauthorized'
             });
         }
- console.log("========== CREATE ISSUE DEBUG ==========");
+        console.log("========== CREATE ISSUE DEBUG ==========");
         console.log("Request body:", req.body);
         console.log("selectStaff:", selectStaff);
         console.log("=======================================");
@@ -84,7 +99,17 @@ export const createIssue = async (req: RoleBasedRequest, res: Response): Promise
         else if (selectStaffRole === "worker") {
             staffSelectedModel = "WorkerModel"
         }
-console.log("selectStaffRole", selectStaffRole)
+        // console.log("selectStaffRole", selectStaffRole)
+
+        const files = req.files as Express.Multer.File[];
+
+        // ✅ Build attachment objects if files exist
+        const attachments = (files || []).map((file) => ({
+            type: file.mimetype.startsWith("image") ? "image" as const : "pdf" as const,
+            url: (file as any).location,
+            originalName: file.originalname,
+            uploadedAt: new Date()
+        }));
 
         // Create new conversation
         const newConvo: IConvo = {
@@ -98,7 +123,7 @@ console.log("selectStaffRole", selectStaffRole)
                 responseType,
                 isMessageRequired,
                 dropdownOptions: responseType === 'dropdown' ? dropdownOptions : undefined,
-                // attachments: attachments || []
+                files: attachments || []
             }
         };
 
@@ -472,6 +497,185 @@ export const getProjectDiscussions = async (req: RoleBasedRequest, res: Response
     }
 };
 
+
+//  Forward the issue to someother staff"
+// controllers/issueDiscussion.controller.ts
+
+export const forwardIssue = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { projectId, convoId } = req.params;
+        const {
+            forwardToStaff,
+            forwardToStaffRole
+        } = req.body;
+
+        if (!req.user) {
+            return res.status(401).json({
+                ok: false,
+                message: 'Unauthorized'
+            });
+        }
+
+        // Validate input
+        if (!forwardToStaff || !forwardToStaffRole) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Forward recipient and role are required'
+            });
+        }
+
+        const discussion = await IssueDiscussionModel.findOne({ projectId });
+        if (!discussion) {
+            return res.status(404).json({
+                ok: false,
+                message: 'Discussion not found'
+            });
+        }
+
+        const convo = (discussion.discussion as any).id(convoId);
+        if (!convo) {
+            return res.status(404).json({
+                ok: false,
+                message: 'Conversation not found'
+            });
+        }
+
+        // ✅ Validation 1: Check if user is the assigned staff
+        if (convo.issue.selectStaff.toString() !== req.user._id) {
+            return res.status(403).json({
+                ok: false,
+                message: 'Only the assigned staff can forward this issue'
+            });
+        }
+
+        // ✅ Validation 2: Cannot forward to self
+        if (forwardToStaff === req.user._id) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Cannot forward issue to yourself'
+            });
+        }
+
+        // ✅ Validation 3: Cannot forward to original raiser
+        if (forwardToStaff === convo.issue.raisedBy.toString()) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Cannot forward issue back to the person who raised it'
+            });
+        }
+
+        // ✅ Validation 4: Check if already responded
+        if (convo.response) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Cannot forward an issue that has already been responded to'
+            });
+        }
+
+        // Validate role
+        const allowedRoles = ["owner", "CTO", "staff", "worker"];
+        if (!allowedRoles.includes(forwardToStaffRole)) {
+            return res.status(400).json({
+                ok: false,
+                message: `Invalid role: ${forwardToStaffRole}`
+            });
+        }
+
+        // Get model name based on role
+        const staffSelectedModel = getModelNameByRole(forwardToStaffRole);
+
+        // Store original assignee for notification
+        const originalAssignee = convo.issue.selectStaff.toString();
+
+        // ✅ Update the three fields
+        convo.issue.selectStaff = new Types.ObjectId(forwardToStaff);
+        convo.issue.staffSelectedModel = staffSelectedModel;
+        convo.issue.selectStaffRole = forwardToStaffRole;
+
+        await discussion.save();
+
+        // Populate the updated conversation
+        const populatedDiscussion = await populateDiscussion(discussion);
+        const updatedConvo = (populatedDiscussion.discussion as any).id(convoId);
+
+        // Format the conversation
+        const formattedConvo = {
+            _id: updatedConvo._id,
+            issue: {
+                ...updatedConvo.issue.toObject(),
+                raisedBy: formatUserData(updatedConvo.issue.raisedBy, updatedConvo.issue.raisedModel),
+                selectStaff: formatUserData(updatedConvo.issue.selectStaff, updatedConvo.issue.staffSelectedModel)
+            },
+            response: null,
+            status: "pending",
+            createdAt: updatedConvo.createdAt,
+            updatedAt: updatedConvo.updatedAt
+        };
+
+        console.log("========== ISSUE FORWARDED ==========");
+        console.log("From:", originalAssignee);
+        console.log("To:", forwardToStaff);
+        console.log("Convo ID:", convoId);
+        console.log("====================================");
+
+        // ✅ Emit socket event
+        await SocketService.emitToProject(projectId.toString(), 'issue_forwarded', {
+            projectId: projectId.toString(),
+            convoId: convoId,
+            conversation: formattedConvo,
+            forwardedFrom: originalAssignee,
+            forwardedTo: forwardToStaff
+        });
+
+        // Emit socket events
+        await SocketService.emitToProject(projectId, 'new_issue_created', {
+            discussionId: discussion._id,
+            conversation: formattedConvo
+        });
+
+        // ✅ Notify new assignee
+        SocketService.sendNotification(forwardToStaff, {
+            type: 'issue_forwarded_to_you',
+            title: 'Issue Forwarded to You',
+            message: `An issue has been forwarded to you`,
+            data: {
+                projectId: projectId,
+                convoId: convoId,
+                forwardedFrom: originalAssignee
+            }
+        });
+
+        // ✅ Notify original raiser
+        SocketService.sendNotification(convo.issue.raisedBy.toString(), {
+            type: 'your_issue_forwarded',
+            title: 'Your Issue Was Forwarded',
+            message: `Your issue has been reassigned to another staff member`,
+            data: {
+                projectId: projectId,
+                convoId: convoId,
+                forwardedTo: forwardToStaff
+            }
+        });
+
+        res.json({
+            ok: true,
+            data: {
+                conversation: formattedConvo,
+                message: 'Issue forwarded successfully'
+            }
+        });
+
+    } catch (error) {
+        const err = error as Error;
+        console.error('Forward issue error:', err);
+        res.status(500).json({
+            ok: false,
+            message: err.message || 'Failed to forward issue'
+        });
+    }
+};
+
+
 /**
  * Get user's assigned issues across all projects
  */
@@ -697,7 +901,7 @@ export const deleteConversation = async (req: RoleBasedRequest, res: Response): 
         if (convo.issue.raisedBy.toString() !== req.user._id && req.user.role !== 'owner') {
             return res.status(403).json({
                 ok: false,
-                message: 'You are not authorized to delete this conversation'
+                message: 'You are not allowed to delete this conversation'
             });
         }
 

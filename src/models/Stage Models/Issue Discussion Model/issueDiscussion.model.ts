@@ -35,6 +35,7 @@ export interface IIssueRaise {
     responseType: "dropdown" | "text" | "file",
     isMessageRequired: boolean,
     dropdownOptions?: string[],
+    files: IIssueFileType[],
     createdAt?: Date
     updatedAt?: Date
 }
@@ -146,7 +147,7 @@ export const IssueRaiseSchema = new Schema<IIssueRaise>({
         enum: ["UserModel", "StaffModel", "CTOModel", "WorkerModel"]
     },
 
-    selectStaffRole:{
+    selectStaffRole: {
         type: String,
         enum: ["CTO", "worker", "owner", "staff"]
     },
@@ -157,6 +158,7 @@ export const IssueRaiseSchema = new Schema<IIssueRaise>({
         required: true,
         refPath: 'discussion.issue.raisedModel' // Path from parent document
     },
+
     raisedModel: {
         type: String,
         required: true,
@@ -180,8 +182,13 @@ export const IssueRaiseSchema = new Schema<IIssueRaise>({
     },
 
     dropdownOptions: {
-        type: [String], required:false
-    }
+        type: [String], required: false
+    },
+
+    files: {
+        type: [IssueFileSchema],
+        default: []
+    },
 
 }, {
     timestamps: true,
@@ -228,22 +235,22 @@ export const IssueDiscussionSchema = new Schema<IIssueDiscussion>({
 
 
 // Validation middleware
-ResponseSchema.pre('save', function(next) {
+ResponseSchema.pre('save', function (next) {
     const response = this as any;
-    
+
     // Count how many response types are filled
     const filledResponses = [
         !!response.dropdownResponse,
         !!response.textResponse,
         !!(response.fileResponse && response.fileResponse.length > 0)
     ].filter(Boolean);
-    
+
     if (filledResponses.length !== 1) {
         return next(new Error('Exactly one response type must be provided based on responseType'));
     }
-    
+
     // Validate that the correct response field is filled based on responseType
-    switch(response.responseType) {
+    switch (response.responseType) {
         case 'dropdown':
             if (!response.dropdownResponse) {
                 return next(new Error('Dropdown response is required for dropdown type'));
@@ -260,12 +267,12 @@ ResponseSchema.pre('save', function(next) {
             }
             break;
     }
-    
+
     next();
 });
 
 // Virtual for getting the issue status
-ConvoSchema.virtual('status').get(function() {
+ConvoSchema.virtual('status').get(function () {
     if (!this.response) {
         return 'pending';
     }
@@ -273,7 +280,7 @@ ConvoSchema.virtual('status').get(function() {
 });
 
 // Instance method to add a new conversation
-IssueDiscussionSchema.methods.addConversation = function(convo: IConvo) {
+IssueDiscussionSchema.methods.addConversation = function (convo: IConvo) {
     this.discussion.push(convo);
     return this.save();
 };

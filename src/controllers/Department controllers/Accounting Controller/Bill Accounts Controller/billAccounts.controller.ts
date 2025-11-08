@@ -152,7 +152,7 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
             taxPercentage,
             // taxAmount,
             // grandTotal,
-             notes } = req.body;
+            notes } = req.body;
 
         // Validate bill data
         const validation = validateBillData({
@@ -185,7 +185,7 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
 
         // Create bill object
         const newBill = await BillAccountModel.create({
-             organizationId,
+            organizationId,
             vendorId: vendorId || null,
             vendorName: vendorName?.trim(),
             accountsPayable,
@@ -226,12 +226,12 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
 // GET All bills (with optional filters)
 export const getBills = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { organizationId, vendorId, page = 1, limit = 10, date, search , sortBy = 'createdAt',
-            sortOrder = 'desc'} = req.query;
+        const { organizationId, vendorId, page = 1, limit = 10, date, search, sortBy = 'createdAt',
+            sortOrder = 'desc', billFromDate, billToDate, createdFromDate , createdToDate } = req.query;
 
 
         // Build cache key based on query parameters
-        const cacheKey = `billaccount:org:${organizationId || 'all'}:vendor:${vendorId || 'all'}:page:${page}:limit:${limit}:date:${date || 'all'}:search${search || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
+        const cacheKey = `billaccount:org:${organizationId || 'all'}:vendor:${vendorId || 'all'}:page:${page}:limit:${limit}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:billFromDate:${billFromDate || "all"}:billToDate:${billToDate || "all"}:search${search || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
 
         // Try to get from cache
         const cachedData = await redisClient.get(cacheKey);
@@ -265,25 +265,94 @@ export const getBills = async (req: RoleBasedRequest, res: Response): Promise<an
         }
 
         // ✅ Filter by single date (createdAt)
-        if (date) {
-            const selectedDate = new Date(date as string);
-            if (isNaN(selectedDate.getTime())) {
-                res.status(400).json({
-                    ok: false,
-                    message: "Invalid date format. Use ISO string (e.g. 2025-10-23)."
-                });
-                return;
+        // if (date) {
+        //     const selectedDate = new Date(date as string);
+        //     if (isNaN(selectedDate.getTime())) {
+        //         res.status(400).json({
+        //             ok: false,
+        //             message: "Invalid date format. Use ISO string (e.g. 2025-10-23)."
+        //         });
+        //         return;
+        //     }
+
+        //     // Create a range covering the entire day
+        //     const startOfDay = new Date(selectedDate);
+        //     startOfDay.setHours(0, 0, 0, 0);
+
+        //     const endOfDay = new Date(selectedDate);
+        //     endOfDay.setHours(23, 59, 59, 999);
+
+        //     filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
+        // }
+
+        if (createdFromDate || createdToDate) {
+            const filterRange: any = {};
+
+            if (createdFromDate) {
+                const from = new Date(createdFromDate as string);
+                if (isNaN(from.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid createdFromDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                from.setHours(0, 0, 0, 0);
+                filterRange.$gte = from;
             }
 
-            // Create a range covering the entire day
-            const startOfDay = new Date(selectedDate);
-            startOfDay.setHours(0, 0, 0, 0);
+            if (createdToDate) {
+                const to = new Date(createdToDate as string);
+                if (isNaN(to.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid createdToDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                to.setHours(23, 59, 59, 999);
+                filterRange.$lte = to;
+            }
 
-            const endOfDay = new Date(selectedDate);
-            endOfDay.setHours(23, 59, 59, 999);
-
-            filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
+            filter.createdAt = filterRange;
         }
+
+
+
+        if (billFromDate || billToDate) {
+            const filterRange: any = {};
+
+            if (billFromDate) {
+                const from = new Date(billFromDate as string);
+                if (isNaN(from.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid billFromDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                from.setHours(0, 0, 0, 0);
+                filterRange.$gte = from;
+            }
+
+            if (billToDate) {
+                const to = new Date(billToDate as string);
+                if (isNaN(to.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid billToDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                to.setHours(23, 59, 59, 999);
+                filterRange.$lte = to;
+            }
+
+            filter.billDate = filterRange;
+        }
+
+
+
 
         if (search && typeof search === 'string' && search.trim() !== '') {
             filter.$or = [
@@ -292,7 +361,7 @@ export const getBills = async (req: RoleBasedRequest, res: Response): Promise<an
             ];
         }
 
-         // Build sort object
+        // Build sort object
         const sort: any = {};
         sort[sortBy as string] = sortOrder === 'asc' ? 1 : -1;
 
@@ -312,7 +381,7 @@ export const getBills = async (req: RoleBasedRequest, res: Response): Promise<an
         ])
 
 
-         // Calculate pagination info
+        // Calculate pagination info
         const totalPages = Math.ceil(totalCount / limitNum);
         const hasNextPage = pageNum < totalPages;
         const hasPrevPage = pageNum > 1;
@@ -362,7 +431,7 @@ export const getBillById = async (req: RoleBasedRequest, res: Response): Promise
             return;
         }
 
-            // Build cache key
+        // Build cache key
         const cacheKey = `billaccount:${id}`;
 
         // Try to get from cache
@@ -509,7 +578,7 @@ export const deleteBill = async (req: RoleBasedRequest, res: Response): Promise<
 
         // Validate ID format
         if (!mongoose.Types.ObjectId.isValid(id)) {
-           return res.status(400).json({
+            return res.status(400).json({
                 ok: false,
                 message: "Invalid bill ID format"
             });
@@ -518,15 +587,15 @@ export const deleteBill = async (req: RoleBasedRequest, res: Response): Promise<
         const deletedbill = await BillAccountModel.findByIdAndDelete(id);
 
         if (!deletedbill) {
-           return res.status(404).json({
+            return res.status(404).json({
                 ok: false,
                 message: "bill not found"
             });
-            
+
         }
 
 
-         // Invalidate related caches
+        // Invalidate related caches
         await invalidateBillCache(
             deletedbill.organizationId?.toString(),
             deletedbill.vendorId?.toString(),

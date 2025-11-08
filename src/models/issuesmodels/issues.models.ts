@@ -38,7 +38,7 @@ const IssueSchema = new Schema<PhaseIssues>({
         type: String
     },
     phaseId: { type: Schema.Types.ObjectId, ref: "PhaseModel" },
-    issueName: String,
+    issueName: {type:String, },
     reporter: String,
     createdAt: { type: Date, default: Date.now },
     status: {
