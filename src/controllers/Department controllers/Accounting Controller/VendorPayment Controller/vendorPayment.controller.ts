@@ -43,7 +43,7 @@ const calculateVendorPaymentTotals = (
 
 // Manual validation function
 type ExceptPaymentNumber = Omit<IVendorPayment, "paymentNumber">
-const validateVendorPaymentData = (data:ExceptPaymentNumber ): { isValid: boolean; errors: string[] } => {
+const validateVendorPaymentData = (data: ExceptPaymentNumber): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
     // Check mandatory fields
@@ -112,7 +112,7 @@ const validateVendorPaymentData = (data:ExceptPaymentNumber ): { isValid: boolea
 
     const numericFields: (keyof ExceptPaymentNumber)[] = ['totalAmount', 'totalDueAmount'];
 
-    numericFields.forEach((field ) => {
+    numericFields.forEach((field) => {
         const value = data[field];
         if (value !== undefined && value !== null && typeof value === 'number' && value < 0) {
             errors.push(`${String(field)} cannot be negative`);
@@ -237,11 +237,17 @@ export const createVendorPayment = async (req: RoleBasedRequest, res: Response):
 export const getVendorPayment = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { organizationId, vendorId, page = 1, limit = 10, date, search, sortBy = 'createdAt',
-            sortOrder = 'desc' } = req.query;
+            sortOrder = 'desc',
+            paymentFromDate,
+            paymentToDate,
+            createdFromDate,
+            createdToDate,
+
+        } = req.query;
 
 
         // Build cache key based on query parameters
-        const cacheKey = `vendorpayment:org:${organizationId || 'all'}:vendor:${vendorId || 'all'}:page:${page}:limit:${limit}:date:${date || 'all'}:search${search || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
+        const cacheKey = `vendorpayment:org:${organizationId || 'all'}:vendor:${vendorId || 'all'}:page:${page}:limit:${limit}:date:${date || 'all'}:search${search || "all"}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:paymentFromDate:${paymentFromDate || "all"}:paymentToDate:${paymentToDate || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
 
         // Try to get from cache
         const cachedData = await redisClient.get(cacheKey);
@@ -274,26 +280,97 @@ export const getVendorPayment = async (req: RoleBasedRequest, res: Response): Pr
             filter.vendorId = new mongoose.Types.ObjectId(vendorId as string);
         }
 
-        // ✅ Filter by single date (createdAt)
-        if (date) {
-            const selectedDate = new Date(date as string);
-            if (isNaN(selectedDate.getTime())) {
-                res.status(400).json({
-                    ok: false,
-                    message: "Invalid date format. Use ISO string (e.g. 2025-10-23)."
-                });
-                return;
+
+
+          if (createdFromDate || createdToDate) {
+            const filterRange: any = {};
+
+            if (createdFromDate) {
+                const from = new Date(createdFromDate as string);
+                if (isNaN(from.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid createdFromDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                from.setHours(0, 0, 0, 0);
+                filterRange.$gte = from;
             }
 
-            // Create a range covering the entire day
-            const startOfDay = new Date(selectedDate);
-            startOfDay.setHours(0, 0, 0, 0);
+            if (createdToDate) {
+                const to = new Date(createdToDate as string);
+                if (isNaN(to.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid createdToDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                to.setHours(23, 59, 59, 999);
+                filterRange.$lte = to;
+            }
 
-            const endOfDay = new Date(selectedDate);
-            endOfDay.setHours(23, 59, 59, 999);
-
-            filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
+            filter.createdAt = filterRange;
         }
+
+
+
+        if (paymentFromDate || paymentToDate) {
+            const filterRange: any = {};
+
+            if (paymentFromDate) {
+                const from = new Date(paymentFromDate as string);
+                if (isNaN(from.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid paymentFromDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                from.setHours(0, 0, 0, 0);
+                filterRange.$gte = from;
+            }
+
+            if (paymentToDate) {
+                const to = new Date(paymentToDate as string);
+                if (isNaN(to.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid paymentToDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                to.setHours(23, 59, 59, 999);
+                filterRange.$lte = to;
+            }
+
+            filter.paymentDate = filterRange;
+        }
+
+
+
+
+        // ✅ Filter by single date (createdAt)
+        // if (date) {
+        //     const selectedDate = new Date(date as string);
+        //     if (isNaN(selectedDate.getTime())) {
+        //         res.status(400).json({
+        //             ok: false,
+        //             message: "Invalid date format. Use ISO string (e.g. 2025-10-23)."
+        //         });
+        //         return;
+        //     }
+
+        //     // Create a range covering the entire day
+        //     const startOfDay = new Date(selectedDate);
+        //     startOfDay.setHours(0, 0, 0, 0);
+
+        //     const endOfDay = new Date(selectedDate);
+        //     endOfDay.setHours(23, 59, 59, 999);
+
+        //     filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
+        // }
 
         if (search && typeof search === 'string' && search.trim() !== '') {
             filter.$or = [

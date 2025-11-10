@@ -328,7 +328,10 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
             organizationId,
             vendorId,
             search,
-            date,
+            dateOfPaymentFromDate , 
+            dateOfPaymentToDate,
+             createdFromDate ,
+              createdToDate,
             minAmount,
             maxAmount,
             paidThrough,
@@ -380,7 +383,7 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
         }
 
         // // Create cache key
-        const cacheKey = `expenses:page:${page}:limit:${limit}:organizationId:${organizationId}:vendorId:${vendorId || "all"}:search:${search || "all"}:date:${date || "all"}:minAmount:${minAmount || "all"}:maxAmount:${maxAmount || "all"}:paidThrough:${paidThrough || "all"}:sortBy:${sortBy}:sortOrder:${sortOrder}`;
+        const cacheKey = `expenses:page:${page}:limit:${limit}:organizationId:${organizationId}:vendorId:${vendorId || "all"}:search:${search || "all"}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:dateOfPaymentFromDate:${dateOfPaymentFromDate || "all"}:dateOfPaymentToDate:${dateOfPaymentToDate || "all"}:minAmount:${minAmount || "all"}:maxAmount:${maxAmount || "all"}:paidThrough:${paidThrough || "all"}:sortBy:${sortBy}:sortOrder:${sortOrder}`;
 
         // Check cache
         const cachedData = await redisClient.get(cacheKey);
@@ -400,7 +403,7 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
             filter.vendorId = vendorId;
         }
 
-        console.log("search", search)
+        // console.log("search", search)
         if (search) {
             filter.$or = [
                 filter.vendorName = { $regex: search, $options: "i" },
@@ -408,19 +411,88 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
             ]
         }
 
-        // Handle single date filter
-        if (date) {
-            const startOfDay = new Date(date as string);
-            startOfDay.setHours(0, 0, 0, 0);
 
-            const endOfDay = new Date(date as string);
-            endOfDay.setHours(23, 59, 59, 999);
+         if (createdFromDate || createdToDate) {
+            const filterRange: any = {};
 
-            filter.dateOfPayment = {
-                $gte: startOfDay,
-                $lte: endOfDay
-            };
+            if (createdFromDate) {
+                const from = new Date(createdFromDate as string);
+                if (isNaN(from.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid createdFromDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                from.setHours(0, 0, 0, 0);
+                filterRange.$gte = from;
+            }
+
+            if (createdToDate) {
+                const to = new Date(createdToDate as string);
+                if (isNaN(to.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid createdToDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                to.setHours(23, 59, 59, 999);
+                filterRange.$lte = to;
+            }
+
+            filter.createdAt = filterRange;
         }
+
+
+
+        if (dateOfPaymentFromDate || dateOfPaymentToDate) {
+            const filterRange: any = {};
+
+            if (dateOfPaymentFromDate) {
+                const from = new Date(dateOfPaymentFromDate as string);
+                if (isNaN(from.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid dateOfPaymentFromDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                from.setHours(0, 0, 0, 0);
+                filterRange.$gte = from;
+            }
+
+            if (dateOfPaymentToDate) {
+                const to = new Date(dateOfPaymentToDate as string);
+                if (isNaN(to.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid dateOfPaymentToDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                to.setHours(23, 59, 59, 999);
+                filterRange.$lte = to;
+            }
+
+            filter.dateOfPayment = filterRange;
+        }
+
+
+
+        // Handle single date filter
+        // if (date) {
+        //     const startOfDay = new Date(date as string);
+        //     startOfDay.setHours(0, 0, 0, 0);
+
+        //     const endOfDay = new Date(date as string);
+        //     endOfDay.setHours(23, 59, 59, 999);
+
+        //     filter.dateOfPayment = {
+        //         $gte: startOfDay,
+        //         $lte: endOfDay
+        //     };
+        // }
 
         if (minAmount || maxAmount) {
             filter.amount = {};

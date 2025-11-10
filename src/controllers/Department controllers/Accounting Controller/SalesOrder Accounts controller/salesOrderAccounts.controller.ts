@@ -279,12 +279,14 @@ export const createSalesOrder = async (req: RoleBasedRequest, res: Response): Pr
 // GET All Invoices (with optional filters)
 export const getSalesorder = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { organizationId, customerId, page = 1, limit = 10, date, search, salesOrderDate, sortBy = 'createdAt',
-            sortOrder = 'desc' } = req.query;
+        const { organizationId, customerId, page = 1, limit = 10, search, sortBy = 'createdAt',
+            sortOrder = 'desc', 
+            fromSalesOrderDate, toSalesOrderDate ,  createdFromDate,
+            createdToDate,} = req.query;
 
 
         // Build cache key based on query parameters
-        const cacheKey = `salesorder:org:${organizationId || 'all'}:customer:${customerId || 'all'}:page:${page}:limit:${limit}:date:${date || 'all'}:salesOrderDate:${salesOrderDate || "all"}:search${search || "all"}:${sortBy}:${sortOrder}`;
+        const cacheKey = `salesorder:org:${organizationId || 'all'}:customer:${customerId || 'all'}:page:${page}:limit:${limit}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:fromSalesOrderDate:${fromSalesOrderDate || "all"}:toSalesOrderDate:${toSalesOrderDate || "all"}:search${search || "all"}:${sortBy}:${sortOrder}`;
 
         // Try to get from cache
         const cachedData = await redisClient.get(cacheKey);
@@ -318,45 +320,113 @@ export const getSalesorder = async (req: RoleBasedRequest, res: Response): Promi
         }
 
         // ✅ Filter by single date (createdAt)
-        if (date) {
-            const selectedDate = new Date(date as string);
-            if (isNaN(selectedDate.getTime())) {
-                res.status(400).json({
-                    ok: false,
-                    message: "Invalid date format. Use ISO string (e.g. 2025-10-23)."
-                });
-                return;
+        // if (date) {
+        //     const selectedDate = new Date(date as string);
+        //     if (isNaN(selectedDate.getTime())) {
+        //         res.status(400).json({
+        //             ok: false,
+        //             message: "Invalid date format. Use ISO string (e.g. 2025-10-23)."
+        //         });
+        //         return;
+        //     }
+
+        //     // Create a range covering the entire day
+        //     const startOfDay = new Date(selectedDate);
+        //     startOfDay.setHours(0, 0, 0, 0);
+
+        //     const endOfDay = new Date(selectedDate);
+        //     endOfDay.setHours(23, 59, 59, 999);
+
+        //     filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
+        // }
+
+        // if (salesOrderDate) {
+        //     const selectedsalesOrderDate = new Date(salesOrderDate as string);
+        //     if (isNaN(selectedsalesOrderDate.getTime())) {
+        //         res.status(400).json({
+        //             ok: false,
+        //             message: "Invalid salesOrderDate format. Use ISO string (e.g. 2025-10-23)."
+        //         });
+        //         return;
+        //     }
+
+        //     // Create a range covering the entire day
+        //     const startOfDay = new Date(selectedsalesOrderDate);
+        //     startOfDay.setHours(0, 0, 0, 0);
+
+        //     const endOfDay = new Date(selectedsalesOrderDate);
+        //     endOfDay.setHours(23, 59, 59, 999);
+
+        //     filter.salesOrderDate = { $gte: startOfDay, $lte: endOfDay };
+        // }
+
+
+         if (createdFromDate || createdToDate) {
+            const filterRange: any = {};
+
+            if (createdFromDate) {
+                const from = new Date(createdFromDate as string);
+                if (isNaN(from.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid createdFromDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                from.setHours(0, 0, 0, 0);
+                filterRange.$gte = from;
             }
 
-            // Create a range covering the entire day
-            const startOfDay = new Date(selectedDate);
-            startOfDay.setHours(0, 0, 0, 0);
-
-            const endOfDay = new Date(selectedDate);
-            endOfDay.setHours(23, 59, 59, 999);
-
-            filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
-        }
-
-        if (salesOrderDate) {
-            const selectedsalesOrderDate = new Date(salesOrderDate as string);
-            if (isNaN(selectedsalesOrderDate.getTime())) {
-                res.status(400).json({
-                    ok: false,
-                    message: "Invalid salesOrderDate format. Use ISO string (e.g. 2025-10-23)."
-                });
-                return;
+            if (createdToDate) {
+                const to = new Date(createdToDate as string);
+                if (isNaN(to.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid createdToDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                to.setHours(23, 59, 59, 999);
+                filterRange.$lte = to;
             }
 
-            // Create a range covering the entire day
-            const startOfDay = new Date(selectedsalesOrderDate);
-            startOfDay.setHours(0, 0, 0, 0);
-
-            const endOfDay = new Date(selectedsalesOrderDate);
-            endOfDay.setHours(23, 59, 59, 999);
-
-            filter.salesOrderDate = { $gte: startOfDay, $lte: endOfDay };
+            filter.createdAt = filterRange;
         }
+
+
+
+        if (fromSalesOrderDate || toSalesOrderDate) {
+            const filterRange: any = {};
+
+            if (fromSalesOrderDate) {
+                const from = new Date(fromSalesOrderDate as string);
+                if (isNaN(from.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid fromSalesOrderDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                from.setHours(0, 0, 0, 0);
+                filterRange.$gte = from;
+            }
+
+            if (toSalesOrderDate) {
+                const to = new Date(toSalesOrderDate as string);
+                if (isNaN(to.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid toSalesOrderDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                to.setHours(23, 59, 59, 999);
+                filterRange.$lte = to;
+            }
+
+            filter.salesOrderDate = filterRange;
+        }
+
 
         if (search && typeof search === 'string' && search.trim() !== '') {
             filter.$or = [

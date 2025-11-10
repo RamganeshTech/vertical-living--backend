@@ -14,7 +14,7 @@ const generateInvoiceNumber = async (organizationId: string): Promise<string> =>
             { organizationId: new mongoose.Types.ObjectId(orgId) },
             { invoiceNumber: 1 }
         ).lean();
-console.log("invoices", invoices)
+        console.log("invoices", invoices)
         if (invoices.length === 0) {
             return `INV-${orgId.slice(0, 5)}-1`;
         }
@@ -272,12 +272,18 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
 // GET All Invoices (with optional filters)
 export const getInvoices = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { organizationId, customerId, page = 1, limit = 10, date, search , sortBy = 'createdAt',
-            sortOrder = 'desc'} = req.query;
+        const { organizationId, customerId, page = 1, limit = 10, search, sortBy = 'createdAt',
+            sortOrder = 'desc',
+
+            fromInvoiceDate,
+            toInvoiceDate,
+            createdFromDate,
+            createdToDate,
+        } = req.query;
 
 
         // Build cache key based on query parameters
-        const cacheKey = `invoices:org:${organizationId || 'all'}:customer:${customerId || 'all'}:page:${page}:limit:${limit}:date:${date || 'all'}:search${search || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
+        const cacheKey = `invoices:org:${organizationId || 'all'}:customer:${customerId || 'all'}:page:${page}:limit:${limit}:search${search || "all"}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:fromInvoiceDate:${fromInvoiceDate || "all"}:toInvoiceDate:${toInvoiceDate || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
 
         // Try to get from cache
         const cachedData = await redisClient.get(cacheKey);
@@ -311,79 +317,149 @@ export const getInvoices = async (req: RoleBasedRequest, res: Response): Promise
         }
 
         // ✅ Filter by single date (createdAt)
-        if (date) {
-            const selectedDate = new Date(date as string);
-            if (isNaN(selectedDate.getTime())) {
-                res.status(400).json({
-                    ok: false,
-                    message: "Invalid date format. Use ISO string (e.g. 2025-10-23)."
-                });
-                return;
+        // if (date) {
+        //     const selectedDate = new Date(date as string);
+        //     if (isNaN(selectedDate.getTime())) {
+        //         res.status(400).json({
+        //             ok: false,
+        //             message: "Invalid date format. Use ISO string (e.g. 2025-10-23)."
+        //         });
+        //         return;
+        //     }
+
+        // Create a range covering the entire day
+    //     const startOfDay = new Date(selectedDate);
+    //     startOfDay.setHours(0, 0, 0, 0);
+
+    //     const endOfDay = new Date(selectedDate);
+    //     endOfDay.setHours(23, 59, 59, 999);
+
+    //     filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
+    // }
+
+
+
+    
+         if (createdFromDate || createdToDate) {
+            const filterRange: any = {};
+
+            if (createdFromDate) {
+                const from = new Date(createdFromDate as string);
+                if (isNaN(from.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid createdFromDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                from.setHours(0, 0, 0, 0);
+                filterRange.$gte = from;
             }
 
-            // Create a range covering the entire day
-            const startOfDay = new Date(selectedDate);
-            startOfDay.setHours(0, 0, 0, 0);
-
-            const endOfDay = new Date(selectedDate);
-            endOfDay.setHours(23, 59, 59, 999);
-
-            filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
-        }
-
-        if (search && typeof search === 'string' && search.trim() !== '') {
-            filter.$or = [
-                { customerName: { $regex: search, $options: 'i' } },
-                { invoiceNumber: { $regex: search, $options: 'i' } },
-            ];
-        }
-
-         // Build sort object
-        const sort: any = {};
-        sort[sortBy as string] = sortOrder === 'asc' ? 1 : -1;
-
-
-        // Calculate pagination
-        const pageNum = parseInt(page as string);
-        const limitNum = parseInt(limit as string);
-        const skip = (pageNum - 1) * limitNum;
-
-        // Get invoices with pagination
-        const [invoices, total] = await Promise.all([
-            InvoiceAccountModel.find(filter)
-                .sort(sort)
-                .skip(skip)
-                .limit(limitNum),
-            InvoiceAccountModel.countDocuments(filter)
-        ])
-
-
-        const response = {
-            ok: true,
-            message: "Invoices retrieved successfully",
-            data: invoices,
-            pagination: {
-                total,
-                page: pageNum,
-                limit: limitNum,
-                totalPages: Math.ceil(total / limitNum)
+            if (createdToDate) {
+                const to = new Date(createdToDate as string);
+                if (isNaN(to.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid createdToDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                to.setHours(23, 59, 59, 999);
+                filterRange.$lte = to;
             }
-        };
+
+            filter.createdAt = filterRange;
+        }
 
 
 
-        // Cache the response for 10 minutes
-        await redisClient.set(cacheKey, JSON.stringify(response), { EX: 60 * 10 });
-        return res.status(200).json(response);
+        if (fromInvoiceDate || toInvoiceDate) {
+            const filterRange: any = {};
 
-    } catch (error: any) {
-        console.error("Error getting invoices:", error);
-        res.status(500).json({
-            ok: false,
-            message: "Error retrieving invoices",
-            error: error.message
-        });
+            if (fromInvoiceDate) {
+                const from = new Date(fromInvoiceDate as string);
+                if (isNaN(from.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid fromInvoiceDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                from.setHours(0, 0, 0, 0);
+                filterRange.$gte = from;
+            }
+
+            if (toInvoiceDate) {
+                const to = new Date(toInvoiceDate as string);
+                if (isNaN(to.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid toInvoiceDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                to.setHours(23, 59, 59, 999);
+                filterRange.$lte = to;
+            }
+
+            filter.invoiceDate = filterRange;
+        }
+
+
+    if (search && typeof search === 'string' && search.trim() !== '') {
+        filter.$or = [
+            { customerName: { $regex: search, $options: 'i' } },
+            { invoiceNumber: { $regex: search, $options: 'i' } },
+        ];
     }
+
+    // Build sort object
+    const sort: any = {};
+    sort[sortBy as string] = sortOrder === 'asc' ? 1 : -1;
+
+
+    // Calculate pagination
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Get invoices with pagination
+    const [invoices, total] = await Promise.all([
+        InvoiceAccountModel.find(filter)
+            .sort(sort)
+            .skip(skip)
+            .limit(limitNum),
+        InvoiceAccountModel.countDocuments(filter)
+    ])
+
+
+    const response = {
+        ok: true,
+        message: "Invoices retrieved successfully",
+        data: invoices,
+        pagination: {
+            total,
+            page: pageNum,
+            limit: limitNum,
+            totalPages: Math.ceil(total / limitNum)
+        }
+    };
+
+
+
+    // Cache the response for 10 minutes
+    await redisClient.set(cacheKey, JSON.stringify(response), { EX: 60 * 10 });
+    return res.status(200).json(response);
+
+} catch (error: any) {
+    console.error("Error getting invoices:", error);
+    res.status(500).json({
+        ok: false,
+        message: "Error retrieving invoices",
+        error: error.message
+    });
+}
 };
 
 // GET Single Invoice by ID
@@ -400,7 +476,7 @@ export const getInvoiceById = async (req: RoleBasedRequest, res: Response): Prom
             return;
         }
 
-            // Build cache key
+        // Build cache key
         const cacheKey = `invoice:${id}`;
 
         // Try to get from cache
@@ -547,7 +623,7 @@ export const deleteInvoice = async (req: RoleBasedRequest, res: Response): Promi
 
         // Validate ID format
         if (!mongoose.Types.ObjectId.isValid(id)) {
-           return res.status(400).json({
+            return res.status(400).json({
                 ok: false,
                 message: "Invalid invoice ID format"
             });
@@ -556,15 +632,15 @@ export const deleteInvoice = async (req: RoleBasedRequest, res: Response): Promi
         const deletedInvoice = await InvoiceAccountModel.findByIdAndDelete(id);
 
         if (!deletedInvoice) {
-           return res.status(404).json({
+            return res.status(404).json({
                 ok: false,
                 message: "Invoice not found"
             });
-            
+
         }
 
 
-         // Invalidate related caches
+        // Invalidate related caches
         await invalidateInvoiceCache(
             deletedInvoice.organizationId?.toString(),
             deletedInvoice.customerId?.toString(),

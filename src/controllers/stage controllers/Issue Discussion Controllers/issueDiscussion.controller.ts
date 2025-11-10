@@ -676,6 +676,75 @@ export const forwardIssue = async (req: RoleBasedRequest, res: Response): Promis
 };
 
 
+
+/**
+ * Delete a conversation (only by issue raiser or admin)
+ */
+export const deleteConversation = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { projectId, convoId } = req.params;
+
+        if (!req.user) {
+            return res.status(401).json({
+                ok: false,
+                message: 'Unauthorized'
+            });
+        }
+
+        const discussion = await IssueDiscussionModel.findOne({ projectId });
+        if (!discussion) {
+            return res.status(404).json({
+                ok: false,
+                message: 'Discussion not found'
+            });
+        }
+
+        const convoIndex = discussion.discussion.findIndex(
+            (convo: any) => convo._id.toString() === convoId
+        );
+
+        if (convoIndex === -1) {
+            return res.status(404).json({
+                ok: false,
+                message: 'Conversation not found'
+            });
+        }
+
+        const convo = discussion.discussion[convoIndex];
+
+        // Check authorization (only raiser or owner can delete)
+        if (convo.issue.raisedBy.toString() !== req.user._id && req.user.role !== 'owner') {
+            return res.status(403).json({
+                ok: false,
+                message: 'You are not allowed to delete this conversation'
+            });
+        }
+
+        // Remove the conversation
+        discussion.discussion.splice(convoIndex, 1);
+        await discussion.save();
+
+        // Emit socket event
+        await SocketService.emitToProject(discussion.projectId.toString(), 'issue_deleted', {
+            discussionId: discussion._id,
+            convoId
+        });
+
+        res.json({
+            ok: true,
+            message: 'Conversation deleted successfully'
+        });
+
+    } catch (error) {
+        const err = error as Error;
+        console.error('Delete conversation error:', err);
+        res.status(500).json({
+            ok: false,
+            error: err.message || 'Failed to delete conversation'
+        });
+    }
+};
+
 /**
  * Get user's assigned issues across all projects
  */
@@ -862,73 +931,7 @@ export const getUserRaisedIssues = async (req: RoleBasedRequest, res: Response):
     }
 };
 
-/**
- * Delete a conversation (only by issue raiser or admin)
- */
-export const deleteConversation = async (req: RoleBasedRequest, res: Response): Promise<any> => {
-    try {
-        const { projectId, convoId } = req.params;
 
-        if (!req.user) {
-            return res.status(401).json({
-                ok: false,
-                message: 'Unauthorized'
-            });
-        }
-
-        const discussion = await IssueDiscussionModel.findOne({ projectId });
-        if (!discussion) {
-            return res.status(404).json({
-                ok: false,
-                message: 'Discussion not found'
-            });
-        }
-
-        const convoIndex = discussion.discussion.findIndex(
-            (convo: any) => convo._id.toString() === convoId
-        );
-
-        if (convoIndex === -1) {
-            return res.status(404).json({
-                ok: false,
-                message: 'Conversation not found'
-            });
-        }
-
-        const convo = discussion.discussion[convoIndex];
-
-        // Check authorization (only raiser or owner can delete)
-        if (convo.issue.raisedBy.toString() !== req.user._id && req.user.role !== 'owner') {
-            return res.status(403).json({
-                ok: false,
-                message: 'You are not allowed to delete this conversation'
-            });
-        }
-
-        // Remove the conversation
-        discussion.discussion.splice(convoIndex, 1);
-        await discussion.save();
-
-        // Emit socket event
-        await SocketService.emitToProject(discussion.projectId.toString(), 'issue_deleted', {
-            discussionId: discussion._id,
-            convoId
-        });
-
-        res.json({
-            ok: true,
-            message: 'Conversation deleted successfully'
-        });
-
-    } catch (error) {
-        const err = error as Error;
-        console.error('Delete conversation error:', err);
-        res.status(500).json({
-            ok: false,
-            error: err.message || 'Failed to delete conversation'
-        });
-    }
-};
 
 
 

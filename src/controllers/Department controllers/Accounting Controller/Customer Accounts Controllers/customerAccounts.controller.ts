@@ -397,6 +397,8 @@ export const getAllCustomers = async (req: RoleBasedRequest, res: Response): Pro
             // firstName,
             // lastName,
             customerType,
+            createdFromDate ,
+              createdToDate,
             search,
             sortBy = 'createdAt',
             sortOrder = 'desc'
@@ -451,6 +453,41 @@ export const getAllCustomers = async (req: RoleBasedRequest, res: Response): Pro
             filter.customerType = customerType;
         }
 
+
+        if (createdFromDate || createdToDate) {
+            const filterRange: any = {};
+
+            if (createdFromDate) {
+                const from = new Date(createdFromDate as string);
+                if (isNaN(from.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid createdFromDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                from.setHours(0, 0, 0, 0);
+                filterRange.$gte = from;
+            }
+
+            if (createdToDate) {
+                const to = new Date(createdToDate as string);
+                if (isNaN(to.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid createdToDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                to.setHours(23, 59, 59, 999);
+                filterRange.$lte = to;
+            }
+
+            filter.createdAt = filterRange;
+        }
+
+
+
         // if (firstName) {
         //     filter.firstName = { $regex: firstName, $options: 'i' };
         // }
@@ -472,7 +509,7 @@ export const getAllCustomers = async (req: RoleBasedRequest, res: Response): Pro
         }
 
         // Create cache key based on filters
-        const cacheKey = `customers:organizationId:${organizationId || 'all'}:page:${pageNum}:limit:${limitNum}:type:${customerType || 'all'}:search:${search || 'none'}:sort:${sortBy}:${sortOrder}`;
+        const cacheKey = `customers:organizationId:${organizationId || 'all'}:page:${pageNum}:limit:${limitNum}:type:${customerType || 'all'}:search:${search || 'none'}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:sort:${sortBy}:${sortOrder}`;
 
         // Check cache
         const cachedData = await redisClient.get(cacheKey);

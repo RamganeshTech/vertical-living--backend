@@ -226,11 +226,16 @@ export const createPurchase = async (req: RoleBasedRequest, res: Response): Prom
 export const getPurchases = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { organizationId, vendorId, page = 1, limit = 10, date, search, sortBy = 'createdAt',
-            sortOrder = 'desc' } = req.query;
+            sortOrder = 'desc',
+            fromPurchaseDate,
+            toPurchaseDate,
+            createdFromDate,
+            createdToDate,
+        } = req.query;
 
 
         // Build cache key based on query parameters
-        const cacheKey = `purchaseaccount:org:${organizationId || 'all'}:vendor:${vendorId || 'all'}:page:${page}:limit:${limit}:date:${date || 'all'}:search${search || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
+        const cacheKey = `purchaseaccount:org:${organizationId || 'all'}:vendor:${vendorId || 'all'}:page:${page}:limit:${limit}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:fromPurchaseDate:${fromPurchaseDate || "all"}:toPurchaseDate:${toPurchaseDate || "all"}:search${search || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
 
         // Try to get from cache
         const cachedData = await redisClient.get(cacheKey);
@@ -264,25 +269,93 @@ export const getPurchases = async (req: RoleBasedRequest, res: Response): Promis
         }
 
         // ✅ Filter by single date (createdAt)
-        if (date) {
-            const selectedDate = new Date(date as string);
-            if (isNaN(selectedDate.getTime())) {
-                res.status(400).json({
-                    ok: false,
-                    message: "Invalid date format. Use ISO string (e.g. 2025-10-23)."
-                });
-                return;
+        // if (date) {
+        //     const selectedDate = new Date(date as string);
+        //     if (isNaN(selectedDate.getTime())) {
+        //         res.status(400).json({
+        //             ok: false,
+        //             message: "Invalid date format. Use ISO string (e.g. 2025-10-23)."
+        //         });
+        //         return;
+        //     }
+
+        //     // Create a range covering the entire day
+        //     const startOfDay = new Date(selectedDate);
+        //     startOfDay.setHours(0, 0, 0, 0);
+
+        //     const endOfDay = new Date(selectedDate);
+        //     endOfDay.setHours(23, 59, 59, 999);
+
+        //     filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
+        // }
+
+
+         if (createdFromDate || createdToDate) {
+            const filterRange: any = {};
+
+            if (createdFromDate) {
+                const from = new Date(createdFromDate as string);
+                if (isNaN(from.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid createdFromDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                from.setHours(0, 0, 0, 0);
+                filterRange.$gte = from;
             }
 
-            // Create a range covering the entire day
-            const startOfDay = new Date(selectedDate);
-            startOfDay.setHours(0, 0, 0, 0);
+            if (createdToDate) {
+                const to = new Date(createdToDate as string);
+                if (isNaN(to.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid createdToDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                to.setHours(23, 59, 59, 999);
+                filterRange.$lte = to;
+            }
 
-            const endOfDay = new Date(selectedDate);
-            endOfDay.setHours(23, 59, 59, 999);
-
-            filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
+            filter.createdAt = filterRange;
         }
+
+
+
+        if (fromPurchaseDate || toPurchaseDate) {
+            const filterRange: any = {};
+
+            if (fromPurchaseDate) {
+                const from = new Date(fromPurchaseDate as string);
+                if (isNaN(from.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid fromPurchaseDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                from.setHours(0, 0, 0, 0);
+                filterRange.$gte = from;
+            }
+
+            if (toPurchaseDate) {
+                const to = new Date(toPurchaseDate as string);
+                if (isNaN(to.getTime())) {
+                    res.status(400).json({
+                        ok: false,
+                        message: "Invalid toPurchaseDate format. Use ISO string (e.g. 2025-10-23)."
+                    });
+                    return;
+                }
+                to.setHours(23, 59, 59, 999);
+                filterRange.$lte = to;
+            }
+
+            filter.purchaseDate = filterRange;
+        }
+
 
         if (search && typeof search === 'string' && search.trim() !== '') {
             filter.$or = [
@@ -311,7 +384,7 @@ export const getPurchases = async (req: RoleBasedRequest, res: Response): Promis
         ])
 
 
-         // Calculate pagination info
+        // Calculate pagination info
         const totalPages = Math.ceil(totalCount / limitNum);
         const hasNextPage = pageNum < totalPages;
         const hasPrevPage = pageNum > 1;
