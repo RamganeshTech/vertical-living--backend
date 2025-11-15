@@ -5,7 +5,7 @@ import { Types } from "mongoose";
 export interface IIssueDiscussion {
     _id?: Types.ObjectId
     organizationId: Types.ObjectId,
-    projectId: Types.ObjectId,
+    // projectId: Types.ObjectId,
     discussion: IConvo[],
     createdAt?: Date
     updatedAt?: Date
@@ -27,6 +27,7 @@ export interface IConvo {
 export interface IIssueRaise {
     _id?: Types.ObjectId,
     selectStaff: Types.ObjectId,
+    projectId: Types.ObjectId
     selectStaffRole: string,
     staffSelectedModel: string,
     raisedBy: Types.ObjectId,
@@ -36,6 +37,7 @@ export interface IIssueRaise {
     isMessageRequired: boolean,
     dropdownOptions?: string[],
     files: IIssueFileType[],
+    isRead: boolean,
     createdAt?: Date
     updatedAt?: Date
 }
@@ -152,6 +154,11 @@ export const IssueRaiseSchema = new Schema<IIssueRaise>({
         enum: ["CTO", "worker", "owner", "staff"]
     },
 
+     projectId: {
+        type: Schema.Types.ObjectId,
+        ref: 'ProjectModel',
+    },
+
     // Dynamic reference using refPath
     raisedBy: {
         type: Schema.Types.ObjectId,
@@ -190,6 +197,11 @@ export const IssueRaiseSchema = new Schema<IIssueRaise>({
         default: []
     },
 
+
+ isRead: {
+            type: Boolean,
+            default: false,
+        },
 }, {
     timestamps: true,
     _id: true
@@ -216,12 +228,6 @@ export const IssueDiscussionSchema = new Schema<IIssueDiscussion>({
         type: Schema.Types.ObjectId,
         required: true,
         ref: 'OrganizationModel',
-    },
-
-    projectId: {
-        type: Schema.Types.ObjectId,
-        required: true,
-        ref: 'ProjectModel',
     },
 
     discussion: {
@@ -271,13 +277,13 @@ ResponseSchema.pre('save', function (next) {
     next();
 });
 
-// Virtual for getting the issue status
-ConvoSchema.virtual('status').get(function () {
-    if (!this.response) {
-        return 'pending';
-    }
-    return 'responded';
-});
+// // Virtual for getting the issue status
+// ConvoSchema.virtual('status').get(function () {
+//     if (!this.response) {
+//         return 'pending';
+//     }
+//     return 'responded';
+// });
 
 // Instance method to add a new conversation
 IssueDiscussionSchema.methods.addConversation = function (convo: IConvo) {

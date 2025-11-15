@@ -3,8 +3,9 @@
 import { Request, Response } from "express";
 import { AccountingModel } from "../../../models/Department Models/Accounting Model/accountingMain.model";
 import { RoleBasedRequest } from "../../../types/types";
+import {Types} from "mongoose"
 
-export async function generateTransactionNumber(organizationId: string): Promise<string> {
+export async function generateTransactionNumber(organizationId: string| Types.ObjectId): Promise<string> {
   // Find last transaction for this org
   const lastDoc = await AccountingModel.findOne({ organizationId })
     .sort({ createdAt: -1 })

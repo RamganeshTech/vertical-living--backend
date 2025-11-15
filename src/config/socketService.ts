@@ -4,14 +4,17 @@
 
 import { Server } from 'socket.io';
 import ProjectModel from '../models/project model/project.model';
+import { Types } from 'aws-sdk/clients/acm';
+import { ObjectId } from 'mongoose';
+import { getUnreadTicketCountUtil } from '../controllers/stage controllers/Issue Discussion Controllers/issueDiscussion.controller';
 
 export class SocketService {
   private static io: Server;
-  
+
   static initialize(io: Server) {
     SocketService.io = io;
   }
-  
+
   static async getOrganizationId(projectId: string): Promise<string | null> {
     try {
       const project = await ProjectModel.findById(projectId).populate('organizationId');
@@ -21,7 +24,7 @@ export class SocketService {
       return null;
     }
   }
-  
+
   static async emitToProject(projectId: string, event: string, data: any) {
     try {
       const organizationId = await this.getOrganizationId(projectId);
@@ -29,19 +32,19 @@ export class SocketService {
 
 
 
-        console.log("Project ID:", projectId);
-        console.log("Event:", event);
-        console.log("Organization ID:", organizationId);
-        console.log("Data keys:", Object.keys(data));
-        console.log("Has conversation?", !!data.conversation);
-        console.log("Has response?", !!data.response);
-        console.log("ConvoId:", data.convoId);
+      console.log("Project ID:", projectId);
+      console.log("Event:", event);
+      console.log("Organization ID:", organizationId);
+      console.log("Data keys:", Object.keys(data));
+      console.log("Has conversation?", !!data.conversation);
+      console.log("Has response?", !!data.response);
+      console.log("ConvoId:", data.convoId);
 
 
 
       if (!organizationId) return;
-      
-      
+
+
       const roomName = `org_${organizationId}`;
       SocketService.io.to(roomName).emit(event, {
         ...data,
@@ -49,23 +52,23 @@ export class SocketService {
         organizationId,
         timestamp: new Date().toISOString()
       });
-      
+
       console.log(`Emitted ${event} to room: ${roomName}`);
-              console.log("=========================================");
+      console.log("=========================================");
 
     } catch (error) {
       console.error('Socket emission error:', error);
     }
   }
-  
+
   static async emitToOrganization(organizationId: string, event: string, data: any) {
     try {
       // Emit to all projects in the organization
       const rooms = await SocketService.io.sockets.adapter.rooms;
-      const orgRooms = Array.from(rooms.keys()).filter(room => 
+      const orgRooms = Array.from(rooms.keys()).filter(room =>
         room.startsWith(`org_${organizationId}_`)
       );
-      
+
       orgRooms.forEach(room => {
         SocketService.io.to(room).emit(event, {
           ...data,
@@ -82,7 +85,7 @@ export class SocketService {
 
 
 
-    // ===== NOTIFICATION METHODS =====
+  // ===== NOTIFICATION METHODS =====
 
   /**
    * Emit notification to specific user
@@ -94,7 +97,7 @@ export class SocketService {
         ...data,
         timestamp: new Date().toISOString()
       });
-      
+
       console.log(`✅ Emitted ${event} to user: ${userId}`);
     } catch (error) {
       console.error('❌ Error emitting to user:', error);
@@ -155,12 +158,75 @@ export class SocketService {
         notification,
         timestamp: new Date().toISOString()
       });
-      
+
       console.log(`✅ Sent notification to organization: ${organizationId}`);
     } catch (error) {
       console.error('❌ Error sending notification to organization:', error);
     }
   }
+
+
+
+
+  // TICKET DISCUSSIONS
+
+  // ✨ NEW: Emit to specific organization discussion (if you already have orgId)
+  static emitToOrgDiscussion(organizationId: string, event: string, data: any) {
+    try {
+      const discussionRoom = `org_discussion_${organizationId}`;
+
+      // console.log(`📣 Emitting ${event} to room=${room} (members=${members})`);
+      console.log("emitted in the organization", discussionRoom)
+      SocketService.io.to(discussionRoom).emit(event, {
+        ...data,
+        organizationId,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`✅ Emitted ${event} to discussion room: ${discussionRoom}`);
+    } catch (error) {
+      console.error('❌ Org discussion emission error:', error);
+    }
+  }
+
+
+
+  // send the unread ticket counts
+
+
+  /**
+   * Update unread count for user
+   */
+  // static updateUnreadTicketCount(userId: string, count: number) {
+  //   this.emitToUser(userId, 'unread_ticket_count_update', { count });
+  // }
+
+  // static async emitTicketNotification(ticket: { _id: string; organizationId: string; assignedTo: string[] }) {
+  //   for (const userId of ticket.assignedTo) {
+  //     const userRoom = `user_issue_notification_${userId}`; // per-user room
+
+  //     const unreadCount = await getUnreadTicketCountUtil(ticket.organizationId, userId);
+
+  //     SocketService.io.to(userRoom).emit('unread_ticket_count_update', { count: unreadCount });
+  //   }
+  // }
+
+  // ---------------------------
+  // Emit to a per-user ticket room
+  // ---------------------------
+  static emitToUserTicketRoom(userId: string, event: string, data: any) {
+    if (!this.io) {
+      console.warn('SocketService.io not initialized');
+      return;
+    }
+    
+    const room = `user_issue_notification_${userId}`;
+    this.io.to(room).emit(event, data);
+    console.log("getting from the emitToUserTicketRoom")
+    console.log(`✅ Emitted ${event} to user ${userId} in room ${room}`);
+  }
+
+
 
 }
 

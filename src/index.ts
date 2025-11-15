@@ -2,7 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import dotenv  from 'dotenv';
+import dotenv from 'dotenv';
 
 import connectDB from './config/connectDB';
 
@@ -69,7 +69,7 @@ import recycleMaterialRoutes from './routers/Stage routes/Inventory Routes/Recyc
 import http from 'http';
 import { Server, Socket } from 'socket.io';
 import ProjectModel from './models/project model/project.model';
-import  jwt  from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { RoleUserPayload } from './types/types';
 import { SocketService } from './config/socketService';
 import LogisticsRoutes from './routers/Department Routes/Logistics Routes/logistics.routes';
@@ -103,9 +103,14 @@ import ExpenseAccountingRoutes from './routers/Department Routes/Accounting Rout
 import BillAccountRoutes from './routers/Department Routes/Accounting Routes/billAccounts.routes';
 import PurchaseAccRoutes from './routers/Department Routes/Accounting Routes/purchaseAcc.routes';
 import VendorPaymentRoutes from './routers/Department Routes/Accounting Routes/vendorPayment.routes';
-import { setupDiscussionSocket } from './controllers/stage controllers/Issue Discussion Controllers/issueDiscussionSocket';
+// import { setupDiscussionSocket } from './controllers/stage controllers/Issue Discussion Controllers/issueDiscussionSocket';
 import issueDiscussionRoutes from './routers/Stage routes/Issue Discussion Routes/issueDiscussion.routes';
+// import { SubContractModel } from './models/SubContract Model/subContract.model';
+// import SubContractRoutes from './routers/SubContract Routes/subContract.routes';
 
+import path from "path";
+import { pathToFileURL } from "url";
+import SubContractRoutesNew from './routers/SubContract Routes/subContractNew.routes';
 
 
 // Extend Socket interface for custom properties
@@ -141,12 +146,12 @@ SocketService.initialize(io);
 
 
 
-io.use((socket:CustomSocket, next) => {
-   console.log("🚀 middleware reached");
+io.use((socket: CustomSocket, next) => {
+  console.log("🚀 middleware reached");
   const cookieHeader = socket.request.headers.cookie;
   // console.log("cookie header", cookieHeader)
   if (!cookieHeader) return next(new Error("No cookies found"));
-// console.log("cookieJHeader", cookieHeader)
+  // console.log("cookieJHeader", cookieHeader)
   // parse manually if needed
   const cookies = Object.fromEntries(
     cookieHeader.split(";").map((c) => {
@@ -154,7 +159,7 @@ io.use((socket:CustomSocket, next) => {
       return [k, decodeURIComponent(v)];
     })
   );
-// console.log("cookies", cookies)
+  // console.log("cookies", cookies)
 
   const token =
     cookies.useraccesstoken ||
@@ -164,10 +169,10 @@ io.use((socket:CustomSocket, next) => {
     cookies.clientaccesstoken;
 
 
-    // console.log("token", token)
+  // console.log("token", token)
   if (!token) return next(new Error("No token found"));
 
-   const tokenSecretMap = {
+  const tokenSecretMap = {
     useraccesstoken: process.env.JWT_ACCESS_SECRET,
     staffaccesstoken: process.env.JWT_STAFF_ACCESS_SECRET,
     workeraccesstoken: process.env.JWT_WORKER_ACCESS_SECRET,
@@ -176,7 +181,7 @@ io.use((socket:CustomSocket, next) => {
   };
 
 
-   let decoded:any = null;
+  let decoded: any = null;
   for (const [cookieName, secret] of Object.entries(tokenSecretMap)) {
     const token = cookies[cookieName];
 
@@ -192,7 +197,7 @@ io.use((socket:CustomSocket, next) => {
         socket.data.user = decoded;
 
         return next();
-      } catch (err:any) {
+      } catch (err: any) {
         console.warn(`❌ Token '${cookieName}' failed: ${err.message}`);
       }
     }
@@ -219,6 +224,7 @@ app.use(express.urlencoded({ extended: true }))
 app.use(express.json({ limit: "50mb" }));
 // mongoose.plugin(procurementLogger); // Apply to ALL schemas
 
+const isProd = process.env.NODE_ENV === "production";
 
 // checkRedisConnection() //for redis
 app.use('/api/auth', authRoutes)
@@ -230,7 +236,7 @@ app.use('/api/project', projectRouter)
 app.use('/api/tasklist', taskListRouter)
 app.use('/api/phase', phaseRoutes)
 app.use('/api/material', materailRoutes)
-app.use('/api/labour', labourRoutes )
+app.use('/api/labour', labourRoutes)
 
 app.use('/api/orgs/', orgsRouter)
 
@@ -349,6 +355,8 @@ app.use('/api/quote/rateconfig', RateConfigRoutes)
 app.use('/api/quote/labour/rateconfig', LabourRateConfigRoutes)
 app.use('/api/quote/quotegenerate', QuoteRouter)
 
+// app.use('/api/subcontract', SubContractRoutes)
+app.use('/api/subcontract', SubContractRoutesNew)
 // STAFF TASKS API
 app.use('/api/worklib', workLibRoutes)
 app.use("/api/stafftasks/", staffTaskRoutes)
@@ -398,7 +406,7 @@ app.use('/api/ai', utilAiRoutes)
 // io.use(async (socket: CustomSocket, next) => {
 //   try {
 //     const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
-    
+
 //     if (!token) {
 //       return next(new Error('Authentication token required'));
 //     }
@@ -407,14 +415,14 @@ app.use('/api/ai', utilAiRoutes)
 //     socket.userId = decoded._id;
 //     socket.userRole = decoded.role;
 //     socket.ownerId = decoded.ownerId;
-    
+
 //     next();
 //   } catch (error) {
 //     next(new Error('Invalid token'));
 //   }
 // });
 
-    
+
 
 
 // io.on("connection", (socket) => {
@@ -428,14 +436,14 @@ app.use('/api/ai', utilAiRoutes)
 
 
 // Socket.IO Connection Handler
-io.on('connection', (socket:CustomSocket) => {
+io.on('connection', (socket: CustomSocket) => {
   console.log(`User ${socket.userId} connected with role ${socket.userRole}`);
-  
+
   // Handle joining project rooms
   socket.on('join_organization', async (data: { organizationId: string }) => {
     try {
       const { organizationId } = data;
-      
+
       // Get organization ID from project
       // const project = await ProjectModel.findById({ _id: projectId }).populate('organizationId');
       // if (!project) {
@@ -444,14 +452,14 @@ io.on('connection', (socket:CustomSocket) => {
       // }
       // const organizationId = project.organizationId._id.toString();
       const roomName = `org_${organizationId}`;
-      
+
       await socket.join(roomName);
       socket.currentRoom = roomName;
       // socket.currentProjectId = projectId;
       socket.currentOrgId = organizationId;
-      
+
       console.log(`User ${socket.userId} joined room: ${roomName}`);
-      
+
       // Notify other users in the room
       socket.to(roomName).emit('user_joined', {
         userId: socket.userId,
@@ -461,34 +469,218 @@ io.on('connection', (socket:CustomSocket) => {
 
       console.log(`User ${socket.userId} joined room: ${roomName}`);
 
-      
+
     } catch (error) {
       socket.emit('error', { message: 'Failed to join project room' });
     }
   });
 
 
-   // Handle joining user-specific notification room
+  // Handle joining user-specific notification room
   socket.on('join_notifications', async (data: { userId: string }) => {
     try {
       const { userId } = data;
       const notificationRoom = `notifications_${userId}`;
-      
+
       await socket.join(notificationRoom);
-      
+
       console.log(`User ${userId} joined notification room: ${notificationRoom}`);
-      
+
       // Send current unread count
       const { getUnreadCount } = await import('./controllers/Notification Controller/notification.service.js');
       const unreadCount = await getUnreadCount(userId);
-      
+
       socket.emit("unread_count_update", { count: unreadCount });
-      
+
     } catch (error) {
       socket.emit("error", { message: 'Failed to join notification room' });
     }
   });
-  
+
+  socket.on('join_ticket_discussion', async (data: {
+    organizationId: string,
+    userId: string
+  }) => {
+    try {
+      const { organizationId, userId } = data;
+
+      // Create room names
+      const orgDiscussionRoom = `org_discussion_${organizationId}`;
+      const userTicketNotiRoom = `user_issue_notification_${userId}`; // add per-user ticket room
+
+      // Join both project and organization discussion rooms
+      // await socket.join(discussionRoom);
+      await socket.join(orgDiscussionRoom);
+      await socket.join(userTicketNotiRoom); // ✅ user-specific ticket room
+
+      if (!socket.data.discussionRooms) {
+        socket.data.discussionRooms = [];
+      }
+
+      socket.data.discussionRooms.push(orgDiscussionRoom); // ← Add to array
+      socket.data.discussionRoom = orgDiscussionRoom;
+      // socket.data.currentProjectId = projectId;
+
+      console.log(`User ${socket.userId} joined discussion rooms: ${orgDiscussionRoom}`);
+
+      // Notify others in the room
+      socket.to(orgDiscussionRoom).emit('user_joined_discussion', {
+        userId: socket.userId,
+        userRole: socket.userRole,
+        userName: socket.data.userName,
+        timestamp: new Date()
+      });
+
+
+
+      if (!socket.userId) {
+        socket.emit('discussion_error', {
+          message: 'User authentication required'
+        });
+        return;
+      }
+
+
+
+
+
+      // Send recent discussions to the joining user
+
+      //     const controllerRelativePath = isProd
+      // ? "../dist/controllers/stage controllers/Issue Discussion Controllers/issueDiscussion.controller.js"
+      // : "./controllers/stage controllers/Issue Discussion Controllers/issueDiscussion.controller.ts";
+
+      // const controllerPath = pathToFileURL(path.resolve(__dirname, controllerRelativePath)).href;
+
+
+      //     const { getUnreadTicketCountUtil, getRecentDiscussions } = await import(controllerPath);
+
+      //     // const { getUnreadTicketCountUtil } = await import('./controllers/stage controllers/Issue Discussion Controllers/issueDiscussion.controller.js');
+      //     const unreadCount = await getUnreadTicketCountUtil(organizationId, socket.userId);
+
+      //     console.log(`📊 Sending unread count to user ${socket.userId}:`, unreadCount); // ← Debug log
+
+
+      //     socket.emit("unread_ticket_count_update", { count: unreadCount });
+      //     // const { getRecentDiscussions } = await import('./controllers/stage controllers/Issue Discussion Controllers/issueDiscussion.controller.js');
+      //     const recentDiscussions = await getRecentDiscussions(organizationId, socket.userId);
+
+      //     socket.emit('recent_discussions', recentDiscussions);
+
+    } catch (error: any) {
+      socket.emit('discussion_error', {
+        message: 'Failed to join discussion room',
+        error: error.message
+      });
+    }
+  });
+
+  // Handle new issue creation
+  socket.on('create_issue', async (data: {
+    projectId: string,
+    issue: any
+  }) => {
+    try {
+      const discussionRoom = `discussion_${data.projectId}`;
+
+      // Emit to all users in the discussion room
+      io.to(discussionRoom).emit('new_issue_created', {
+        issue: data.issue,
+        createdBy: {
+          userId: socket.userId,
+          userRole: socket.userRole,
+          userName: socket.data.userName
+        },
+        timestamp: new Date()
+      });
+
+      // Also notify the assigned staff member personally
+      const assignedStaffRoom = `notifications_${data.issue.selectStaff}`;
+      io.to(assignedStaffRoom).emit('assigned_to_issue', {
+        issue: data.issue,
+        assignedBy: socket.data.userName,
+        // projectId: data.projectId
+      });
+
+    } catch (error: any) {
+      socket.emit('discussion_error', {
+        message: 'Failed to create issue',
+        error: error.message
+      });
+    }
+  });
+
+  // Handle response submission
+  socket.on('submit_response', async (data: {
+    discussionId: string,
+    convoId: string,
+    response: any,
+    projectId: string
+  }) => {
+    try {
+      const discussionRoom = `discussion_${data.projectId}`;
+
+      // Emit to all users in the discussion room
+      io.to(discussionRoom).emit('new_response_added', {
+        discussionId: data.discussionId,
+        convoId: data.convoId,
+        response: data.response,
+        respondedBy: {
+          userId: socket.userId,
+          userRole: socket.userRole,
+          userName: socket.data.userName
+        },
+        timestamp: new Date()
+      });
+
+    } catch (error: any) {
+      socket.emit('discussion_error', {
+        message: 'Failed to submit response',
+        error: error.message
+      });
+    }
+  });
+
+  // Handle typing indicators
+  socket.on('typing', (data: {
+    projectId: string,
+    isTyping: boolean,
+    convoId?: string
+  }) => {
+    const discussionRoom = `discussion_${data.projectId}`;
+
+    socket.to(discussionRoom).emit('user_typing', {
+      userId: socket.userId,
+      userName: socket.data.userName,
+      isTyping: data.isTyping,
+      convoId: data.convoId
+    });
+  });
+
+  // Handle leaving discussion room
+  socket.on('leave_ticket_discussion', (data: { projectId: string }) => {
+    const discussionRoom = `discussion_${data.projectId}`;
+
+    socket.leave(discussionRoom);
+    socket.to(discussionRoom).emit('user_left_discussion', {
+      userId: socket.userId,
+      userName: socket.data.userName
+    });
+
+    // Clean up socket data
+    socket.data.discussionRooms = socket.data.discussionRooms?.filter(
+      (room: any) => room !== discussionRoom
+    );
+  });
+
+
+  if (socket.userId) {
+    // Join a personal notification room
+    const userNotificationRoom = `user_notifications_${socket.userId}`;
+    socket.join(userNotificationRoom);
+    console.log(`User ${socket.userId} joined room ${userNotificationRoom}`);
+  }
+
   // Handle leaving project rooms
   socket.on('leave_organization', () => {
     if (socket.currentRoom) {
@@ -503,14 +695,14 @@ io.on('connection', (socket:CustomSocket) => {
       socket.currentOrgId = undefined;
     }
   });
-  
+
   socket.on('disconnect', () => {
     console.log(`User ${socket.userId} disconnected`);
   });
 });
 
 // Add discussion socket setup
-setupDiscussionSocket(io);
+// setupDiscussionSocket(io);
 
 const PORT = process.env.PORT || 4000
 

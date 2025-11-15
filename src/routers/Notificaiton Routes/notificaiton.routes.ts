@@ -28,11 +28,11 @@ notificaitonRoutes.get('/getAllNotification', getUserNotifications);
 // Get unread notifications  (not in use)
 notificaitonRoutes.get('/unread', getUserUnreadNotifications);
 
-// Get unread count
-notificaitonRoutes.get('/unread-count', getUserUnreadCount);
-
 // Mark as read(not in use)
 notificaitonRoutes.patch('/:id/read', markAsRead);
+
+// Get unread count
+notificaitonRoutes.get('/unread-count', getUserUnreadCount);
 
 // Mark all as read
 notificaitonRoutes.patch('/mark-all-read', markAllAsRead);

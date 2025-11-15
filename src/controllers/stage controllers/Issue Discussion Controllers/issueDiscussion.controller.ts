@@ -3,12 +3,13 @@
 import { Response } from 'express';
 // import { RoleBasedRequest } from '../types/request.types';
 // import { IssueDiscussionModel } from '../models/IssueDiscussion.model';
-import { populateDiscussion, formatUserData, getModelNameByRole } from './populateDiscussion.util';
+import { populateDiscussion, formatUserData } from './populateDiscussion.util';
 // import { SocketService } from '../services/socketService';
 import { Types } from 'mongoose';
 import { RoleBasedRequest } from '../../../types/types';
 import { IConvo, IssueDiscussionModel } from '../../../models/Stage Models/Issue Discussion Model/issueDiscussion.model';
 import { SocketService } from '../../../config/socketService';
+import { getModelNameByRole } from '../../../utils/common features/utils';
 
 /**
  * Create a new issue
@@ -27,19 +28,19 @@ export const createIssue = async (req: RoleBasedRequest, res: Response): Promise
             //   attachments
         } = req.body;
 
-        
-    // 🧩 Convert to boolean
-    isMessageRequired = isMessageRequired === "true" || isMessageRequired === true;
 
-    // 🧩 Parse dropdownOptions if it was sent as JSON string
-    if (typeof dropdownOptions === "string") {
-      try {
-        dropdownOptions = JSON.parse(dropdownOptions);
-      } catch (e) {
-        console.warn("Failed to parse dropdownOptions:", dropdownOptions);
-        dropdownOptions = [];
-      }
-    }
+        // 🧩 Convert to boolean
+        isMessageRequired = isMessageRequired === "true" || isMessageRequired === true;
+
+        // 🧩 Parse dropdownOptions if it was sent as JSON string
+        if (typeof dropdownOptions === "string") {
+            try {
+                dropdownOptions = JSON.parse(dropdownOptions);
+            } catch (e) {
+                console.warn("Failed to parse dropdownOptions:", dropdownOptions);
+                dropdownOptions = [];
+            }
+        }
 
 
         // Get user info from auth middleware
@@ -72,34 +73,21 @@ export const createIssue = async (req: RoleBasedRequest, res: Response): Promise
         const raisedModel = getModelNameByRole(req.user.role);
 
         // Find or create discussion document
-        let discussion = await IssueDiscussionModel.findOne({
+        // let discussion;
+
+        // = await IssueDiscussionModel.findOne({
+        //     organizationId,
+        // });
+
+        // if (!discussion) {
+        let discussion = new IssueDiscussionModel({
             organizationId,
-            projectId
+            // projectId,
+            discussion: []
         });
+        // }
 
-        if (!discussion) {
-            discussion = new IssueDiscussionModel({
-                organizationId,
-                projectId,
-                discussion: []
-            });
-        }
-
-        let staffSelectedModel = "StaffModel";
-
-        if (selectStaffRole === "owner") {
-            staffSelectedModel = "UserModel"
-        }
-        else if (selectStaffRole === "CTO") {
-            staffSelectedModel = "CTOModel"
-        }
-        else if (selectStaffRole === "staff") {
-            staffSelectedModel = "StaffModel"
-        }
-        else if (selectStaffRole === "worker") {
-            staffSelectedModel = "WorkerModel"
-        }
-        // console.log("selectStaffRole", selectStaffRole)
+        let staffSelectedModel = getModelNameByRole(selectStaffRole);
 
         const files = req.files as Express.Multer.File[];
 
@@ -117,9 +105,11 @@ export const createIssue = async (req: RoleBasedRequest, res: Response): Promise
                 selectStaff: new Types.ObjectId(selectStaff),
                 staffSelectedModel: staffSelectedModel,
                 selectStaffRole: selectStaffRole,
+                projectId: new Types.ObjectId(projectId),
                 raisedBy: new Types.ObjectId(raisedBy),
                 raisedModel,
                 issue,
+                isRead: false,
                 responseType,
                 isMessageRequired,
                 dropdownOptions: responseType === 'dropdown' ? dropdownOptions : undefined,
@@ -132,47 +122,67 @@ export const createIssue = async (req: RoleBasedRequest, res: Response): Promise
         await discussion.save();
 
         // Populate the new discussion
-        const populatedDiscussion = await populateDiscussion(discussion);
-        const latestConvo = populatedDiscussion.discussion[populatedDiscussion.discussion.length - 1];
+        // const populatedDiscussion = await populateDiscussion(discussion);
 
-        // Format user data for consistent response
-        const formattedConvo = {
-            _id: latestConvo._id,
-            issue: {
-                ...latestConvo.issue.toObject(),
-                raisedBy: formatUserData(latestConvo.issue.raisedBy, latestConvo.issue.raisedModel),
-                selectStaff: formatUserData(latestConvo.issue.selectStaff, 'StaffModel')
-            },
-            response: null,
-            status: 'pending',
-            createdAt: latestConvo.createdAt,
-            updatedAt: latestConvo.updatedAt
+
+        const populatedDiscussion = await populateDiscussion(discussion);
+        const conversation = populatedDiscussion.discussion[0];
+
+        // ✅ Format the full IssueDiscussion document
+        const formattedDiscussion = {
+            _id: populatedDiscussion._id,
+            organizationId: populatedDiscussion.organizationId,
+            discussion: [{
+                _id: conversation._id,
+                issue: {
+                    ...conversation.issue.toObject(),
+                    raisedBy: formatUserData(conversation.issue.raisedBy, conversation.issue.raisedModel),
+                    selectStaff: formatUserData(conversation.issue.selectStaff, conversation.issue.staffSelectedModel)
+                },
+                createdAt: conversation.createdAt,
+                updatedAt: conversation.updatedAt
+            }],
+            createdAt: populatedDiscussion.createdAt,
+            updatedAt: populatedDiscussion.updatedAt,
+            __v: populatedDiscussion.__v
         };
 
-        // Emit socket events
-        await SocketService.emitToProject(projectId, 'new_issue_created', {
+
+        
+
+        // ✅ CHANGED: Use emitToOrgDiscussion instead of emitToProject
+        await SocketService.emitToOrgDiscussion(organizationId, 'new_issue_created', {
             discussionId: discussion._id,
-            conversation: formattedConvo
+            conversation: formattedDiscussion,
+            projectId  // Include projectId in data if needed
         });
 
+
+
+        console.log("conversation", conversation.issue)
+        console.log("selectStaff", conversation.issue.selectStaff._id.toString())
+        await getUnreadTicketCountUtil(formattedDiscussion.organizationId, conversation.issue.selectStaff._id.toString());
+
         // Send notification to assigned staff
-        SocketService.sendNotification(selectStaff, {
-            type: 'issue_assigned',
-            title: 'New Issue Assigned',
-            message: `You have been assigned a new issue: ${issue}`,
-            data: {
-                discussionId: discussion._id,
-                convoId: latestConvo._id,
-                projectId,
-                issueTitle: issue
-            }
-        });
+        // SocketService.sendNotification(selectStaff, {
+        //     type: 'issue_assigned',
+        //     title: 'New Issue Assigned',
+        //     message: `You have been assigned a new issue: ${issue}`,
+        //     data: {
+        //         discussionId: discussion._id,
+        //         convoId: discussion._id,
+        //         projectId,
+        //         issueTitle: issue
+        //     }
+        // });
 
         res.status(201).json({
             ok: true,
             data: {
                 discussionId: discussion._id,
-                conversation: formattedConvo
+                // conversation: formattedConvo,
+                conversation: populatedDiscussion.toObject(), // Return full document
+                projectId,
             }
         });
 
@@ -191,9 +201,10 @@ export const createIssue = async (req: RoleBasedRequest, res: Response): Promise
  */
 export const addResponse = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { projectId, convoId } = req.params;
+        const { organizationId, convoId } = req.params;
         const { responseContent, optionalMessage, } = req.body;
 
+        console.log("convoId", convoId)
         if (!req.user) {
             return res.status(401).json({
                 ok: false,
@@ -205,7 +216,7 @@ export const addResponse = async (req: RoleBasedRequest, res: Response): Promise
         const responsededBy = req.user._id;
         const responsededModel = getModelNameByRole(req.user.role);
 
-        const discussion = await IssueDiscussionModel.findOne({ projectId });
+        const discussion = await IssueDiscussionModel.findOne({ organizationId, _id: convoId });
         if (!discussion) {
             return res.status(404).json({
                 ok: false,
@@ -213,13 +224,13 @@ export const addResponse = async (req: RoleBasedRequest, res: Response): Promise
             });
         }
 
-        const convo = (discussion.discussion as any).id(convoId);
-        if (!convo) {
-            return res.status(404).json({
-                ok: false,
-                message: 'Conversation not found'
-            });
-        }
+        const convo = discussion.discussion[0];
+        // if (!convo) {
+        //     return res.status(404).json({
+        //         ok: false,
+        //         message: 'Conversation not found'
+        //     });
+        // }
 
         // Check if user is authorized to respond
         if (convo.issue.selectStaff.toString() !== req.user._id) {
@@ -284,15 +295,6 @@ export const addResponse = async (req: RoleBasedRequest, res: Response): Promise
                     originalName: file.originalname,
                 }));
 
-
-
-
-                // if (!fileResponse || fileResponse.length === 0) {
-                //     return res.status(400).json({
-                //         ok: false,
-                //         error: 'File upload is required'
-                //     });
-                // }
                 response.fileResponse = attachments;
                 break;
         }
@@ -315,26 +317,27 @@ export const addResponse = async (req: RoleBasedRequest, res: Response): Promise
 
         // Populate and format response
         const populatedDiscussion = await populateDiscussion(discussion);
-        const updatedConvo = populatedDiscussion.discussion.id(convoId);
+        // const updatedConvo = populatedDiscussion.discussion.id(convoId);
 
-        const formattedConvo = {
-            _id: updatedConvo._id,
-            issue: {
-                ...updatedConvo.issue.toObject(),
-                raisedBy: formatUserData(updatedConvo.issue.raisedBy, updatedConvo.issue.raisedModel),
-                selectStaff: formatUserData(updatedConvo.issue.selectStaff, 'StaffModel')
-            },
-            response: {
-                ...updatedConvo.response.toObject(),
-                responsededBy: formatUserData(
-                    updatedConvo.response.responsededBy,
-                    updatedConvo.response.responsededModel
-                )
-            },
-            status: "responded",
-            createdAt: updatedConvo.createdAt,
-            updatedAt: updatedConvo.updatedAt
-        }
+        // const formattedConvo = {
+        //     _id: updatedConvo._id,
+        //     issue: {
+        //         ...updatedConvo.issue.toObject(),
+        //         raisedBy: formatUserData(updatedConvo.issue.raisedBy, updatedConvo.issue.raisedModel),
+        //         // selectStaff: formatUserData(updatedConvo.issue.selectStaff, 'StaffModel')
+        //         selectStaff: formatUserData(updatedConvo.issue.selectStaff, updatedConvo.issue.staffSelectedModel)
+        //     },
+        //     response: {
+        //         ...updatedConvo.response.toObject(),
+        //         responsededBy: formatUserData(
+        //             updatedConvo.response.responsededBy,
+        //             updatedConvo.response.responsededModel
+        //         )
+        //     },
+        //     status: "responded",
+        //     createdAt: updatedConvo.createdAt,
+        //     updatedAt: updatedConvo.updatedAt
+        // }
 
         // Emit socket events
         // await SocketService.emitToProject(discussion.projectId.toString(), 'issue_response_added', {
@@ -343,28 +346,66 @@ export const addResponse = async (req: RoleBasedRequest, res: Response): Promise
         //     response: formattedConvo.response 
         // });
 
-
+        const projectIdString = convo.issue.projectId.toString();
 
         // ✅ FIXED: Extract _id from populated projectId
-        const projectIdString = discussion.projectId._id
-            ? discussion.projectId._id.toString()
-            : projectId; // Fallback to param if not populated
+        // const projectIdString = discussion.projectId._id
+        //     ? discussion.projectId._id.toString()
+        //     : projectId; // Fallback to param if not populated
 
 
         // ✅ ADD THESE LOGS
         console.log("========== EMITTING SOCKET EVENT ==========");
         console.log("Project ID:", projectIdString.toString());
         console.log("Convo ID:", convoId);
-        console.log("Formatted Conversation:", JSON.stringify(formattedConvo, null, 2));
         console.log("==========================================");
 
+        // await SocketService.emitToProject(projectIdString, 'issue_response_added', {
+        //     projectId: projectIdString,  // ✅ Add projectId
+        //     convoId: String(convoId),                           // ✅ Keep convoId as string
+        //     conversation: formattedConvo,               // ✅ Add full conversation
+        //     response: formattedConvo.response           // ✅ Keep response for backward compatibility
+        // });
 
 
-        await SocketService.emitToProject(projectIdString, 'issue_response_added', {
+        const conversation = populatedDiscussion.discussion[0];
+
+        // ✅ Format the full IssueDiscussion document
+        const formattedDiscussion = {
+            _id: populatedDiscussion._id,
+            organizationId: populatedDiscussion.organizationId,
+            discussion: [{
+                _id: conversation._id,
+                issue: {
+                    ...conversation.issue.toObject(),
+                    raisedBy: formatUserData(conversation.issue.raisedBy, conversation.issue.raisedModel),
+                    selectStaff: formatUserData(conversation.issue.selectStaff, conversation.issue.staffSelectedModel)
+                },
+                response: {
+                    ...conversation.response.toObject(),
+                    responsededBy: formatUserData(
+                        conversation.response.responsededBy,
+                        conversation.response.responsededModel
+                    )
+                },
+                createdAt: conversation.createdAt,
+                updatedAt: conversation.updatedAt
+            }],
+            createdAt: populatedDiscussion.createdAt,
+            updatedAt: populatedDiscussion.updatedAt,
+            __v: populatedDiscussion.__v
+        };
+
+
+        console.log("formattedDiscussion:", JSON.stringify(formattedDiscussion, null, 2));
+
+
+        // ✅ CHANGED: Use emitToOrgDiscussion
+        await SocketService.emitToOrgDiscussion(organizationId, 'issue_response_added', {
             projectId: projectIdString,  // ✅ Add projectId
-            convoId: String(convoId),                           // ✅ Keep convoId as string
-            conversation: formattedConvo,               // ✅ Add full conversation
-            response: formattedConvo.response           // ✅ Keep response for backward compatibility
+            convoId: String(convoId),
+            conversation: formattedDiscussion,
+            // response: formattedConvo.response
         });
 
         // Notify the issue raiser
@@ -382,8 +423,10 @@ export const addResponse = async (req: RoleBasedRequest, res: Response): Promise
         res.json({
             ok: true,
             data: {
-                response: formattedConvo.response,
-                conversation: formattedConvo  // ✅ Optionally return full conversation
+                response: formattedDiscussion,
+                // conversation: formattedConvo  // ✅ Optionally return full conversation
+                conversation: populatedDiscussion.toObject() // Return full document
+
             }
         });
 
@@ -400,110 +443,347 @@ export const addResponse = async (req: RoleBasedRequest, res: Response): Promise
 /**
  * Get discussions for a project
  */
-export const getProjectDiscussions = async (req: RoleBasedRequest, res: Response): Promise<any> => {
-    try {
-        const { projectId } = req.params;
-        const { page = 1, limit = 20, status, assignedToMe } = req.query;
+// export const getProjectDiscussions = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+//     try {
+//         const { organizationId } = req.params;
+//         const { page = 1, limit = 20, search = "",
+//             projectId = "",
+//             myTickets = "false",
+//             notResponded = "false",
+//             sortBy = "createdAt",
+//             sortOrder = "desc", } = req.query;
 
-        if (!req.user) {
-            return res.status(401).json({
-                ok: false,
-                error: 'Unauthorized'
-            });
-        }
+//         if (!req.user) {
+//             return res.status(401).json({
+//                 ok: false,
+//                 error: 'Unauthorized'
+//             });
+//         }
 
-        const query: any = { projectId };
+//         const query: any = { organizationId };
 
-        const discussion = await IssueDiscussionModel.findOne(query);
+//         const discussions = await IssueDiscussionModel.find(query);
 
-        if (!discussion) {
-            return res.json({
-                ok: true,
-                data: {
-                    discussionId: null,
-                    discussions: [],
-                    totalConversations: 0,
-                    page: Number(page),
-                    limit: Number(limit)
-                }
-            });
-        }
+//         if (!discussions || discussions.length === 0) {
+//             return res.json({
+//                 ok: true,
+//                 data: {
+//                     discussionId: null,
+//                     discussions: [],
+//                     totalConversations: 0,
+//                     page: Number(page),
+//                     limit: Number(limit)
+//                 }
+//             });
+//         }
 
-        // Populate discussions
-        const populatedDiscussion = await populateDiscussion(discussion);
+//         // Populate discussions
+//         // const populatedDiscussion = await populateDiscussion(discussion);
 
-        // Filter conversations based on query params
-        let filteredConvos = populatedDiscussion.discussion;
+//         // ✅ CHANGED: Populate ALL documents and merge their discussions
+//         let allConversations: any[] = [];
 
-        // Filter by assigned to current user
-        if (assignedToMe === 'true') {
-            filteredConvos = filteredConvos.filter(
-                (convo: any) => convo.issue.selectStaff?._id?.toString() === req.user!._id
-            );
-        }
+//         for (const discussion of discussions) {
+//             const populatedDiscussion = await populateDiscussion(discussion);
 
-        // Filter by status
-        if (status) {
-            filteredConvos = filteredConvos.filter((convo: any) => {
-                const convoStatus = convo.response ? 'responded' : 'pending';
-                return convoStatus === status;
-            });
-        }
+//             console.log("populatedDiscussion", populatedDiscussion)
+//             allConversations.push(populatedDiscussion.toObject());
+//         }
 
-        // Pagination
-        const startIndex = (Number(page) - 1) * Number(limit);
-        const endIndex = startIndex + Number(limit);
-        const paginatedConvos = filteredConvos.slice(startIndex, endIndex);
 
-        // Format all conversations
-        const formattedDiscussions = paginatedConvos.map((convo: any) => ({
-            _id: convo._id,
-            issue: {
-                ...convo.issue.toObject(),
-                raisedBy: formatUserData(convo.issue.raisedBy, convo.issue.raisedModel),
-                selectStaff: formatUserData(convo.issue.selectStaff, convo.issue.staffSelectedModel)
-            },
-            response: convo.response ? {
-                ...convo.response.toObject(),
-                responsededBy: formatUserData(
-                    convo.response.responsededBy,
-                    convo.response.responsededModel
-                )
-            } : null,
-            status: convo.response ? 'responded' : 'pending',
-            createdAt: convo.createdAt,
-            updatedAt: convo.updatedAt
-        }));
+//         // Filter conversations based on query params
+//         let filteredDiscussions = allConversations;
 
-        res.json({
-            ok: true,
-            data: {
-                discussionId: populatedDiscussion._id,
-                projectId: populatedDiscussion.projectId,
-                discussions: formattedDiscussions,
-                totalConversations: filteredConvos.length,
-                page: Number(page),
-                limit: Number(limit)
-            }
-        });
+//         console.log("allConversations first dsicussion", allConversations[0].discussion)
+//         console.log("allConversations", allConversations)
 
-    } catch (error) {
-        const err = error as Error;
-        console.error('Get discussions error:', err);
-        res.status(500).json({
-            ok: false,
-            error: err.message || 'Failed to fetch discussions'
-        });
-    }
-};
+
+//         console.log("filteredDiscussions ", filteredDiscussions)
+//         // if (projectId) {
+//         //     filteredDiscussions = filteredDiscussions.filter(
+//         //         (convo: any) => convo.issue.projectId?._id?.toString() === projectId
+//         //     );
+//         // }
+
+
+
+
+//         // Filter by projectId
+//         if (projectId) {
+//             filteredDiscussions = filteredDiscussions.filter(doc =>
+//                 doc.discussion[0]?.issue?.projectId?._id?.toString() === projectId
+//             );
+//         }
+
+
+
+//         // Pagination
+//         const startIndex = (Number(page) - 1) * Number(limit);
+//         const endIndex = startIndex + Number(limit);
+//         const paginatedConvos = filteredDiscussions.slice(startIndex, endIndex);
+//         const totalConversations = filteredDiscussions?.length || 0;
+//         // Format all conversations
+//         // const formattedDiscussions = paginatedConvos.map((convo: any) => ({
+//         //     _id: convo._id,
+//         //     issue: {
+//         //         ...convo.issue.toObject(),
+//         //         raisedBy: formatUserData(convo.issue.raisedBy, convo.issue.raisedModel),
+//         //         selectStaff: formatUserData(convo.issue.selectStaff, convo.issue.staffSelectedModel)
+//         //     },
+//         //     response: convo.response ? {
+//         //         ...convo.response.toObject(),
+//         //         responsededBy: formatUserData(
+//         //             convo.response.responsededBy,
+//         //             convo.response.responsededModel
+//         //         )
+//         //     } : null,
+//         //     status: convo.response ? 'responded' : 'pending',
+//         //     createdAt: convo.createdAt,
+//         //     updatedAt: convo.updatedAt
+//         // }));
+
+
+//         const formattedDiscussions = paginatedConvos.map((doc: any) => {
+//             console.log("convo of document", doc)
+//             const convo = doc.discussion[0];
+
+//             console.log("convo of thedocu", convo)
+
+//             return {
+//                 _id: doc._id,
+//                 organizationId: doc.organizationId,
+//                 discussion: [{
+//                     _id: convo?._id,
+//                     issue: {
+//                         ...convo.issue,
+//                         raisedBy: formatUserData(convo.issue.raisedBy, convo.issue.raisedModel),
+//                         selectStaff: formatUserData(convo.issue.selectStaff, convo.issue.staffSelectedModel)
+//                     },
+//                     response: convo.response ? {
+//                         ...convo.response,
+//                         responsededBy: formatUserData(
+//                             convo.response.responsededBy,
+//                             convo.response.responsededModel
+//                         )
+//                     } : undefined,
+//                     createdAt: convo.createdAt,
+//                     updatedAt: convo.updatedAt
+//                 }],
+//                 createdAt: doc.createdAt,
+//                 updatedAt: doc.updatedAt,
+//                 __v: doc.__v
+//             };
+//         });
+
+
+//         res.json({
+//             ok: true,
+//             data: {
+//                 // projectId: populatedDiscussion.projectId,
+//                 discussions: formattedDiscussions,
+//                 totalConversations: totalConversations,
+//                 page: Number(page),
+//                 limit: Number(limit),
+//                 totalPages: Math.ceil(totalConversations / Number(limit)) // ✅ ADDED: Helpful for
+//             }
+//         });
+
+//     } catch (error) {
+//         const err = error as Error;
+//         console.error('Get discussions error:', err);
+//         res.status(500).json({
+//             ok: false,
+//             error: err.message || 'Failed to fetch discussions'
+//         });
+//     }
+// };
 
 
 //  Forward the issue to someother staff"
 // controllers/issueDiscussion.controller.ts
 
+
+
+export const getProjectDiscussions = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { organizationId } = req.params;
+        const {
+            page = 1,
+            limit = 20,
+            search = "",
+            projectId = "",
+            myTickets = "false",
+            notResponded = "false",
+            sortBy = "createdAt",
+            sortOrder = "desc",
+        } = req.query as any;
+
+
+        if (!req.user) {
+            return res.status(401).json({ ok: false, error: "Unauthorized" });
+        }
+
+        const pageNum = Number(page) || 1;
+        const limitNum = Number(limit) || 20;
+        const myTicketsBool = String(myTickets) === "true";
+        const notRespondedBool = String(notResponded) === "true";
+        const sortDir = String(sortOrder).toLowerCase() === "asc" ? 1 : -1;
+
+        // 🟢 fetch all docs for org
+        const docs = await IssueDiscussionModel.find({ organizationId });
+
+        if (!docs || docs.length === 0) {
+            return res.json({
+                ok: true,
+                data: {
+                    discussions: [],
+                    totalConversations: 0,
+                    page: pageNum,
+                    limit: limitNum,
+                    totalPages: 0,
+                },
+            });
+        }
+
+        // 🟢 populate each doc and FLATTEN ALL conversations
+        let allConvos: {
+            parentId: any;
+            organizationId: any;
+            convo: any; // populated discussion subdoc
+            createdAt: Date;
+            updatedAt: Date;
+        }[] = [];
+
+        for (const d of docs) {
+            const populated = await populateDiscussion(d); // assumes populates discussion.issue/response users/projects
+            const obj = populated.toObject();
+            const arr = Array.isArray(obj.discussion) ? obj.discussion : [];
+
+            for (const c of arr) {
+                allConvos.push({
+                    parentId: obj._id,
+                    organizationId: obj.organizationId,
+                    convo: c,
+                    createdAt: c.createdAt,
+                    updatedAt: c.updatedAt,
+                });
+            }
+        }
+
+        // 🟢 FILTERS
+
+        // search across issue text, project name, raisedBy/selectStaff names
+        const q = String(search).trim().toLowerCase();
+        if (q) {
+            allConvos = allConvos.filter(({ convo }) => {
+                const issueText = convo?.issue?.issue || "";
+                const pName = convo?.issue?.projectId?.projectName || "";
+                const raisedName = convo?.issue?.raisedBy?.name || "";
+                const staffName = convo?.issue?.selectStaff?.name || "";
+                const issue = convo?.issue?.issue || "";
+                const textResponse = convo?.response?.textResponse || "";
+                const dropdownResponse = convo?.response?.dropdownResponse || "";
+                return (
+                    issueText.toLowerCase().includes(q) ||
+                    pName.toLowerCase().includes(q) ||
+                    raisedName.toLowerCase().includes(q) ||
+                    staffName.toLowerCase().includes(q) ||
+                    issue.toLowerCase().includes(q) ||
+                    textResponse.toLowerCase().includes(q) ||
+                    dropdownResponse.toLowerCase().includes(q)
+                );
+            });
+        }
+
+        // filter by project
+        if (projectId) {
+            allConvos = allConvos.filter(
+                ({ convo }) =>
+                    convo?.issue?.projectId?._id?.toString() === String(projectId)
+            );
+        }
+
+        // myTickets -> assigned to current user
+        if (myTicketsBool) {
+            allConvos = allConvos.filter(
+                ({ convo }) =>
+                    convo?.issue?.selectStaff?._id?.toString() === req.user!._id.toString()
+            );
+        }
+
+        // notResponded -> no response
+        if (notRespondedBool) {
+            allConvos = allConvos.filter(({ convo }) => !convo?.response);
+        }
+
+        // 🟢 SORT (by convo createdAt/updatedAt)
+        allConvos.sort((a, b) => {
+            let aVal: any = a[sortBy as "createdAt" | "updatedAt"] ?? a.createdAt;
+            let bVal: any = b[sortBy as "createdAt" | "updatedAt"] ?? b.createdAt;
+            const ad = new Date(aVal).getTime();
+            const bd = new Date(bVal).getTime();
+            return sortDir === 1 ? ad - bd : bd - ad;
+        });
+
+        // 🟢 PAGINATION
+        const totalConversations = allConvos.length;
+        const start = (pageNum - 1) * limitNum;
+        const end = start + limitNum;
+        const pageItems = allConvos.slice(start, end);
+
+        // 🟢 FORMAT OUTPUT (compatible shape)
+        const formattedDiscussions = pageItems.map(({ parentId, organizationId, convo }) => ({
+            _id: parentId, // parent doc id
+            organizationId,
+            discussion: [
+                {
+                    _id: convo?._id,
+                    issue: {
+                        ...convo.issue,
+                        raisedBy: formatUserData(convo.issue.raisedBy, convo.issue.raisedModel),
+                        selectStaff: formatUserData(convo.issue.selectStaff, convo.issue.staffSelectedModel),
+                    },
+                    response: convo.response
+                        ? {
+                            ...convo.response,
+                            responsededBy: formatUserData(
+                                convo.response.responsededBy,
+                                convo.response.responsededModel
+                            ),
+                        }
+                        : undefined,
+                    createdAt: convo.createdAt,
+                    updatedAt: convo.updatedAt,
+                },
+            ],
+            createdAt: convo.createdAt,
+            updatedAt: convo.updatedAt,
+        }));
+
+        return res.json({
+            ok: true,
+            data: {
+                discussions: formattedDiscussions,
+                totalConversations,
+                page: pageNum,
+                limit: limitNum,
+                totalPages: Math.ceil(totalConversations / limitNum),
+            },
+        });
+    } catch (error) {
+        const err = error as Error;
+        console.error("Get discussions error:", err);
+        res.status(500).json({
+            ok: false,
+            error: err.message || "Failed to fetch discussions",
+        });
+    }
+};
+
+
 export const forwardIssue = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { projectId, convoId } = req.params;
+        const { organizationId, convoId } = req.params;
         const {
             forwardToStaff,
             forwardToStaffRole
@@ -524,7 +804,7 @@ export const forwardIssue = async (req: RoleBasedRequest, res: Response): Promis
             });
         }
 
-        const discussion = await IssueDiscussionModel.findOne({ projectId });
+        const discussion = await IssueDiscussionModel.findById(convoId);
         if (!discussion) {
             return res.status(404).json({
                 ok: false,
@@ -532,13 +812,11 @@ export const forwardIssue = async (req: RoleBasedRequest, res: Response): Promis
             });
         }
 
-        const convo = (discussion.discussion as any).id(convoId);
-        if (!convo) {
-            return res.status(404).json({
-                ok: false,
-                message: 'Conversation not found'
-            });
+        const convo = discussion.discussion[0] || {
+            issue: null,
+            response: null
         }
+
 
         // ✅ Validation 1: Check if user is the assigned staff
         if (convo.issue.selectStaff.toString() !== req.user._id) {
@@ -587,51 +865,87 @@ export const forwardIssue = async (req: RoleBasedRequest, res: Response): Promis
         // Store original assignee for notification
         const originalAssignee = convo.issue.selectStaff.toString();
 
-        // ✅ Update the three fields
+        // ✅ Update the four fields
         convo.issue.selectStaff = new Types.ObjectId(forwardToStaff);
         convo.issue.staffSelectedModel = staffSelectedModel;
         convo.issue.selectStaffRole = forwardToStaffRole;
+        convo.issue.isRead = false;
 
         await discussion.save();
 
         // Populate the updated conversation
         const populatedDiscussion = await populateDiscussion(discussion);
-        const updatedConvo = (populatedDiscussion.discussion as any).id(convoId);
+        // const updatedConvo = (populatedDiscussion.discussion as any).id(convoId);
 
-        // Format the conversation
-        const formattedConvo = {
-            _id: updatedConvo._id,
-            issue: {
-                ...updatedConvo.issue.toObject(),
-                raisedBy: formatUserData(updatedConvo.issue.raisedBy, updatedConvo.issue.raisedModel),
-                selectStaff: formatUserData(updatedConvo.issue.selectStaff, updatedConvo.issue.staffSelectedModel)
-            },
-            response: null,
-            status: "pending",
-            createdAt: updatedConvo.createdAt,
-            updatedAt: updatedConvo.updatedAt
+        const conversation = populatedDiscussion.discussion[0];
+
+        // ✅ Format the full IssueDiscussion document
+        const formattedDiscussion = {
+            _id: populatedDiscussion._id,
+            organizationId: populatedDiscussion.organizationId,
+            discussion: [{
+                _id: conversation._id,
+                issue: {
+                    ...conversation.issue.toObject(),
+                    raisedBy: formatUserData(conversation.issue.raisedBy, conversation.issue.raisedModel),
+                    selectStaff: formatUserData(conversation.issue.selectStaff, conversation.issue.staffSelectedModel)
+                },
+                createdAt: conversation.createdAt,
+                updatedAt: conversation.updatedAt
+            }],
+            createdAt: populatedDiscussion.createdAt,
+            updatedAt: populatedDiscussion.updatedAt,
+            __v: populatedDiscussion.__v
         };
+
+
+
+
+        // ✅ Get projectId from the issue
+        const projectId = conversation.issue.projectId.toString();
+
 
         console.log("========== ISSUE FORWARDED ==========");
         console.log("From:", originalAssignee);
         console.log("To:", forwardToStaff);
         console.log("Convo ID:", convoId);
+        console.log("Project ID:", projectId);
         console.log("====================================");
 
+
+
+
+
         // ✅ Emit socket event
-        await SocketService.emitToProject(projectId.toString(), 'issue_forwarded', {
-            projectId: projectId.toString(),
-            convoId: convoId,
-            conversation: formattedConvo,
-            forwardedFrom: originalAssignee,
-            forwardedTo: forwardToStaff
-        });
+        // await SocketService.emitToProject(projectId.toString(), 'issue_forwarded', {
+        //     projectId: projectId.toString(),
+        //     convoId: convoId,
+        //     conversation: formattedConvo,
+        //     forwardedFrom: originalAssignee,
+        //     forwardedTo: forwardToStaff
+        // });
 
         // Emit socket events
-        await SocketService.emitToProject(projectId, 'new_issue_created', {
+        // await SocketService.emitToProject(projectId, 'new_issue_created', {
+        //     discussionId: discussion._id,
+        //     conversation: formattedConvo
+        // });
+
+
+        // ✅ CHANGED: Use emitToOrgDiscussion
+        await SocketService.emitToOrgDiscussion(organizationId, 'issue_forwarded', {
             discussionId: discussion._id,
-            conversation: formattedConvo
+            // conversation: formattedConvo,
+            conversation: formattedDiscussion, // Full document
+            convoId,
+            forwardedBy: req.user?._id
         });
+
+
+        // await getUnreadTicketCountUtil(organizationId, formattedDiscussion.discussion[0].issue.selectStaff._id);
+        await getUnreadTicketCountUtil(formattedDiscussion.organizationId, conversation.issue.selectStaff._id.toString());
+
+
 
         // ✅ Notify new assignee
         SocketService.sendNotification(forwardToStaff, {
@@ -660,7 +974,9 @@ export const forwardIssue = async (req: RoleBasedRequest, res: Response): Promis
         res.json({
             ok: true,
             data: {
-                conversation: formattedConvo,
+                // conversation: formattedConvo,
+                conversation: populatedDiscussion.toObject(), // Return full document
+
                 message: 'Issue forwarded successfully'
             }
         });
@@ -682,7 +998,7 @@ export const forwardIssue = async (req: RoleBasedRequest, res: Response): Promis
  */
 export const deleteConversation = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { projectId, convoId } = req.params;
+        const { convoId, organizationId } = req.params;
 
         if (!req.user) {
             return res.status(401).json({
@@ -691,7 +1007,7 @@ export const deleteConversation = async (req: RoleBasedRequest, res: Response): 
             });
         }
 
-        const discussion = await IssueDiscussionModel.findOne({ projectId });
+        const discussion = await IssueDiscussionModel.findById(convoId);
         if (!discussion) {
             return res.status(404).json({
                 ok: false,
@@ -699,18 +1015,18 @@ export const deleteConversation = async (req: RoleBasedRequest, res: Response): 
             });
         }
 
-        const convoIndex = discussion.discussion.findIndex(
-            (convo: any) => convo._id.toString() === convoId
-        );
+        // const convoIndex = discussion.discussion.findIndex(
+        //     (convo: any) => convo._id.toString() === convoId
+        // );
 
-        if (convoIndex === -1) {
-            return res.status(404).json({
-                ok: false,
-                message: 'Conversation not found'
-            });
-        }
+        // if (convoIndex === -1) {
+        //     return res.status(404).json({
+        //         ok: false,
+        //         message: 'Conversation not found'
+        //     });
+        // }
 
-        const convo = discussion.discussion[convoIndex];
+        const convo = discussion.discussion[0];
 
         // Check authorization (only raiser or owner can delete)
         if (convo.issue.raisedBy.toString() !== req.user._id && req.user.role !== 'owner') {
@@ -720,15 +1036,26 @@ export const deleteConversation = async (req: RoleBasedRequest, res: Response): 
             });
         }
 
+        await IssueDiscussionModel.findByIdAndDelete(convoId);
+
+
         // Remove the conversation
-        discussion.discussion.splice(convoIndex, 1);
-        await discussion.save();
 
         // Emit socket event
-        await SocketService.emitToProject(discussion.projectId.toString(), 'issue_deleted', {
+        // await SocketService.emitToProject(convo.issue.projectId.toString(), 'issue_deleted', {
+        //     discussionId: discussion._id,
+        //     convoId
+        // });
+
+
+
+        // ✅ CHANGED: Use emitToOrgDiscussion
+        await SocketService.emitToOrgDiscussion(organizationId, 'issue_deleted', {
             discussionId: discussion._id,
             convoId
         });
+
+
 
         res.json({
             ok: true,
@@ -745,96 +1072,192 @@ export const deleteConversation = async (req: RoleBasedRequest, res: Response): 
     }
 };
 
+
+
 /**
- * Get user's assigned issues across all projects
+ * Mark all as read
+ * PATCH /api/notifications/mark-all-read
  */
-export const getUserAssignedIssues = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const markAllTicketAsRead = async (req: RoleBasedRequest, res: Response) => {
     try {
-        if (!req.user) {
-            return res.status(401).json({
-                ok: false,
-                error: 'Unauthorized'
-            });
-        }
+        const { organizationId } = req.params
+        const userId = req.user?._id!;
 
-        const userId = req.user._id;
-        const { status, page = 1, limit = 20 } = req.query;
+        // await IssueDiscussionModel.updateMany({ organizationId, "discussion.$.issue.selectedStaff": userId, isRead: false }, { isRead: true });
 
-        // Find all discussions where user is assigned
-        const discussions = await IssueDiscussionModel.find({
-            'discussion.issue.selectStaff': userId
-        });
-
-        let allAssignedConvos: any[] = [];
-
-        // Process each discussion
-        for (const discussion of discussions) {
-            const populatedDiscussion = await populateDiscussion(discussion);
-
-            // Filter conversations assigned to user
-            const assignedConvos = populatedDiscussion.discussion.filter(
-                (convo: any) => convo.issue.selectStaff?._id?.toString() === userId
-            );
-
-            // Add project info to each conversation
-            const convosWithProject = assignedConvos.map((convo: any) => ({
-                _id: convo._id,
-                discussionId: discussion._id,
-                projectId: discussion.projectId,
-                issue: {
-                    ...convo.issue.toObject(),
-                    raisedBy: formatUserData(convo.issue.raisedBy, convo.issue.raisedModel),
-                    selectStaff: formatUserData(convo.issue.selectStaff, 'StaffModel')
-                },
-                response: convo.response ? {
-                    ...convo.response.toObject(),
-                    responsededBy: formatUserData(
-                        convo.response.responsededBy,
-                        convo.response.responsededModel
-                    )
-                } : null,
-                status: convo.response ? 'responded' : 'pending',
-                createdAt: convo.createdAt,
-                updatedAt: convo.updatedAt
-            }));
-
-            allAssignedConvos.push(...convosWithProject);
-        }
-
-        // Filter by status if provided
-        if (status) {
-            allAssignedConvos = allAssignedConvos.filter(convo => convo.status === status);
-        }
-
-        // Sort by creation date (newest first)
-        allAssignedConvos.sort((a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          await IssueDiscussionModel.updateMany(
+            {
+                organizationId,
+                "discussion.issue.selectStaff": userId,
+                "discussion.issue.isRead": false
+            },
+            {
+                $set: { "discussion.$[elem].issue.isRead": true }
+            },
+            {
+                arrayFilters: [
+                    {
+                        "elem.issue.selectStaff": userId,
+                        "elem.issue.isRead": false
+                    }
+                ]
+            }
         );
 
-        // Pagination
-        const startIndex = (Number(page) - 1) * Number(limit);
-        const endIndex = startIndex + Number(limit);
-        const paginatedConvos = allAssignedConvos.slice(startIndex, endIndex);
-
-        res.json({
+        res.status(200).json({
             ok: true,
-            data: {
-                issues: paginatedConvos,
-                total: allAssignedConvos.length,
-                page: Number(page),
-                limit: Number(limit)
-            }
+            message: 'All Tickets marked as read',
         });
-
     } catch (error) {
-        const err = error as Error;
-        console.error('Get user assigned issues error:', err);
         res.status(500).json({
             ok: false,
-            error: err.message || 'Failed to fetch assigned issues'
+            message: 'Error marking all as read',
+            error: error instanceof Error ? error.message : 'Unknown error',
         });
     }
 };
+
+
+    export const getUnreadTicketCountUtil = async (organizationId: string, userId: string) => {
+        try {
+           
+            const count = await IssueDiscussionModel.countDocuments({
+                organizationId,
+                discussion: {
+                    $elemMatch: {
+                        "issue.selectStaff": userId,
+                        "issue.isRead": false
+                    }
+                }
+            });
+
+            console.log("unread count", count)
+
+            // Emit to the per-user socket room
+            SocketService.emitToUserTicketRoom(userId, 'unread_ticket_count_update', { count });
+
+            return count || 0;
+        } catch (error) {
+            throw error;
+        }
+
+    }
+
+
+
+export const getUnreadTicketCount = async (req: RoleBasedRequest, res: Response) => {
+    try {
+        const { organizationId } = req.params
+
+        const userId = req.user?._id!;
+
+        const count = await getUnreadTicketCountUtil(organizationId, userId);
+
+        res.status(200).json({
+            ok: true,
+            message: 'Unread count fetched successfully',
+            count,
+        });
+    } catch (error) {
+        res.status(500).json({
+            ok: false,
+            message: 'Error fetching unread count',
+            error: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+};
+
+
+/**
+ * Get user's assigned issues across all projects
+ */
+// export const getUserAssignedIssues = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+//     try {
+//         if (!req.user) {
+//             return res.status(401).json({
+//                 ok: false,
+//                 error: 'Unauthorized'
+//             });
+//         }
+
+//         const userId = req.user._id;
+//         const { status, page = 1, limit = 20 } = req.query;
+
+//         // Find all discussions where user is assigned
+//         const discussions = await IssueDiscussionModel.find({
+//             'discussion.issue.selectStaff': userId
+//         });
+
+//         let allAssignedConvos: any[] = [];
+
+//         // Process each discussion
+//         for (const discussion of discussions) {
+//             const populatedDiscussion = await populateDiscussion(discussion);
+
+//             // Filter conversations assigned to user
+//             const assignedConvos = populatedDiscussion.discussion.filter(
+//                 (convo: any) => convo.issue.selectStaff?._id?.toString() === userId
+//             );
+
+//             // Add project info to each conversation
+//             const convosWithProject = assignedConvos.map((convo:any) => ({
+//                 _id: convo._id,
+//                 discussionId: discussion._id,
+//                 projectId: convo.projectId,
+//                 issue: {
+//                     ...convo.issue.toObject(),
+//                     raisedBy: formatUserData(convo.issue.raisedBy, convo.issue.raisedModel),
+//                     selectStaff: formatUserData(convo.issue.selectStaff, 'StaffModel')
+//                 },
+//                 response: convo.response ? {
+//                     ...convo.response.toObject(),
+//                     responsededBy: formatUserData(
+//                         convo.response.responsededBy,
+//                         convo.response.responsededModel
+//                     )
+//                 } : null,
+//                 status: convo.response ? 'responded' : 'pending',
+//                 createdAt: convo.createdAt,
+//                 updatedAt: convo.updatedAt
+//             }));
+
+//             allAssignedConvos.push(...convosWithProject);
+//         }
+
+//         // Filter by status if provided
+//         if (status) {
+//             allAssignedConvos = allAssignedConvos.filter(convo => convo.status === status);
+//         }
+
+//         // Sort by creation date (newest first)
+//         allAssignedConvos.sort((a, b) =>
+//             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+//         );
+
+//         // Pagination
+//         const startIndex = (Number(page) - 1) * Number(limit);
+//         const endIndex = startIndex + Number(limit);
+//         const paginatedConvos = allAssignedConvos.slice(startIndex, endIndex);
+
+//         res.json({
+//             ok: true,
+//             data: {
+//                 issues: paginatedConvos,
+//                 total: allAssignedConvos.length,
+//                 page: Number(page),
+//                 limit: Number(limit)
+//             }
+//         });
+
+//     } catch (error) {
+//         const err = error as Error;
+//         console.error('Get user assigned issues error:', err);
+//         res.status(500).json({
+//             ok: false,
+//             error: err.message || 'Failed to fetch assigned issues'
+//         });
+//     }
+// };
 
 /**
  * Get user's raised issues
@@ -875,7 +1298,6 @@ export const getUserRaisedIssues = async (req: RoleBasedRequest, res: Response):
             const convosWithProject = raisedConvos.map((convo: any) => ({
                 _id: convo._id,
                 discussionId: discussion._id,
-                projectId: discussion.projectId,
                 issue: {
                     ...convo.issue.toObject(),
                     raisedBy: formatUserData(convo.issue.raisedBy, convo.issue.raisedModel),
@@ -937,10 +1359,10 @@ export const getUserRaisedIssues = async (req: RoleBasedRequest, res: Response):
 
 //  CONTROLLERS USED FOR SOCCKETS
 
-export const getRecentDiscussions = async (projectId: string, userId: string) => {
+export const getRecentDiscussions = async (organizationId: string, userId: string) => {
     try {
         // Find the discussion document for this project
-        const discussion = await IssueDiscussionModel.findOne({ projectId });
+        const discussion = await IssueDiscussionModel.findOne({ organizationId });
 
         if (!discussion) {
             return {
@@ -970,10 +1392,10 @@ export const getRecentDiscussions = async (projectId: string, userId: string) =>
                 return {
                     _id: convo._id,
                     discussionId: discussion._id,
-                    projectId: discussion.projectId,
                     issue: {
                         _id: convo.issue._id,
                         issue: convo.issue.issue,
+                        projectId: convo.issue.projectId,
                         responseType: convo.issue.responseType,
                         isMessageRequired: convo.issue.isMessageRequired,
                         dropdownOptions: convo.issue.dropdownOptions,
