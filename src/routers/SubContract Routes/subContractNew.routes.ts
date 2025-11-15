@@ -13,7 +13,8 @@ import {
     deleteSubContract,
     getSubContractBasicDetails,
     uploadBeforeWorkInfo,
-    deleteWorkerInfo
+    deleteWorkerInfo,
+    updateSubContract
 } from '../../controllers/SubContract Controllers/subContractNew.controller';
 import { imageUploadToS3, processUploadFiles } from '../../utils/s3Uploads/s3upload';
 
@@ -29,6 +30,15 @@ SubContractRoutesNew.post(
     processUploadFiles,
     createSubContract
 );
+
+
+SubContractRoutesNew.put(
+    "/update/:subContractId",
+    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    updateSubContract
+);
+
+
 
 // ✅ Generate shareable link
 SubContractRoutesNew.put(

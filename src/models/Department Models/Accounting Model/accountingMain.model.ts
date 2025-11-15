@@ -5,6 +5,7 @@ export interface IAccounting extends Document {
   transactionNumber?: string | null;
   organizationId: Types.ObjectId;
   projectId: Types.ObjectId;
+  subContractId: Types.ObjectId;
   transactionType: "quote" | "invoice" | "payment" | "expense" | "refund";
   fromDept?: "logistics" | "hr" | "procurement" | "factory" | null;
   totalAmount: {
@@ -26,6 +27,7 @@ const accountingSchema = new Schema<IAccounting>({
     type: String,
     default: null
   },
+  subContractId: { type: Schema.Types.ObjectId, ref: "SubContractModel", default:null },
   organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
   projectId: {
     type: mongoose.Schema.Types.ObjectId,
