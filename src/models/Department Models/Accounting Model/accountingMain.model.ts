@@ -18,16 +18,35 @@ export interface IAccounting extends Document {
   notes: string;
   // approvedAt?: Date;
   paidAt: Date | null;
+  installMents?: IInstallmentAcc[]
   createdAt: Date;
   updatedAt: Date;
 }
+
+
+export interface IInstallmentAcc {
+  amount: number
+  dueDate: Date,
+  status: string,  // or "paid"
+  orderId: string,        // Razorpay order ID
+  paymentId: string
+}
+
+const InstallmentAccSchema = new Schema<IInstallmentAcc>({
+  amount: { type: Number, default: null },
+  dueDate: { type: Date, default: null },
+  status: { type: String, default: null },
+  orderId: { type: String, default: null },
+  paymentId: { type: String, default: null }
+}, { _id: true })
+
 
 const accountingSchema = new Schema<IAccounting>({
   transactionNumber: {
     type: String,
     default: null
   },
-  subContractId: { type: Schema.Types.ObjectId, ref: "SubContractModel", default:null },
+  subContractId: { type: Schema.Types.ObjectId, ref: "SubContractModel", default: null },
   organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
   projectId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -67,7 +86,8 @@ const accountingSchema = new Schema<IAccounting>({
   //   ref: 'UserModel'
   // },
   // approvedAt: {type: Date, default: null},
-  paidAt: { type: Date, default: null }
+  paidAt: { type: Date, default: null },
+  installMents: { type: [InstallmentAccSchema], default: [] },
 }, {
   timestamps: true
 });

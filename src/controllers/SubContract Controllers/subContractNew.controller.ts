@@ -7,7 +7,7 @@ import crypto from "crypto";
 import { RoleBasedRequest } from "../../types/types";
 import { SubContractModel, IFileItem } from "../../models/SubContract Model/subContract.model";
 import { AccountingModel } from "../../models/Department Models/Accounting Model/accountingMain.model";
-import { generateTransactionNumber } from "../Department controllers/Accounting Controller/accounting.controller";
+import { createAccountingEntry, generateTransactionNumber } from "../Department controllers/Accounting Controller/accounting.controller";
 import dotenv from "dotenv"
 dotenv.config()
 
@@ -882,8 +882,6 @@ export const updateWorkerStatus = async (req: RoleBasedRequest, res: Response): 
         // const acceptedWorkers = formDate.workerInfo.filter(work => work.status === "accepted")
 
         if (status === "accepted") {
-
-
             const existingAccounting = await AccountingModel.findOne({
                 subContractId: subContract._id
             });
@@ -892,120 +890,129 @@ export const updateWorkerStatus = async (req: RoleBasedRequest, res: Response): 
                 const transactionNumber = await generateTransactionNumber(subContract.organizationId);
 
                 await AccountingModel.create({
-                      subContractId: subContract._id, // <--- new link
+                    subContractId: subContract._id, // <--- new link
                     organizationId: subContract.organizationId,
                     projectId: subContract.projectId,
                     transactionNumber: transactionNumber,
                     transactionType: "expense",
                     totalAmount: {
-                        amount: subContract.totalCost,
+                        amount: subContract?.totalCost,
                         taxAmount: 0
                     },
                     status: "pending",
                 })
+
+                // await createAccountingEntry({
+                //     organizationId: (subContract as any).organizationId,
+                //     projectId: (subContract as any).projectId,
+                //     fromDept: "hr",
+                //     subContractId: (subContract as any)._id,
+                //     totalCost: subContract.totalCost,
+                //     // installMents: (subContract as any)?.installMents || []
+                // })
             }
         }
 
 
-            return res.status(200).json({
-                ok: true,
-                message: `Worker status updated to ${status}`,
-                data: subContract
-            });
+        return res.status(200).json({
+            ok: true,
+            message: `Worker status updated to ${status}`,
+            data: subContract
+        });
 
-        } catch (error) {
-            console.error("Error updating worker status:", error);
-            return res.status(500).json({
+    } catch (error) {
+        console.error("Error updating worker status:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : "Unknown error"
+        });
+    }
+};
+
+// Delete SubContract (for authorized users)
+export const deleteSubContract = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { subContractId } = req.params;
+
+        if (!subContractId) {
+            return res.status(400).json({
                 ok: false,
-                message: "Internal server error",
-                error: error instanceof Error ? error.message : "Unknown error"
+                message: "SubContract ID is required"
             });
         }
-    };
 
-    // Delete SubContract (for authorized users)
-    export const deleteSubContract = async (req: RoleBasedRequest, res: Response): Promise<any> => {
-        try {
-            const { subContractId } = req.params;
+        const deletedSubContract = await SubContractModel.findByIdAndDelete(subContractId);
 
-            if (!subContractId) {
-                return res.status(400).json({
-                    ok: false,
-                    message: "SubContract ID is required"
-                });
-            }
-
-            const deletedSubContract = await SubContractModel.findByIdAndDelete(subContractId);
-
-            if (!deletedSubContract) {
-                return res.status(404).json({
-                    ok: false,
-                    message: "SubContract not found"
-                });
-            }
-
-            return res.status(200).json({
-                ok: true,
-                message: "SubContract deleted successfully",
-                data: deletedSubContract
-            });
-
-        } catch (error) {
-            console.error("Error deleting SubContract:", error);
-            return res.status(500).json({
+        if (!deletedSubContract) {
+            return res.status(404).json({
                 ok: false,
-                message: "Internal server error",
-                error: error instanceof Error ? error.message : "Unknown error"
+                message: "SubContract not found"
             });
         }
-    };
+
+        return res.status(200).json({
+            ok: true,
+            message: "SubContract deleted successfully",
+            data: deletedSubContract
+        });
+
+    } catch (error) {
+        console.error("Error deleting SubContract:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : "Unknown error"
+        });
+    }
+};
 
 
-    //  NOT USED 
-    export const deleteWorkerInfo = async (req: Request, res: Response): Promise<any> => {
-        try {
-            const { subContractId } = req.params;
-            // const { submissionToken } = req.query;
+//  NOT USED 
+export const deleteWorkerInfo = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { subContractId } = req.params;
+        // const { submissionToken } = req.query;
 
-            if (!subContractId) {
-                return res.status(400).json({
-                    ok: false,
-                    message: "SubContract ID is required"
-                });
-            }
-
-            // if (!submissionToken) {
-            //     return res.status(400).json({
-            //         ok: false,
-            //         message: "Submission token is required"
-            //     });
-            // }
-
-            // Find the SubContract
-            const subContract = await SubContractModel.findByIdAndDelete(subContractId);
-
-            if (!subContract) {
-                return res.status(404).json({
-                    ok: false,
-                    message: "SubContract not found"
-                });
-            }
-
-            await subContract.save();
-
-            return res.status(200).json({
-                ok: true,
-                message: "Worker info deleted successfully",
-                data: subContract
-            });
-
-        } catch (error) {
-            console.error("Error deleting worker info:", error);
-            return res.status(500).json({
+        if (!subContractId) {
+            return res.status(400).json({
                 ok: false,
-                message: "Internal server error",
-                error: error instanceof Error ? error.message : "Unknown error"
+                message: "SubContract ID is required"
             });
         }
-    };
+
+        // if (!submissionToken) {
+        //     return res.status(400).json({
+        //         ok: false,
+        //         message: "Submission token is required"
+        //     });
+        // }
+
+        // Find the SubContract
+        const subContract = await SubContractModel.findByIdAndDelete(subContractId);
+
+        if (!subContract) {
+            return res.status(404).json({
+                ok: false,
+                message: "SubContract not found"
+            });
+        }
+
+        await subContract.save();
+
+        return res.status(200).json({
+            ok: true,
+            message: "Worker info deleted successfully",
+            data: subContract
+        });
+
+    } catch (error) {
+        console.error("Error deleting worker info:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : "Unknown error"
+        });
+    }
+};
 
