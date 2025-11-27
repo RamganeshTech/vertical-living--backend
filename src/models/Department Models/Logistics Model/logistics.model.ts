@@ -30,41 +30,54 @@ export interface ILogisticsShipment {
     // coordinates?: number[];
   };
   items?: IShipmentItem[];
-  status?: "pending" | "assigned" | "in_transit" | "delivered" | "cancelled";
+  shipmentStatus?: "pending" | "assigned" | "pickedup" | "in_transit" | "delivered" | "cancelled";
   scheduledDate?: Date;
   actualPickupTime?: Date;
   actualDeliveryTime?: Date;
   // assignedTo?: Types.ObjectId;
   notes?: string;
-}
 
-export interface ILogisticsMain extends Document {
-  organizationId: Types.ObjectId;
-  vehicles: Types.ObjectId[];
-  projectShipments: {
-    projectId: Types.ObjectId,
-    shipments: Types.ObjectId[],
-  }[]
+
+  currentLocation: {
+    latitude: number,
+    longitude: number,
+    updatedAt: Date
+  },
+
+  lastLocationUpdate: Date,
+
+  eta: number,   // minutes
+
+  // trackingId: String,
+
+  locationHistory: [{
+    latitude: number,
+    longitude: number,
+    timestamp: Date
+  }],
+
+  token: string
+
 }
 
 
 export const LogisticsShipmentSchema = new Schema<ILogisticsShipment>({
   organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
-  
+
   projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel" },
-  shipmentNumber: {type:String, default: null },
+  shipmentNumber: { type: String, default: null },
   // shipmentType: { type: String, enum: ["delivery", "pickup", "transfer"] },
-  vehicleDetails: { type:LogisticsVehicleSchema, default: null },
+  vehicleDetails: { type: LogisticsVehicleSchema, default: null },
   origin: {
-    address: {type: String, default:null},
-    contactPerson: {type: String, default:null},
-    contactPhone: {type: String, default:null},
+    address: { type: String, default: null },
+    contactPerson: { type: String, default: null },
+    contactPhone: { type: String, default: null },
     // coordinates: [Number]
   },
   destination: {
-    address: {type: String, default:null},
-    contactPerson: {type: String, default:null},
-    contactPhone: {type: String, default:null},
+    address: { type: String, default: null },
+    contactPerson: { type: String, default: null },
+    contactPhone: { type: String, default: null },
     // coordinates: [Number]
   },
   items: [{
@@ -73,38 +86,50 @@ export const LogisticsShipmentSchema = new Schema<ILogisticsShipment>({
     weight: Number,
     description: String
   }],
-  status: {
+  shipmentStatus: {
     type: String,
-    enum: ["pending", "assigned", "in_transit", "delivered", "cancelled", null],
+    enum: ["pending", "assigned", "pickedup", "in_transit", "delivered", "cancelled", null],
     default: "pending"
   },
-  scheduledDate: {type: Date, default:null},
-  actualPickupTime: {type: Date, default:null},
-  actualDeliveryTime: {type: Date, default:null},
-  notes: {type: String, default:null}
-}, { _id: true, timestamps: true });
+  scheduledDate: { type: Date, default: null },
+  actualPickupTime: { type: Date, default: null },
+  actualDeliveryTime: { type: Date, default: null },
+  notes: { type: String, default: null },
 
+  // trackingId: {
+  //   type: String,
+  //   default: null
+  // },
+
+  currentLocation: {
+    latitude: Number,
+    longitude: Number,
+    updatedAt: Date
+  },
+
+  lastLocationUpdate: {
+    type: Date,
+    default: null
+  },
+
+  eta: {
+    type: Number,   // ETA in minutes
+    default: null
+  },
+
+  locationHistory: [
+    {
+      latitude: { type: Number,  },
+      longitude: { type: Number,  },
+      timestamp: { type: Date, default: Date.now }
+    }
+  ],
+  token: {type: String, default: null}
+
+}, { _id: true, timestamps: true });
 
 
 export const LogisticsShipmentModel = mongoose.model<ILogisticsShipment>(
   "LogisticsShipmentModel",
   LogisticsShipmentSchema
 );
-
-// const LogisticsMainSchema = new Schema<ILogisticsMain>({
-//   organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
-//   vehicles: { type: [Schema.Types.ObjectId], ref: "LogisticsVehicleModel", default: [] },
-//   projectShipments: [
-//     {
-//       projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", required: true },
-//       shipments: [{ type: Schema.Types.ObjectId, ref: "LogisticsShipmentModel" }] // references, not embedded
-//     }
-//   ]
-// }, { timestamps: true });
-
-// export const LogisticsMainModel = mongoose.model<ILogisticsMain>(
-//   "LogisticsMainModel",
-//   LogisticsMainSchema
-// );
-
-

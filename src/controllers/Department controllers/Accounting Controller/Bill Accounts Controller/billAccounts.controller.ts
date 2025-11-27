@@ -264,26 +264,7 @@ export const getBills = async (req: RoleBasedRequest, res: Response): Promise<an
             filter.vendorId = new mongoose.Types.ObjectId(vendorId as string);
         }
 
-        // ✅ Filter by single date (createdAt)
-        // if (date) {
-        //     const selectedDate = new Date(date as string);
-        //     if (isNaN(selectedDate.getTime())) {
-        //         res.status(400).json({
-        //             ok: false,
-        //             message: "Invalid date format. Use ISO string (e.g. 2025-10-23)."
-        //         });
-        //         return;
-        //     }
-
-        //     // Create a range covering the entire day
-        //     const startOfDay = new Date(selectedDate);
-        //     startOfDay.setHours(0, 0, 0, 0);
-
-        //     const endOfDay = new Date(selectedDate);
-        //     endOfDay.setHours(23, 59, 59, 999);
-
-        //     filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
-        // }
+        
 
         if (createdFromDate || createdToDate) {
             const filterRange: any = {};

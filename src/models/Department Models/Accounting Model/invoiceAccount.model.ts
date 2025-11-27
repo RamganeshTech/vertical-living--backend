@@ -1,5 +1,17 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+
+
+
+
+
+export interface IUploadPdf {
+  type: "image" | "pdf";
+  url: string;
+  originalName?: string;
+  uploadedAt?: Date;
+}
+
 export interface IInvoiceItem {
   itemName: string;
   quantity: number;
@@ -33,6 +45,8 @@ export interface IInvoice extends Document {
 
   customerNotes?: string;
   termsAndConditions?: string;
+
+  pdfData?: IUploadPdf
 }
 
 const InvoiceItemSchema = new Schema<IInvoiceItem>(
@@ -44,6 +58,17 @@ const InvoiceItemSchema = new Schema<IInvoiceItem>(
   },
   { _id: true }
 );
+
+
+
+
+
+const pdfGeneratorSchema = new Schema<IUploadPdf>({
+  type: { type: String, enum: ["image", "pdf"] },
+  url: { type: String,  },
+  originalName: String,
+  uploadedAt: { type: Date, default: new Date() }
+}, {_id: true});
 
 const InvoiceSchema = new Schema<IInvoice>(
   {
@@ -72,6 +97,7 @@ const InvoiceSchema = new Schema<IInvoice>(
     grandTotal: { type: Number, default: 0 },
     customerNotes: { type: String, default:null },
     termsAndConditions: { type: String , default:null},
+    pdfData: {type: pdfGeneratorSchema, default: null}
   },
   { timestamps: true }
 );

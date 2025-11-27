@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import ProcurementModelNew from "../../../models/Department Models/ProcurementNew Model/procurementNew.model";
 import { generateProcurementPdf } from "./procurementPdf";
-import { LogisticsShipmentModel } from "../../../models/Department Models/Logistics Model/logistics.model";
 import { createShipmentUtil } from "../Logistics Controllers/logistics.controller";
 import { createAccountingEntry } from "../Accounting Controller/accounting.controller";
 

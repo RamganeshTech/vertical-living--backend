@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { addInstallments, createAccountInstallmentOrder, deleteAccounting, getAccounting, getSingleAccounting, updateAccountingTransaction, verifyAccountsInstallmentPayment } from "../../../controllers/Department controllers/Accounting Controller/accounting.controller";
+import { addInstallments, checkAccPayoutStatus, createAccountInstallmentOrder, deleteAccounting, getAccounting, getSingleAccounting, payInstallment, updateAccountingTransaction, verifyAccountsInstallmentPayment } from "../../../controllers/Department controllers/Accounting Controller/accounting.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 
 const accountingRoutes = Router();
@@ -30,5 +30,11 @@ accountingRoutes.post(
   "/verifypayment/:accId/:installmentId",
   multiRoleAuthMiddleware("owner", "CTO", "staff"),
   verifyAccountsInstallmentPayment);
+
+
+  
+accountingRoutes.post("/:accountingId/installments/:installmentId/pay", payInstallment);
+accountingRoutes.get("/:accountingId/installments/:installmentId/status", checkAccPayoutStatus);
+
 
 export default accountingRoutes;

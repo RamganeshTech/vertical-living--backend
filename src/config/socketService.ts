@@ -228,5 +228,175 @@ export class SocketService {
 
 
 
+
+
+   // ============================================
+  // 🚗 LOCATION TRACKING METHODS
+  // ============================================
+
+  /**
+   * Emit location update to organization room
+   * Used when driver location updates
+   */
+  static async emitLocationUpdate(organizationId: string, locationData: {
+    shipmentId: string;
+    latitude: number;
+    longitude: number;
+    updatedAt: Date;
+    shipmentStatus: string;
+    vehicleDetails?: any;
+    shipmentNumber?: string;
+  }) {
+    try {
+      const roomName = `org_${organizationId}`;
+      
+      SocketService.io.to(roomName).emit('location_update', {
+        ...locationData,
+        organizationId,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`📍 Location update sent to ${roomName}:`, {
+        shipmentId: locationData.shipmentId,
+        lat: locationData.latitude,
+        lng: locationData.longitude
+      });
+    } catch (error) {
+      console.error('Location update emission error:', error);
+    }
+  }
+
+  /**
+   * Emit tracking started event
+   * Called when driver starts a delivery
+   */
+  static async emitTrackingStarted(organizationId: string, trackingData: {
+    shipmentId: string;
+    // trackingId: string;
+    shipmentNumber: string;
+    vehicleDetails: any;
+    destination?: any;
+  }) {
+    try {
+      const roomName = `org_${organizationId}`;
+      
+      SocketService.io.to(roomName).emit('tracking_started', {
+        ...trackingData,
+        organizationId,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`🚀 Tracking started notification sent to ${roomName}`);
+    } catch (error) {
+      console.error('Tracking started emission error:', error);
+    }
+  }
+
+  /**
+   * Emit tracking stopped event
+   * Called when shipment is delivered or cancelled
+   */
+  static async emitTrackingStopped(organizationId: string, trackingData: {
+    shipmentId: string;
+    shipmentNumber: string;
+    status: string;
+    finalLocation?: {
+      latitude: number;
+      longitude: number;
+    };
+  }) {
+    try {
+      const roomName = `org_${organizationId}`;
+      
+      SocketService.io.to(roomName).emit('tracking_stopped', {
+        ...trackingData,
+        organizationId,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`🛑 Tracking stopped notification sent to ${roomName}`);
+    } catch (error) {
+      console.error('Tracking stopped emission error:', error);
+    }
+  }
+
+  /**
+   * Emit driver connection status change
+   * Used to show if driver's connection is active/stale/disconnected
+   */
+  static async emitDriverConnectionStatus(organizationId: string, statusData: {
+    shipmentId: string;
+    connectionStatus: 'active' | 'stale' | 'disconnected';
+    lastLocationUpdate?: Date;
+  }) {
+    try {
+      const roomName = `org_${organizationId}`;
+      
+      SocketService.io.to(roomName).emit('driver_connection_status', {
+        ...statusData,
+        organizationId,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`📶 Connection status sent to ${roomName}:`, statusData.connectionStatus);
+    } catch (error) {
+      console.error('Connection status emission error:', error);
+    }
+  }
+
+  /**
+   * Emit ETA update
+   * Called when ETA is calculated/updated
+   */
+  static async emitETAUpdate(organizationId: string, etaData: {
+    shipmentId: string;
+    eta: number; // minutes
+    estimatedArrival: Date;
+  }) {
+    try {
+      const roomName = `org_${organizationId}`;
+      
+      SocketService.io.to(roomName).emit('eta_update', {
+        ...etaData,
+        organizationId,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`⏱️ ETA update sent to ${roomName}: ${etaData.eta} minutes`);
+    } catch (error) {
+      console.error('ETA update emission error:', error);
+    }
+  }
+
+  /**
+   * Get all active shipments in organization
+   * Helper method to send bulk location data
+   */
+  static async emitBulkLocationUpdate(organizationId: string, shipments: Array<{
+    shipmentId: string;
+    currentLocation: {
+      latitude: number;
+      longitude: number;
+      updatedAt: Date;
+    };
+    shipmentStatus: string;
+    shipmentNumber: string;
+  }>) {
+    try {
+      const roomName = `org_${organizationId}`;
+      
+      SocketService.io.to(roomName).emit('bulk_location_update', {
+        shipments,
+        organizationId,
+        count: shipments.length,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`📦 Bulk location update sent to ${roomName}: ${shipments.length} shipments`);
+    } catch (error) {
+      console.error('Bulk location update emission error:', error);
+    }
+  }
+
 }
 

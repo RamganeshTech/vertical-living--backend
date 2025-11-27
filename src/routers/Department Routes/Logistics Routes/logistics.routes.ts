@@ -1,6 +1,6 @@
 // logistics.routes.ts
 import express from "express";
-import { createShipment,  deleteShipment,  getAllShipments,  getSingleLogisticsShipment,  SyncAccountingFromLogistics,  updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
+import { createShipment,  deleteShipment,  getActiveShipmentsWithLocation,  getAllShipments,  getShipmentByToken,  getShipmentRouteHistory,  getSingleLogisticsShipment,  startTracking,  SyncAccountingFromLogistics,  updateDriverLocation,  updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 
 const LogisticsRoutes = express.Router();
@@ -18,6 +18,12 @@ LogisticsRoutes.delete("/shipment/delete/:organizationId/:shipmentId", multiRole
 LogisticsRoutes.get("/shipment/getshipment",  multiRoleAuthMiddleware("owner", "CTO", "staff"),getAllShipments);
 LogisticsRoutes.get("/shipment/getsingle/:shipmentId",  multiRoleAuthMiddleware("owner", "CTO", "staff"),getSingleLogisticsShipment);
 
+
+LogisticsRoutes.post('/shipment/:shipmentId/update-location', updateDriverLocation);
+LogisticsRoutes.post('/shipment/:shipmentId/start-tracking', startTracking);
+LogisticsRoutes.get('/shipment/active-with-location',multiRoleAuthMiddleware("owner", "CTO", "staff"), getActiveShipmentsWithLocation);
+LogisticsRoutes.get('/shipment/:shipmentId/route-history',multiRoleAuthMiddleware("owner", "CTO", "staff"), getShipmentRouteHistory);
+LogisticsRoutes.get('/shipment/getpublic/:token', getShipmentByToken);
 
 
 LogisticsRoutes.post(

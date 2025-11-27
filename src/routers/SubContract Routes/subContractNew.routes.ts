@@ -13,7 +13,6 @@ import {
     deleteSubContract,
     getSubContractBasicDetails,
     uploadBeforeWorkInfo,
-    deleteWorkerInfo,
     updateSubContract
 } from '../../controllers/SubContract Controllers/subContractNew.controller';
 import { imageUploadToS3, processUploadFiles } from '../../utils/s3Uploads/s3upload';

@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import { InvoiceAccountModel } from "../../../../models/Department Models/Accounting Model/invoiceAccount.model";
 import { RoleBasedRequest } from "../../../../types/types";
 import redisClient from "../../../../config/redisClient";
+import { generateInvoiceAccBillPdf, PdfInvoiceData } from "./pdfInvoiceAcc";
+import { COMPANY_LOGO, uploadToS3 } from "../../../stage controllers/ordering material controller/pdfOrderHistory.controller";
 
 // Helper function to generate unique invoice number
 const generateInvoiceNumber = async (organizationId: string): Promise<string> => {
@@ -172,24 +174,9 @@ const invalidateInvoiceCache = async (organizationId?: string, customerId?: stri
 export const createInvoice = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const {
-            customerId,
-            organizationId,
-            customerName,
-            orderNumber,
-            accountsReceivable,
-            salesPerson,
-            subject,
-            invoiceDate,
-            terms,
-            dueDate,
-            items,
-            totalAmount,
-            discountPercentage,
-            discountAmount,
-            taxPercentage,
-            taxAmount,
-            grandTotal,
-            customerNotes,
+            customerId,organizationId,customerName,orderNumber,
+            accountsReceivable,salesPerson,subject,invoiceDate,terms,dueDate,items,totalAmount,
+            discountPercentage,discountAmount,taxPercentage,taxAmount,grandTotal,customerNotes,
             termsAndConditions } = req.body;
 
         // Validate invoice data
@@ -225,7 +212,7 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
         const invoiceNumber = await generateInvoiceNumber(organizationId);
 
         // Create invoice object
-        const newInvoice = await InvoiceAccountModel.create({
+        const newInvoice:any = await InvoiceAccountModel.create({
             organizationId,
             customerId: customerId || null,
             customerName: customerName?.trim(),
@@ -250,6 +237,30 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
 
         // Save to database
         // const savedInvoice = await newInvoice.save();
+
+          // Generate PDF
+        const pdfData = {
+            ...newInvoice.toObject(),
+            companyLogo: COMPANY_LOGO, // Add your company logo URL
+            companyName: 'Vertical Living' // Add your company name
+        };
+
+        const pdfBytes = await generateInvoiceAccBillPdf(pdfData);
+
+        const fileName = `invoice-${invoiceNumber}-${Date.now()}.pdf`;
+
+        const uploadResult = await uploadToS3(pdfBytes, fileName);
+
+        // Update invoice with PDF data
+        newInvoice.pdfData = {
+            type: "pdf",
+            url: uploadResult.Location,
+            originalName: fileName,
+            uploadedAt: new Date(),
+        };
+
+        await newInvoice.save();
+
 
         // Invalidate related caches
         await invalidateInvoiceCache(organizationId, customerId);

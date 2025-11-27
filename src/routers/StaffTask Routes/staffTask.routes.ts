@@ -32,7 +32,7 @@ const staffTaskRoutes = Router();
 
 staffTaskRoutes.post('/tasks/bulk', multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("files"), processUploadFiles, createStaffTask); 
 
-staffTaskRoutes.post('/tasks/taskfromwork', multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("files"), processUploadFiles, createStaffTaskFromWork);
+staffTaskRoutes.post('/x', multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("files"), processUploadFiles, createStaffTaskFromWork);
 // 📝 2. UPDATE / DELETE SUB-TASKS ----------------------------------
 
 // Update subtask name

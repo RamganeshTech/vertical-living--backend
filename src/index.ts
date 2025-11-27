@@ -108,9 +108,11 @@ import issueDiscussionRoutes from './routers/Stage routes/Issue Discussion Route
 // import { SubContractModel } from './models/SubContract Model/subContract.model';
 // import SubContractRoutes from './routers/SubContract Routes/subContract.routes';
 
-import path from "path";
-import { pathToFileURL } from "url";
+// import path from "path";
+// import { pathToFileURL } from "url";
 import SubContractRoutesNew from './routers/SubContract Routes/subContractNew.routes';
+import razorpayRoutes from './routers/Razorpay_routes/razorpay.routes';
+import BillNewAccountRoutes from './routers/Department Routes/Accounting Routes/billNewAccounts.routes';
 
 
 // Extend Socket interface for custom properties
@@ -239,6 +241,7 @@ app.use('/api/material', materailRoutes)
 app.use('/api/labour', labourRoutes)
 
 app.use('/api/orgs/', orgsRouter)
+app.use('/api/razorpay', razorpayRoutes)
 
 app.use('/api/owner', orgOwnerRoutes)
 app.use('/api/staff', staffRoutes)
@@ -346,6 +349,7 @@ app.use('/api/department/accounting/salesorder', salesAccountsRoutes)
 app.use('/api/department/accounting/vendor', vendorAccountingRoutes)
 app.use('/api/department/accounting/expense', ExpenseAccountingRoutes)
 app.use('/api/department/accounting/bill', BillAccountRoutes)
+app.use('/api/department/accounting/billpdf', BillNewAccountRoutes)
 app.use('/api/department/accounting/purchase', PurchaseAccRoutes)
 app.use('/api/department/accounting/vendorpayment', VendorPaymentRoutes)
 

@@ -6,6 +6,7 @@ import { RoleBasedRequest } from "../../../types/types";
 import mongoose, { Types } from "mongoose"
 import Razorpay from "razorpay";
 import crypto from 'crypto';
+import { getDecryptedRazorpayConfig } from "../../RazoryPay_controllers/razorpay.controllers";
 
 const razorpayInstance = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
@@ -173,6 +174,11 @@ export const addInstallments = async (req: RoleBasedRequest,
         status: "pending",
         orderId: "",
         paymentId: "",
+        transactionId: "",
+        paidAt: null,
+        failureReason: null,
+        fees: null,
+        tax: null
       })
     })
 
@@ -180,7 +186,11 @@ export const addInstallments = async (req: RoleBasedRequest,
 
     if (!acc) return res.status(404).json({ ok: false, message: "Transaction not found" });
 
-    acc.installMents = validatedInstallments;
+    if(acc.installMents) {
+      acc.installMents = [...acc.installMents, ...validatedInstallments];
+    }else{
+      acc.installMents = validatedInstallments
+    }
     await acc.save();
 
     return res.status(200).json({ ok: true, message: "installments updated successfully", data: acc });
@@ -282,7 +292,7 @@ export const getSingleAccounting = async (
 // PAYMENT FROM ACCOUNTING
 
 
-export const createAccountInstallmentOrder = async (req:Request, res:Response):Promise<any> => {
+export const createAccountInstallmentOrder = async (req: Request, res: Response): Promise<any> => {
   try {
     const { accountingId, installmentId } = req.params;
 
@@ -325,7 +335,7 @@ export const createAccountInstallmentOrder = async (req:Request, res:Response):P
       }
     });
 
-  } catch (err:any) {
+  } catch (err: any) {
     console.log("error", err)
     return res.status(500).json({ ok: false, message: err.message });
   }
@@ -334,7 +344,7 @@ export const createAccountInstallmentOrder = async (req:Request, res:Response):P
 
 
 
-export const verifyAccountsInstallmentPayment = async (req: Request, res: Response):Promise<any> => {
+export const verifyAccountsInstallmentPayment = async (req: Request, res: Response): Promise<any> => {
   try {
     const { accId, installmentId } = req.params;
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
@@ -368,7 +378,236 @@ export const verifyAccountsInstallmentPayment = async (req: Request, res: Respon
     });
   } catch (err: any) {
     console.log(err);
-   return   res.status(500).json({ ok: false, message: err.message });
+    return res.status(500).json({ ok: false, message: err.message });
   }
 };
 
+
+
+
+//  NEW SERVICES FOR PAYOUTS
+
+
+
+
+interface PayoutData {
+  amount: number; // in INR
+  vendorUpiId: string;
+  purpose: string;
+  reference_id: string; // e.g., installmentId
+  narration: string;
+}
+
+export const createVendorPayout = async (
+  organizationId: string,
+  payoutData: PayoutData
+) => {
+  try {
+    // Get decrypted RazorpayX credentials
+    const config = await getDecryptedRazorpayConfig(organizationId);
+
+    if (!config.razorpayXKeyId || !config.razorpayXKeySecret || !config.razorpayXAccountNumber) {
+      throw new Error("RazorpayX is not configured for this organization");
+    }
+
+    // Initialize RazorpayX
+    const razorpayX: any = new Razorpay({
+      key_id: config.razorpayXKeyId,
+      key_secret: config.razorpayXKeySecret
+    });
+
+    // Create payout
+    const payout = await razorpayX.payouts.create({
+      account_number: config.razorpayXAccountNumber,
+      amount: Math.round(payoutData.amount * 100), // Convert to paise
+      currency: "INR",
+      mode: "UPI",
+      purpose: payoutData.purpose, // e.g., "payout", "vendor_payment"
+      fund_account: {
+        account_type: "vpa",
+        vpa: {
+          address: payoutData.vendorUpiId
+        }
+      },
+      queue_if_low_balance: false,
+      reference_id: payoutData.reference_id,
+      narration: payoutData.narration // Shows in bank statement
+    });
+
+    return {
+      success: true,
+      payoutId: payout.id,
+      orderId: payout.fund_account_id,
+      status: payout.status, // "processing", "processed", "reversed", "cancelled"
+      utr: payout.utr, // UTR number (available after processing)
+      amount: payout.amount / 100,
+      fees: payout.fees / 100,
+      tax: payout.tax / 100
+    };
+
+  } catch (error: any) {
+    console.error("Payout creation failed:", error);
+    throw new Error(error.error?.description || error.message || "Payout failed");
+  }
+};
+
+// Check payout status
+export const getPayoutStatus = async (
+  organizationId: string,
+  payoutId: string
+) => {
+  try {
+    const config = await getDecryptedRazorpayConfig(organizationId);
+
+    const razorpayX: any = new Razorpay({
+      key_id: config.razorpayXKeyId!,
+      key_secret: config.razorpayXKeySecret!
+    });
+
+    const payout = await razorpayX.payouts.fetch(payoutId);
+
+    return {
+      payoutId: payout.id,
+      status: payout.status,
+      utr: payout.utr,
+      amount: payout.amount / 100,
+      processedAt: payout.processed_at
+    };
+
+  } catch (error: any) {
+    throw new Error(error.error?.description || "Failed to fetch payout status");
+  }
+};
+
+
+//  CONTROLLER 
+
+
+export const payInstallment = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { accountingId, installmentId } = req.params;
+
+    // Find the accounting record
+    const accounting = await AccountingModel.findById(accountingId);
+
+    if (!accounting) {
+      return res.status(404).json({ ok: false, message: "Accounting record not found" });
+    }
+
+    // Find the installment
+    const installment = (accounting.installMents as any).id(installmentId);
+
+    if (!installment) {
+      return res.status(404).json({ ok: false, message: "Installment not found" });
+    }
+
+    if (installment.status === 'paid') {
+      return res.status(400).json({ ok: false, message: "Installment already paid" });
+    }
+
+    if (!accounting.upiId) {
+      return res.status(400).json({ ok: false, message: "Vendor UPI ID not found" });
+    }
+
+    // Create payout
+    const payoutResult = await createVendorPayout(
+      accounting.organizationId.toString(),
+      {
+        amount: installment.amount!,
+        vendorUpiId: accounting.upiId,
+        purpose: "vendor_payment",
+        reference_id: installmentId.toString(),
+        narration: `Payment for ${accounting.transactionNumber || 'Invoice'}`
+      }
+    );
+
+    // Update installment
+    installment.status = payoutResult.status === 'processed' ? 'paid' : 'processing';
+    installment.paymentId = payoutResult.payoutId;
+    installment.orderId = payoutResult.orderId;
+    installment.transactionId = payoutResult.utr || null;
+    installment.fees = payoutResult.fees;
+    installment.tax = payoutResult.tax;
+
+    if (payoutResult.status === 'processed') {
+      installment.paidAt = new Date();
+    }
+
+    await accounting.save();
+
+    // Update overall status
+    const allPaid = accounting.installMents!.every(inst => inst.status === 'paid');
+    const somePaid = accounting.installMents!.some(inst => inst.status === 'paid');
+
+    if (allPaid) {
+      accounting.status = 'paid';
+      accounting.paidAt = new Date();
+    } else if (somePaid) {
+      accounting.status = 'pending';
+    }
+
+    await accounting.save();
+
+    return res.json({
+      ok: true,
+      message: "Payout initiated successfully",
+      data: {
+        payoutId: payoutResult.payoutId,
+        status: payoutResult.status,
+        installment: installment
+      }
+    });
+
+  } catch (error: any) {
+    console.error("Installment payment error:", error);
+    res.status(500).json({ ok: false, message: error.message });
+  }
+};
+
+// Check and update payout status
+export const checkAccPayoutStatus = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { accountingId, installmentId } = req.params;
+
+    const accounting = await AccountingModel.findById(accountingId);
+    if (!accounting) {
+      return res.status(404).json({ ok: false, message: "Accounting record not found" });
+    }
+
+    const installment = (accounting.installMents as any).id(installmentId);
+    if (!installment || !installment.paymentId) {
+      return res.status(404).json({ ok: false, message: "Installment or payment not found" });
+    }
+
+    // const { getPayoutStatus } = await import("../services/razorpayPayout.service");
+
+    const payoutStatus = await getPayoutStatus(
+      accounting.organizationId.toString(),
+      installment.paymentId
+    );
+
+    // Update installment status
+    if (payoutStatus.status === 'processed') {
+      installment.status = 'paid';
+      installment.paidAt = new Date();
+      installment.transactionId = payoutStatus.utr || null;
+    } else if (payoutStatus.status === 'reversed' || payoutStatus.status === 'cancelled') {
+      installment.status = 'failed';
+      installment.failureReason = payoutStatus.status;
+    }
+
+    await accounting.save();
+
+    return res.json({
+      ok: true,
+      data: {
+        status: payoutStatus.status,
+        utr: payoutStatus.utr,
+        installment: installment
+      }
+    });
+
+  } catch (error: any) {
+    res.status(500).json({ ok: false, message: error.message });
+  }
+};

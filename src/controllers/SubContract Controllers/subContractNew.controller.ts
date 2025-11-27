@@ -497,40 +497,6 @@ export const uploadAfterWorkInfo = async (req: Request, res: Response): Promise<
     }
 };
 
-
-
-// // Get SubContract by shareable link (accessible without login)
-// export const getSubContractByShareableLink = async (req: Request, res: Response):Promise<any> => {
-//     try {
-//         const { token } = req.params;
-//         const shareableLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/public/subcontract?token=${token}`;
-
-//         const subContract = await SubContractModel.findOne({ shrableLink: shareableLink })
-
-
-//         if (!subContract) {
-//             return res.status(404).json({
-//                 ok: false,
-//                 message: "Invalid or expired link"
-//             });
-//         }
-
-//         return res.status(200).json({
-//             ok: true,
-//             data: subContract
-//         });
-
-//     } catch (error) {
-//         console.error("Error getting SubContract by shareable link:", error);
-//         return res.status(500).json({
-//             ok: false,
-//             message: "Internal server error",
-//             error: error instanceof Error ? error.message : "Unknown error"
-//         });
-//     }
-// };
-
-// Get all SubContracts by organizationId
 export const getSubContractsByOrganization = async (req: Request, res: Response): Promise<any> => {
     try {
         const { organizationId } = req.params;
@@ -779,35 +745,6 @@ export const getSubContractBasicDetails = async (req: Request, res: Response): P
             });
         }
 
-        // let workerInfo: any = {};
-
-        // if (submissionToken) {
-        //     const matchedWorker = subContract.workerInfo.find(
-        //         (work) => work.submissionToken === submissionToken
-        //     );
-
-        //     if (matchedWorker) {
-        //         workerInfo = {
-        //             workerName: matchedWorker.workerName || null,
-        //             dateOfCommencement: matchedWorker.dateOfCommencement || null,
-        //             dateOfCompletion: matchedWorker.dateOfCompletion || null,
-        //             filesBeforeWork: matchedWorker.filesBeforeWork || null,
-        //             filesAfterWork: matchedWorker.filesAfterWork || null,
-        //             labourCost: matchedWorker.labourCost || null,
-        //             materialCost: matchedWorker.materialCost || null,
-        //             totalCost: matchedWorker.totalCost || null,
-        //         };
-        //     }
-        // }
-
-        // const data = {
-        //     _id: subContract._id,
-        //     organizationId: subContract.organizationId,
-        //     projectId: subContract.projectId,
-        //     workOrderCreatedBy: subContract.workOrderCreatedBy,
-        //     workName: subContract.workName,
-        //     ...workerInfo
-        // }
 
         return res.status(200).json({
             ok: true,

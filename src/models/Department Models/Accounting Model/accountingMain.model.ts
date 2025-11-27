@@ -29,15 +29,25 @@ export interface IInstallmentAcc {
   dueDate: Date,
   status: string,  // or "paid"
   orderId: string,        // Razorpay order ID
-  paymentId: string
+  paymentId: string,
+  transactionId: string
+  paidAt: Date | null
+  failureReason:string | null
+  fees: number | null
+  tax:number| null
 }
 
 const InstallmentAccSchema = new Schema<IInstallmentAcc>({
   amount: { type: Number, default: null },
   dueDate: { type: Date, default: null },
   status: { type: String, default: null },
-  orderId: { type: String, default: null },
-  paymentId: { type: String, default: null }
+  orderId: { type: String, default: null }, // Razorpay order/fund_account_id
+  paymentId: { type: String, default: null }, // Razorpay payout_id
+  transactionId: { type: String, default: null }, // UTR number
+  paidAt: { type: Date, default: null },
+  failureReason: { type: String, default: null },
+  fees: { type: Number, default: null },
+  tax: { type: Number, default: null }
 }, { _id: true })
 
 
