@@ -16,6 +16,7 @@ export interface IInvoiceItem {
   itemName: string;
   quantity: number;
   rate: number;
+  unit?: string;
   totalCost: number; // quantity * rate
 }
 
@@ -51,10 +52,11 @@ export interface IInvoice extends Document {
 
 const InvoiceItemSchema = new Schema<IInvoiceItem>(
   {
-    itemName: { type: String,  },
-    quantity: { type: Number,  default: 0 },
-    rate: { type: Number,  },
-    totalCost: { type: Number,  }, // quantity * rate
+    itemName: { type: String, },
+    quantity: { type: Number, default: 0 },
+    rate: { type: Number, },
+    unit: { type: String, default: ""},
+    totalCost: { type: Number, }, // quantity * rate
   },
   { _id: true }
 );
@@ -65,10 +67,10 @@ const InvoiceItemSchema = new Schema<IInvoiceItem>(
 
 const pdfGeneratorSchema = new Schema<IUploadPdf>({
   type: { type: String, enum: ["image", "pdf"] },
-  url: { type: String,  },
+  url: { type: String, },
   originalName: String,
   uploadedAt: { type: Date, default: new Date() }
-}, {_id: true});
+}, { _id: true });
 
 const InvoiceSchema = new Schema<IInvoice>(
   {
@@ -76,17 +78,19 @@ const InvoiceSchema = new Schema<IInvoice>(
       type: Schema.Types.ObjectId,
       ref: "CustomerAccountModel",
     },
-    organizationId:{ type: Schema.Types.ObjectId,
-      ref: "OrganizationModel"},
-    customerName: { type: String, default:null  },
-    invoiceNumber: { type: String,  default:null},
-    orderNumber: { type: String  ,default:null},
-    accountsReceivable: { type: String  ,default:null},
-    salesPerson: { type: String  ,default:null},
-    subject: { type: String  ,default:null},
-    invoiceDate: { type: Date,  default: new Date() },
-    terms: { type: String  ,default:null},
-    dueDate: { type: Date  ,default:null},
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: "OrganizationModel"
+    },
+    customerName: { type: String, default: null },
+    invoiceNumber: { type: String, default: null },
+    orderNumber: { type: String, default: null },
+    accountsReceivable: { type: String, default: null },
+    salesPerson: { type: String, default: null },
+    subject: { type: String, default: null },
+    invoiceDate: { type: Date, default: new Date() },
+    terms: { type: String, default: null },
+    dueDate: { type: Date, default: null },
 
     items: { type: [InvoiceItemSchema], default: [] },
     totalAmount: { type: Number, default: 0 },
@@ -95,9 +99,9 @@ const InvoiceSchema = new Schema<IInvoice>(
     taxPercentage: { type: Number, default: 0 },
     taxAmount: { type: Number, default: 0 },
     grandTotal: { type: Number, default: 0 },
-    customerNotes: { type: String, default:null },
-    termsAndConditions: { type: String , default:null},
-    pdfData: {type: pdfGeneratorSchema, default: null}
+    customerNotes: { type: String, default: null },
+    termsAndConditions: { type: String, default: null },
+    pdfData: { type: pdfGeneratorSchema, default: null }
   },
   { timestamps: true }
 );

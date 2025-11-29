@@ -3,6 +3,10 @@ import mongoose from "mongoose";
 import { RoleBasedRequest } from "../../../../types/types";
 import redisClient from "../../../../config/redisClient";
 import { BillAccountModel } from "../../../../models/Department Models/Accounting Model/billAccount.model";
+import { COMPANY_LOGO, uploadToS3 } from "../../../stage controllers/ordering material controller/pdfOrderHistory.controller";
+import { generateBillAccBillPdf } from "./pdfBillAcc";
+import { AccountingModel } from "../../../../models/Department Models/Accounting Model/accountingMain.model";
+import { generateTransactionNumber } from "../accounting.controller";
 
 // Helper function to generate unique bill number
 // Helper function to calculate bill totals
@@ -79,6 +83,11 @@ const validateBillData = (data: any): { isValid: boolean; errors: string[] } => 
                 errors.push(`Item ${index + 1}: Rate cannot be negative`);
             }
 
+
+            if (typeof item.unit !== "string") {
+                errors.push(`Item ${index + 1}: unit must be atleast empty string`);
+            }
+
             if (typeof item.quantity === 'number' && item.quantity < 0) {
                 errors.push(`Item ${index + 1}: Quantity cannot be negative`);
             }
@@ -134,12 +143,38 @@ const invalidateBillCache = async (organizationId?: string, vendorId?: string, b
 };
 
 
+const parseBodyData = (body: any) => {
+    const parsed = { ...body };
+
+    // Parse Items if stringified
+    if (typeof parsed.items === 'string') {
+        try {
+            parsed.items = JSON.parse(parsed.items);
+        } catch (e) {
+            parsed.items = [];
+        }
+    }
+
+    // Convert numeric strings to numbers
+    ['totalAmount', 'discountPercentage', 'taxPercentage'].forEach(field => {
+        if (parsed[field]) parsed[field] = Number(parsed[field]);
+    });
+
+    return parsed;
+};
+
+
 // CREATE Bill
 export const createBill = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
+
+        const bodyData = parseBodyData(req.body);
+
+
         const {
             vendorId = null,
             organizationId,
+            projectId,
             vendorName,
             accountsPayable,
             subject,
@@ -152,7 +187,7 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
             taxPercentage,
             // taxAmount,
             // grandTotal,
-            notes } = req.body;
+            notes } = bodyData;
 
         // Validate bill data
         const validation = validateBillData({
@@ -173,8 +208,9 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
         // Calculate item totals
         const processedItems = items.map((item: any) => ({
             ...item,
-            totalCost: (item.quantity || 0) * (item.rate || 0)
+            totalCost: (Number(item.quantity) || 0) * (Number(item.rate) || 0)
         }));
+
 
         // Calculate bill totals
         const totals = calculateBillTotals(
@@ -183,9 +219,23 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
             taxPercentage || 0
         );
 
+
+        const files = req.files as (Express.Multer.File & { location: string })[];
+
+        const mappedFiles: any[] = files.map(file => {
+            const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
+            return {
+                type,
+                url: file.location,
+                originalName: file.originalname,
+                uploadedAt: new Date()
+            };
+        });
+
         // Create bill object
         const newBill = await BillAccountModel.create({
             organizationId,
+            projectId: projectId || null,
             vendorId: vendorId || null,
             vendorName: vendorName?.trim(),
             accountsPayable,
@@ -199,11 +249,38 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
             taxPercentage,
             taxAmount: totals.taxAmount,
             grandTotal: totals.grandTotal,
-            notes: notes || null
+            notes: notes || null,
+            images: mappedFiles || [],
+            isSyncedWithAccounting: false,
+            pdfData: null,
         });
 
         // Save to database
         // const savedBill = await newBill.save();
+
+
+        const pdfData: any = {
+            ...newBill.toObject(),
+            companyLogo: COMPANY_LOGO,
+            companyName: 'Vertical Living'
+        };
+
+        const pdfBytes = await generateBillAccBillPdf(pdfData);
+
+        const fileName = `bill-${newBill.billNumber}-${Date.now()}.pdf`;
+
+        const uploadResult = await uploadToS3(pdfBytes, fileName);
+
+        // Update bill with PDF data
+        newBill.pdfData = {
+            type: "pdf",
+            url: uploadResult.Location,
+            originalName: fileName,
+            uploadedAt: new Date(),
+        };
+
+        await newBill.save();
+
 
         // Invalidate related caches
         await invalidateBillCache(organizationId, vendorId);
@@ -227,7 +304,7 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
 export const getBills = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { organizationId, vendorId, page = 1, limit = 10, date, search, sortBy = 'createdAt',
-            sortOrder = 'desc', billFromDate, billToDate, createdFromDate , createdToDate } = req.query;
+            sortOrder = 'desc', billFromDate, billToDate, createdFromDate, createdToDate } = req.query;
 
 
         // Build cache key based on query parameters
@@ -264,7 +341,7 @@ export const getBills = async (req: RoleBasedRequest, res: Response): Promise<an
             filter.vendorId = new mongoose.Types.ObjectId(vendorId as string);
         }
 
-        
+
 
         if (createdFromDate || createdToDate) {
             const filterRange: any = {};
@@ -455,103 +532,239 @@ export const getBillById = async (req: RoleBasedRequest, res: Response): Promise
 };
 
 // UPDATE bill
-// export const updatebill = async (req: Request, res: Response): Promise<any> => {
-//     try {
-//         const { id } = req.params;
-//         const updateData = req.body;
+export const updatebill = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { id } = req.params;
+        //   let updateData = parseBodyData(req.body);
+        const updateData = req.body;
 
-//         // Validate ID format
-//         if (!mongoose.Types.ObjectId.isValid(id)) {
-//             res.status(400).json({
-//                 ok: false,
-//                 message: "Invalid bill ID format"
-//             });
-//             return;
-//         }
+        // Validate ID format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            res.status(400).json({
+                ok: false,
+                message: "Invalid bill ID format"
+            });
+            return;
+        }
 
-//         // Check if bill exists
-//         const existingbill = await BillAccountModel.findById(id);
-//         if (!existingbill) {
-//             res.status(404).json({
-//                 ok: false,
-//                 message: "bill not found"
-//             });
-//             return;
-//         }
+        // wipe the existing array in the database.
+        if (updateData.images) {
+            delete updateData.images;
+        }
 
-//         // Validate update data
-//         const validation = validatebillData({
-//             ...existingbill.toObject(),
-//             ...updateData
-//         });
 
-//         if (!validation.isValid) {
-//             res.status(400).json({
-//                 ok: false,
-//                 message: "Validation failed",
-//                 errors: validation.errors
-//             });
-//             return;
-//         }
+        // Check if bill exists
+        const existingbill = await BillAccountModel.findById(id);
+        if (!existingbill) {
+            res.status(404).json({
+                ok: false,
+                message: "bill not found"
+            });
+            return;
+        }
 
-//         // If items are being updated, recalculate totals
-//         if (updateData.items) {
-//             const processedItems = updateData.items.map((item: any) => ({
-//                 ...item,
-//                 totalCost: (item.quantity || 0) * (item.rate || 0)
-//             }));
+        // Validate update data
+        const validation = validateBillData({
+            ...existingbill.toObject(),
+            ...updateData
+        });
 
-//             const totals = calculatebillTotals(
-//                 processedItems,
-//                 updateData.discountPercentage ?? existingbill.discountPercentage ?? 0,
-//                 updateData.taxPercentage ?? existingbill.taxPercentage ?? 0
-//             );
+        if (!validation.isValid) {
+            res.status(400).json({
+                ok: false,
+                message: "Validation failed",
+                errors: validation.errors
+            });
+            return;
+        }
 
-//             updateData.items = processedItems;
-//             updateData.totalAmount = totals.totalAmount;
-//             updateData.discountAmount = totals.discountAmount;
-//             updateData.taxAmount = totals.taxAmount;
-//             updateData.grandTotal = totals.grandTotal;
-//         } else if (updateData.discountPercentage !== undefined || updateData.taxPercentage !== undefined) {
-//             // Recalculate if discount or tax percentage changed
-//             const totals = calculatebillTotals(
-//                 existingbill.items,
-//                 updateData.discountPercentage ?? existingbill.discountPercentage ?? 0,
-//                 updateData.taxPercentage ?? existingbill.taxPercentage ?? 0
-//             );
+        // const files = req.files as (Express.Multer.File & { location: string })[];
 
-//             updateData.totalAmount = totals.totalAmount;
-//             updateData.discountAmount = totals.discountAmount;
-//             updateData.taxAmount = totals.taxAmount;
-//             updateData.grandTotal = totals.grandTotal;
-//         }
+        // const newUploadedFiles: any[] = files.map(file => {
+        //     const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
+        //     return {
+        //         type,
+        //         url: file.location,
+        //         originalName: file.originalname,
+        //         uploadedAt: new Date()
+        //     };
+        // });
 
-//         // Update bill
-//         const updatedbill = await BillAccountModel.findByIdAndUpdate(
-//             id,
-//             updateData,
-//             { new: true, runValidators: true }
-//         ).populate('vendorId', 'name email')
-//             .populate('organizationId', 'name');
 
-//         res.status(200).json({
-//             ok: true,
-//             message: "bill updated successfully",
-//             data: updatedbill
-//         });
-//     } catch (error: any) {
-//         console.error("Error updating bill:", error);
-//         res.status(500).json({
-//             ok: false,
-//             message: "Error updating bill",
-//             error: error.message
-//         });
-//     }
-// };
+        //   let existingImages = [];
+        // if (req?.body?.existingImages) {
+        //      try { existingImages = JSON.parse(req.body.existingImages); } catch(e) {}
+        // }
+
+        //   if (req.body.existingImages !== undefined) {
+        //     // Full update of image array
+        //     updateData.images = [...existingImages, ...newUploadedFiles];
+        // } else if (newUploadedFiles.length > 0) {
+        //     // If no existing list sent, imply $push (handled via query or fetching first)
+        //     const currentBill = await BillAccountModel.findById(id);
+        //     updateData.images = [...(currentBill?.images || []), ...newUploadedFiles];
+        // }
+
+
+        // If items are being updated, recalculate totals
+        if (updateData.items) {
+            const processedItems = updateData.items.map((item: any) => ({
+                ...item,
+                totalCost: (item.quantity || 0) * (item.rate || 0)
+            }));
+
+            const totals = calculateBillTotals(
+                processedItems,
+                updateData.discountPercentage ?? existingbill.discountPercentage ?? 0,
+                updateData.taxPercentage ?? existingbill.taxPercentage ?? 0
+            );
+
+            updateData.items = processedItems;
+            updateData.totalAmount = totals.totalAmount;
+            updateData.discountAmount = totals.discountAmount;
+            updateData.taxAmount = totals.taxAmount;
+            updateData.grandTotal = totals.grandTotal;
+            updateData.isSyncedWithAccounting = false;
+
+        } else if (updateData.discountPercentage !== undefined || updateData.taxPercentage !== undefined) {
+            // Recalculate if discount or tax percentage changed
+            const totals = calculateBillTotals(
+                existingbill.items,
+                updateData.discountPercentage ?? existingbill.discountPercentage ?? 0,
+                updateData.taxPercentage ?? existingbill.taxPercentage ?? 0
+            );
+
+            updateData.totalAmount = totals.totalAmount;
+            updateData.discountAmount = totals.discountAmount;
+            updateData.taxAmount = totals.taxAmount;
+            updateData.grandTotal = totals.grandTotal;
+            // IMPORTANT: Financial data changed, so we must re-sync
+            updateData.isSyncedWithAccounting = false;
+
+        }
+
+        // Update bill
+        const updatedbill = await BillAccountModel.findByIdAndUpdate(
+            id,
+            updateData,
+            { new: true, runValidators: true }
+        )
+
+        if (!updatedbill) {
+            return res.status(404).json({ message: "bill not found", ok: false })
+        }
+
+        const pdfData: any = {
+            ...updatedbill.toObject(),
+            companyLogo: COMPANY_LOGO,
+            companyName: 'Vertical Living'
+        };
+
+        const pdfBytes = await generateBillAccBillPdf(pdfData);
+
+        const fileName = `bill-${updatedbill.billNumber}-${Date.now()}.pdf`;
+
+        const uploadResult = await uploadToS3(pdfBytes, fileName);
+
+        // Update bill with PDF data
+        updatedbill.pdfData = {
+            type: "pdf",
+            url: uploadResult.Location,
+            originalName: fileName,
+            uploadedAt: new Date(),
+        };
+
+        await updatedbill.save();
+
+
+        // Invalidate related caches
+        await invalidateBillCache((updatedbill as any).organizationId, (updatedbill as any).vendorId, id);
+
+
+        res.status(200).json({
+            ok: true,
+            message: "bill updated successfully",
+            data: updatedbill
+        });
+    } catch (error: any) {
+        console.error("Error updating bill:", error);
+        res.status(500).json({
+            ok: false,
+            message: "Error updating bill",
+            error: error.message
+        });
+    }
+};
+
+
+
+
+// --- SEPARATE UPLOAD ONLY ENDPOINT ---
+export const uploadBillImagesOnly = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { id } = req.params;
+
+        const files = req.files as (Express.Multer.File & { location: string })[];
+        if (!files || files.length === 0) {
+            return res.status(400).json({ ok: false, message: "No files uploaded" });
+        }
+
+        const mappedFiles = files.map(file => ({
+            _id: new mongoose.Types.ObjectId(),
+            type: file.mimetype.startsWith("image") ? "image" : "pdf",
+            url: file.location,
+            originalName: file.originalname,
+            uploadedAt: new Date()
+        }));
+
+        const updatedBill = await BillAccountModel.findByIdAndUpdate(
+            id,
+            { $push: { images: { $each: mappedFiles } } }, // $push appends specifically
+            { new: true }
+        );
+
+        if (!updatedBill) {
+            return res.status(404).json({ message: "bill not found", ok: false })
+        }
+
+
+        const pdfData: any = {
+            ...updatedBill.toObject(),
+            companyLogo: COMPANY_LOGO,
+            companyName: 'Vertical Living'
+        };
+
+        const pdfBytes = await generateBillAccBillPdf(pdfData);
+
+        const fileName = `bill-${updatedBill.billNumber}-${Date.now()}.pdf`;
+
+        const uploadResult = await uploadToS3(pdfBytes, fileName);
+
+        // Update bill with PDF data
+        updatedBill.pdfData = {
+            type: "pdf",
+            url: uploadResult.Location,
+            originalName: fileName,
+            uploadedAt: new Date(),
+        };
+
+        await updatedBill.save();
+
+        await invalidateBillCache((updatedBill as any).organizationId, (updatedBill as any).vendorId, id);
+
+
+        res.status(200).json({ ok: true, message: "Images added successfully", data: updatedBill });
+    } catch (error: any) {
+        res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+
+
+
+
 
 // DELETE bill
-
-
 
 export const deleteBill = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
@@ -599,3 +812,213 @@ export const deleteBill = async (req: RoleBasedRequest, res: Response): Promise<
 };
 
 
+
+
+export const deleteBillImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { id, imageId } = req.params;
+
+        // Validate ID format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                ok: false,
+                message: "Invalid bill ID format"
+            });
+        }
+
+        const bill = await BillAccountModel.findById(id);
+
+        if (!bill) {
+            return res.status(404).json({
+                ok: false,
+                message: "bill not found"
+            });
+
+        }
+        bill.images = bill.images.filter(
+            (image: any) => image._id.toString() !== imageId
+        );
+
+        await bill.save();
+
+
+        // Invalidate related caches
+        await invalidateBillCache(
+            bill.organizationId?.toString(),
+            bill.vendorId?.toString(),
+            id
+        );
+
+        return res.status(200).json({
+            ok: true,
+            message: "bill image deleted successfully",
+            data: bill
+        });
+    } catch (error: any) {
+        console.error("Error deleting bill:", error);
+        res.status(500).json({
+            ok: false,
+            message: "Error deleting bill",
+            error: error.message
+        });
+    }
+};
+
+
+
+
+
+
+
+
+
+
+//  SYNC TO ACCOUNTS 
+
+
+
+export const sendBillToAccounting = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { billId } = req.params; // We expect the Bill ID to be sent
+
+    // 1. Validate Bill ID
+    if (!mongoose.Types.ObjectId.isValid(billId)) {
+      return res.status(400).json({
+        ok: false,
+        message: "Invalid Bill ID format"
+      });
+    }
+
+    // 2. Fetch the Bill
+    const bill = await BillAccountModel.findById(billId);
+    if (!bill) {
+      return res.status(404).json({
+        ok: false,
+        message: "Bill not found"
+      });
+    }
+
+
+    // 3. Prepare the Accounting Items (Mapped from Bill)
+    const accountItems = bill.items.map((item: any) => ({
+      itemName: item.itemName,
+      quantity: item.quantity,
+      rate: item.rate,
+      unit: item.unit || "",
+      totalCost: item.totalCost,
+      dueDate: bill.dueDate,
+      status: "pending",
+      orderId: "",
+      paymentId: "",
+      transactionId: "",
+      paidAt: null,
+      failureReason: "",
+      fees: null,
+      tax: null
+    }));
+
+
+
+     // 2. CHECK BY REFERENCE ID (The Robust Way)
+        let accountingEntry = null;
+        
+        if (bill.accountingRef) {
+            accountingEntry = await AccountingModel.findById(bill.accountingRef);
+        }
+
+        // If we have an entry, but it's not "pending", we shouldn't touch it automatically
+        // because money might have already moved.
+        if (accountingEntry && accountingEntry.status !== 'pending') {
+             return res.status(400).json({
+                ok: false,
+                message: "Cannot update Accounting record because it is already processed (Paid/Cancelled)."
+             });
+        }
+
+        // --- CASE A: UPDATE EXISTING ---
+        if (accountingEntry) {
+            
+            // Check for changes to avoid unnecessary database writes
+            const currentBillTotal = bill.grandTotal || 0;
+            const existingAccTotal = accountingEntry.totalAmount?.amount || 0;
+
+            if (currentBillTotal === existingAccTotal) {
+                 // Even if amounts match, ensuring we mark bill as synced
+                 if (!bill.isSyncedWithAccounting) {
+                     bill.isSyncedWithAccounting = true;
+                     await bill.save();
+                 }
+                 return res.status(200).json({
+                    ok: true,
+                    message: "Accounting is already up to date.",
+                    data: accountingEntry
+                });
+            }
+
+            // Update fields
+            accountingEntry.items = accountItems;
+            accountingEntry.totalAmount = {
+                amount: bill.grandTotal || 0,
+                taxAmount: bill.taxAmount || 0
+            };
+            accountingEntry.dueDate = bill.dueDate;
+            
+            // Optionally append to notes that it was updated
+            // accountingEntry.notes = accountingEntry.notes + " (Updated via Bill)";
+
+            const updatedEntry = await accountingEntry.save();
+
+            // Mark Bill as Synced
+            bill.isSyncedWithAccounting = true;
+            await bill.save();
+
+            return res.status(200).json({
+                ok: true,
+                message: "Existing Accounting entry updated.",
+                data: updatedEntry
+            });
+        }
+
+        // --- CASE B: CREATE NEW ---
+        
+        const transactionNumber = await generateTransactionNumber(bill.organizationId);
+
+        const newAccountingEntry = new AccountingModel({
+            transactionNumber: transactionNumber,
+            organizationId: bill.organizationId,
+            transactionType: 'expense',
+            fromDept: req.body.fromDept || 'procurement',
+            items: accountItems,
+            totalAmount: {
+                amount: bill.grandTotal || 0,
+                taxAmount: bill.taxAmount || 0
+            },
+            status: 'pending',
+            dueDate: bill.dueDate || null,
+            notes: `Generated from Vendor Bill #${bill.billNumber}. ${bill.notes ? `Ref: ${bill.notes}` : ''}`,
+            paidAt: null,
+            installMents: []
+        });
+
+        const savedEntry = await newAccountingEntry.save();
+
+        // --- CRITICAL: LINK BACK TO BILL ---
+        bill.accountingRef = savedEntry._id as any;
+        bill.isSyncedWithAccounting = true;
+        await bill.save();
+
+        return res.status(201).json({
+            ok: true,
+            message: "Sent to Accounting Department successfully",
+            data: savedEntry
+        });
+
+  } catch (error: any) {
+    console.error("Error sending bill to accounting:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Error processing request",
+      error: error.message
+    });
+  }
+}

@@ -7,6 +7,7 @@ import mongoose, { Types } from "mongoose"
 import Razorpay from "razorpay";
 import crypto from 'crypto';
 import { getDecryptedRazorpayConfig } from "../../RazoryPay_controllers/razorpay.controllers";
+import { BillAccountModel } from "../../../models/Department Models/Accounting Model/billAccount.model";
 
 const razorpayInstance = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
@@ -89,6 +90,7 @@ export async function createAccountingEntry({
 
   return doc;
 }
+
 
 
 export const updateAccountingTransaction = async (req: RoleBasedRequest, res: Response): Promise<any> => {
@@ -186,9 +188,9 @@ export const addInstallments = async (req: RoleBasedRequest,
 
     if (!acc) return res.status(404).json({ ok: false, message: "Transaction not found" });
 
-    if(acc.installMents) {
+    if (acc.installMents) {
       acc.installMents = [...acc.installMents, ...validatedInstallments];
-    }else{
+    } else {
       acc.installMents = validatedInstallments
     }
     await acc.save();

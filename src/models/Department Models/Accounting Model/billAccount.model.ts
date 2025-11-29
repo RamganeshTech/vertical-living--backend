@@ -1,9 +1,12 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import { IUploadPdf } from "./invoiceAccount.model";
 
 
 export interface IBillAccount extends Document {
     organizationId: mongoose.Types.ObjectId;
     vendorId: Types.ObjectId;
+    projectId: Types.ObjectId;
+    accountingRef: Types.ObjectId;
     vendorName: string;
     billNumber: string,
     billDate: Date,
@@ -24,6 +27,9 @@ export interface IBillAccount extends Document {
 
 
     notes: string | null;
+    images: IBillUploads[],
+    pdfData: IBillUploads | null,
+    isSyncedWithAccounting?: boolean
 }
 
 
@@ -31,19 +37,34 @@ export interface IBillItem {
     itemName: string;
     quantity: number;
     rate: number;
+    unit: string;
     totalCost: number; // quantity * rate
 }
 
-const InvoiceItemSchema = new Schema<IBillItem>(
+const BillItemSchema = new Schema<IBillItem>(
     {
         itemName: { type: String, },
         quantity: { type: Number, default: 0 },
         rate: { type: Number, },
+        unit: { type: String, default: "" },
         totalCost: { type: Number, }, // quantity * rate
     },
     { _id: true }
 );
 
+
+export interface IBillUploads extends IUploadPdf { }
+
+
+
+
+
+const BillUploadSchema = new Schema<IUploadPdf>({
+    type: { type: String, enum: ["image", "pdf"] },
+    url: { type: String, },
+    originalName: String,
+    uploadedAt: { type: Date, default: new Date() }
+}, { _id: true });
 
 
 const BillAccountSchema = new Schema<IBillAccount>(
@@ -55,6 +76,19 @@ const BillAccountSchema = new Schema<IBillAccount>(
         vendorId: {
             type: Schema.Types.ObjectId,
             ref: "VendorAccountModel",
+            default: null
+        },
+
+        accountingRef: {
+            type: Schema.Types.ObjectId,
+            ref: "AccountingModel",
+            default: null
+        },
+
+        projectId: {
+            type: Schema.Types.ObjectId,
+            ref: "ProjectModel",
+            default: null
         },
         vendorName: { type: String, default: null },
         billNumber: { type: String, },
@@ -62,7 +96,7 @@ const BillAccountSchema = new Schema<IBillAccount>(
         dueDate: { type: Date, default: new Date() },
         accountsPayable: { type: String, default: null },
         subject: { type: String, default: null },
-        items: { type: [InvoiceItemSchema], default: [] },
+        items: { type: [BillItemSchema], default: [] },
         totalAmount: { type: Number, default: 0 },
         discountPercentage: { type: Number, default: 0 },
         discountAmount: { type: Number, default: 0 },
@@ -70,6 +104,12 @@ const BillAccountSchema = new Schema<IBillAccount>(
         taxAmount: { type: Number, default: 0 },
         grandTotal: { type: Number, default: 0 },
         notes: { type: String, default: null },
+        images: { type: [BillUploadSchema], default: [] },
+        pdfData: { type: BillUploadSchema, default: null },
+        isSyncedWithAccounting: {
+            type: Boolean,
+            default: false
+        }
     },
     { timestamps: true }
 );

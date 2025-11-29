@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { InvoiceAccountModel } from "../../../../models/Department Models/Accounting Model/invoiceAccount.model";
 import { RoleBasedRequest } from "../../../../types/types";
 import redisClient from "../../../../config/redisClient";
@@ -119,6 +119,11 @@ const validateInvoiceData = (data: any): { isValid: boolean; errors: string[] } 
                 errors.push(`Item ${index + 1}: Quantity cannot be negative`);
             }
 
+            if (typeof item.unit !== 'string') {
+                errors.push(`Item ${index + 1}: unit cannot be empty`);
+            }
+
+
             if (typeof item.totalCost === 'number' && item.totalCost < 0) {
                 errors.push(`Item ${index + 1}: Total cost cannot be negative`);
             }
@@ -174,9 +179,9 @@ const invalidateInvoiceCache = async (organizationId?: string, customerId?: stri
 export const createInvoice = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const {
-            customerId,organizationId,customerName,orderNumber,
-            accountsReceivable,salesPerson,subject,invoiceDate,terms,dueDate,items,totalAmount,
-            discountPercentage,discountAmount,taxPercentage,taxAmount,grandTotal,customerNotes,
+            customerId, organizationId, customerName, orderNumber,
+            accountsReceivable, salesPerson, subject, invoiceDate, terms, dueDate, items, totalAmount,
+            discountPercentage, discountAmount, taxPercentage, taxAmount, grandTotal, customerNotes,
             termsAndConditions } = req.body;
 
         // Validate invoice data
@@ -212,7 +217,7 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
         const invoiceNumber = await generateInvoiceNumber(organizationId);
 
         // Create invoice object
-        const newInvoice:any = await InvoiceAccountModel.create({
+        const newInvoice: any = await InvoiceAccountModel.create({
             organizationId,
             customerId: customerId || null,
             customerName: customerName?.trim(),
@@ -238,7 +243,7 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
         // Save to database
         // const savedInvoice = await newInvoice.save();
 
-          // Generate PDF
+        // Generate PDF
         const pdfData = {
             ...newInvoice.toObject(),
             companyLogo: COMPANY_LOGO, // Add your company logo URL
@@ -339,19 +344,19 @@ export const getInvoices = async (req: RoleBasedRequest, res: Response): Promise
         //     }
 
         // Create a range covering the entire day
-    //     const startOfDay = new Date(selectedDate);
-    //     startOfDay.setHours(0, 0, 0, 0);
+        //     const startOfDay = new Date(selectedDate);
+        //     startOfDay.setHours(0, 0, 0, 0);
 
-    //     const endOfDay = new Date(selectedDate);
-    //     endOfDay.setHours(23, 59, 59, 999);
+        //     const endOfDay = new Date(selectedDate);
+        //     endOfDay.setHours(23, 59, 59, 999);
 
-    //     filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
-    // }
+        //     filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
+        // }
 
 
 
-    
-         if (createdFromDate || createdToDate) {
+
+        if (createdFromDate || createdToDate) {
             const filterRange: any = {};
 
             if (createdFromDate) {
@@ -418,59 +423,59 @@ export const getInvoices = async (req: RoleBasedRequest, res: Response): Promise
         }
 
 
-    if (search && typeof search === 'string' && search.trim() !== '') {
-        filter.$or = [
-            { customerName: { $regex: search, $options: 'i' } },
-            { invoiceNumber: { $regex: search, $options: 'i' } },
-        ];
-    }
-
-    // Build sort object
-    const sort: any = {};
-    sort[sortBy as string] = sortOrder === 'asc' ? 1 : -1;
-
-
-    // Calculate pagination
-    const pageNum = parseInt(page as string);
-    const limitNum = parseInt(limit as string);
-    const skip = (pageNum - 1) * limitNum;
-
-    // Get invoices with pagination
-    const [invoices, total] = await Promise.all([
-        InvoiceAccountModel.find(filter)
-            .sort(sort)
-            .skip(skip)
-            .limit(limitNum),
-        InvoiceAccountModel.countDocuments(filter)
-    ])
-
-
-    const response = {
-        ok: true,
-        message: "Invoices retrieved successfully",
-        data: invoices,
-        pagination: {
-            total,
-            page: pageNum,
-            limit: limitNum,
-            totalPages: Math.ceil(total / limitNum)
+        if (search && typeof search === 'string' && search.trim() !== '') {
+            filter.$or = [
+                { customerName: { $regex: search, $options: 'i' } },
+                { invoiceNumber: { $regex: search, $options: 'i' } },
+            ];
         }
-    };
+
+        // Build sort object
+        const sort: any = {};
+        sort[sortBy as string] = sortOrder === 'asc' ? 1 : -1;
+
+
+        // Calculate pagination
+        const pageNum = parseInt(page as string);
+        const limitNum = parseInt(limit as string);
+        const skip = (pageNum - 1) * limitNum;
+
+        // Get invoices with pagination
+        const [invoices, total] = await Promise.all([
+            InvoiceAccountModel.find(filter)
+                .sort(sort)
+                .skip(skip)
+                .limit(limitNum),
+            InvoiceAccountModel.countDocuments(filter)
+        ])
+
+
+        const response = {
+            ok: true,
+            message: "Invoices retrieved successfully",
+            data: invoices,
+            pagination: {
+                total,
+                page: pageNum,
+                limit: limitNum,
+                totalPages: Math.ceil(total / limitNum)
+            }
+        };
 
 
 
-    // Cache the response for 10 minutes
-    await redisClient.set(cacheKey, JSON.stringify(response), { EX: 60 * 10 });
-    return res.status(200).json(response);
+        // Cache the response for 10 minutes
+        await redisClient.set(cacheKey, JSON.stringify(response), { EX: 60 * 10 });
+        return res.status(200).json(response);
 
-} catch (error: any) {
-    console.error("Error getting invoices:", error);
-    res.status(500).json({
-        ok: false,
-        message: "Error retrieving invoices",
-        error: error.message
-    });
-}
+    } catch (error: any) {
+        console.error("Error getting invoices:", error);
+        res.status(500).json({
+            ok: false,
+            message: "Error retrieving invoices",
+            error: error.message
+        });
+    }
 };
 
 // GET Single Invoice by ID
@@ -530,99 +535,132 @@ export const getInvoiceById = async (req: RoleBasedRequest, res: Response): Prom
 };
 
 // UPDATE Invoice
-// export const updateInvoice = async (req: Request, res: Response): Promise<any> => {
-//     try {
-//         const { id } = req.params;
-//         const updateData = req.body;
+export const updateInvoice = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
 
-//         // Validate ID format
-//         if (!mongoose.Types.ObjectId.isValid(id)) {
-//             res.status(400).json({
-//                 ok: false,
-//                 message: "Invalid invoice ID format"
-//             });
-//             return;
-//         }
+        // Validate ID format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            res.status(400).json({
+                ok: false,
+                message: "Invalid invoice ID format"
+            });
+            return;
+        }
 
-//         // Check if invoice exists
-//         const existingInvoice = await InvoiceAccountModel.findById(id);
-//         if (!existingInvoice) {
-//             res.status(404).json({
-//                 ok: false,
-//                 message: "Invoice not found"
-//             });
-//             return;
-//         }
+        // Check if invoice exists
+        const existingInvoice = await InvoiceAccountModel.findById(id);
+        if (!existingInvoice) {
+            res.status(404).json({
+                ok: false,
+                message: "Invoice not found"
+            });
+            return;
+        }
 
-//         // Validate update data
-//         const validation = validateInvoiceData({
-//             ...existingInvoice.toObject(),
-//             ...updateData
-//         });
+        // Validate update data
+        const validation = validateInvoiceData({
+            ...existingInvoice.toObject(),
+            ...updateData
+        });
 
-//         if (!validation.isValid) {
-//             res.status(400).json({
-//                 ok: false,
-//                 message: "Validation failed",
-//                 errors: validation.errors
-//             });
-//             return;
-//         }
+        if (!validation.isValid) {
+            res.status(400).json({
+                ok: false,
+                message: "Validation failed",
+                errors: validation.errors
+            });
+            return;
+        }
 
-//         // If items are being updated, recalculate totals
-//         if (updateData.items) {
-//             const processedItems = updateData.items.map((item: any) => ({
-//                 ...item,
-//                 totalCost: (item.quantity || 0) * (item.rate || 0)
-//             }));
+        // If items are being updated, recalculate totals
+        if (updateData.items) {
+            const processedItems = updateData.items.map((item: any) => ({
+                ...item,
+                totalCost: (item.quantity || 0) * (item.rate || 0)
+            }));
 
-//             const totals = calculateInvoiceTotals(
-//                 processedItems,
-//                 updateData.discountPercentage ?? existingInvoice.discountPercentage ?? 0,
-//                 updateData.taxPercentage ?? existingInvoice.taxPercentage ?? 0
-//             );
+            const totals = calculateInvoiceTotals(
+                processedItems,
+                updateData.discountPercentage ?? existingInvoice.discountPercentage ?? 0,
+                updateData.taxPercentage ?? existingInvoice.taxPercentage ?? 0
+            );
 
-//             updateData.items = processedItems;
-//             updateData.totalAmount = totals.totalAmount;
-//             updateData.discountAmount = totals.discountAmount;
-//             updateData.taxAmount = totals.taxAmount;
-//             updateData.grandTotal = totals.grandTotal;
-//         } else if (updateData.discountPercentage !== undefined || updateData.taxPercentage !== undefined) {
-//             // Recalculate if discount or tax percentage changed
-//             const totals = calculateInvoiceTotals(
-//                 existingInvoice.items,
-//                 updateData.discountPercentage ?? existingInvoice.discountPercentage ?? 0,
-//                 updateData.taxPercentage ?? existingInvoice.taxPercentage ?? 0
-//             );
+            updateData.items = processedItems;
+            updateData.totalAmount = totals.totalAmount;
+            updateData.discountAmount = totals.discountAmount;
+            updateData.taxAmount = totals.taxAmount;
+            updateData.grandTotal = totals.grandTotal;
+        } else if (updateData.discountPercentage !== undefined || updateData.taxPercentage !== undefined) {
+            // Recalculate if discount or tax percentage changed
+            const totals = calculateInvoiceTotals(
+                existingInvoice.items,
+                updateData.discountPercentage ?? existingInvoice.discountPercentage ?? 0,
+                updateData.taxPercentage ?? existingInvoice.taxPercentage ?? 0
+            );
 
-//             updateData.totalAmount = totals.totalAmount;
-//             updateData.discountAmount = totals.discountAmount;
-//             updateData.taxAmount = totals.taxAmount;
-//             updateData.grandTotal = totals.grandTotal;
-//         }
+            updateData.totalAmount = totals.totalAmount;
+            updateData.discountAmount = totals.discountAmount;
+            updateData.taxAmount = totals.taxAmount;
+            updateData.grandTotal = totals.grandTotal;
+        }
 
-//         // Update invoice
-//         const updatedInvoice = await InvoiceAccountModel.findByIdAndUpdate(
-//             id,
-//             updateData,
-//             { new: true, runValidators: true }
-//         ).populate('customerId', 'name email')
-//             .populate('organizationId', 'name');
+        // Update invoice
+        const updatedInvoice = await InvoiceAccountModel.findByIdAndUpdate(
+            id,
+            updateData,
+            { new: true, runValidators: true }
+        )
 
-//         res.status(200).json({
-//             ok: true,
-//             message: "Invoice updated successfully",
-//             data: updatedInvoice
-//         });
-//     } catch (error: any) {
-//         console.error("Error updating invoice:", error);
-//         res.status(500).json({
-//             ok: false,
-//             message: "Error updating invoice",
-//             error: error.message
-//         });
-//     }
-// };
+
+        if (!updatedInvoice) {
+            return res.status(404).json({ message: "invoice not updated", ok: false })
+        }
+
+
+
+        // Generate PDF
+        const pdfData:any = {
+            ...updatedInvoice.toObject(),
+            companyLogo: COMPANY_LOGO, // Add your company logo URL
+            companyName: 'Vertical Living' // Add your company name
+        };
+
+        const pdfBytes = await generateInvoiceAccBillPdf(pdfData);
+
+        const fileName = `invoice-${updatedInvoice.invoiceNumber}-${Date.now()}.pdf`;
+
+        const uploadResult = await uploadToS3(pdfBytes, fileName);
+
+        // Update invoice with PDF data
+        updatedInvoice.pdfData = {
+            type: "pdf",
+            url: uploadResult.Location,
+            originalName: fileName,
+            uploadedAt: new Date(),
+        };
+
+        await updatedInvoice.save();
+
+
+        await invalidateInvoiceCache(String(updatedInvoice.organizationId), String(updatedInvoice.customerId), id);
+
+
+        res.status(200).json({
+            ok: true,
+            message: "Invoice updated successfully",
+            data: updatedInvoice
+        });
+    } catch (error: any) {
+        console.error("Error updating invoice:", error);
+        res.status(500).json({
+            ok: false,
+            message: "Error updating invoice",
+            error: error.message
+        });
+    }
+};
 
 // DELETE Invoice
 

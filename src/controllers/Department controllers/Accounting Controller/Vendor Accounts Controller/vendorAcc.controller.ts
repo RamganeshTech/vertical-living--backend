@@ -7,6 +7,7 @@ import { RoleBasedRequest } from '../../../../types/types';
 import { validateCreateVendor, validateUpdateVendor } from './vendorAccountsValidation';
 import VendorAccountModel from '../../../../models/Department Models/Accounting Model/vendor.model';
 import { validateMongoId } from '../Customer Accounts Controllers/customerAccoutsValidation';
+import { getCoordinatesFromGoogleMapUrl } from '../../../../utils/common features/utils';
 
 export const createVendor = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
@@ -51,17 +52,52 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
             }
         }
 
+        const uploadedFiles = req.files as { [fieldname: string]: (Express.Multer.File & { location: string })[] };
+
+
+        let mainImage: any | null = null;
+
+
+
+        if (uploadedFiles && uploadedFiles['mainImage'] && uploadedFiles['mainImage'][0]) {
+            const file = uploadedFiles['mainImage'][0];
+
+            // YOU MUST SAVE THIS AS AN OBJECT, NOT A STRING
+            mainImage = {
+                type: "image",
+                url: file.location, // This is the S3 URL
+                originalName: file.originalname,
+                uploadedAt: new Date()
+            };
+        }
+
+
+
+
         // Handle uploaded files (if any)
         const documents: any[] = [];
 
-        if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-            const files = req.files as (Express.Multer.File & { location: string })[];
+        // if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+        //     const files = req.files as (Express.Multer.File & { location: string })[];
 
-            files.forEach((file) => {
-                // const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
-                // const documentType = fileExtension === 'pdf' ? 'pdf' : 'image';
+        //     files.forEach((file) => {
+        //         // const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+        //         // const documentType = fileExtension === 'pdf' ? 'pdf' : 'image';
+        //         const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
+
+        //         documents.push({
+        //             type: type,
+        //             url: file.location,
+        //             originalName: file.originalname,
+        //             uploadedAt: new Date()
+        //         });
+        //     });
+        // }
+
+
+        if (uploadedFiles && uploadedFiles['files'] && uploadedFiles['files'].length > 0) {
+            uploadedFiles['files'].forEach((file) => {
                 const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
-
                 documents.push({
                     type: type,
                     url: file.location,
@@ -71,8 +107,17 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
             });
         }
 
+        if (req.body.location && req.body.location.mapUrl) {
+            const { lat, lng } = await getCoordinatesFromGoogleMapUrl(req.body.location.mapUrl);
+
+            // Save the extracted coords
+            req.body.location.latitude = lat;
+            req.body.location.longitude = lng;
+        }
+
+
         // Create customer
-        const vendor = new VendorAccountModel({...req.body, documents});
+        const vendor = new VendorAccountModel({ ...req.body, documents, mainImage });
         await vendor.save();
 
         // Invalidate cache for the organiziaotns's customer list
@@ -112,8 +157,8 @@ export const updateVendor = async (req: RoleBasedRequest, res: Response): Promis
         }
 
 
-        if(req.body?.documents){
-             return res.status(400).json({
+        if (req.body?.documents) {
+            return res.status(400).json({
                 ok: false,
                 message: 'Document field is not allowed'
             });
@@ -154,6 +199,16 @@ export const updateVendor = async (req: RoleBasedRequest, res: Response): Promis
             }
         }
 
+
+        if (req.body.location && req.body.location.mapUrl) {
+            const { lat, lng } = await getCoordinatesFromGoogleMapUrl(req.body.location.mapUrl);
+
+            // Save the extracted coords
+            req.body.location.latitude = lat;
+            req.body.location.longitude = lng;
+        }
+
+
         // Update customer
         const updatedVendor = await VendorAccountModel.findByIdAndUpdate(
             id,
@@ -190,10 +245,82 @@ export const updateVendor = async (req: RoleBasedRequest, res: Response): Promis
 };
 
 
-export const updateVendorDoc= async (req: RoleBasedRequest, res: Response): Promise<any> => {
+
+export const updateVendorMainImage = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { vendorId } = req.params;
+
+        // 1. Check if file exists
+        // Note: Since we use imageUploadToS3.single('mainImage'), the file is in req.file (not req.files)
+        const file = req.file as (Express.Multer.File & { location: string });
+
+        if (!file) {
+            return res.status(400).json({
+                ok: false,
+                message: 'No image file provided'
+            });
+        }
+
+
+        const mainImageObject = {
+            url: file.location,
+            originalName: file.originalname,
+            type: "image",
+            uploadedAt: new Date()
+        };
+
+
+
+        // 2. Update Database
+        const updatedVendor = await VendorAccountModel.findByIdAndUpdate(
+            vendorId,
+            { mainImage: mainImageObject },
+            { new: true } // Return updated doc
+        );
+
+        if (!updatedVendor) {
+            return res.status(404).json({
+                ok: false,
+                message: 'Vendor not found'
+            });
+        }
+
+        const cacheKey = `vendor:${updatedVendor._id}`;
+        await redisClient.del(cacheKey);
+
+        // const cachePattern = `customers:organizationId:${existingVendor.organizationId}:*`;
+        const cachePattern = `vendors:organizationId:${req.body.organizationId}*`;
+
+        const keys = await redisClient.keys(cachePattern);
+        if (keys.length > 0) {
+            await redisClient.del(keys);
+        }
+
+        return res.status(200).json({
+            ok: true,
+            message: 'Shop image updated successfully',
+            data: {
+                mainImage: updatedVendor.mainImage
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Error updating shop image:', error);
+        return res.status(500).json({
+            ok: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+};
+
+
+
+
+export const updateVendorDoc = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
 
-          const { id } = req.params;
+        const { id } = req.params;
 
         // Validate vendor ID
         if (!validateMongoId(id)) {
@@ -204,7 +331,7 @@ export const updateVendorDoc= async (req: RoleBasedRequest, res: Response): Prom
         }
 
 
-         const documents: any[] = [];
+        const documents: any[] = [];
 
         if (req.files && Array.isArray(req.files) && req.files.length > 0) {
             const files = req.files as (Express.Multer.File & { location: string })[];
@@ -222,21 +349,21 @@ export const updateVendorDoc= async (req: RoleBasedRequest, res: Response): Prom
                 });
             });
         }
-        
-          // Update Vendor - push documents to array
+
+        // Update Vendor - push documents to array
         const updatedVendor = await VendorAccountModel.findByIdAndUpdate(
             id,
             { $push: { documents: { $each: documents } } }, // Use $each to push multiple documents
             { new: true, runValidators: true }
         );
 
-        if(!updatedVendor){
-             return res.status(400).json({
-            ok: false,
-            message: 'Vendor not found',
-        });
+        if (!updatedVendor) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Vendor not found',
+            });
         }
-          // Invalidate cache
+        // Invalidate cache
         const cacheKey = `vendor:${id}`;
         await redisClient.del(cacheKey);
 
@@ -341,8 +468,8 @@ export const getvendor = async (req: RoleBasedRequest, res: Response): Promise<a
 
         // Fetch from database
         const vendor = await VendorAccountModel.findById(id)
-            // .populate('projectId', 'name')
-            // .populate('clientId', 'name');
+        // .populate('projectId', 'name')
+        // .populate('clientId', 'name');
 
         if (!vendor) {
             return res.status(404).json({
@@ -386,8 +513,8 @@ export const getAllvendors = async (req: RoleBasedRequest, res: Response): Promi
             // firstName,
             // lastName,
             // vendorType,
-             createdFromDate ,
-              createdToDate,
+            createdFromDate,
+            createdToDate,
             search,
             sortBy = 'createdAt',
             sortOrder = 'desc'
@@ -441,7 +568,7 @@ export const getAllvendors = async (req: RoleBasedRequest, res: Response): Promi
         // }
 
 
-        
+
         if (createdFromDate || createdToDate) {
             const filterRange: any = {};
 
@@ -572,12 +699,12 @@ export const getAllvendors = async (req: RoleBasedRequest, res: Response): Promi
 
 
 export const getAllvendorDropDown = async (req: Request, res: Response): Promise<any> => {
- try {
+    try {
         const {
             organizationId
         } = req.query;
 
-       
+
         // Validate organizationId if provided
         if (organizationId && !validateMongoId(organizationId as string)) {
             return res.status(400).json({
@@ -586,7 +713,7 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
             });
         }
 
-       
+
 
         // Build filter object
         const filter: any = {};
@@ -595,7 +722,7 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
             filter.organizationId = organizationId;
         }
 
-       
+
         // Create cache key based on filters
         const cacheKey = `vendors:dropdown:organizationId:${organizationId || 'all'}`;
 
@@ -606,32 +733,32 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
             return res.status(200).json({
                 ok: true,
                 message: 'vendors fetched okfully (from cache)',
-                data:JSON.parse(cachedData),
+                data: JSON.parse(cachedData),
             });
         }
 
-     
+
         // Fetch vendors with pagination
         const vendors = await VendorAccountModel.find(filter).select('_id firstName lastName email') // Only select needed fields
             .lean();
 
-        let modifiedvendor = vendors.map(vendor=> {
+        let modifiedvendor = vendors.map(vendor => {
             return {
-                _id: vendor._id, 
+                _id: vendor._id,
                 vendorName: `${vendor.firstName} ${vendor.lastName}`,
                 email: vendor.email
             }
         })
 
 
-         // Cache the result
+        // Cache the result
         await redisClient.set(cacheKey, JSON.stringify(modifiedvendor), { EX: 60 * 10 }); // 10 min
 
-        
+
         return res.status(200).json({
             ok: true,
             message: 'vendors fetched okfully',
-            data:modifiedvendor
+            data: modifiedvendor
         });
 
     } catch (error: any) {

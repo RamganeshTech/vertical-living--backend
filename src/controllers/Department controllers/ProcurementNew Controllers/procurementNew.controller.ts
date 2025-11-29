@@ -3,6 +3,7 @@ import ProcurementModelNew from "../../../models/Department Models/ProcurementNe
 import { generateProcurementPdf } from "./procurementPdf";
 import { createShipmentUtil } from "../Logistics Controllers/logistics.controller";
 import { createAccountingEntry } from "../Accounting Controller/accounting.controller";
+import { decryptCryptoToken, encryptCryptoToken } from "../../../utils/common features/utils";
 
 export const getProcurementNewDetails = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -10,10 +11,10 @@ export const getProcurementNewDetails = async (req: Request, res: Response): Pro
 
         const filters: any = { organizationId };
 
-  if (projectId) filters.projectId = projectId; // ✅ properly assign
-  // 
-  
-  // const redisMainKey = `stage:OrderMaterialHistoryModel:${projectId}`
+        if (projectId) filters.projectId = projectId; // ✅ properly assign
+        // 
+
+        // const redisMainKey = `stage:OrderMaterialHistoryModel:${projectId}`
         // // await redisClient.del(redisMainKey)
         // const cachedData = await redisClient.get(redisMainKey)
 
@@ -21,7 +22,7 @@ export const getProcurementNewDetails = async (req: Request, res: Response): Pro
         //     return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
         // }
 
-        const doc = await ProcurementModelNew.find(filters).sort({createdAt : -1});
+        const doc = await ProcurementModelNew.find(filters).sort({ createdAt: -1 });
         if (!doc) return res.status(200).json({ ok: true, message: "Data not found", data: [] });
 
         // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
@@ -79,7 +80,7 @@ export const updateProcurementDeliveryLocationDetails = async (req: Request, res
         // }
 
 
-         if(phoneNumber?.trim()  && phoneNumber.length !== 10){
+        if (phoneNumber?.trim() && phoneNumber.length !== 10) {
             return res.status(400).json({ ok: false, message: "Phone Number should be 10 digits" });
         }
 
@@ -126,7 +127,7 @@ export const updateProcurementShopDetails = async (req: Request, res: Response):
         // }
 
 
-        if(phoneNumber?.trim()  && phoneNumber.length !== 10){
+        if (phoneNumber?.trim() && phoneNumber.length !== 10) {
             return res.status(400).json({ ok: false, message: "Phone Number should be 10 digits" });
         }
 
@@ -134,7 +135,7 @@ export const updateProcurementShopDetails = async (req: Request, res: Response):
             id,
             {
                 $set: {
-                    shopDetails: { shopName, address, contactPerson, phoneNumber , upiId },
+                    shopDetails: { shopName, address, contactPerson, phoneNumber, upiId },
                 },
             },
             { new: true, upsert: true }
@@ -277,6 +278,105 @@ export const deleteProcurementPdf = async (req: Request, res: Response): Promise
 };
 
 
+
+//  public usage
+export const generateSecureProcurementLink = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { orderId, itemId } = req.params;
+
+        const token = encryptCryptoToken({
+            orderId,
+            itemId,
+            createdAt: Date.now() // for expiry checks later if needed
+        });
+
+        return res.json({
+            ok: true,
+            message: "Secure link generated",
+            data: { token }
+        });
+    } catch (err: any) {
+        return res.status(500).json({ ok: false, message: err.message });
+    }
+};
+
+export const updateProcurementItemRate = async (req: Request, res: Response): Promise<any> => {
+    try {
+        // const { orderId, itemId } = req.params;
+        const { token } = req.params;
+
+        const { rate } = req.body;
+
+        if (!rate || rate < 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Rate must be a valid positive number"
+            });
+        }
+
+
+        const decoded = decryptCryptoToken(token);
+        const { orderId, itemId } = decoded;
+
+
+        const order = await ProcurementModelNew.findById(orderId);
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Purchase order not found"
+            });
+        }
+
+        const item = (order.selectedUnits as any).id(itemId);
+        if (!item) {
+            return res.status(404).json({
+                success: false,
+                message: "Item not found in selectedUnits"
+            });
+        }
+
+        // Prevent update if already filled
+        if (item.rate && item.rate > 0) {
+            return res.status(403).json({
+                success: false,
+                message: "Rate already submitted — cannot update again"
+            });
+        }
+
+        // Update rate & total cost
+        item.rate = rate;
+        const qty = item.quantity || 0;
+        item.totalCost = qty * rate;
+
+        // Recalculate order total cost
+        order.totalCost = order.selectedUnits.reduce(
+            (sum, u) => sum + (u.totalCost || 0), 0
+        );
+
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Item rate updated successfully",
+            data: {
+                item,
+                updatedOrderTotalCost: order.totalCost
+            }
+        });
+
+    } catch (error:any) {
+        console.error("Error updating procurement item rate:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message
+        });
+    }
+};
+
+
+
+
 export const deleteprocurement = async (req: Request, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
@@ -284,7 +384,7 @@ export const deleteprocurement = async (req: Request, res: Response): Promise<an
         if (!id) {
             return res.status(400).json({ ok: false, message: "Invalid id" });
         }
-console.log("pricrement deelted", id )
+        console.log("pricrement deelted", id)
         const shipment = await ProcurementModelNew.findByIdAndDelete(id);
 
         if (!shipment) {
@@ -333,7 +433,7 @@ export const syncLogisticsDept = async (req: Request, res: Response): Promise<an
                 contactPerson: procurement?.shopDetails?.contactPerson || null,
                 contactPhone: procurement?.shopDetails?.phoneNumber || null
             },
-            destination:{
+            destination: {
                 address: procurement?.deliveryLocationDetails?.address || null,
                 contactPerson: procurement?.deliveryLocationDetails?.siteSupervisor || null,
                 contactPhone: procurement?.deliveryLocationDetails?.phoneNumber || null
@@ -364,13 +464,13 @@ export const SyncAccountingFromProcurement = async (req: Request, res: Response)
             return res.status(400).json({ ok: false, message: "OrganizationId and  ProjectId is required" });
         }
 
-        const doc = await createAccountingEntry({
-            organizationId,
-            projectId,
-            fromDept: "procurement",
-            totalCost,
-            upiId
-        });
+            const doc = await createAccountingEntry({
+                organizationId,
+                projectId,
+                fromDept: "procurement",
+                totalCost,
+                upiId
+            });
 
         res.status(201).json({ ok: true, data: doc });
     } catch (err: any) {

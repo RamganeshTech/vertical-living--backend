@@ -8,6 +8,13 @@ export interface IUpload {
     uploadedAt?: Date;
 }
 
+export interface IVendorLocation {
+    address: string | null; // Human readable string (e.g. "123 Main St, New York")
+    latitude: number | null; // e.g. 40.7128
+    longitude: number | null; // e.g. -74.0060
+}
+
+
 export interface IVendor extends Document {
     // customerType: "business" | "individual";
     organizationId: Types.ObjectId;
@@ -34,6 +41,10 @@ export interface IVendor extends Document {
     TDS: string;
     documents?: IUpload[];
     // customerOwner?: mongoose.Types.ObjectId;
+
+    location?: IVendorLocation;
+    mainImage?: IUpload
+
 }
 
 
@@ -50,7 +61,7 @@ const VendorSchema = new Schema<IVendor>(
         clientId: { type: Schema.Types.ObjectId, ref: "ClientModel" },
         //   salutation: { type: String },
         firstName: { type: String, default: null },
-        lastName: { type: String, default: null },
+        // lastName: { type: String, default: null },
 
         companyName: { type: String, default: null },
         // displayName: { type: String , default: null},
@@ -74,6 +85,13 @@ const VendorSchema = new Schema<IVendor>(
         //   type: Schema.Types.ObjectId,
         //   ref: "User",
         // },
+        location: {
+            address: { type: String, default: null },
+            mapUrl: { type: String }, // Store the raw link
+            latitude: { type: Number, default: null },
+            longitude: { type: Number, default: null }
+        },
+        mainImage: { type: fileSchema, default: null }
     },
     { timestamps: true }
 );

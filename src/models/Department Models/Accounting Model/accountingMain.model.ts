@@ -16,6 +16,7 @@ export interface IAccounting extends Document {
   status: "approved" | "paid" | "cancelled" | "overdue" | "pending";
   dueDate: Date | null;
   notes: string;
+  items: IAccountsItems[]
   // approvedAt?: Date;
   paidAt: Date | null;
   installMents?: IInstallmentAcc[]
@@ -32,9 +33,18 @@ export interface IInstallmentAcc {
   paymentId: string,
   transactionId: string
   paidAt: Date | null
-  failureReason:string | null
+  failureReason: string | null
   fees: number | null
-  tax:number| null
+  tax: number | null
+}
+
+
+export interface IAccountsItems extends Omit<IInstallmentAcc, "amount"> {
+  itemName: string;
+  quantity: number;
+  rate: number;
+  unit: string;
+  totalCost: number; // quantity * rate
 }
 
 const InstallmentAccSchema = new Schema<IInstallmentAcc>({
@@ -51,15 +61,36 @@ const InstallmentAccSchema = new Schema<IInstallmentAcc>({
 }, { _id: true })
 
 
+
+
+const AccountItemsSchema = new Schema<IAccountsItems>({
+  itemName: { type: String, },
+  quantity: { type: Number, default: 0 },
+  rate: { type: Number, },
+  unit: { type: String, default: "" },
+  totalCost: { type: Number, }, // quantity * rate
+  dueDate: { type: Date, default: null },
+  status: { type: String, default: null },
+  orderId: { type: String, default: null }, // Razorpay order/fund_account_id
+  paymentId: { type: String, default: null }, // Razorpay payout_id
+  transactionId: { type: String, default: null }, // UTR number
+  paidAt: { type: Date, default: null },
+  failureReason: { type: String, default: null },
+  fees: { type: Number, default: null },
+  tax: { type: Number, default: null }
+},
+  { _id: true })
+
 const accountingSchema = new Schema<IAccounting>({
   transactionNumber: {
     type: String,
     default: null
   },
   subContractId: { type: Schema.Types.ObjectId, ref: "SubContractModel", default: null },
-  organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
+  organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel", default: null },
   projectId: {
     type: mongoose.Schema.Types.ObjectId,
+    default: null,
     ref: 'ProjectModel'
   },
   transactionType: {
@@ -69,6 +100,7 @@ const accountingSchema = new Schema<IAccounting>({
   },
   fromDept: { type: String, enum: ["logistics", "hr", "procurement", "factory", null], default: null },
   upiId: { type: String, default: null },
+  items: { type: [AccountItemsSchema], default: null },
   totalAmount: {
     amount: {
       type: Number,

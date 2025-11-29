@@ -1,11 +1,13 @@
 import { PDFDocument, rgb, PDFFont, PDFImage, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { Types } from 'mongoose';
+import { formatDate } from '../../../stage controllers/workReport Controller/imageWorkReport';
 
 // Types for invoice data
 interface InvoiceItem {
-    description: string;
+    itemName: string;
     quantity: number;
+        unit: string; // Add this line
     rate: number;
     totalCost: number;
 }
@@ -36,7 +38,7 @@ export interface PdfInvoiceData {
 }
 
 // Professional color scheme
-const COLORS = {
+export const COLORS = {
     PRIMARY: rgb(0.1, 0.4, 0.9),     // Professional blue
     SECONDARY: rgb(0.2, 0.2, 0.2),   // Dark gray
     ACCENT: rgb(0.9, 0.3, 0.1),      // Orange for highlights
@@ -55,12 +57,9 @@ export async function generateInvoiceAccBillPdf(invoiceData: PdfInvoiceData): Pr
     const pdfDoc = await PDFDocument.create();
     pdfDoc.registerFontkit(fontkit);
 
-    // Embed fonts - CORRECTED WAY
+    // Embed fonts
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    // const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    // const normalFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
 
     // Add a page
     const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
@@ -80,6 +79,11 @@ export async function generateInvoiceAccBillPdf(invoiceData: PdfInvoiceData): Pr
     // Draw totals section
     yPosition = drawTotalsSection(page, invoiceData, yPosition, width, helveticaBoldFont, helveticaFont);
 
+    // Draw remarks section if remarks exist
+    if (invoiceData.subject) {
+        yPosition = drawRemarksSection(page, invoiceData, yPosition, width, helveticaBoldFont, helveticaFont);
+    }
+
     // Draw notes and terms if they exist
     if (invoiceData.customerNotes || invoiceData.termsAndConditions) {
         yPosition = drawNotesAndTerms(page, invoiceData, yPosition, width, helveticaBoldFont, helveticaFont);
@@ -89,6 +93,38 @@ export async function generateInvoiceAccBillPdf(invoiceData: PdfInvoiceData): Pr
     drawFooter(page, invoiceData, width, helveticaFont);
 
     return await pdfDoc.save();
+}
+
+
+
+/**
+ * Split text into multiple lines based on max width
+ */
+function splitTextIntoLines(text: string, font: PDFFont, fontSize: number, maxWidth: number): string[] {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        const width = font.widthOfTextAtSize(testLine, fontSize);
+        
+        if (width <= maxWidth) {
+            currentLine = testLine;
+        } else {
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+            currentLine = word;
+        }
+    }
+    
+    if (currentLine) {
+        lines.push(currentLine);
+    }
+    
+    return lines;
 }
 
 /**
@@ -222,11 +258,11 @@ function drawInvoiceInfoSection(
     // Right column - Invoice details
     const details = [
         { label: 'Invoice Number', value: invoiceData.invoiceNumber },
-        { label: 'Invoice Date', value: new Date(invoiceData.invoiceDate).toLocaleDateString() },
-        { label: 'Due Date', value: new Date(invoiceData.dueDate).toLocaleDateString() },
+        { label: 'Invoice Date', value: formatDate(invoiceData.invoiceDate)},
+        { label: 'Due Date', value: formatDate(invoiceData.dueDate)},
         { label: 'Order Number', value: invoiceData.orderNumber },
         { label: 'Sales Person', value: invoiceData.salesPerson },
-        { label: 'Subject', value: invoiceData.subject },
+        // { label: 'Remaks', value: invoiceData.subject },
         { label: 'Terms', value: invoiceData.terms },
     ];
 
@@ -270,12 +306,13 @@ function drawItemsTable(
     const tableTop = yPosition;
     const tableLeft = 50;
     const tableWidth = width - 100;
-    const columnWidths = [tableWidth * 0.5, tableWidth * 0.15, tableWidth * 0.15, tableWidth * 0.2];
+    // Updated column widths for serial number and multi-line text
+    const columnWidths = [tableWidth * 0.08, tableWidth * 0.37, tableWidth * 0.1, tableWidth * 0.1, tableWidth * 0.15, tableWidth * 0.2];
     const rowHeight = 25;
     const headerHeight = 30;
 
-    // Table headers
-    const headers = ['Description', 'Quantity', 'Rate', 'Total'];
+    // Updated table headers with serial number
+    const headers = ['S.No', 'Item Name', 'Qty', 'Unit', 'Rate', 'Total'];
     let currentX = tableLeft;
 
     // Draw table header background
@@ -290,11 +327,11 @@ function drawItemsTable(
     // Draw header text
     headers.forEach((header, index) => {
         page.drawText(header, {
-            x: currentX + 10,
+            x: currentX + 5,
             y: tableTop - headerHeight + 10,
-            size: 12,
+            size: 10,
             font: boldFont,
-            color: rgb(1, 1, 1), // White text
+            color: rgb(1, 1, 1),
         });
         currentX += columnWidths[index];
     });
@@ -317,47 +354,102 @@ function drawItemsTable(
 
         currentX = tableLeft;
 
-        // Description
-        page.drawText(item.description || 'No description', {
-            x: currentX + 10,
+        // Serial Number
+        page.drawText((index + 1).toString(), {
+            x: currentX + 8,
             y: currentY - 20,
-            size: 10,
+            size: 9,
             font: regularFont,
             color: COLORS.TEXT,
-            maxWidth: columnWidths[0] - 20,
         });
         currentX += columnWidths[0];
 
-        // Quantity
-        page.drawText((item.quantity || 0).toString(), {
-            x: currentX + 10,
-            y: currentY - 20,
-            size: 10,
-            font: regularFont,
-            color: COLORS.TEXT,
+        // Item Name with multi-line support
+        const itemName = item.itemName || 'No item name';
+        const maxItemNameWidth = columnWidths[1] - 10;
+        
+        // Split text into multiple lines if needed
+        const lines = splitTextIntoLines(itemName, regularFont, 9, maxItemNameWidth);
+        lines.forEach((line, lineIndex) => {
+            page.drawText(line, {
+                x: currentX + 5,
+                y: currentY - 20 - (lineIndex * 12),
+                size: 9,
+                font: regularFont,
+                color: COLORS.TEXT,
+            });
         });
+        
+        // Adjust row height based on number of lines
+        const itemRowHeight = Math.max(rowHeight, lines.length * 12);
         currentX += columnWidths[1];
 
-        // Rate
-        page.drawText(`₹${(item.rate || 0 ).toFixed(2)}`, {
-            x: currentX + 10,
+        // Quantity
+        page.drawText((item.quantity || 0).toString(), {
+            x: currentX + 5,
             y: currentY - 20,
-            size: 10,
+            size: 9,
             font: regularFont,
             color: COLORS.TEXT,
         });
         currentX += columnWidths[2];
 
-        // Total
-        page.drawText(`₹${(item.totalCost || 0).toFixed(2)}`, {
-            x: currentX + 10,
+        // Unit
+        page.drawText(item.unit || '-', {
+            x: currentX + 5,
             y: currentY - 20,
-            size: 10,
+            size: 9,
+            font: regularFont,
+            color: COLORS.TEXT,
+        });
+        currentX += columnWidths[3];
+
+        // Rate (without INR prefix)
+        page.drawText((item.rate || 0).toLocaleString('en-IN', { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+        }), {
+            x: currentX + 5,
+            y: currentY - 20,
+            size: 9,
+            font: regularFont,
+            color: COLORS.TEXT,
+        });
+        currentX += columnWidths[4];
+
+        // Total (without INR prefix)
+        page.drawText((item.totalCost || 0).toLocaleString('en-IN', { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+        }), {
+            x: currentX + 5,
+            y: currentY - 20,
+            size: 9,
             font: regularFont,
             color: COLORS.TEXT,
         });
 
-        currentY -= rowHeight;
+        currentY -= itemRowHeight;
+
+        // Check if we need a new page
+        if (currentY < 100) {
+            const newPage = page.doc.addPage([595.28, 841.89]);
+            currentY = 841.89 - 50;
+            
+            // Redraw table headers on new page
+            currentX = tableLeft;
+            headers.forEach((header, idx) => {
+                newPage.drawText(header, {
+                    x: currentX + 5,
+                    y: currentY - 10,
+                    size: 10,
+                    font: boldFont,
+                    color: rgb(1, 1, 1),
+                });
+                currentX += columnWidths[idx];
+            });
+            currentY -= 30;
+        }
     });
 
     // Draw table borders
@@ -387,51 +479,55 @@ function drawTotalsSection(
     const totalsLeft = width - 200;
     let currentY = yPosition;
 
-    // Subtotal
-    drawTotalLine(page, 'Subtotal', `$${invoiceData.totalAmount.toFixed(2)}`, totalsLeft, currentY, regularFont);
+    // Subtotal in bold
+    drawTotalLine(page, 'Subtotal', invoiceData.totalAmount.toLocaleString('en-IN', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+    }), totalsLeft, currentY, boldFont);
     currentY -= 25;
 
-    // Discount
+    // Discount in bold
     if (invoiceData.discountAmount && invoiceData.discountAmount > 0) {
         const discountText = invoiceData.discountPercentage
             ? `Discount (${invoiceData.discountPercentage}%)`
             : 'Discount';
-        drawTotalLine(page, discountText, `-$${invoiceData.discountAmount.toFixed(2)}`, totalsLeft, currentY, regularFont);
+        drawTotalLine(page, discountText, `-${invoiceData.discountAmount.toLocaleString('en-IN', { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+        })}`, totalsLeft, currentY, boldFont);
         currentY -= 25;
     }
 
-    // Tax
+    // Tax in bold
     if (invoiceData.taxAmount && invoiceData.taxAmount > 0) {
         const taxText = invoiceData.taxPercentage
             ? `Tax (${invoiceData.taxPercentage}%)`
             : 'Tax';
-        drawTotalLine(page, taxText, `$${invoiceData.taxAmount.toFixed(2)}`, totalsLeft, currentY, regularFont);
+        drawTotalLine(page, taxText, invoiceData.taxAmount.toLocaleString('en-IN', { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+        }), totalsLeft, currentY, boldFont);
         currentY -= 25;
     }
 
-    // Grand Total
-    page.drawRectangle({
-        x: totalsLeft - 10,
-        y: currentY - 30,
-        width: 160,
-        height: 35,
-        color: COLORS.PRIMARY,
-    });
-
+    // Grand Total (no background color, just bold)
     page.drawText('Grand Total', {
         x: totalsLeft,
         y: currentY - 15,
         size: 14,
         font: boldFont,
-        color: rgb(1, 1, 1),
+        color: COLORS.PRIMARY,
     });
 
-    page.drawText(`$${invoiceData.grandTotal.toFixed(2)}`, {
+    page.drawText(`INR ${invoiceData.grandTotal.toLocaleString('en-IN', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+    })}`, {
         x: totalsLeft + 100,
         y: currentY - 15,
         size: 14,
         font: boldFont,
-        color: rgb(1, 1, 1),
+        color: COLORS.PRIMARY,
     });
 
     return currentY - 50;
@@ -439,8 +535,7 @@ function drawTotalsSection(
 
 /**
  * Helper function to draw total lines
- */
-function drawTotalLine(
+ */function drawTotalLine(
     page: any,
     label: string,
     value: string,
@@ -448,6 +543,12 @@ function drawTotalLine(
     y: number,
     font: PDFFont
 ): void {
+    // Check if we need new page for totals
+    if (y < 100) {
+        const newPage = page.doc.addPage([595.28, 841.89]);
+        y = 841.89 - 100;
+    }
+
     page.drawText(label, {
         x: x,
         y: y,
@@ -464,6 +565,65 @@ function drawTotalLine(
         color: COLORS.TEXT,
     });
 }
+
+
+
+
+/**
+ * Draw remarks section after totals
+ */
+function drawRemarksSection(
+    page: any,
+    invoiceData: PdfInvoiceData,
+    yPosition: number,
+    width: number,
+    boldFont: PDFFont,
+    regularFont: PDFFont
+): number {
+    if (!invoiceData.subject) return yPosition;
+    
+    let currentY = yPosition;
+    
+    // Remarks title in bold
+    page.drawText('Remarks:', {
+        x: 50,
+        y: currentY,
+        size: 12,
+        font: boldFont,
+        color: COLORS.TEXT,
+    });
+
+    currentY -= 20;
+
+    // Remarks content with multi-line support
+    const remarks = invoiceData.subject;
+    const maxRemarksWidth = width - 100;
+    
+    // Split remarks into multiple lines
+    const lines = splitTextIntoLines(remarks, regularFont, 10, maxRemarksWidth);
+    
+    lines.forEach((line, index) => {
+        // Check if we need a new page
+        if (currentY < 100) {
+            const newPage = page.doc.addPage([595.28, 841.89]);
+            currentY = 841.89 - 50;
+        }
+        
+        page.drawText(line, {
+            x: 50,
+            y: currentY,
+            size: 10,
+            font: regularFont,
+            color: COLORS.LIGHT_TEXT,
+        });
+        
+        currentY -= 15;
+    });
+
+    return currentY - 20;
+}
+
+
 
 /**
  * Draw notes and terms section
@@ -527,8 +687,7 @@ function drawNotesAndTerms(
 
 /**
  * Draw footer
- */
-function drawFooter(
+ */function drawFooter(
     page: any,
     invoiceData: PdfInvoiceData,
     width: number,
@@ -545,19 +704,6 @@ function drawFooter(
         color: COLORS.LIGHT_TEXT,
     });
 
-    page.drawText(`Invoice #${invoiceData.invoiceNumber}`, {
-        x: 50,
-        y: 30,
-        size: 8,
-        font: font,
-        color: COLORS.LIGHT_TEXT,
-    });
-
-    page.drawText(`Generated on ${new Date().toLocaleDateString()}`, {
-        x: width - 150,
-        y: 30,
-        size: 8,
-        font: font,
-        color: COLORS.LIGHT_TEXT,
-    });
+    // Removed invoice number and generated date from footer
 }
+
