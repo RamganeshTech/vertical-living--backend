@@ -68,19 +68,51 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
         }
 
 
-        if (endDate && startDate > endDate) {
-            res.status(400).json({ message: "end date should be after start date" })
-            return
+        // Convert startDate always
+        const start = new Date(startDate);
+
+        // Prepare dueDate and endDate logic
+        let end = endDate ? new Date(endDate) : null;
+        let due = dueDate ? new Date(dueDate) : null;
+
+        // If dueDate missing → auto set +15 days
+        if (!due) {
+            due = new Date(start.getTime() + 15 * 24 * 60 * 60 * 1000);
         }
 
-        if (dueDate && startDate > dueDate) {
-            res.status(400).json({ message: "Due date should be after start date" })
-            return
+        // Validations
+        if (end && end < start) {
+            return res.status(400).json({
+                ok: false,
+                message: "End date must be after start date"
+            });
         }
 
+        if (due < start) {
+            return res.status(400).json({
+                ok: false,
+                message: "Due date must be after start date"
+            });
+        }
+
+        // Duration always from dueDate
         const durationInDays = Math.ceil(
-            (new Date(dueDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)
+            (due.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
         );
+
+        // if (endDate && startDate > endDate) {
+        //     res.status(400).json({ message: "end date should be after start date" })
+        //     return
+        // }
+
+        // if (dueDate && startDate > dueDate) {
+        //     res.status(400).json({ message: "Due date should be after start date" })
+        //     return
+        // }
+
+        // const durationInDays = Math.ceil(
+        //     (new Date(dueDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)
+        // );
 
 
         // Optional: validate priority
@@ -116,9 +148,9 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
                 projectInformation: {
                     owner: user?.role === "owner" ? user?._id : user?.ownerId,
                     tags: tags || [],
-                    startDate,
-                    endDate,
-                    dueDate,
+                    startDate: start,
+                    endDate: end ? end : null,   // 👈 store null if not provided
+                    dueDate: due,
                     duration: durationInDays,
                     priority,
                     // category: category || "residential",
@@ -204,7 +236,7 @@ export const getProjectUtil = async (organizationId: string) => {
         await redisClient.set(cacheKey, JSON.stringify(projects), { EX: 300 }); // expires in 5 mins (put in secondsj)
         return { message: "Projects retrived successfully", data: projects, ok: true }
     }
-    catch (error:any) {
+    catch (error: any) {
         console.log("error form getProjects", error)
         throw error
     }

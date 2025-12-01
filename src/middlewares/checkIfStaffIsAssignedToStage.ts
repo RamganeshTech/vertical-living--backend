@@ -18,6 +18,9 @@ export const checkIfStaffIsAssignedToStage = (
             const stageName = model.modelName; // Get model name like "MaterialRoomConfirmation"
             const redisKey = `stage:${stageName}:${projectId}`;
 
+            console.log("userId", userId)
+            console.log("userRole", userRole)
+
             let stageData: any;
             // await redisClient.del(redisKey)
             const skipRedis = stageName === "CostEstimation" || stageName === "PaymentConfirmationModel";
@@ -44,20 +47,28 @@ export const checkIfStaffIsAssignedToStage = (
                     return res.status(404).json({ message: "Stage data not found", ok: false });
                 }
             }
-            // console.log("assingeed to id is working")
-            // console.log("stageData", stageData)
+            console.log("assingeed to id is working")
+            console.log("stageData", stageData)
 
-            if (stageData.assignedTo) {
+            if (stageData?.assignedTo) {
+
                 const assignedToID = stageData?.["assignedTo"]._id;
 
-                // console.log("assignedTo", assignedToID)
+                console.log("assignedTo 222222222222", assignedToID)
 
                 if (!assignedToID || assignedToID.toString() !== userId) {
                     return res.status(400).json({ message: "Access denied: youre not assigned to this stage", ok: false });
                 }
+
+
+                console.log("im also getting printed here ")
+                return next();
+
             }
             else {
+                console.log("2222222 it is allowing ")
                 return next();
+
             }
 
         } catch (err) {

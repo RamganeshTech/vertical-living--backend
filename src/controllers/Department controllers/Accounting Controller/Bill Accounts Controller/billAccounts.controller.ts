@@ -1,12 +1,14 @@
 import { Request, Response } from "express";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { RoleBasedRequest } from "../../../../types/types";
 import redisClient from "../../../../config/redisClient";
 import { BillAccountModel } from "../../../../models/Department Models/Accounting Model/billAccount.model";
 import { COMPANY_LOGO, uploadToS3 } from "../../../stage controllers/ordering material controller/pdfOrderHistory.controller";
 import { generateBillAccBillPdf } from "./pdfBillAcc";
 import { AccountingModel } from "../../../../models/Department Models/Accounting Model/accountingMain.model";
-import { generateTransactionNumber } from "../accounting.controller";
+import { generateTransactionNumber, syncAccountingRecord } from "../accounting.controller";
+import { PaymentMainAccountModel } from "../../../../models/Department Models/Accounting Model/paymentMainAcc.model";
+import { createPaymentMainAccUtil } from "../PaymentMainAcc_controllers/paymentMainAcc.controller";
 
 // Helper function to generate unique bill number
 // Helper function to calculate bill totals
@@ -251,7 +253,7 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
             grandTotal: totals.grandTotal,
             notes: notes || null,
             images: mappedFiles || [],
-            isSyncedWithAccounting: false,
+            isSyncedWithAccounting: true,
             pdfData: null,
         });
 
@@ -281,6 +283,33 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
 
         await newBill.save();
 
+
+
+         // We use the utility here because it handles Generating the Unique Record ID
+        await syncAccountingRecord({
+            organizationId: newBill.organizationId,
+            projectId: newBill?.projectId || null,
+            
+            // Reference Links
+            referenceId: newBill._id,
+            referenceModel: "BillAccountModel", // Must match Schema
+            
+            // Categorization
+            deptRecordFrom: "Bill",
+
+            // Person Details
+            assoicatedPersonName: newBill.vendorName,
+            assoicatedPersonId: newBill?.vendorId || null,
+            assoicatedPersonModel: "VendorAccountModel", // Assuming this is your Vendor Model
+
+            // Financials
+            amount: newBill?.grandTotal || 0, // Utility takes care of grandTotal logic if passed
+            notes: newBill?.notes || "",
+            
+            // Defaults for Creation
+            status: "pending", 
+            paymentId: null 
+        });
 
         // Invalidate related caches
         await invalidateBillCache(organizationId, vendorId);
@@ -677,6 +706,33 @@ export const updatebill = async (req: Request, res: Response): Promise<any> => {
         await updatedbill.save();
 
 
+          // 2. UPDATE ACCOUNTS (Direct Update)
+        // We strictly avoid touching 'paymentId' or 'status' here
+        const isExiting = await AccountingModel.findOneAndUpdate(
+            {
+                referenceId: updatedbill._id,
+                referenceModel: "BillAccountModel"
+            },
+            {
+                $set: {
+                    // Update fields that might have changed in the bill
+                    amount: updatedbill.grandTotal,
+                    notes: updatedbill.notes,
+                    projectId: updatedbill?.projectId || null,
+                    assoicatedPersonName: updatedbill.vendorName,
+                    
+                    // Optional: Update person ID if vendor changed
+                    assoicatedPersonId: updatedbill?.vendorId || null,
+                    
+                    // IMPORTANT: We DO NOT include 'status' or 'paymentId' here.
+                    // Those are controlled by the Payment Controller.
+                }
+            },
+            { new: true } 
+        );
+
+
+
         // Invalidate related caches
         await invalidateBillCache((updatedbill as any).organizationId, (updatedbill as any).vendorId, id);
 
@@ -877,148 +933,191 @@ export const deleteBillImages = async (req: RoleBasedRequest, res: Response): Pr
 
 
 
-export const sendBillToAccounting = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { billId } = req.params; // We expect the Bill ID to be sent
+// export const sendBillToAccounting = async (req: Request, res: Response): Promise<any> => {
+//     try {
+//         const { billId } = req.params; // We expect the Bill ID to be sent
 
-    // 1. Validate Bill ID
-    if (!mongoose.Types.ObjectId.isValid(billId)) {
-      return res.status(400).json({
-        ok: false,
-        message: "Invalid Bill ID format"
-      });
-    }
+//         // 1. Validate Bill ID
+//         if (!mongoose.Types.ObjectId.isValid(billId)) {
+//             return res.status(400).json({
+//                 ok: false,
+//                 message: "Invalid Bill ID format"
+//             });
+//         }
 
-    // 2. Fetch the Bill
-    const bill = await BillAccountModel.findById(billId);
-    if (!bill) {
-      return res.status(404).json({
-        ok: false,
-        message: "Bill not found"
-      });
-    }
-
-
-    // 3. Prepare the Accounting Items (Mapped from Bill)
-    const accountItems = bill.items.map((item: any) => ({
-      itemName: item.itemName,
-      quantity: item.quantity,
-      rate: item.rate,
-      unit: item.unit || "",
-      totalCost: item.totalCost,
-      dueDate: bill.dueDate,
-      status: "pending",
-      orderId: "",
-      paymentId: "",
-      transactionId: "",
-      paidAt: null,
-      failureReason: "",
-      fees: null,
-      tax: null
-    }));
+//         // 2. Fetch the Bill
+//         const bill = await BillAccountModel.findById(billId);
+//         if (!bill) {
+//             return res.status(404).json({
+//                 ok: false,
+//                 message: "Bill not found"
+//             });
+//         }
 
 
+//         // 3. Prepare the Accounting Items (Mapped from Bill)
+//         const accountItems = bill.items.map((item: any) => ({
+//             itemName: item.itemName,
+//             quantity: item.quantity,
+//             rate: item.rate,
+//             unit: item.unit || "",
+//             totalCost: item.totalCost,
+//             dueDate: bill.dueDate,
+//             status: "pending",
+//             orderId: "",
+//             paymentId: "",
+//             transactionId: "",
+//             paidAt: null,
+//             failureReason: "",
+//             fees: null,
+//             tax: null
+//         }));
 
-     // 2. CHECK BY REFERENCE ID (The Robust Way)
-        let accountingEntry = null;
-        
-        if (bill.accountingRef) {
-            accountingEntry = await AccountingModel.findById(bill.accountingRef);
-        }
 
-        // If we have an entry, but it's not "pending", we shouldn't touch it automatically
-        // because money might have already moved.
-        if (accountingEntry && accountingEntry.status !== 'pending') {
-             return res.status(400).json({
+
+//         // --- CASE B: CREATE NEW ---
+
+//         const recordNumber = await generateTransactionNumber(bill.organizationId);
+
+//         const newAccountingEntry = new AccountingModel({
+//             recordNumber: recordNumber,
+//             organizationId: bill.organizationId,
+//             transactionType: 'expense',
+//             fromDept: req.body.fromDept || 'procurement',
+//             items: accountItems,
+//             totalAmount: {
+//                 amount: bill.grandTotal || 0,
+//                 taxAmount: bill.taxAmount || 0
+//             },
+//             status: 'pending',
+//             dueDate: bill.dueDate || null,
+//             notes: `Generated from Vendor Bill #${bill.billNumber}. ${bill.notes ? `Ref: ${bill.notes}` : ''}`,
+//             paidAt: null,
+//             installMents: []
+//         });
+
+//         const savedEntry = await newAccountingEntry.save();
+
+//         // --- CRITICAL: LINK BACK TO BILL ---
+//         bill.accountingRef = savedEntry._id as any;
+//         bill.isSyncedWithAccounting = true;
+//         await bill.save();
+
+//         await invalidateBillCache((bill as any).organizationId, (bill as any).vendorId, bill._id as string);
+
+
+//         return res.status(201).json({
+//             ok: true,
+//             message: "Sent to Accounting Department successfully",
+//             data: savedEntry
+//         });
+
+//     } catch (error: any) {
+//         console.error("Error sending bill to accounting:", error);
+//         return res.status(500).json({
+//             ok: false,
+//             message: "Error processing request",
+//             error: error.message
+//         });
+//     }
+// }
+
+
+
+//  SYNC TO PAYMENT MAIN
+
+export const sendBillToPayment = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { billId } = req.params; // We expect the Bill ID to be sent
+
+        // 1. Validate Bill ID
+        if (!mongoose.Types.ObjectId.isValid(billId)) {
+            return res.status(400).json({
                 ok: false,
-                message: "Cannot update Accounting record because it is already processed (Paid/Cancelled)."
-             });
-        }
-
-        // --- CASE A: UPDATE EXISTING ---
-        if (accountingEntry) {
-            
-            // Check for changes to avoid unnecessary database writes
-            const currentBillTotal = bill.grandTotal || 0;
-            const existingAccTotal = accountingEntry.totalAmount?.amount || 0;
-
-            if (currentBillTotal === existingAccTotal) {
-                 // Even if amounts match, ensuring we mark bill as synced
-                 if (!bill.isSyncedWithAccounting) {
-                     bill.isSyncedWithAccounting = true;
-                     await bill.save();
-                 }
-                 return res.status(200).json({
-                    ok: true,
-                    message: "Accounting is already up to date.",
-                    data: accountingEntry
-                });
-            }
-
-            // Update fields
-            accountingEntry.items = accountItems;
-            accountingEntry.totalAmount = {
-                amount: bill.grandTotal || 0,
-                taxAmount: bill.taxAmount || 0
-            };
-            accountingEntry.dueDate = bill.dueDate;
-            
-            // Optionally append to notes that it was updated
-            // accountingEntry.notes = accountingEntry.notes + " (Updated via Bill)";
-
-            const updatedEntry = await accountingEntry.save();
-
-            // Mark Bill as Synced
-            bill.isSyncedWithAccounting = true;
-            await bill.save();
-
-            return res.status(200).json({
-                ok: true,
-                message: "Existing Accounting entry updated.",
-                data: updatedEntry
+                message: "Invalid Bill ID format"
             });
         }
 
-        // --- CASE B: CREATE NEW ---
-        
-        const transactionNumber = await generateTransactionNumber(bill.organizationId);
+        // 2. Fetch the Bill
+        const bill = await BillAccountModel.findById(billId);
+        if (!bill) {
+            return res.status(404).json({
+                ok: false,
+                message: "Bill not found"
+            });
+        }
 
-        const newAccountingEntry = new AccountingModel({
-            transactionNumber: transactionNumber,
-            organizationId: bill.organizationId,
-            transactionType: 'expense',
-            fromDept: req.body.fromDept || 'procurement',
-            items: accountItems,
-            totalAmount: {
-                amount: bill.grandTotal || 0,
-                taxAmount: bill.taxAmount || 0
-            },
-            status: 'pending',
-            dueDate: bill.dueDate || null,
-            notes: `Generated from Vendor Bill #${bill.billNumber}. ${bill.notes ? `Ref: ${bill.notes}` : ''}`,
+
+        if(bill?.isSyncWithPaymentsSection){
+            return res.status(400).json({message:"Bill Already sent to the payment section", ok:false})
+        }
+
+
+        // 3. Prepare the Accounting Items (Mapped from Bill)
+        const paymentItems = bill.items.map((item: any) => ({
+            itemName: item.itemName,
+            quantity: item.quantity,
+            rate: item.rate,
+            unit: item.unit || "",
+            totalCost: item.totalCost,
+            dueDate: bill.dueDate,
+            status: "pending",
+            orderId: "",
+            paymentId: "",
+            transactionId: "",
             paidAt: null,
-            installMents: []
-        });
+            failureReason: "",
+            fees: null,
+            tax: null
+        }));
 
-        const savedEntry = await newAccountingEntry.save();
 
-        // --- CRITICAL: LINK BACK TO BILL ---
-        bill.accountingRef = savedEntry._id as any;
-        bill.isSyncedWithAccounting = true;
-        await bill.save();
+        const newPayemnt = await createPaymentMainAccUtil({
+            paymentPersonId: bill.vendorId || null,
+            paymentPersonModel: bill?.vendorId ? "VendorAccountModel" : null,
+            paymentPersonName: bill?.vendorName || "",
+            organizationId: bill.organizationId,
+            accountingRef: null,
+            projectId: bill?.projectId || null,
+            fromSectionModel: "BillAccountModel",
+            fromSectionId: bill._id as Types.ObjectId,
+            fromSection: "bill",
+            paymentDate: null,
+            dueDate: bill.dueDate,
+            subject: bill.subject,
+            items: paymentItems,
+            totalAmount: bill.totalAmount || 0,
+            discountPercentage: bill.discountPercentage || 0,
+            discountAmount: bill.discountAmount || 0,
+            taxPercentage: bill.taxPercentage || 0,
+            taxAmount: bill.taxAmount || 0,
+            grandTotal: bill.grandTotal || 0,
+            notes: bill.notes || null,
+            isSyncedWithAccounting: false,
+            generalStatus: "pending"
+        })
+
+        bill.isSyncWithPaymentsSection = true;
+        await bill.save()
+
+
+
+
+        await invalidateBillCache((bill as any).organizationId, (bill as any).vendorId, bill._id as string);
+
 
         return res.status(201).json({
             ok: true,
-            message: "Sent to Accounting Department successfully",
-            data: savedEntry
+            message: "Sent to Payments Section successfully",
+            data: newPayemnt
         });
 
-  } catch (error: any) {
-    console.error("Error sending bill to accounting:", error);
-    return res.status(500).json({
-      ok: false,
-      message: "Error processing request",
-      error: error.message
-    });
-  }
+    } catch (error: any) {
+        console.error("Error sending bill to payement:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Error processing request",
+            error: error.message
+        });
+    }
 }

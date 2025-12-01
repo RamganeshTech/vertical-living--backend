@@ -517,12 +517,12 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
     const siteDoc = await SiteMeasurementModel.findOne({ projectId });
     if (!siteDoc) return res.status(404).json({ ok: false, message: "Site measurement not found" });
 
-    if (siteDoc.status === "completed") return res.status(400).json({ ok: false, message: "Stage Already completed" });
+    // if (siteDoc.status === "completed") return res.status(400).json({ ok: false, message: "Stage Already completed" });
 
     siteDoc.status = "completed";
     siteDoc.isEditable = false;
 
-    if (siteDoc.status === "completed") {
+    // if (siteDoc.status === "completed") {
       const siteRooms = siteDoc.rooms || [];
       await syncSampleDesignModel(projectId, siteRooms)
 
@@ -533,7 +533,7 @@ const siteMeasurementCompletionStatus = async (req: Request, res: Response): Pro
       //   description: "Site Measurement Stage marked is documented",
       //   uploadedFiles, // optionally add files here
       // })
-    }
+    // }
 
     await siteDoc.save();
 

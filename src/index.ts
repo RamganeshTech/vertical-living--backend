@@ -113,6 +113,7 @@ import issueDiscussionRoutes from './routers/Stage routes/Issue Discussion Route
 import SubContractRoutesNew from './routers/SubContract Routes/subContractNew.routes';
 import razorpayRoutes from './routers/Razorpay_routes/razorpay.routes';
 import BillNewAccountRoutes from './routers/Department Routes/Accounting Routes/billNewAccounts.routes';
+import paymentAccRoutes from './routers/Department Routes/Accounting Routes/paymentMainAccount.routes';
 
 
 // Extend Socket interface for custom properties
@@ -343,6 +344,7 @@ app.use('/api/department/logistics', LogisticsRoutes)
 app.use('/api/department/procurement', procurementNewRoutes)
 app.use('/api/department/accounting', accountingRoutes)
 app.use('/api/department/accounting/customer', customerAccountingRoutes)
+app.use('/api/department/accounting/payments/section', paymentAccRoutes)
 app.use('/api/department/accounting/invoice', invoiceAccountRoutes)
 app.use('/api/department/accounting/retailinvoice', retailInvoiceAccountRoutes)
 app.use('/api/department/accounting/salesorder', salesAccountsRoutes)

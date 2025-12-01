@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import ProcurementModelNew from "../../../models/Department Models/ProcurementNew Model/procurementNew.model";
 import { generateProcurementPdf } from "./procurementPdf";
 import { createShipmentUtil } from "../Logistics Controllers/logistics.controller";
-import { createAccountingEntry } from "../Accounting Controller/accounting.controller";
 import { decryptCryptoToken, encryptCryptoToken } from "../../../utils/common features/utils";
 
 export const getProcurementNewDetails = async (req: Request, res: Response): Promise<any> => {
@@ -464,15 +463,15 @@ export const SyncAccountingFromProcurement = async (req: Request, res: Response)
             return res.status(400).json({ ok: false, message: "OrganizationId and  ProjectId is required" });
         }
 
-            const doc = await createAccountingEntry({
-                organizationId,
-                projectId,
-                fromDept: "procurement",
-                totalCost,
-                upiId
-            });
+            // const doc = await createAccountingEntry({
+            //     organizationId,
+            //     projectId,
+            //     fromDept: "procurement",
+            //     totalCost,
+            //     upiId
+            // });
 
-        res.status(201).json({ ok: true, data: doc });
+        res.status(201).json({ ok: true, message:"feaure coming soon" });
     } catch (err: any) {
         console.error("Error sending logistics entry to accounting:", err);
         res.status(500).json({ ok: false, message: err.message });

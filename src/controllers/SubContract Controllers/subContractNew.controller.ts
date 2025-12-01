@@ -7,7 +7,7 @@ import crypto from "crypto";
 import { RoleBasedRequest } from "../../types/types";
 import { SubContractModel, IFileItem } from "../../models/SubContract Model/subContract.model";
 import { AccountingModel } from "../../models/Department Models/Accounting Model/accountingMain.model";
-import { createAccountingEntry, generateTransactionNumber } from "../Department controllers/Accounting Controller/accounting.controller";
+import { generateTransactionNumber } from "../Department controllers/Accounting Controller/accounting.controller";
 import dotenv from "dotenv"
 dotenv.config()
 

@@ -1,6 +1,6 @@
 // logistics.routes.ts
 import express from "express";
-import { createShipment,  deleteShipment,  getActiveShipmentsWithLocation,  getAllShipments,  getShipmentByToken,  getShipmentRouteHistory,  getSingleLogisticsShipment,  startTracking,  SyncAccountingFromLogistics,  updateDriverLocation,  updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
+import { createShipment,  deleteShipment,    getAllShipments, getSingleLogisticsShipment,    SyncAccountingFromLogistics,    updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 
 const LogisticsRoutes = express.Router();
@@ -19,18 +19,18 @@ LogisticsRoutes.get("/shipment/getshipment",  multiRoleAuthMiddleware("owner", "
 LogisticsRoutes.get("/shipment/getsingle/:shipmentId",  multiRoleAuthMiddleware("owner", "CTO", "staff"),getSingleLogisticsShipment);
 
 
-LogisticsRoutes.post('/shipment/:shipmentId/update-location', updateDriverLocation);
-LogisticsRoutes.post('/shipment/:shipmentId/start-tracking', startTracking);
-LogisticsRoutes.get('/shipment/active-with-location',multiRoleAuthMiddleware("owner", "CTO", "staff"), getActiveShipmentsWithLocation);
-LogisticsRoutes.get('/shipment/:shipmentId/route-history',multiRoleAuthMiddleware("owner", "CTO", "staff"), getShipmentRouteHistory);
-LogisticsRoutes.get('/shipment/getpublic/:token', getShipmentByToken);
+// TRACKING LOCATION ROUTES
+// LogisticsRoutes.post('/shipment/:shipmentId/update-location', updateDriverLocation);
+// LogisticsRoutes.post('/shipment/:shipmentId/start-tracking', startTracking);
+// LogisticsRoutes.get('/shipment/active-with-location',multiRoleAuthMiddleware("owner", "CTO", "staff"), getActiveShipmentsWithLocation);
+// LogisticsRoutes.get('/shipment/:shipmentId/route-history',multiRoleAuthMiddleware("owner", "CTO", "staff"), getShipmentRouteHistory);
+// LogisticsRoutes.get('/shipment/getpublic/:token', getShipmentByToken);
 
 
 LogisticsRoutes.post(
   "/syncaccounting/:organizationId/:projectId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   SyncAccountingFromLogistics
-
 );
 
 export default LogisticsRoutes;

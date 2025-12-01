@@ -30,6 +30,7 @@ export interface IBillAccount extends Document {
     images: IBillUploads[],
     pdfData: IBillUploads | null,
     isSyncedWithAccounting?: boolean
+    isSyncWithPaymentsSection?: boolean
 }
 
 
@@ -109,7 +110,12 @@ const BillAccountSchema = new Schema<IBillAccount>(
         isSyncedWithAccounting: {
             type: Boolean,
             default: false
+        },
+        isSyncWithPaymentsSection: {
+            type: Boolean,
+            default: false
         }
+
     },
     { timestamps: true }
 );
