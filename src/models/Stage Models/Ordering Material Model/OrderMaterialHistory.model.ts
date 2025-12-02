@@ -104,9 +104,9 @@ export interface OrderMaterialSiteDetail {
 
 export interface OrderMaterialShopDetails {
     shopName: string | null,
-    address: string  | null,
-    contactPerson: string  | null,
-    phoneNumber: string  | null,
+    address: string | null,
+    contactPerson: string | null,
+    phoneNumber: string | null,
 }
 
 
@@ -153,6 +153,7 @@ export interface IOrderedMaterialHistory {
     publicUnits: IPublicUnits;
     publicUnitsVersion: number
     needsStaffReview: boolean
+    images: IPdfGenerator[]
 
     totalCost: number;
     assignedTo: Types.ObjectId;
@@ -223,9 +224,9 @@ export const OrderSubItemSchema = new Schema<OrderSubItems>({
 
 
 export const PublicUnitsSchema = new Schema<IPublicUnits>({
-    shopDetails: {type: ShopDetailsSchema, default: null},
-    subItems: {type: [OrderSubItemSchema], default: []},
-}, {_id:false})
+    shopDetails: { type: ShopDetailsSchema, default: null },
+    subItems: { type: [OrderSubItemSchema], default: [] },
+}, { _id: false })
 
 
 const orderedUnits = new Schema<OrderedMaterialSingle>({
@@ -255,6 +256,7 @@ const OrderHistorySchema = new Schema<IOrderedMaterialHistory>({
     selectedUnits: { type: [orderedUnits], default: [] },
 
     publicUnits: { type: PublicUnitsSchema, default: {} },
+    images:{ type: [pdfGeneratorSchema], default: [] },
 
     // ✨ NEW: Simple change tracking ✨
     publicUnitsVersion: { type: Number, default: 0 }, // Increment on each public change

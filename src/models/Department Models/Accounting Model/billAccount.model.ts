@@ -25,6 +25,8 @@ export interface IBillAccount extends Document {
 
     grandTotal: number;
 
+    advancedAmount: number
+    paymentType: string
 
     notes: string | null;
     images: IBillUploads[],
@@ -107,6 +109,10 @@ const BillAccountSchema = new Schema<IBillAccount>(
         notes: { type: String, default: null },
         images: { type: [BillUploadSchema], default: [] },
         pdfData: { type: BillUploadSchema, default: null },
+
+        advancedAmount: { type: Number, default: 0 },
+        paymentType: { type: String, default: "" },
+
         isSyncedWithAccounting: {
             type: Boolean,
             default: false

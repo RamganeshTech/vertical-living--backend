@@ -15,7 +15,9 @@ import { createPaymentMainAccUtil } from "../PaymentMainAcc_controllers/paymentM
 const calculateBillTotals = (
     items: any[],
     discountPercentage: number = 0,
-    taxPercentage: number = 0
+    taxPercentage: number = 0,
+    advancedAmount: number = 0,
+    paymentType: string = ""
 ) => {
     // Calculate total amount from items
     const totalAmount = items.reduce((sum, item) => {
@@ -32,7 +34,14 @@ const calculateBillTotals = (
     const taxAmount = (amountAfterDiscount * taxPercentage) / 100;
 
     // Calculate grand total
-    const grandTotal = amountAfterDiscount + taxAmount;
+    let grandTotal = amountAfterDiscount + taxAmount;
+
+
+    if (paymentType === "pay advanced, balance later") {
+        const advance = advancedAmount || 0;
+        grandTotal = Math.max(0, grandTotal - advance); // Prevent negative
+    }
+
 
     return {
         totalAmount,
@@ -185,9 +194,11 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
             items,
             totalAmount,
             discountPercentage,
+            advancedAmount,
+            paymentType,
+            // taxAmount,
             // discountAmount,
             taxPercentage,
-            // taxAmount,
             // grandTotal,
             notes } = bodyData;
 
@@ -216,9 +227,13 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
 
         // Calculate bill totals
         const totals = calculateBillTotals(
+
             processedItems,
             discountPercentage || 0,
-            taxPercentage || 0
+            taxPercentage || 0,
+            advancedAmount || 0,
+            paymentType
+
         );
 
 
@@ -246,6 +261,8 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
             dueDate,
             items: processedItems,
             totalAmount: totals.totalAmount,
+            paymentType,
+            advancedAmount,
             discountPercentage,
             discountAmount: totals.discountAmount,
             taxPercentage,
@@ -285,15 +302,15 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
 
 
 
-         // We use the utility here because it handles Generating the Unique Record ID
+        // We use the utility here because it handles Generating the Unique Record ID
         await syncAccountingRecord({
             organizationId: newBill.organizationId,
             projectId: newBill?.projectId || null,
-            
+
             // Reference Links
             referenceId: newBill._id,
             referenceModel: "BillAccountModel", // Must match Schema
-            
+
             // Categorization
             deptRecordFrom: "Bill",
 
@@ -305,10 +322,10 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
             // Financials
             amount: newBill?.grandTotal || 0, // Utility takes care of grandTotal logic if passed
             notes: newBill?.notes || "",
-            
+
             // Defaults for Creation
-            status: "pending", 
-            paymentId: null 
+            status: "pending",
+            paymentId: null
         });
 
         // Invalidate related caches
@@ -585,11 +602,11 @@ export const updatebill = async (req: Request, res: Response): Promise<any> => {
         // Check if bill exists
         const existingbill = await BillAccountModel.findById(id);
         if (!existingbill) {
-            res.status(404).json({
+            return res.status(404).json({
                 ok: false,
                 message: "bill not found"
             });
-            return;
+
         }
 
         // Validate update data
@@ -599,40 +616,21 @@ export const updatebill = async (req: Request, res: Response): Promise<any> => {
         });
 
         if (!validation.isValid) {
-            res.status(400).json({
+            return res.status(400).json({
                 ok: false,
                 message: "Validation failed",
                 errors: validation.errors
             });
-            return;
+
         }
 
-        // const files = req.files as (Express.Multer.File & { location: string })[];
-
-        // const newUploadedFiles: any[] = files.map(file => {
-        //     const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
-        //     return {
-        //         type,
-        //         url: file.location,
-        //         originalName: file.originalname,
-        //         uploadedAt: new Date()
-        //     };
-        // });
 
 
-        //   let existingImages = [];
-        // if (req?.body?.existingImages) {
-        //      try { existingImages = JSON.parse(req.body.existingImages); } catch(e) {}
-        // }
-
-        //   if (req.body.existingImages !== undefined) {
-        //     // Full update of image array
-        //     updateData.images = [...existingImages, ...newUploadedFiles];
-        // } else if (newUploadedFiles.length > 0) {
-        //     // If no existing list sent, imply $push (handled via query or fetching first)
-        //     const currentBill = await BillAccountModel.findById(id);
-        //     updateData.images = [...(currentBill?.images || []), ...newUploadedFiles];
-        // }
+        // ✅ Directly accept frontend-calculated totals
+        updateData.totalAmount = updateData.totalAmount ?? existingbill.totalAmount;
+        updateData.discountAmount = updateData.discountAmount ?? existingbill.discountAmount;
+        updateData.taxAmount = updateData.taxAmount ?? existingbill.taxAmount;
+        updateData.grandTotal = updateData.grandTotal ?? existingbill.grandTotal;
 
 
         // If items are being updated, recalculate totals
@@ -642,34 +640,52 @@ export const updatebill = async (req: Request, res: Response): Promise<any> => {
                 totalCost: (item.quantity || 0) * (item.rate || 0)
             }));
 
-            const totals = calculateBillTotals(
-                processedItems,
-                updateData.discountPercentage ?? existingbill.discountPercentage ?? 0,
-                updateData.taxPercentage ?? existingbill.taxPercentage ?? 0
-            );
+            // const totals = calculateBillTotals(
+            //     processedItems,
+            //     updateData.discountPercentage ?? existingbill.discountPercentage ?? 0,
+            //     updateData.taxPercentage ?? existingbill.taxPercentage ?? 0,
+            //     updateData.advancedAmount || existingbill.advancedAmount || 0,
+            //     updateData.paymentType || existingbill.paymentType || ""
+
+            // );
 
             updateData.items = processedItems;
-            updateData.totalAmount = totals.totalAmount;
-            updateData.discountAmount = totals.discountAmount;
-            updateData.taxAmount = totals.taxAmount;
-            updateData.grandTotal = totals.grandTotal;
+            // updateData.totalAmount = totals.totalAmount;
+            // updateData.discountAmount = totals.discountAmount;
+            // updateData.taxAmount = totals.taxAmount;
+            // updateData.grandTotal = totals.grandTotal;
             updateData.isSyncedWithAccounting = false;
 
         } else if (updateData.discountPercentage !== undefined || updateData.taxPercentage !== undefined) {
             // Recalculate if discount or tax percentage changed
-            const totals = calculateBillTotals(
-                existingbill.items,
-                updateData.discountPercentage ?? existingbill.discountPercentage ?? 0,
-                updateData.taxPercentage ?? existingbill.taxPercentage ?? 0
-            );
+            // const totals = calculateBillTotals(
+            //     existingbill.items,
+            //     updateData.discountPercentage ?? existingbill.discountPercentage ?? 0,
+            //     updateData.taxPercentage ?? existingbill.taxPercentage ?? 0
+            // );
 
-            updateData.totalAmount = totals.totalAmount;
-            updateData.discountAmount = totals.discountAmount;
-            updateData.taxAmount = totals.taxAmount;
-            updateData.grandTotal = totals.grandTotal;
+            // updateData.totalAmount = totals.totalAmount;
+            // updateData.discountAmount = totals.discountAmount;
+            // updateData.taxAmount = totals.taxAmount;
+            // updateData.grandTotal = totals.grandTotal;
             // IMPORTANT: Financial data changed, so we must re-sync
             updateData.isSyncedWithAccounting = false;
 
+        }
+        else if (updateData.paymentType !== undefined) {
+
+            // const processedItems = updateData.items.map((item: any) => ({
+            //     ...item,
+            //     totalCost: (item.quantity || 0) * (item.rate || 0)
+            // }));
+
+            // const totals = calculateBillTotals(
+            //     processedItems,
+            //     updateData.discountPercentage ?? existingbill.discountPercentage ?? 0,
+            //     updateData.taxPercentage ?? existingbill.taxPercentage ?? 0,
+            //     updateData.advancedAmount || existingbill.advancedAmount || 0,
+            //     updateData.paymentType || existingbill.paymentType || ""
+            // );
         }
 
         // Update bill
@@ -706,7 +722,7 @@ export const updatebill = async (req: Request, res: Response): Promise<any> => {
         await updatedbill.save();
 
 
-          // 2. UPDATE ACCOUNTS (Direct Update)
+        // 2. UPDATE ACCOUNTS (Direct Update)
         // We strictly avoid touching 'paymentId' or 'status' here
         const isExiting = await AccountingModel.findOneAndUpdate(
             {
@@ -720,15 +736,15 @@ export const updatebill = async (req: Request, res: Response): Promise<any> => {
                     notes: updatedbill.notes,
                     projectId: updatedbill?.projectId || null,
                     assoicatedPersonName: updatedbill.vendorName,
-                    
+
                     // Optional: Update person ID if vendor changed
                     assoicatedPersonId: updatedbill?.vendorId || null,
-                    
+
                     // IMPORTANT: We DO NOT include 'status' or 'paymentId' here.
                     // Those are controlled by the Payment Controller.
                 }
             },
-            { new: true } 
+            { new: true }
         );
 
 
@@ -1048,8 +1064,8 @@ export const sendBillToPayment = async (req: Request, res: Response): Promise<an
         }
 
 
-        if(bill?.isSyncWithPaymentsSection){
-            return res.status(400).json({message:"Bill Already sent to the payment section", ok:false})
+        if (bill?.isSyncWithPaymentsSection) {
+            return res.status(400).json({ message: "Bill Already sent to the payment section", ok: false })
         }
 
 

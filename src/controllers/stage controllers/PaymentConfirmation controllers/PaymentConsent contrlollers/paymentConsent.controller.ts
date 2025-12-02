@@ -9,7 +9,7 @@ import { RoleBasedRequest } from "../../../../types/types";
 
 
 
- const toggleConsentRequired = async (req: Request, res: Response): Promise<any> => {
+const toggleConsentRequired = async (req: Request, res: Response): Promise<any> => {
   try {
     const { projectId } = req.params;
 
@@ -18,7 +18,7 @@ import { RoleBasedRequest } from "../../../../types/types";
     }
 
     const paymentDoc = await PaymentConfirmationModel.findOne({ projectId });
-   
+
     if (!paymentDoc) {
       return res.status(404).json({ ok: false, message: "Payment Confirmation not found." });
     }
@@ -66,12 +66,12 @@ const generateConsentLink = async (req: Request, res: Response): Promise<any> =>
 
     const token = crypto.randomBytes(32).toString("hex");
     paymentDoc.paymentClientConsent.agreementToken = token;
-    
-    let link:string
-    if(process.env.NODE_ENV === "development"){
-        link = `http://localhost:5173/clientconsent/public/${projectId}/${token}`;
-      }
-    else{
+
+    let link: string
+    if (process.env.NODE_ENV === "development") {
+      link = `http://localhost:5173/clientconsent/public/${projectId}/${token}`;
+    }
+    else {
       link = `${process.env.FRONTEND_URL}/clientconsent/public/${projectId}/${token}`;
     }
     paymentDoc.paymentClientConsent.link = link
@@ -113,7 +113,7 @@ const acceptClientConsent = async (req: RoleBasedRequest, res: Response): Promis
     //   return res.status(400).json({ ok: false, message: "Consent already given.", data: null });
     // }
 
-      if (paymentDoc.paymentClientConsent.isAgreed) {
+    if (paymentDoc.paymentClientConsent.isAgreed) {
       return res.status(400).json({ ok: false, message: "Consent already given.", data: null });
     }
 
@@ -123,7 +123,7 @@ const acceptClientConsent = async (req: RoleBasedRequest, res: Response): Promis
 
     // ✅ Save the client ID securely
     // paymentDoc.paymentClientConsent.agreedByClientId = clientId;
-paymentDoc.paymentClientConsent.isAgreed = true
+    paymentDoc.paymentClientConsent.isAgreed = true
     paymentDoc.paymentClientConsent.agreedAt = new Date();
     // paymentDoc.paymentClientConsent.agreedByName = name || null;
     // paymentDoc.paymentClientConsent.agreedByEmail = email || null;
@@ -151,7 +151,7 @@ paymentDoc.paymentClientConsent.isAgreed = true
 
 
 export {
-    toggleConsentRequired,
-    generateConsentLink,
-    acceptClientConsent,
+  toggleConsentRequired,
+  generateConsentLink,
+  acceptClientConsent,
 }

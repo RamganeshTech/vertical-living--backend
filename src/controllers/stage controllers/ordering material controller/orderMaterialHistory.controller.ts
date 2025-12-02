@@ -18,6 +18,7 @@ import { generateOrderHistoryPDF } from "./pdfOrderHistory.controller";
 import { updateInventoryRemainingQuantity } from "../Inventory controllers/inventory.controller";
 import { InventoryModel } from "../../../models/Stage Models/Inventory Model/inventroy.model";
 import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
+import { IFileItem } from "../../../models/Stage Models/sampleDesing model/sampleDesign.model";
 
 // export const syncOrderingMaterialsHistory = async (projectId: string) => {
 
@@ -256,7 +257,7 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
     // } else if (mode?.mode === "Manual Flow") {
 
     //     console.log("gettin g into the manual flow")
-        
+
     //     // 1. Get material confirmation data (with packages)
     //     const materialRoomData = await MaterialRoomConfirmationModel.findOne({ projectId }).lean();
     //     if (!materialRoomData) {
@@ -340,11 +341,11 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
     // }
 
     // Build timer
-    
-    
-    
+
+
+
     // 1. Get material confirmation data (with packages)
-         const requirementData = await RequirementFormModel.findOne({ projectId }).lean();
+    const requirementData = await RequirementFormModel.findOne({ projectId }).lean();
     if (!requirementData) {
         console.log("❌ Requirement form not found");
         return;
@@ -442,7 +443,7 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
     console.log("✅ Synced requirement form to order history");
 
     // return existing;
-        
+
     // const timer: IOrderHistorytimer = {
     //     startedAt: new Date(),
     //     completedAt: null,
@@ -1025,6 +1026,102 @@ export const updateShopDetails = async (req: Request, res: Response): Promise<an
 
 
 
+
+
+export const uploadOrderMaterialImages = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params;
+
+        const files = req.files as (Express.Multer.File & { location: string })[];
+
+        if (!files || files.length === 0) {
+            return res.status(400).json({ message: "No files uploaded.", ok: false });
+        }
+
+        const mappedFiles: IFileItem[] = files.map(file => {
+            const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
+            return {
+                _id: new mongoose.Types.ObjectId(),
+                type,
+                url: file.location,
+                originalName: file.originalname,
+                uploadedAt: new Date()
+            };
+        });
+
+
+        
+        const orderingDoc = await OrderMaterialHistoryModel.findOneAndUpdate({ projectId }, {
+            $push: { images: { $each: mappedFiles } }
+        }, { new: true });
+
+        if (!orderingDoc) {
+            return res.status(400).json({ ok: false, message: "Failed to upload the images." });
+        }
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderingDoc })
+
+        res.status(200).json({ ok: true, message: "Shop details updated", data: orderingDoc.images || [] });
+    }
+    catch (error: any) {
+        console.error("Error updatinthe shop details form ordering room", error);
+        return res.status(500).json({ message: "Server error", ok: false });
+    }
+};
+
+
+
+export const deleteOrderingMaterialImage = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, imageId } = req.params;
+
+        // 1. Find the pdf record in DB
+        // const orderDoc = await OrderMaterialHistoryModel.findOne({
+        //   projectId,
+        //   generatedLink:{
+        //     $pull: {_id: pdfId}
+        //   }
+        // });
+
+        const orderDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
+            { projectId },
+            { $pull: { images: { _id: imageId } } },
+            { returnDocument: "after" }
+        );
+
+        if (!orderDoc) {
+            return res.status(404).json({ message: "image not found", ok: false });
+        }
+
+        // 2. Delete from S3
+        // const pdfKey = pdfRecord.fileKey; // store s3 key in db when uploading
+        // if (pdfKey) {
+        //   await s3
+        //     .deleteObject({
+        //       Bucket: process.env.AWS_S3_BUCKET!,
+        //       Key: pdfKey,
+        //     })
+        //     .promise();
+        // }
+
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+
+
+        return res.status(200).json({
+            message: "PDF deleted successfully",
+            data: orderDoc?.images || [],
+            ok: true
+        });
+    } catch (err) {
+        console.error("Error deleting PDF:", err);
+        return res.status(500).json({ message: "Failed to delete PDF", error: err, ok: false });
+    }
+};
+
+
+
+
 export const getOrderHistoryMaterial = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
@@ -1305,62 +1402,62 @@ export const getPublicDetails = async (req: Request, res: Response): Promise<any
         // if (mode === "Modular Units") {
 
 
-            // const modularUnits = await SelectedModularUnitModel.findOne({ projectId });
-            // const externalUnits = await SelectedExternalModel.findOne({ projectId });
+        // const modularUnits = await SelectedModularUnitModel.findOne({ projectId });
+        // const externalUnits = await SelectedExternalModel.findOne({ projectId });
 
-            // let finalData: any = []
-
-
-            // if (modularUnits && modularUnits.selectedUnits) {
-            //     let units = modularUnits.selectedUnits
-
-            //     let onlyUnits = units.map(ele => {
-            //         return {
-            //             "unitName": "N/A",
-            //             "image": ele?.image,
-            //             "customId": ele?.customId,
-            //             "category": ele?.category,
-            //             "quantity": ele?.quantity,
-            //             "height": 0,
-            //             "width": 0,
-            //             "depth": 0
-            //         }
-            //     })
+        // let finalData: any = []
 
 
-            //     finalData = finalData.concat(onlyUnits)
-            // }
+        // if (modularUnits && modularUnits.selectedUnits) {
+        //     let units = modularUnits.selectedUnits
+
+        //     let onlyUnits = units.map(ele => {
+        //         return {
+        //             "unitName": "N/A",
+        //             "image": ele?.image,
+        //             "customId": ele?.customId,
+        //             "category": ele?.category,
+        //             "quantity": ele?.quantity,
+        //             "height": 0,
+        //             "width": 0,
+        //             "depth": 0
+        //         }
+        //     })
 
 
-            // if (externalUnits && externalUnits.selectedUnits) {
-
-            //     let units = externalUnits.selectedUnits
-
-            //     let onlyUnits = units.map(ele => {
-            //         return {
-            //             "unitName": ele.unitName,
-            //             "image": ele?.image || "No Image",
-            //             "customId": ele.unitCode,
-            //             "category": ele?.category,
-            //             "quantity": ele?.quantity,
-            //             "height": ele.dimention?.height ?? "N/A",
-            //             "width": ele.dimention?.width ?? "N/A",
-            //             "depth": ele.dimention?.depth ?? "N/A",
-            //         }
-            //     })
-
-            //     finalData = finalData.concat(onlyUnits)
-            // }
-
-            // return res.status(200).json({ message: "got the data", data: finalData, ok: true })
+        //     finalData = finalData.concat(onlyUnits)
+        // }
 
 
-            let existing = await OrderMaterialHistoryModel.findOne({ projectId });
+        // if (externalUnits && externalUnits.selectedUnits) {
 
-            if (!existing) {
-                return res.status(200).json({ message: "got the data", data: [], ok: true })
-            }
-            return res.status(200).json({ message: "got the data", data: existing, ok: true })
+        //     let units = externalUnits.selectedUnits
+
+        //     let onlyUnits = units.map(ele => {
+        //         return {
+        //             "unitName": ele.unitName,
+        //             "image": ele?.image || "No Image",
+        //             "customId": ele.unitCode,
+        //             "category": ele?.category,
+        //             "quantity": ele?.quantity,
+        //             "height": ele.dimention?.height ?? "N/A",
+        //             "width": ele.dimention?.width ?? "N/A",
+        //             "depth": ele.dimention?.depth ?? "N/A",
+        //         }
+        //     })
+
+        //     finalData = finalData.concat(onlyUnits)
+        // }
+
+        // return res.status(200).json({ message: "got the data", data: finalData, ok: true })
+
+
+        let existing = await OrderMaterialHistoryModel.findOne({ projectId });
+
+        if (!existing) {
+            return res.status(200).json({ message: "got the data", data: [], ok: true })
+        }
+        return res.status(200).json({ message: "got the data", data: existing, ok: true })
         // }
         // else if (mode === "Manual Flow") {
         //     let existing = await OrderMaterialHistoryModel.findOne({ projectId });

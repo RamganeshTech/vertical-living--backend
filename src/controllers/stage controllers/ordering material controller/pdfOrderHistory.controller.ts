@@ -72,40 +72,6 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
 
         let yPosition = height - 20;
 
-        // Old method Add company logo
-        // try {
-        //     const logoResponse = await fetch(COMPANY_LOGO);
-        //     const logoBuffer = await logoResponse.arrayBuffer();
-        //     const logoImage = await pdfDoc.embedPng(logoBuffer);
-
-        //     const logoSize = 60;
-        //     page.drawImage(logoImage, {
-        //         x: (width - logoSize) / 2,
-        //         y: yPosition - logoSize,
-        //         width: logoSize,
-        //         height: logoSize,
-        //     });
-        //     yPosition -= logoSize + 20;
-        // } catch (error) {
-        //     console.log('Could not load logo, continuing without it');
-        //     yPosition -= 20;
-        // }
-
-
-
-
-        // Company name
-        // page.drawText(COMPANY_NAME, {
-        //     x: (width - COMPANY_NAME.length * 12) / 2,
-        //     y: yPosition,
-        //     size: 24,
-        //     font: boldFont,
-        //    color: rgb(0, 0.4, 0.8),
-        // });
-        // yPosition -= 50;
-
-
-
         try {
             const logoRes = await fetch(COMPANY_LOGO);
             const logoBuffer = await logoRes.arrayBuffer();
@@ -226,6 +192,337 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
             });
             yPosition -= 40;
         }
+
+
+
+// // FIRST VERSION
+//           // ========== IMAGES SECTION - AFTER PROJECT DETAILS ==========
+//         // Check if images exist and have URLs
+//         const hasImages = orderHistory.images && 
+//                          Array.isArray(orderHistory.images) && 
+//                          orderHistory.images.length > 0 &&
+//                          orderHistory.images.some(img => img && img.url && img.url.trim() !== '');
+
+//         if (hasImages) {
+//             // Add heading for images section
+//             page.drawText("Images:", {
+//                 x: 50,
+//                 y: yPosition,
+//                 size: 14,
+//                 font: boldFont,
+//                 color: rgb(0.2, 0.2, 0.2),
+//             });
+//             yPosition -= 25;
+
+//             const imageWidth = 150; // Fixed width for images
+//             const imageHeight = 150; // Fixed height for images
+//             const margin = 20; // Margin between images
+//             const imagesPerRow = Math.floor((width - 100) / (imageWidth + margin));
+            
+//             let currentRow = 0;
+//             let currentCol = 0;
+
+//             // Filter valid images (with URLs)
+//             const validImages = orderHistory.images.filter(img => img && img.url && img.url.trim() !== '');
+
+//             for (let i = 0; i < validImages.length; i++) {
+//                 const image = validImages[i];
+                
+//                 // Check if we need a new page
+//                 if (yPosition < imageHeight + 100) {
+//                     page = pdfDoc.addPage([595, 842]);
+//                     yPosition = height - 50;
+//                     currentRow = 0;
+//                     currentCol = 0;
+//                 }
+
+//                 try {
+//                     // Calculate position
+//                     const xPos = 50 + (currentCol * (imageWidth + margin));
+//                     const yPos = yPosition - imageHeight;
+
+//                     // Fetch and embed image
+//                     const imageRes = await fetch(image?.url!);
+                    
+//                     // Check if response is OK
+//                     if (!imageRes.ok) {
+//                         console.warn(`Failed to fetch image ${i+1}: ${imageRes.statusText}`);
+//                         continue;
+//                     }
+
+//                     const imageBuffer = await imageRes.arrayBuffer();
+                    
+//                     // Check if buffer has data
+//                     if (!imageBuffer || imageBuffer.byteLength === 0) {
+//                         console.warn(`Image ${i+1} has empty buffer`);
+//                         continue;
+//                     }
+
+//                     // Try to determine image type and embed
+//                     let embeddedImage;
+//                     try {
+//                         // Try as JPEG
+//                         embeddedImage = await pdfDoc.embedJpg(imageBuffer);
+//                     } catch (jpgError) {
+//                         try {
+//                             // Try as PNG
+//                             embeddedImage = await pdfDoc.embedPng(imageBuffer);
+//                         } catch (pngError) {
+//                             console.warn(`Failed to embed image ${i+1}: Not a valid JPEG or PNG`);
+//                             continue;
+//                         }
+//                     }
+
+//                     // Calculate scaling to fit within fixed dimensions while maintaining aspect ratio
+//                     const imgDims = embeddedImage.scale(1);
+//                     const scale = Math.min(
+//                         imageWidth / imgDims.width,
+//                         imageHeight / imgDims.height
+//                     );
+                    
+//                     const scaledWidth = imgDims.width * scale;
+//                     const scaledHeight = imgDims.height * scale;
+
+//                     // Center image in the allocated space
+//                     const xOffset = xPos + (imageWidth - scaledWidth) / 2;
+//                     const yOffset = yPos + (imageHeight - scaledHeight) / 2;
+
+//                     // Draw image with border
+//                     page.drawRectangle({
+//                         x: xPos,
+//                         y: yPos,
+//                         width: imageWidth,
+//                         height: imageHeight,
+//                         borderColor: rgb(0.8, 0.8, 0.8),
+//                         borderWidth: 1,
+//                         color: rgb(0.95, 0.95, 0.95), // Light background for transparency
+//                     });
+
+//                     page.drawImage(embeddedImage, {
+//                         x: xOffset,
+//                         y: yOffset,
+//                         width: scaledWidth,
+//                         height: scaledHeight,
+//                     });
+
+//                     // Add image number
+//                     page.drawText(`Image ${i + 1}`, {
+//                         x: xPos + 5,
+//                         y: yPos - 15,
+//                         size: 8,
+//                         font: regularFont,
+//                         color: rgb(0.5, 0.5, 0.5),
+//                     });
+
+//                     // Update column position
+//                     currentCol++;
+                    
+//                     // Move to next row if needed
+//                     if (currentCol >= imagesPerRow) {
+//                         currentCol = 0;
+//                         currentRow++;
+//                         yPosition -= (imageHeight + margin + 25); // Add space for next row + label
+//                     }
+
+//                 } catch (error) {
+//                     console.warn(`Failed to process image ${i+1}:`, error);
+//                     // Continue with next image even if one fails
+//                     continue;
+//                 }
+//             }
+
+//             // After all images, update yPosition for next section
+//             if (currentCol > 0) {
+//                 yPosition -= (imageHeight + margin + 25);
+//             }
+            
+//             // Add some space after images section
+//             yPosition -= 30;
+//         }
+        // ========== END IMAGES SECTION ==========
+
+
+        // SECOND VERSION
+
+                // ========== IMAGES SECTION - AFTER PROJECT DETAILS ==========
+        // Check if images exist and have URLs
+        const hasImages = orderHistory.images && 
+                         Array.isArray(orderHistory.images) && 
+                         orderHistory.images.length > 0 &&
+                         orderHistory.images.some(img => img && img.url && img.url.trim() !== '');
+
+        if (hasImages) {
+            // Add heading for images section
+            page.drawText("Images:", {
+                x: 50,
+                y: yPosition,
+                size: 14,
+                font: boldFont,
+                color: rgb(0.2, 0.2, 0.2),
+            });
+            yPosition -= 25;
+
+            const maxImageWidth = 150; // Maximum width for images
+            const maxImageHeight = 150; // Maximum height for images
+            const margin = 30; // Margin between images
+            const imagesPerRow = 3; // Fixed to 3 images per row
+            
+            // Filter valid images (with URLs)
+            const validImages = orderHistory.images.filter(img => img && img.url && img.url.trim() !== '');
+            
+            // Calculate available width for each image in the row
+            const totalAvailableWidth = width - 100; // 50px margin on each side
+            const imageWidth = (totalAvailableWidth - ((imagesPerRow - 1) * margin)) / imagesPerRow;
+            const imageHeight = maxImageHeight;
+
+            let currentRow = 0;
+            let currentCol = 0;
+
+            for (let i = 0; i < validImages.length; i++) {
+                const image = validImages[i];
+                
+                // Check if we need a new page
+                if (yPosition < imageHeight + 100) {
+                    page = pdfDoc.addPage([595, 842]);
+                    yPosition = height - 50;
+                    currentRow = 0;
+                    currentCol = 0;
+                    
+                    // Redraw "Images:" heading on new page
+                    page.drawText("Images (continued):", {
+                        x: 50,
+                        y: yPosition,
+                        size: 14,
+                        font: boldFont,
+                        color: rgb(0.2, 0.2, 0.2),
+                    });
+                    yPosition -= 25;
+                }
+
+                try {
+                    // Calculate position
+                    const xPos = 50 + (currentCol * (imageWidth + margin));
+                    const yPos = yPosition - imageHeight;
+
+                    // Fetch and embed image
+                    const imageRes = await fetch(image?.url!);
+                    
+                    // Check if response is OK
+                    if (!imageRes.ok) {
+                        console.warn(`Failed to fetch image ${i+1}: ${imageRes.statusText}`);
+                        currentCol++;
+                        if (currentCol >= imagesPerRow) {
+                            currentCol = 0;
+                            currentRow++;
+                            yPosition -= (imageHeight + margin);
+                        }
+                        continue;
+                    }
+
+                    const imageBuffer = await imageRes.arrayBuffer();
+                    
+                    // Check if buffer has data
+                    if (!imageBuffer || imageBuffer.byteLength === 0) {
+                        console.warn(`Image ${i+1} has empty buffer`);
+                        currentCol++;
+                        if (currentCol >= imagesPerRow) {
+                            currentCol = 0;
+                            currentRow++;
+                            yPosition -= (imageHeight + margin);
+                        }
+                        continue;
+                    }
+
+                    // Try to determine image type and embed
+                    let embeddedImage;
+                    try {
+                        // Try as JPEG
+                        embeddedImage = await pdfDoc.embedJpg(imageBuffer);
+                    } catch (jpgError) {
+                        try {
+                            // Try as PNG
+                            embeddedImage = await pdfDoc.embedPng(imageBuffer);
+                        } catch (pngError) {
+                            console.warn(`Failed to embed image ${i+1}: Not a valid JPEG or PNG`);
+                            currentCol++;
+                            if (currentCol >= imagesPerRow) {
+                                currentCol = 0;
+                                currentRow++;
+                                yPosition -= (imageHeight + margin);
+                            }
+                            continue;
+                        }
+                    }
+
+                    // Get original image dimensions
+                    const imgDims = embeddedImage.scale(1);
+                    
+                    // Calculate scaling to fit within the allocated width/height while maintaining aspect ratio
+                    const scale = Math.min(
+                        imageWidth / imgDims.width,
+                        imageHeight / imgDims.height
+                    );
+                    
+                    const scaledWidth = imgDims.width * scale;
+                    const scaledHeight = imgDims.height * scale;
+
+                    // Center image in the allocated space
+                    const xOffset = xPos + (imageWidth - scaledWidth) / 2;
+                    const yOffset = yPos + (imageHeight - scaledHeight) / 2;
+
+                    // Draw only the image (no background, no border)
+                    page.drawImage(embeddedImage, {
+                        x: xOffset,
+                        y: yOffset,
+                        width: scaledWidth,
+                        height: scaledHeight,
+                    });
+
+                    // Add image number below the image
+                    const imageNumber = `Image ${i + 1}`;
+                    const numberWidth = regularFont.widthOfTextAtSize(imageNumber, 9);
+                    const numberX = xPos + (imageWidth - numberWidth) / 2;
+                    
+                    page.drawText(imageNumber, {
+                        x: numberX,
+                        y: yPos - 15,
+                        size: 9,
+                        font: regularFont,
+                        color: rgb(0.4, 0.4, 0.4),
+                    });
+
+                    // Update column position
+                    currentCol++;
+                    
+                    // Move to next row if needed
+                    if (currentCol >= imagesPerRow) {
+                        currentCol = 0;
+                        currentRow++;
+                        yPosition -= (imageHeight + margin + 20); // Image height + margin + label space
+                    }
+
+                } catch (error) {
+                    console.warn(`Failed to process image ${i+1}:`, error);
+                    // Continue with next image even if one fails
+                    currentCol++;
+                    if (currentCol >= imagesPerRow) {
+                        currentCol = 0;
+                        currentRow++;
+                        yPosition -= (imageHeight + margin + 20);
+                    }
+                    continue;
+                }
+            }
+
+            // After all images, update yPosition for next section
+            if (currentCol > 0) {
+                yPosition -= (imageHeight + margin + 20);
+            }
+            
+            // Add some space after images section
+            yPosition -= 30;
+        }
+        // ========== END IMAGES SECTION ==========
 
 
         // Shop Details Section
@@ -532,7 +829,7 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
             orderHistory.generatedLink = []
             orderHistory?.generatedLink.push(pdfData as IPdfGenerator)
         }
-
+        
         console.log("orderHistory.generatedLink", orderHistory.generatedLink)
 
         // const ProcurementNewItems: any[] = [];
@@ -594,6 +891,8 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
         orderHistory.selectedUnits.forEach(unit => {
             unit.subItems = [];
         });
+        orderHistory.images = [];
+
 
 
         await orderHistory.save();

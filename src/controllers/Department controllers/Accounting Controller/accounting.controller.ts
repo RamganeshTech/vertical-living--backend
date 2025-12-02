@@ -722,6 +722,8 @@ const formatLedgerItem = (item: any) => {
   // Determine Status: Trust Payment Model first, then Ledger, then Bill
   const currentStatus = payment.generalStatus || item.status || source.status || 'pending';
 
+  
+
   return {
     _id: item._id,
     recordNumber: item.recordNumber,

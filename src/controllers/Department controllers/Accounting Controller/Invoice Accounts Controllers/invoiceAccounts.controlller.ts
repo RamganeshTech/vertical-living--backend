@@ -289,7 +289,7 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
 
             // Person Details
             assoicatedPersonName: newInvoice.customerName,
-            assoicatedPersonId: newInvoice?.cusotmerId || null,
+            assoicatedPersonId: newInvoice?.customerId || null,
             assoicatedPersonModel: "CustomerAccountModel", // Assuming this is your Vendor Model
 
             // Financials
@@ -675,6 +675,7 @@ export const updateInvoice = async (req: Request, res: Response): Promise<any> =
         await updatedInvoice.save();
 
 
+
         const isExiting = await AccountingModel.findOneAndUpdate(
             {
                 referenceId: updatedInvoice._id,
@@ -687,13 +688,20 @@ export const updateInvoice = async (req: Request, res: Response): Promise<any> =
                     notes: updatedInvoice?.customerNotes,
                     projectId: updatedInvoice?.projectId || null,
                     assoicatedPersonName: updatedInvoice.customerName,
+                    assoicatedPersonModel: "CustomerAccountModel", // Assuming this is your Vendor Model
 
                     // Optional: Update person ID if vendor changed
                     assoicatedPersonId: updatedInvoice?.customerId || null,
 
+                    organizationId: updatedInvoice.organizationId,
+
+                    referenceId: updatedInvoice._id,
+                    referenceModel: "InvoiceAccountModel", // Must match Schema
+                    deptRecordFrom: "Invoice",
+
                 }
             },
-            { new: true }
+            { new: true, upsert: true }
         );
 
 
@@ -763,3 +771,72 @@ export const deleteInvoice = async (req: RoleBasedRequest, res: Response): Promi
         });
     }
 };
+
+
+export const syncToAccountsFromInvoice = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { invoiceId } = req.params;
+
+        // Validate ID format
+        if (!mongoose.Types.ObjectId.isValid(invoiceId)) {
+            return res.status(400).json({
+                ok: false,
+                message: "Invalid invoice ID format"
+            });
+        }
+
+        const invoice = await InvoiceAccountModel.findById(invoiceId);
+
+        if (!invoice) {
+            return res.status(404).json({
+                ok: false,
+                message: "Invoice not found"
+            });
+
+        }
+
+
+
+        // We use the utility here because it handles Generating the Unique Record ID
+        const result = await syncAccountingRecord({
+            organizationId: invoice.organizationId,
+            projectId: invoice?.projectId || null,
+
+            // Reference Links
+            referenceId: invoice._id,
+            referenceModel: "InvoiceAccountModel", // Must match Schema
+
+            // Categorization
+            deptRecordFrom: "Invoice",
+
+            // Person Details
+            assoicatedPersonName: invoice.customerName,
+            assoicatedPersonId: invoice?.customerId || null,
+            assoicatedPersonModel: "CustomerAccountModel", // Assuming this is your Vendor Model
+
+            // Financials
+            amount: invoice?.grandTotal || 0, // Utility takes care of grandTotal logic if passed
+            notes: invoice?.customerNotes || "",
+
+            // Defaults for Creation
+            status: "pending",
+            paymentId: null
+        });
+
+
+        return res.status(200).json({
+            ok: true,
+            data: result || null,
+            message: "Sent to accounts dept "
+        });
+
+
+    } catch (error: any) {
+        console.error("Error deleting invoice:", error);
+        res.status(500).json({
+            ok: false,
+            message: "Error deleting invoice",
+            error: error.message
+        });
+    }
+};  

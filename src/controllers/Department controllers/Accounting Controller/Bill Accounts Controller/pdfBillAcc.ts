@@ -21,6 +21,8 @@ export interface PdfBillData {
     discountAmount?: number;
     taxPercentage?: number;
     taxAmount?: number;
+    advancedAmount: number;
+    paymentType: string;
     grandTotal: number;
     notes?: string;
     images?: Array<{
@@ -97,9 +99,9 @@ function drawBillTotalsSection(
     let currentY = yPosition;
 
     // Subtotal in bold with INR
-    drawBillTotalLine(page, 'Subtotal', `INR ${billData.totalAmount.toLocaleString('en-IN', { 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
+    drawBillTotalLine(page, 'Subtotal', `INR ${billData.totalAmount.toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
     })}`, totalsLeft, currentY, boldFont);
     currentY -= 25;
 
@@ -108,9 +110,9 @@ function drawBillTotalsSection(
         const discountText = billData.discountPercentage
             ? `Discount (${billData.discountPercentage}%)`
             : 'Discount';
-        drawBillTotalLine(page, discountText, `-INR ${billData.discountAmount.toLocaleString('en-IN', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
+        drawBillTotalLine(page, discountText, `-INR ${billData.discountAmount.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         })}`, totalsLeft, currentY, boldFont);
         currentY -= 25;
     }
@@ -120,12 +122,31 @@ function drawBillTotalsSection(
         const taxText = billData.taxPercentage
             ? `Tax (${billData.taxPercentage}%)`
             : 'Tax';
-        drawBillTotalLine(page, taxText, `INR ${billData.taxAmount.toLocaleString('en-IN', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
+        drawBillTotalLine(page, taxText, `INR ${billData.taxAmount.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         })}`, totalsLeft, currentY, boldFont);
         currentY -= 25;
     }
+
+
+    if (billData.advancedAmount) {
+        const amtText = `Advance Amt`
+
+        drawBillTotalLine(page, amtText, `-INR ${billData.advancedAmount.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        })}`, totalsLeft, currentY, boldFont);
+        currentY -= 25;
+    }
+
+
+    // if (billData.paymentType) {
+    //     const paymentTypeText = `Payment Type`
+    //     drawBillTotalLine(page, paymentTypeText, `${billData.paymentType}`, totalsLeft, currentY, boldFont);
+    //     currentY -= 25;
+    // }
+
 
     // Grand Total (bold with INR, no background color)
     page.drawText('Grand Total', {
@@ -136,9 +157,9 @@ function drawBillTotalsSection(
         color: COLORS.PRIMARY,
     });
 
-    page.drawText(`INR ${billData.grandTotal.toLocaleString('en-IN', { 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
+    page.drawText(`INR ${billData.grandTotal.toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
     })}`, {
         x: totalsLeft + 120, // Adjusted for INR prefix
         y: currentY - 15,
@@ -245,11 +266,11 @@ async function drawBillHeader(
 
     } catch (error) {
         console.error('Failed to load company logo, using text only:', error);
-        
+
         // Fallback: company name only
         const brandFontSize = 24;
         const brandTextWidth = boldFont.widthOfTextAtSize(companyName, brandFontSize);
-        
+
         page.drawText(companyName, {
             x: (width - brandTextWidth) / 2,
             y: yPosition,
@@ -320,7 +341,8 @@ function drawBillInfoSection(
         { label: 'Bill Number', value: billData.billNumber },
         { label: 'Bill Date', value: formatDate(billData.billDate) },
         { label: 'Due Date', value: formatDate(billData.dueDate) },
-        { label: 'Accounts Payable', value: billData.accountsPayable },
+        // { label: 'Accounts Payable', value: billData.accountsPayable },
+        {label: "Payment Type", value: billData.paymentType}
     ];
 
     let detailY = currentY;
@@ -403,7 +425,7 @@ function drawBillItemsTable(
         if (currentY < 100) {
             const newPage = page.doc.addPage([595.28, 841.89]);
             currentY = 841.89 - 50;
-            
+
             // Redraw table headers on new page
             currentX = tableLeft;
             headers.forEach((header, idx) => {
@@ -444,11 +466,11 @@ function drawBillItemsTable(
         // Item Name with multi-line support
         const itemName = item.itemName || 'No item name';
         const maxItemNameWidth = columnWidths[1] - 10;
-        
+
         const lines = splitTextIntoLines(itemName, regularFont, 9, maxItemNameWidth);
         const lineHeight = 12;
         const itemNameHeight = Math.max(baseRowHeight, lines.length * lineHeight);
-        
+
         lines.forEach((line, lineIndex) => {
             page.drawText(line, {
                 x: currentX + 5,
@@ -481,9 +503,9 @@ function drawBillItemsTable(
         currentX += columnWidths[3];
 
         // Rate
-        page.drawText((item.rate || 0).toLocaleString('en-IN', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
+        page.drawText((item.rate || 0).toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         }), {
             x: currentX + 5,
             y: currentY - 20,
@@ -494,9 +516,9 @@ function drawBillItemsTable(
         currentX += columnWidths[4];
 
         // Total
-        page.drawText((item.totalCost || 0).toLocaleString('en-IN', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
+        page.drawText((item.totalCost || 0).toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         }), {
             x: currentX + 5,
             y: currentY - 20,
@@ -533,9 +555,9 @@ function drawBillNotesSection(
     regularFont: PDFFont
 ): number {
     if (!billData.notes) return yPosition;
-    
+
     let currentY = yPosition;
-    
+
     // Notes title in bold
     page.drawText('Notes:', {
         x: 50,
@@ -550,18 +572,18 @@ function drawBillNotesSection(
     // Notes content with multi-line support
     const notes = billData.notes;
     const maxNotesWidth = width - 100;
-    
+
     const lines = splitTextIntoLines(notes, regularFont, 10, maxNotesWidth);
-    
+
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        
+
         // Check if we need a new page
         if (currentY < 50) {
             const newPage = page.doc.addPage([595.28, 841.89]);
             currentY = 841.89 - 50;
         }
-        
+
         page.drawText(line, {
             x: 50,
             y: currentY,
@@ -569,7 +591,7 @@ function drawBillNotesSection(
             font: regularFont,
             color: COLORS.LIGHT_TEXT,
         });
-        
+
         currentY -= 15;
     }
 
@@ -588,10 +610,10 @@ async function drawBillImagesSection(
     regularFont: PDFFont
 ): Promise<number> {
     if (!billData.images || billData.images.length === 0) return yPosition;
-    
+
     let currentY = yPosition;
     let currentPage = page;
-    
+
     // Images title in bold
     currentPage.drawText('Attached Images:', {
         x: 50,
@@ -605,9 +627,9 @@ async function drawBillImagesSection(
 
     // Filter only images (not PDFs)
     const imageFiles = billData.images.filter(img => img.type === 'image');
-    
+
     console.log('Total images found:', imageFiles.length);
-    
+
     if (imageFiles.length === 0) return currentY;
 
     // Image grid configuration
@@ -623,13 +645,13 @@ async function drawBillImagesSection(
     for (let i = 0; i < imageFiles.length; i++) {
         const image = imageFiles[i];
         const col = i % imagesPerRow;
-        
+
         // Check if we need a new page (before drawing this image)
         if (currentY - (currentRow * totalImageHeight) < 100) {
             currentPage = currentPage.doc.addPage([595.28, 841.89]);
             currentY = 841.89 - 50; // Reset to top of new page
             currentRow = 0; // Reset row counter for new page
-            
+
             // Redraw title on new page
             currentPage.drawText('Attached Images:', {
                 x: 50,
@@ -640,33 +662,33 @@ async function drawBillImagesSection(
             });
             currentY -= 30;
         }
-        
+
         const xPos = 50 + (col * (imageWidth + spacing));
         const yPos = currentY - (currentRow * totalImageHeight);
 
         try {
             console.log(`Attempting to load image: ${image.url}`);
-            
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            const imageResponse = await fetch(image.url, { 
-                signal: controller.signal 
+            const imageResponse = await fetch(image.url, {
+                signal: controller.signal
             });
             clearTimeout(timeoutId);
-            
+
             if (!imageResponse.ok) {
                 throw new Error(`HTTP ${imageResponse.status}: ${imageResponse.statusText}`);
             }
-            
+
             const imageBuffer = await imageResponse.arrayBuffer();
-            
+
             if (imageBuffer.byteLength === 0) {
                 throw new Error('Empty image buffer');
             }
-            
+
             console.log(`Image loaded successfully, size: ${imageBuffer.byteLength} bytes`);
-            
+
             let pdfImage: PDFImage;
 
             // Use the same logic from your working code
@@ -699,7 +721,7 @@ async function drawBillImagesSection(
             const imageName = image.originalName || `Image ${i + 1}`;
             const maxNameWidth = imageWidth - 10;
             const nameLines = splitTextIntoLines(imageName, regularFont, 8, maxNameWidth);
-            
+
             nameLines.forEach((line, lineIndex) => {
                 currentPage.drawText(line, {
                     x: xPos + 5,
@@ -714,10 +736,10 @@ async function drawBillImagesSection(
 
         } catch (error) {
             console.error(`Failed to load image ${image.url}:`, error);
-            
+
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Error details:', errorMessage);
-            
+
             // Draw placeholder for failed image
             currentPage.drawRectangle({
                 x: xPos,
@@ -762,7 +784,7 @@ function splitTextIntoLines(text: string, font: PDFFont, fontSize: number, maxWi
         const word = words[i];
         const testLine = currentLine ? `${currentLine} ${word}` : word;
         const width = font.widthOfTextAtSize(testLine, fontSize);
-        
+
         if (width <= maxWidth) {
             currentLine = testLine;
         } else {
@@ -772,11 +794,11 @@ function splitTextIntoLines(text: string, font: PDFFont, fontSize: number, maxWi
             currentLine = word;
         }
     }
-    
+
     if (currentLine) {
         lines.push(currentLine);
     }
-    
+
     return lines;
 }
 
