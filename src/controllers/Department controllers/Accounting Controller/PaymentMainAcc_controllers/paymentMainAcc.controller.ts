@@ -149,7 +149,8 @@ export const getSinglePaymentAcc = async (req: Request, res: Response): Promise<
         const payment = await PaymentMainAccountModel.findById(id)
             .populate("projectId", "_id projectName")
             .populate("accountingRef")
-            .populate("paymentPersonId", "vendorName customerName companyName"); // Optional: Populate person details
+            .populate("paymentPersonId", "vendorName customerName companyName")
+            .populate("fromSectionId")// Optional: Populate person details
 
 
         if (!payment) {

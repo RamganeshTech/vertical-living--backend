@@ -3,6 +3,9 @@ import mongoose, { isValidObjectId } from "mongoose";
 import { ExpenseAccountModel } from "../../../../models/Department Models/Accounting Model/expenseAccount.model";
 import redisClient from "../../../../config/redisClient";
 import { validateMongoId } from "../Customer Accounts Controllers/customerAccoutsValidation";
+import { syncAccountingRecord } from "../accounting.controller";
+import { AccountingModel } from "../../../../models/Department Models/Accounting Model/accountingMain.model";
+import { createPaymentMainAccUtil } from "../PaymentMainAcc_controllers/paymentMainAcc.controller";
 
 // ✅ Manual Validation Helper
 const validateExpenseData = (data: any, isUpdate = false) => {
@@ -39,11 +42,16 @@ const validateExpenseData = (data: any, isUpdate = false) => {
         errors.push("Amount must be a positive number");
     }
 
-    if (data.dateOfPayment && isNaN(Date.parse(data.dateOfPayment))) {
-        errors.push("Invalid date format for dateOfPayment");
+    if (data.expenseDate && isNaN(Date.parse(data.expenseDate))) {
+        errors.push("Invalid date format for expenseDate");
     }
 
-    if (data.paidThrough && typeof data.paidThrough !== "string") {
+    if (data.dueDate && isNaN(Date.parse(data.dueDate))) {
+        errors.push("Invalid date format for dueDate");
+    }
+
+
+    if (data.payThrough && typeof data.payThrough !== "string") {
         errors.push("PaidThrough must be a string");
     }
 
@@ -71,10 +79,12 @@ export const createExpense = async (req: Request, res: Response): Promise<any> =
             organizationId,
             vendorId,
             vendorName,
-            dateOfPayment,
+            projectId,
+            expenseDate,
             amount,
-            paidThrough,
+            payThrough,
             notes,
+            dueDate,
         } = req.body;
 
         // Create expense
@@ -82,9 +92,11 @@ export const createExpense = async (req: Request, res: Response): Promise<any> =
             organizationId,
             vendorId: vendorId || null,
             vendorName,
-            dateOfPayment: dateOfPayment || new Date(),
+            projectId,
+            expenseDate: expenseDate || new Date(),
             amount,
-            paidThrough,
+            dueDate,
+            payThrough,
             notes,
         });
 
@@ -103,6 +115,34 @@ export const createExpense = async (req: Request, res: Response): Promise<any> =
         if (statsKeys.length > 0) {
             await redisClient.del(statsKeys);
         }
+
+
+        // We use the utility here because it handles Generating the Unique Record ID
+        await syncAccountingRecord({
+            organizationId: expense.organizationId,
+            projectId: expense?.projectId || null,
+
+            // Reference Links
+            referenceId: expense._id,
+            referenceModel: "ExpenseAccountModel", // Must match Schema
+
+            // Categorization
+            deptRecordFrom: "Expense",
+
+            // Person Details
+            assoicatedPersonName: expense.vendorName,
+            assoicatedPersonId: expense?.vendorId || null,
+            assoicatedPersonModel: "VendorAccountModel", // Assuming this is your Vendor Model
+
+            // Financials
+            amount: expense?.amount || 0, // Utility takes care of grandTotal logic if passed
+            notes: expense?.notes || "",
+
+            // Defaults for Creation
+            status: "pending",
+            paymentId: null
+        });
+
 
         return res.status(201).json({
             ok: true,
@@ -145,11 +185,13 @@ export const updateExpense = async (req: Request, res: Response): Promise<any> =
         const {
             vendorId,
             vendorName,
-            invoiceNumber,
-            dateOfPayment,
+            expenseNumber,
+            expenseDate,
             amount,
-            paidThrough,
+            payThrough,
             notes,
+            dueDate,
+            projectId
         } = req.body;
 
         // Find and update expense
@@ -165,10 +207,12 @@ export const updateExpense = async (req: Request, res: Response): Promise<any> =
         // Update fields
         if (vendorId) expense.vendorId = vendorId;
         if (vendorName) expense.vendorName = vendorName;
-        if (invoiceNumber) expense.invoiceNumber = invoiceNumber;
-        if (dateOfPayment) expense.dateOfPayment = new Date(dateOfPayment);
+        if (expenseNumber) expense.expenseNumber = expenseNumber;
+        if (expenseDate) expense.expenseDate = new Date(expenseDate);
+        if (dueDate) expense.dueDate = new Date(dueDate);
+        if (projectId) expense.projectId = projectId;
         if (amount !== undefined) expense.amount = amount;
-        if (paidThrough) expense.paidThrough = paidThrough;
+        if (payThrough) expense.payThrough = payThrough;
         if (notes !== undefined) expense.notes = notes;
 
         await expense.save();
@@ -189,6 +233,29 @@ export const updateExpense = async (req: Request, res: Response): Promise<any> =
         if (statsKeys.length > 0) {
             await redisClient.del(statsKeys);
         }
+
+
+        const isExiting = await AccountingModel.findOneAndUpdate(
+            {
+                referenceId: expense._id,
+                referenceModel: "ExpenseAccountModel"
+            },
+            {
+                $set: {
+                    // Update fields that might have changed in the bill
+                    amount: expense.amount,
+                    notes: expense.notes,
+                    projectId: expense?.projectId || null,
+                    assoicatedPersonName: expense.vendorName,
+                    // Optional: Update person ID if vendor changed
+                    assoicatedPersonId: expense?.vendorId || null,
+                    // IMPORTANT: We DO NOT include 'status' or 'paymentId' here.
+                    // Those are controlled by the Payment Controller.
+                }
+            },
+            { new: true }
+        );
+
 
 
         return res.status(200).json({
@@ -292,8 +359,8 @@ export const getExpenseById = async (req: Request, res: Response): Promise<any> 
 
         // Find expense
         const expense = await ExpenseAccountModel.findById(id)
-            .populate("vendorId", "name email phone")
-            .populate("organizationId", "name");
+            .populate("vendorId", "firstName email phone.work")
+        // .populate("organizationId", "name");
 
         if (!expense) {
             return res.status(404).json({
@@ -328,13 +395,13 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
             organizationId,
             vendorId,
             search,
-            dateOfPaymentFromDate , 
-            dateOfPaymentToDate,
-             createdFromDate ,
-              createdToDate,
+            expenseDateFromDate,
+            expenseDateToDate,
+            createdFromDate,
+            createdToDate,
             minAmount,
             maxAmount,
-            paidThrough,
+            payThrough,
             page = "1",
             limit = "10",
             sortBy = "createdAt",
@@ -383,7 +450,7 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
         }
 
         // // Create cache key
-        const cacheKey = `expenses:page:${page}:limit:${limit}:organizationId:${organizationId}:vendorId:${vendorId || "all"}:search:${search || "all"}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:dateOfPaymentFromDate:${dateOfPaymentFromDate || "all"}:dateOfPaymentToDate:${dateOfPaymentToDate || "all"}:minAmount:${minAmount || "all"}:maxAmount:${maxAmount || "all"}:paidThrough:${paidThrough || "all"}:sortBy:${sortBy}:sortOrder:${sortOrder}`;
+        const cacheKey = `expenses:page:${page}:limit:${limit}:organizationId:${organizationId}:vendorId:${vendorId || "all"}:search:${search || "all"}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:expenseDateFromDate:${expenseDateFromDate || "all"}:expenseDateToDate:${expenseDateToDate || "all"}:minAmount:${minAmount || "all"}:maxAmount:${maxAmount || "all"}:payThrough:${payThrough || "all"}:sortBy:${sortBy}:sortOrder:${sortOrder}`;
 
         // Check cache
         const cachedData = await redisClient.get(cacheKey);
@@ -407,12 +474,12 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
         if (search) {
             filter.$or = [
                 filter.vendorName = { $regex: search, $options: "i" },
-                filter.invoiceNumber = { $regex: search, $options: "i" },
+                filter.expenseNumber = { $regex: search, $options: "i" },
             ]
         }
 
 
-         if (createdFromDate || createdToDate) {
+        if (createdFromDate || createdToDate) {
             const filterRange: any = {};
 
             if (createdFromDate) {
@@ -446,15 +513,15 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
 
 
 
-        if (dateOfPaymentFromDate || dateOfPaymentToDate) {
+        if (expenseDateFromDate || expenseDateToDate) {
             const filterRange: any = {};
 
-            if (dateOfPaymentFromDate) {
-                const from = new Date(dateOfPaymentFromDate as string);
+            if (expenseDateFromDate) {
+                const from = new Date(expenseDateFromDate as string);
                 if (isNaN(from.getTime())) {
                     res.status(400).json({
                         ok: false,
-                        message: "Invalid dateOfPaymentFromDate format. Use ISO string (e.g. 2025-10-23)."
+                        message: "Invalid expenseDateFromDate format. Use ISO string (e.g. 2025-10-23)."
                     });
                     return;
                 }
@@ -462,12 +529,12 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
                 filterRange.$gte = from;
             }
 
-            if (dateOfPaymentToDate) {
-                const to = new Date(dateOfPaymentToDate as string);
+            if (expenseDateToDate) {
+                const to = new Date(expenseDateToDate as string);
                 if (isNaN(to.getTime())) {
                     res.status(400).json({
                         ok: false,
-                        message: "Invalid dateOfPaymentToDate format. Use ISO string (e.g. 2025-10-23)."
+                        message: "Invalid expenseDateToDate format. Use ISO string (e.g. 2025-10-23)."
                     });
                     return;
                 }
@@ -475,7 +542,7 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
                 filterRange.$lte = to;
             }
 
-            filter.dateOfPayment = filterRange;
+            filter.expenseDate = filterRange;
         }
 
 
@@ -488,7 +555,7 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
         //     const endOfDay = new Date(date as string);
         //     endOfDay.setHours(23, 59, 59, 999);
 
-        //     filter.dateOfPayment = {
+        //     filter.expenseDate = {
         //         $gte: startOfDay,
         //         $lte: endOfDay
         //     };
@@ -504,8 +571,8 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
             }
         }
 
-        if (paidThrough) {
-            filter.paidThrough = { $regex: paidThrough, $options: "i" };
+        if (payThrough) {
+            filter.payThrough = { $regex: payThrough, $options: "i" };
         }
 
         // Build sort object
@@ -562,111 +629,111 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<any> 
     }
 };
 
-// ✅ GET Expense Statistics (Bonus)
-export const getExpenseStatistics = async (req: Request, res: Response): Promise<any> => {
+
+
+//  SYNC TO PAYMENT MAIN
+
+export const sendExpenseToPayment = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { organizationId, startDate, endDate } = req.query;
+        const { expenseId } = req.params; // We expect the Bill ID to be sent
 
-        // Validate organizationId
-        if (!organizationId) {
+        // 1. Validate Bill ID
+        if (!mongoose.Types.ObjectId.isValid(expenseId)) {
             return res.status(400).json({
                 ok: false,
-                message: "Organization ID is required",
+                message: "Invalid Bill ID format"
             });
         }
 
-        if (!validateMongoId(organizationId as string)) {
-            return res.status(400).json({
+        // 2. Fetch the Bill
+        const expense = await ExpenseAccountModel.findById(expenseId);
+        if (!expense) {
+            return res.status(404).json({
                 ok: false,
-                message: "Invalid Organization ID",
+                message: "Expense not found"
             });
         }
 
-        // Create cache key
-        const cacheKey = `expense-stats:organizationId:${organizationId}:startDate:${startDate || "all"}:endDate:${endDate || "all"}`;
 
-        // Check cache
-        const cachedStats = await redisClient.get(cacheKey);
-        if (cachedStats) {
-            return res.status(200).json({
-                ok: true,
-                message: "Statistics retrieved from cache",
-                data: JSON.parse(cachedStats),
-                cached: true,
-            });
+        if (expense?.isSyncWithPaymentsSection) {
+            return res.status(400).json({ message: "Bill Already sent to the payment section", ok: false })
         }
 
-        // Build filter
-        const filter: any = { organizationId };
 
-        if (startDate || endDate) {
-            filter.dateOfPayment = {};
-            if (startDate) {
-                filter.dateOfPayment.$gte = new Date(startDate as string);
-            }
-            if (endDate) {
-                filter.dateOfPayment.$lte = new Date(endDate as string);
-            }
+        // 3. Prepare the Accounting Items (Mapped from Bill)
+        const paymentItems = [{
+            itemName: "expense item",
+            quantity: 1,
+            rate: expense.amount || 0,
+            unit: "",
+            totalCost: expense.amount || 0,
+            dueDate: expense.dueDate,
+            status: "pending",
+            orderId: "",
+            paymentId: "",
+            transactionId: "",
+            paidAt: null,
+            failureReason: "",
+            fees: null,
+            tax: null
+        }];
+
+
+        const newPayemnt = await createPaymentMainAccUtil({
+            paymentPersonId: expense.vendorId || null,
+            paymentPersonModel: expense?.vendorId ? "VendorAccountModel" : null,
+            paymentPersonName: expense?.vendorName || "",
+            organizationId: expense.organizationId,
+            accountingRef: null,
+            projectId: expense?.projectId || null,
+            fromSectionModel: "ExpenseAccountModel",
+            fromSectionId: expense._id as any,
+            fromSection: "Expense",
+            paymentDate: null,
+            dueDate: expense.dueDate,
+            subject: "",
+            items: paymentItems,
+            totalAmount: expense.amount || 0,
+            discountPercentage: 0,
+            discountAmount: 0,
+            taxPercentage: 0,
+            taxAmount: 0,
+            grandTotal: expense.amount,
+            notes: expense.notes,
+            isSyncedWithAccounting: false,
+            generalStatus: "pending"
+        })
+
+        expense.isSyncWithPaymentsSection = true;
+        await expense.save()
+
+
+        // ✅ Clear single expense cache
+        await redisClient.del(`expense:${expenseId}`);
+
+        // ✅ Clear statistics cache
+        const statsCachePattern = `expense-stats:organizationId:${expense.organizationId}*`;
+        const statsKeys = await redisClient.keys(statsCachePattern);
+        if (statsKeys.length > 0) {
+            await redisClient.del(statsKeys);
         }
 
-        // Calculate statistics
-        const stats = await ExpenseAccountModel.aggregate([
-            { $match: filter },
-            {
-                $group: {
-                    _id: null,
-                    totalExpenses: { $sum: 1 },
-                    totalAmount: { $sum: "$amount" },
-                    averageAmount: { $avg: "$amount" },
-                    maxAmount: { $max: "$amount" },
-                    minAmount: { $min: "$amount" },
-                },
-            },
-        ]);
 
-        const statistics = stats.length > 0 ? stats[0] : {
-            totalExpenses: 0,
-            totalAmount: 0,
-            averageAmount: 0,
-            maxAmount: 0,
-            minAmount: 0,
-        };
 
-        // Get top vendors
-        const topVendors = await ExpenseAccountModel.aggregate([
-            { $match: filter },
-            {
-                $group: {
-                    _id: "$vendorId",
-                    vendorName: { $first: "$vendorName" },
-                    totalAmount: { $sum: "$amount" },
-                    count: { $sum: 1 },
-                },
-            },
-            { $sort: { totalAmount: -1 } },
-            { $limit: 5 },
-        ]);
 
-        const result = {
-            ...statistics,
-            topVendors,
-        };
 
-        // Cache the result (expire in 10 minutes)
-        await redisClient.setEx(cacheKey, 600, JSON.stringify(result));
-
-        return res.status(200).json({
+        return res.status(201).json({
             ok: true,
-            message: "Statistics retrieved successfully",
-            data: result,
-            cached: false,
+            message: "Sent to Payments Section successfully",
+            data: newPayemnt
         });
+
     } catch (error: any) {
-        console.error("Error getting expense statistics:", error);
+        console.error("Error sending bill to payement:", error);
         return res.status(500).json({
             ok: false,
-            message: "Internal server error",
-            error: error.message,
+            message: "Error processing request",
+            error: error.message
         });
     }
-};
+}

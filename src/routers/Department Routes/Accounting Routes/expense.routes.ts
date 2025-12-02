@@ -6,7 +6,8 @@ import {
     deleteExpense,
     getExpenseById,
     getAllExpenses,
-    getExpenseStatistics
+    sendExpenseToPayment,
+    // getExpenseStatistics
 } from "../../../controllers/Department controllers/Accounting Controller/Expense Accounts Controllers/expenseAccounts.controllers";
 
 // ✅ GET all accounting records for an organization (with filters)
@@ -31,8 +32,6 @@ ExpenseAccountingRoutes.get("/getsingle/:id", getExpenseById);
 
 // ✅ Get All Expenses with Filters & Pagination
 ExpenseAccountingRoutes.get("/getall", getAllExpenses);
-
-// ✅ Get Expense Statistics
-ExpenseAccountingRoutes.get("/getstatistics", getExpenseStatistics);
+ExpenseAccountingRoutes.post("/syntopayments/:expenseId", sendExpenseToPayment);
 
 export default ExpenseAccountingRoutes;

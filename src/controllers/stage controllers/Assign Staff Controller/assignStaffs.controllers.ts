@@ -20,6 +20,7 @@ import { assignedTo, selectedFields } from "../../../constants/BEconstants";
 import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
 import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
+import { parse } from "path";
 
 
 export const stageModelMap = new Map<string, Model<Document>>([
@@ -43,16 +44,27 @@ const assignStageStaffByName = async (req: Request, res: Response): Promise<any>
   try {
     const { stageName, projectId, staffId } = req.params;
 
-    
+
+    // console.log("staffID", staffId)
     // console.log("staff", staffId)
 
     if (!stageName || !projectId) {
       return res.status(400).json({ message: "stageName and projectId required", ok: false });
     }
 
-    if(!staffId){
-      return res.status(400).json({ message: "select the staff to assign", ok: false });
+
+    let parsedStaffId: string | null = null;
+
+    if (staffId && staffId !== "null") {
+      parsedStaffId = staffId;
     }
+
+    // console.log("parsedStaffId", parsedStaffId)
+
+
+    // if(!staffId){
+    //   return res.status(400).json({ message: "select the staff to assign", ok: false });
+    // }
 
     // console.log("staff", staffId)
 
@@ -66,13 +78,13 @@ const assignStageStaffByName = async (req: Request, res: Response): Promise<any>
       return res.status(400).json({ message: "Invalid projectId", ok: false });
     }
 
-    if (staffId && !Types.ObjectId.isValid(staffId)) {
-      return res.status(400).json({ message: "Invalid staffId", ok: false });
-    }
+    // if (staffId && !Types.ObjectId.isValid(staffId)) {
+    //   return res.status(400).json({ message: "Invalid staffId", ok: false });
+    // }
 
     const updated = await StageModel.findOneAndUpdate(
       { projectId },
-      { assignedTo: staffId || null },
+      { assignedTo: parsedStaffId || null },
       { new: true }
     );
 
@@ -82,7 +94,7 @@ const assignStageStaffByName = async (req: Request, res: Response): Promise<any>
 
 
     const populatedData = await updated.populate(assignedTo, selectedFields)
-    
+
     const redisMainKey = `stage:${stageName}:${projectId}`
     // console.log("key name", redisMainKey)
     await redisClient.set(redisMainKey, JSON.stringify(populatedData.toObject()), { EX: 60 * 10 })

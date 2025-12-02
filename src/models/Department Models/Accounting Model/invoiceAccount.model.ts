@@ -25,6 +25,7 @@ export interface IInvoice extends Document {
   organizationId: mongoose.Types.ObjectId;
   customerName: string;
   invoiceNumber: string;
+  projectId: mongoose.Types.ObjectId;
   orderNumber?: string;
   accountsReceivable?: string;
   salesPerson?: string;
@@ -55,7 +56,7 @@ const InvoiceItemSchema = new Schema<IInvoiceItem>(
     itemName: { type: String, },
     quantity: { type: Number, default: 0 },
     rate: { type: Number, },
-    unit: { type: String, default: ""},
+    unit: { type: String, default: "" },
     totalCost: { type: Number, }, // quantity * rate
   },
   { _id: true }
@@ -83,6 +84,10 @@ const InvoiceSchema = new Schema<IInvoice>(
       ref: "OrganizationModel"
     },
     customerName: { type: String, default: null },
+    projectId: {
+      type: Schema.Types.ObjectId,
+      ref: "ProjectModel",
+    },
     invoiceNumber: { type: String, default: null },
     orderNumber: { type: String, default: null },
     accountsReceivable: { type: String, default: null },

@@ -734,11 +734,11 @@ const formatLedgerItem = (item: any) => {
     // Type Info
     type: item.deptRecordFrom, // "Bill Acc", "Expense Acc"
 
-    // Source Details (The Bill)
+    // Source Details (The Bill/Expense/Invoice)
     sourceDetails: {
       id: source._id,
       number: source.billNumber || source.expenseNumber || "N/A",
-      date: source.billDate || source.date,
+      date: source?.billDate || source?.date || source?.expenseDate,
       createdAt: source.createdAt,
       dueDate: source.dueDate,
       model: item.referenceModel
@@ -831,7 +831,7 @@ export const getSingleAccountingRecord = async (req: Request, res: Response): Pr
     const record = await AccountingModel.findById(id)
       .populate("projectId", "projectName _id")
       // Deep population for single view
-      .populate("referenceId") // Get full Bill details
+      .populate("referenceId") // Get full Bill details/ expense details also 
       .populate("paymentId");  // Get full Payment details
 
     if (!record) {

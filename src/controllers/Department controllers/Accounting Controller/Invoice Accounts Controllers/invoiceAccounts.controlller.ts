@@ -5,6 +5,8 @@ import { RoleBasedRequest } from "../../../../types/types";
 import redisClient from "../../../../config/redisClient";
 import { generateInvoiceAccBillPdf, PdfInvoiceData } from "./pdfInvoiceAcc";
 import { COMPANY_LOGO, uploadToS3 } from "../../../stage controllers/ordering material controller/pdfOrderHistory.controller";
+import { syncAccountingRecord } from "../accounting.controller";
+import { AccountingModel } from "../../../../models/Department Models/Accounting Model/accountingMain.model";
 
 // Helper function to generate unique invoice number
 const generateInvoiceNumber = async (organizationId: string): Promise<string> => {
@@ -179,7 +181,7 @@ const invalidateInvoiceCache = async (organizationId?: string, customerId?: stri
 export const createInvoice = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const {
-            customerId, organizationId, customerName, orderNumber,
+            customerId, organizationId, customerName, projectId, orderNumber,
             accountsReceivable, salesPerson, subject, invoiceDate, terms, dueDate, items, totalAmount,
             discountPercentage, discountAmount, taxPercentage, taxAmount, grandTotal, customerNotes,
             termsAndConditions } = req.body;
@@ -220,6 +222,7 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
         const newInvoice: any = await InvoiceAccountModel.create({
             organizationId,
             customerId: customerId || null,
+            projectId: projectId || null,
             customerName: customerName?.trim(),
             orderNumber: orderNumber || null,
             accountsReceivable: accountsReceivable || null,
@@ -269,6 +272,34 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
 
         // Invalidate related caches
         await invalidateInvoiceCache(organizationId, customerId);
+
+
+
+        // We use the utility here because it handles Generating the Unique Record ID
+        await syncAccountingRecord({
+            organizationId: newInvoice.organizationId,
+            projectId: newInvoice?.projectId || null,
+
+            // Reference Links
+            referenceId: newInvoice._id,
+            referenceModel: "InvoiceAccountModel", // Must match Schema
+
+            // Categorization
+            deptRecordFrom: "Invoice",
+
+            // Person Details
+            assoicatedPersonName: newInvoice.customerName,
+            assoicatedPersonId: newInvoice?.cusotmerId || null,
+            assoicatedPersonModel: "CustomerAccountModel", // Assuming this is your Vendor Model
+
+            // Financials
+            amount: newInvoice?.grandTotal || 0, // Utility takes care of grandTotal logic if passed
+            notes: newInvoice?.customerNotes || "",
+
+            // Defaults for Creation
+            status: "pending",
+            paymentId: null
+        });
 
         return res.status(201).json({
             ok: true,
@@ -621,7 +652,7 @@ export const updateInvoice = async (req: Request, res: Response): Promise<any> =
 
 
         // Generate PDF
-        const pdfData:any = {
+        const pdfData: any = {
             ...updatedInvoice.toObject(),
             companyLogo: COMPANY_LOGO, // Add your company logo URL
             companyName: 'Vertical Living' // Add your company name
@@ -642,6 +673,28 @@ export const updateInvoice = async (req: Request, res: Response): Promise<any> =
         };
 
         await updatedInvoice.save();
+
+
+        const isExiting = await AccountingModel.findOneAndUpdate(
+            {
+                referenceId: updatedInvoice._id,
+                referenceModel: "InvoiceAccountModel"
+            },
+            {
+                $set: {
+                    // Update fields that might have changed in the invoice
+                    amount: updatedInvoice.grandTotal,
+                    notes: updatedInvoice?.customerNotes,
+                    projectId: updatedInvoice?.projectId || null,
+                    assoicatedPersonName: updatedInvoice.customerName,
+
+                    // Optional: Update person ID if vendor changed
+                    assoicatedPersonId: updatedInvoice?.customerId || null,
+
+                }
+            },
+            { new: true }
+        );
 
 
         await invalidateInvoiceCache(String(updatedInvoice.organizationId), String(updatedInvoice.customerId), id);
