@@ -150,8 +150,58 @@ const acceptClientConsent = async (req: RoleBasedRequest, res: Response): Promis
 
 
 
+const getPaymentConsentTermsAndConditions =  async (req: RoleBasedRequest, res: Response): Promise<any> => {
+  try {
+    const { projectId, token } = req.params;
+    // const { clientId } = req.body;
+
+    // if (!clientId) {
+    //   return res.status(400).json({ ok: false, message: "Client ID is required.", data: null });
+    // }
+
+    const paymentDoc = await PaymentConfirmationModel.findOne({ projectId });
+
+    if (!paymentDoc || !paymentDoc?.paymentClientConsent) {
+      return res.status(404).json({ ok: false, message: "Consent data not found.", data: null });
+    }
+
+    if (!paymentDoc.isConsentRequired) {
+      return res.status(400).json({ ok: false, message: "Consent is not required for this project.", data: null });
+    }
+
+    // if (paymentDoc.paymentClientConsent.agreedByClientId) {
+    //   return res.status(400).json({ ok: false, message: "Consent already given.", data: null });
+    // }
+
+
+
+    if (paymentDoc.paymentClientConsent.isAgreed) {
+      return res.status(400).json({ ok: false, message: "Consent already given.", data: null });
+    }
+
+    if (paymentDoc.paymentClientConsent.agreementToken !== token) {
+      console.log("agreementToken form the db", paymentDoc.paymentClientConsent.agreementToken)
+      console.log("token", token)
+      return res.status(400).json({ ok: false, message: "Consent Form token Expired or Invalid.", data: null });
+    }
+
+    
+
+    return res.status(200).json({
+      ok: true,
+      message: "Client consent fetched successfully.",
+      data: paymentDoc.paymentClientConsent.content || null
+    });
+
+  } catch (err) {
+    console.error("Accept client consent error:", err);
+    return res.status(500).json({ ok: false, message: "Server error.", data: null });
+  }
+};
+
 export {
   toggleConsentRequired,
   generateConsentLink,
   acceptClientConsent,
+  getPaymentConsentTermsAndConditions
 }

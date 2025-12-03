@@ -311,6 +311,10 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
             referenceId: newBill._id,
             referenceModel: "BillAccountModel", // Must match Schema
 
+            deptGeneratedDate: newBill?.billDate || null,
+            deptNumber: newBill?.billNumber || null,
+            deptDueDate: newBill?.dueDate || null,
+
             // Categorization
             deptRecordFrom: "Bill",
 
@@ -350,11 +354,11 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
 export const getBills = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { organizationId, vendorId, page = 1, limit = 10, date, search, sortBy = 'createdAt',
-            sortOrder = 'desc', billFromDate, billToDate, createdFromDate, createdToDate } = req.query;
+            sortOrder = 'desc', billFromDate, billToDate, createdFromDate, createdToDate, minAmount , maxAmount } = req.query;
 
 
         // Build cache key based on query parameters
-        const cacheKey = `billaccount:org:${organizationId || 'all'}:vendor:${vendorId || 'all'}:page:${page}:limit:${limit}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:billFromDate:${billFromDate || "all"}:billToDate:${billToDate || "all"}:search${search || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
+        const cacheKey = `billaccount:org:${organizationId || 'all'}:vendor:${vendorId || 'all'}:page:${page}:limit:${limit}:minAmount:${minAmount || 0}:maxAmount:${maxAmount || 0}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:billFromDate:${billFromDate || "all"}:billToDate:${billToDate || "all"}:search${search || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
 
         // Try to get from cache
         const cachedData = await redisClient.get(cacheKey);
@@ -419,6 +423,16 @@ export const getBills = async (req: RoleBasedRequest, res: Response): Promise<an
             }
 
             filter.createdAt = filterRange;
+        }
+
+         if (minAmount || maxAmount) {
+            filter.grandTotal = {};
+            if (minAmount) {
+                filter.grandTotal.$gte = parseFloat(minAmount as string);
+            }
+            if (maxAmount) {
+                filter.grandTotal.$lte = parseFloat(maxAmount as string);
+            }
         }
 
 
@@ -736,6 +750,11 @@ export const updatebill = async (req: Request, res: Response): Promise<any> => {
                     notes: updatedbill.notes,
                     projectId: updatedbill?.projectId || null,
                     assoicatedPersonName: updatedbill.vendorName,
+
+                    deptGeneratedDate: updatedbill?.billDate || null,
+                    deptNumber: updatedbill?.billNumber || null,
+                    deptDueDate: updatedbill?.dueDate || null,
+
 
                     // Optional: Update person ID if vendor changed
                     assoicatedPersonId: updatedbill?.vendorId || null,
@@ -1097,7 +1116,7 @@ export const sendBillToPayment = async (req: Request, res: Response): Promise<an
             projectId: bill?.projectId || null,
             fromSectionModel: "BillAccountModel",
             fromSectionId: bill._id as Types.ObjectId,
-            fromSection: "bill",
+            fromSection: "Bill",
             paymentDate: null,
             dueDate: bill.dueDate,
             subject: bill.subject,

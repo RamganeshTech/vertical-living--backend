@@ -126,6 +126,12 @@ export const createExpense = async (req: Request, res: Response): Promise<any> =
             referenceId: expense._id,
             referenceModel: "ExpenseAccountModel", // Must match Schema
 
+            deptGeneratedDate: expense?.expenseDate || null,
+            deptNumber: expense?.expenseNumber || null,
+            deptDueDate: expense?.dueDate || null,
+
+
+
             // Categorization
             deptRecordFrom: "Expense",
 
@@ -249,6 +255,12 @@ export const updateExpense = async (req: Request, res: Response): Promise<any> =
                     assoicatedPersonName: expense.vendorName,
                     // Optional: Update person ID if vendor changed
                     assoicatedPersonId: expense?.vendorId || null,
+
+                    deptGeneratedDate: expense?.expenseDate || null,
+                    deptNumber: expense?.expenseNumber || null,
+                    deptDueDate: expense?.dueDate || null,
+
+
                     // IMPORTANT: We DO NOT include 'status' or 'paymentId' here.
                     // Those are controlled by the Payment Controller.
                 }

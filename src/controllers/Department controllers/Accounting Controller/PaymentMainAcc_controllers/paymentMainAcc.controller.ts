@@ -105,7 +105,7 @@ export const getAllPaymentsAcc = async (req: Request, res: Response): Promise<an
             .limit(limitNumber)
             .populate("projectId", "projectName _id")
             // Ensure the fields here exist in your Vendor/Customer schemas
-            .populate("paymentPersonId", "vendorName customerName companyName name");
+            .populate("paymentPersonId", "vendorName customerName companyName");
 
         // --- 5. Determine Next Page ---
         const totalPages = Math.ceil(totalCount / limitNumber);

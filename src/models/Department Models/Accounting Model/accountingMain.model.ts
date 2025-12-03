@@ -173,10 +173,20 @@ import mongoose, { Schema, Types } from "mongoose";
 
 
 export interface IAccounting extends Document {
+  _id: Types.ObjectId;
   recordNumber?: string | null;
   organizationId: Types.ObjectId;
 
   projectId: Types.ObjectId | null;
+
+
+  // --- NEW FIELDS (For Sorting & Searching without Lookup) ---
+  deptGeneratedDate: Date;      // Stores BillDate, InvoiceDate, or ExpenseDate
+  deptNumber: string;           // Stores "BILL-001", "INV-005", "EXP-99"
+  deptDueDate: Date | null;       // Stores Bill DueDate
+  // ----------------------------------------------------------
+
+
 
   paymentId: mongoose.Types.ObjectId | null;
   referenceId: mongoose.Types.ObjectId;
@@ -185,10 +195,10 @@ export interface IAccounting extends Document {
   assoicatedPersonName: string;
   assoicatedPersonId: mongoose.Types.ObjectId;
 
-  deptRecordFrom: string // To show badge color
+  deptRecordFrom: "Retail Invoice" | "Invoice" | "Bill" | "Expense" // To show badge color
   assoicatedPersonModel: string | null
   amount: number
-  status: string;
+  status: string | null;
   notes: string
   createdAt: Date;
   updatedAt: Date;
@@ -208,17 +218,25 @@ const accountingSchema = new Schema<IAccounting>({
     ref: 'ProjectModel'
   },
 
+
+
+  // ✅ NEW FIELDS
+  deptGeneratedDate: { type: Date, default: null }, // Indexed for Date Range Filter
+  deptNumber: { type: String, default: null }, // Indexed for Search
+  deptDueDate: { type: Date, default: null, },
+
   referenceId: { type: Schema.Types.ObjectId, refPath: "referenceModel", default: null },
   referenceModel: {
     type: String,
     default: null,
   },
 
-  paymentId: { 
-    type: Schema.Types.ObjectId, 
+  paymentId: {
+    type: Schema.Types.ObjectId,
     ref: "PaymentMainAccountsModel",
-     default: null },
-  
+    default: null
+  },
+
 
   assoicatedPersonName: {
     type: String,
@@ -237,7 +255,7 @@ const accountingSchema = new Schema<IAccounting>({
   status: {
     type: String,
     default: 'pending',
-    enum: ['paid', 'cancelled', "pending"]
+    enum: ['paid', 'cancelled', "pending", null]
   },
   notes: { type: String, default: null },
 

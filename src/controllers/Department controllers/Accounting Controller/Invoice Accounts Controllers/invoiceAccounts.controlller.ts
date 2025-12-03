@@ -287,6 +287,10 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
             // Categorization
             deptRecordFrom: "Invoice",
 
+            deptGeneratedDate: newInvoice?.invoiceDate || null,
+            deptNumber: newInvoice?.invoiceNumber || null,
+            deptDueDate: newInvoice?.dueDate || null,
+
             // Person Details
             assoicatedPersonName: newInvoice.customerName,
             assoicatedPersonId: newInvoice?.customerId || null,
@@ -297,7 +301,7 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
             notes: newInvoice?.customerNotes || "",
 
             // Defaults for Creation
-            status: "pending",
+            status: null,
             paymentId: null
         });
 
@@ -321,7 +325,7 @@ export const getInvoices = async (req: RoleBasedRequest, res: Response): Promise
     try {
         const { organizationId, customerId, page = 1, limit = 10, search, sortBy = 'createdAt',
             sortOrder = 'desc',
-
+            minAmount, maxAmount,
             fromInvoiceDate,
             toInvoiceDate,
             createdFromDate,
@@ -330,7 +334,7 @@ export const getInvoices = async (req: RoleBasedRequest, res: Response): Promise
 
 
         // Build cache key based on query parameters
-        const cacheKey = `invoices:org:${organizationId || 'all'}:customer:${customerId || 'all'}:page:${page}:limit:${limit}:search${search || "all"}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:fromInvoiceDate:${fromInvoiceDate || "all"}:toInvoiceDate:${toInvoiceDate || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
+        const cacheKey = `invoices:org:${organizationId || 'all'}:customer:${customerId || 'all'}:page:${page}:limit:${limit}:search${search || "all"}:minAmount:${minAmount || "all"}:maxAmount:${maxAmount || "all"}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:fromInvoiceDate:${fromInvoiceDate || "all"}:toInvoiceDate:${toInvoiceDate || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
 
         // Try to get from cache
         const cachedData = await redisClient.get(cacheKey);
@@ -451,6 +455,16 @@ export const getInvoices = async (req: RoleBasedRequest, res: Response): Promise
             }
 
             filter.invoiceDate = filterRange;
+        }
+
+        if (minAmount || maxAmount) {
+            filter.grandTotal = {};
+            if (minAmount) {
+                filter.grandTotal.$gte = parseFloat(minAmount as string);
+            }
+            if (maxAmount) {
+                filter.grandTotal.$lte = parseFloat(maxAmount as string);
+            }
         }
 
 
@@ -690,6 +704,11 @@ export const updateInvoice = async (req: Request, res: Response): Promise<any> =
                     assoicatedPersonName: updatedInvoice.customerName,
                     assoicatedPersonModel: "CustomerAccountModel", // Assuming this is your Vendor Model
 
+                    deptGeneratedDate: updatedInvoice?.invoiceDate || null,
+                    deptNumber: updatedInvoice?.invoiceNumber || null,
+                    deptDueDate: updatedInvoice?.dueDate || null,
+
+
                     // Optional: Update person ID if vendor changed
                     assoicatedPersonId: updatedInvoice?.customerId || null,
 
@@ -813,6 +832,11 @@ export const syncToAccountsFromInvoice = async (req: RoleBasedRequest, res: Resp
             assoicatedPersonName: invoice.customerName,
             assoicatedPersonId: invoice?.customerId || null,
             assoicatedPersonModel: "CustomerAccountModel", // Assuming this is your Vendor Model
+
+            deptGeneratedDate: invoice?.invoiceDate || null,
+            deptNumber: invoice?.invoiceNumber || null,
+            deptDueDate: invoice?.dueDate || null,
+
 
             // Financials
             amount: invoice?.grandTotal || 0, // Utility takes care of grandTotal logic if passed

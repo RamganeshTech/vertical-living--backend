@@ -1,9 +1,11 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { IUploadPdf } from "./invoiceAccount.model";
 
 export interface IRetailInvoiceItem {
   itemName: string;
   quantity: number;
   rate: number;
+  unit?: string;
   totalCost: number; // quantity * rate
 }
 
@@ -13,9 +15,10 @@ export interface IRetailInvoice extends Document {
   customerName: string;
   mobile?: string;
   salesPerson?: string;
+  projectId: mongoose.Types.ObjectId;
   invoiceNumber: string;
   subject?: string;
-  invoiceDate: Date;
+  invoiceDate: Date ;
   items: IRetailInvoiceItem[];
   totalAmount: number;
 
@@ -28,13 +31,27 @@ export interface IRetailInvoice extends Document {
 
   grandTotal: number;
   paymentMode: "cash" | "card" | "cheque" | "bank transfer" | "UPI" | null
+
+  pdfData?: IUploadPdf
+  customerNotes?: string
+
 }
+
+
+
+const pdfGeneratorSchema = new Schema<IUploadPdf>({
+  type: { type: String, enum: ["image", "pdf"] },
+  url: { type: String, },
+  originalName: String,
+  uploadedAt: { type: Date, default: new Date() }
+}, { _id: true });
 
 const RetailInvoiceItemSchema = new Schema<IRetailInvoiceItem>(
   {
     itemName: { type: String, },
     quantity: { type: Number, default: 1 },
     rate: { type: Number, },
+    unit: { type: String, default: "" },
     totalCost: { type: Number, }, // quantity * rate
   },
   { _id: true }
@@ -51,6 +68,10 @@ const RetailInvoiceSchema = new Schema<IRetailInvoice>(
       ref: "OrganizationModel"
     },
     customerName: { type: String, default: null },
+    projectId: {
+      type: Schema.Types.ObjectId,
+      ref: "ProjectModel",
+    },
     mobile: { type: String, default: null },
     salesPerson: { type: String, default: null },
     subject: { type: String, default: null },
@@ -66,7 +87,9 @@ const RetailInvoiceSchema = new Schema<IRetailInvoice>(
     taxAmount: { type: Number, default: 0 },
 
     grandTotal: { type: Number, default: 0 },
-    paymentMode: { type: String, default: null, enum: ["cash", "card", "cheque", "bank transfer", "UPI", null] }
+    paymentMode: { type: String, default: null, enum: ["cash", "card", "cheque", "bank transfer", "UPI", null] },
+    customerNotes: { type: String, default: null },
+    pdfData: { type: pdfGeneratorSchema, default: null }
   },
   { timestamps: true }
 );

@@ -660,12 +660,16 @@ export const syncAccountingRecord = async (
     // Payment (Optional - passed only when creating payment)
     paymentId?: any;
 
-    deptRecordFrom: string;   //bill, expense, subcontract
+    deptGeneratedDate?: Date | null;
+    deptNumber: string | null;
+    deptDueDate: Date | null;
+
+    deptRecordFrom: "Retail Invoice" | "Invoice" | "Bill" | "Expense";   //bill, expense, subcontract
     assoicatedPersonName?: string;
     assoicatedPersonId?: any;
     assoicatedPersonModel?: string;
     amount?: number;
-    status?: string;
+    status?: string | null;
     notes?: string;
   },
   // session: mongoose.ClientSession | null = null
@@ -715,110 +719,275 @@ export const syncAccountingRecord = async (
 
 
 // helper to format the response
+
+
 const formatLedgerItem = (item: any) => {
-  const source = item.referenceId || {}; // The Bill/Expense Doc
-  const payment = item.paymentId || {};  // The Payment Doc
+  const source = item.referenceId || {}; // Populated Bill, Invoice, or Expense
+  const payment = item.paymentId || {};  // Populated Payment
 
-  // Determine Status: Trust Payment Model first, then Ledger, then Bill
+  // 1. NORMALIZE SOURCE FIELDS
+  // We map specific fields from different models to a common standard
+  let docNumber = "N/A";
+  let docDate = null;
+  let docDueDate = null;
+  let docItems: any[] = [];
+  let docTotal = 0;
+  let docTax = 0;
+  let docDiscount = 0;
+  let docNotes = "";
+
+  // Check type based on deptRecordFrom
+  const type = item.deptRecordFrom; // "Bill Acc", "Invoice Acc", "Expense Acc"
+
+  if (type === "Bill") {
+    docNumber = source.billNumber;
+    docDate = source.billDate;
+    docDueDate = source.dueDate;
+    docItems = source.items || [];
+    docTotal = source.grandTotal;
+    docTax = source.taxAmount;
+    docDiscount = source.discountAmount;
+    docNotes = source.notes;
+  } 
+  else if (type === "Invoice" || type === "Retail Invoice") {
+    docNumber = source.invoiceNumber || source.retailInvoiceNumber;
+    docDate = source.invoiceDate;
+    docDueDate = source.dueDate;
+    docItems = source.items || [];
+    docTotal = source.grandTotal;
+    docTax = source.taxAmount;
+    docDiscount = source.discountAmount;
+    docNotes = source.customerNotes;
+  } 
+  else if (type === "Expense") {
+    docNumber = source.expenseNumber;
+    docDate = source.expenseDate;
+    docItems = source.items || []; // Some expenses might not have items
+    docTotal = source.amount;
+    docNotes = source.notes;
+  }
+
+  // 2. NORMALIZE PAYMENT DATA
+  // Invoices usually represent money coming IN, so they might not have a 'paymentId' 
+  // linked in the same way as Bills (money going OUT).
+  // We only show payment details if it exists.
+  const paymentDetails = item.paymentId ? {
+      id: payment._id,
+      number: payment.paymentNumber,
+      date: payment.paymentDate,
+      status: payment.generalStatus,
+      orderId: payment.orderId,
+      transactionId: payment.transactionId,
+      amountPaid: payment.grandTotal,
+      // We include items here so you can compare Source Items vs Payment Items
+      items: payment.items || [] 
+  } : null;
+
+  // 3. DETERMINE STATUS
   const currentStatus = payment.generalStatus || item.status || source.status || 'pending';
-
-  
 
   return {
     _id: item._id,
     recordNumber: item.recordNumber,
     createdAt: item.createdAt,
-
-    // Financials
+    
+    // High Level Info
+    type: type,
     amount: item.amount,
-    status: currentStatus, // Unified Status
+    status: currentStatus,
 
-    // Type Info
-    type: item.deptRecordFrom, // "Bill Acc", "Expense Acc"
-
-    // Source Details (The Bill/Expense/Invoice)
-    sourceDetails: {
-      id: source._id,
-      number: source.billNumber || source.expenseNumber || "N/A",
-      date: source?.billDate || source?.date || source?.expenseDate,
-      createdAt: source.createdAt,
-      dueDate: source.dueDate,
-      model: item.referenceModel
-    },
-
-    // Payment Details (The Payment Record - Only if exists)
-    paymentDetails: item.paymentId ? {
-      id: payment._id,
-      number: payment.paymentNumber,
-      date: payment.paymentDate,
-      transactionId: payment.transactionId, // UTR etc
-      isPaid: payment.generalStatus === 'paid'
-    } : null,
-
-    // Person
+    // Person Info
     person: {
       name: item.assoicatedPersonName,
       id: item.assoicatedPersonId,
       model: item.assoicatedPersonModel
-    }
+    },
+
+    // UNIFIED SOURCE DETAILS (The standard object for Frontend)
+    sourceDetails: {
+      id: source._id,
+      model: item.referenceModel,
+      deptFrom: item.deptRecordFrom,
+      // Standardized Fields
+      deptNumber: docNumber, // Normalized Number
+      deptGeneratedDate: docDate,     // Normalized Date
+      deptDueDate: docDueDate,
+      
+      // Financials
+      grandTotal: docTotal,
+      taxAmount: docTax,
+      
+      // Content
+      items: docItems, // <--- The Items Array
+      notes: docNotes
+    },
+
+    // PAYMENT DETAILS (Nullable)
+    paymentDetails: paymentDetails
   };
 };
 
 
 
+// OLD VERSION
+// const formatLedgerItem = (item: IAccounting) => {
+//   const source: any = item.referenceId || {}; // The Bill/Expense Doc
+//   const payment: any = item.paymentId || {};  // The Payment Doc
+
+//   // Determine Status: Trust Payment Model first, then Ledger, then Bill
+//   const currentStatus = payment.generalStatus || item.status || source.status || 'pending';
+
+
+
+//   return {
+//     _id: item._id,
+//     recordNumber: item.recordNumber,
+//     createdAt: item.createdAt,
+
+//     // Financials
+//     amount: item.amount,
+//     status: currentStatus, // Unified Status
+
+//     // Type Info
+//     type: item.deptRecordFrom, // "Bill Acc", "Expense Acc"
+
+//     // Source Details (The Bill/Expense/Invoice)
+//     sourceDetails: {
+//       id: source._id,
+//       deptNumber: item.deptNumber,
+//       deptGeneratedDate: item.deptGeneratedDate,
+//       deptDueDate: item.deptDueDate,
+//       createdAt: source.createdAt,
+//       model: item.referenceModel
+//     },
+
+//     // Payment Details (The Payment Record - Only if exists)
+//     paymentDetails: item.paymentId ? {
+//       id: payment._id,
+//       number: payment.paymentNumber,
+//       date: payment.paymentDate,
+//       transactionId: payment.transactionId, // UTR etc
+//       isPaid: payment.generalStatus === 'paid'
+//     } : null,
+
+//     // Person
+//     person: {
+//       name: item.assoicatedPersonName,
+//       id: item.assoicatedPersonId,
+//       model: item.assoicatedPersonModel
+//     }
+//   };
+// };
+
+
+
 // ==============================================================================
 // GET ALL (Updated with Payment Population)
-// ==============================================================================
+// ==============================================================================export const getAllAccountingRecords = async (req: Request, res: Response): Promise<any> => {
 export const getAllAccountingRecords = async (req: Request, res: Response): Promise<any> => {
   try {
     const {
-      organizationId, projectId,
-      status, personName, deptRecordFrom,
-      page = 1, limit = 20
+      organizationId,
+      projectId,
+      status,
+      // personName,
+      deptRecordFrom,
+      
+      // Search & Range Filters
+      search,
+      startDate,
+      endDate,
+      minAmount,
+      maxAmount,
+
+      // Pagination
+      page = 1,
+      limit = 20
     } = req.query;
 
+    // 1. Initialize Filter
     const filter: FilterQuery<IAccounting> = {};
+
+    // --- Basic Filters ---
     if (organizationId) filter.organizationId = new mongoose.Types.ObjectId(organizationId as string);
     if (projectId) filter.projectId = new mongoose.Types.ObjectId(projectId as string);
     if (deptRecordFrom) filter.deptRecordFrom = deptRecordFrom;
     if (status) filter.status = status;
-    if (personName) filter.assoicatedPersonName = { $regex: personName as string, $options: "i" };
+    
+    // Direct Person Name Search (Strict/Regex)
+    // if (personName) filter.assoicatedPersonName = { $regex: personName as string, $options: "i" };
 
-    // Pagination
+    // --- Amount Range Filter ---
+    if (minAmount || maxAmount) {
+      filter.amount = {};
+      if (minAmount) filter.amount.$gte = Number(minAmount);
+      if (maxAmount) filter.amount.$lte = Number(maxAmount);
+    }
+
+    // --- Date Range Filter (Uses new deptGeneratedDate) ---
+    if (startDate || endDate) {
+      filter.deptGeneratedDate = {};
+      if (startDate) filter.deptGeneratedDate.$gte = new Date(startDate as string);
+      if (endDate) filter.deptGeneratedDate.$lte = new Date(endDate as string);
+    }
+
+    // --- Global Search (Search Box) ---
+    // Searches across Number, Name, Internal Record No, and Notes
+    if (search) {
+      const searchRegex = new RegExp(search as string, "i");
+      filter.$or = [
+        { deptNumber: searchRegex },           // Searches BILL-001, INV-001
+        { assoicatedPersonName: searchRegex }, // Searches Vendor/Customer Name
+        { recordNumber: searchRegex },         // Searches ACC-REC-001
+        // { deptRecordFrom: searchRegex },         // Searches Bill, Retail Invoice, Invoice
+        // { notes: searchRegex }
+      ];
+    }
+
+    // 2. Pagination Calculation
     const pageNum = Number(page);
     const limitNum = Number(limit);
     const skip = (pageNum - 1) * limitNum;
 
-    // QUERY
+    // 3. Execute Query
     const records = await AccountingModel.find(filter)
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1 }) // Sort by the actual transaction date (Bill Date), not createdAt
       .skip(skip)
       .limit(limitNum)
       .populate("projectId", "projectName _id")
-      // 1. Populate the Source (Bill/Expense)
+      // Populate Source (Bill/Expense) for extra details if needed
       .populate({
         path: "referenceId",
-        select: "billNumber billDate expenseNumber date totalAmount status dueDate items salesman remarks"
+        // We select common fields. Mongoose ignores fields that don't exist on the specific model.
+        // select: "billNumber billDate expenseNumber invoiceNumber invoiceDate expenseDate grandTotal amount status dueDate items"
+        select: "billNumber billDate expenseNumber invoiceNumber invoiceDate expenseDate amount totalAmount grandTotal taxAmount taxPercentage discountAmount discountPercentage status dueDate items notes customerNotes description terms"
+
       })
-      // 2. Populate the Payment Record
+      // Populate Payment Record
       .populate({
         path: "paymentId",
         select: "paymentNumber paymentDate generalStatus transactionId items"
       });
 
+    // 4. Get Total Count (For Pagination)
     const total = await AccountingModel.countDocuments(filter);
 
-    // Format
+    // 5. Format Response
     const formattedData = records.map(record => formatLedgerItem(record));
 
     return res.status(200).json({
       ok: true,
-      pagination: { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) },
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum)
+      },
       data: formattedData
     });
 
   } catch (error: any) {
-    console.error(error);
+    console.error("Error in getAllAccountingRecords:", error);
     return res.status(500).json({ ok: false, message: error.message });
   }
 };
@@ -830,18 +999,33 @@ export const getSingleAccountingRecord = async (req: Request, res: Response): Pr
   try {
     const { id } = req.params;
 
-    const record = await AccountingModel.findById(id)
+    // const record = await AccountingModel.findById(id)
+    //   .populate("projectId", "projectName _id")
+    //   // Deep population for single view
+    //   .populate("referenceId") // Get full Bill details/ expense details also 
+    //   .populate("paymentId");  // Get full Payment details
+
+       const record = await AccountingModel.findById(id)
       .populate("projectId", "projectName _id")
-      // Deep population for single view
-      .populate("referenceId") // Get full Bill details/ expense details also 
-      .populate("paymentId");  // Get full Payment details
+      // 1. Populate Reference (Bill, Invoice, or Expense)
+      .populate({
+        path: "referenceId",
+        // Select ALL possible fields across models to ensure we get data regardless of type
+        select: "billNumber billDate expenseNumber invoiceNumber invoiceDate expenseDate amount totalAmount grandTotal taxAmount taxPercentage discountAmount discountPercentage status dueDate items notes customerNotes description terms"
+      })
+      // 2. Populate Payment
+      .populate({
+        path: "paymentId",
+        select: "paymentNumber paymentDate generalStatus transactionId items grandTotal"
+      });
 
     if (!record) {
       return res.status(404).json({ ok: false, message: "Record not found" });
     }
 
 
-    console.log("record", record)
+
+    console.log("record", record?.referenceId)
 
     return res.status(200).json({
       ok: true,

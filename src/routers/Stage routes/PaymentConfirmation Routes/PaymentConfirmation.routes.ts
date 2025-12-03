@@ -1,7 +1,7 @@
 // routes/payment/paymentConsent.routes.ts
 
 import express from "express";
-import { acceptClientConsent, generateConsentLink, toggleConsentRequired } from "../../../controllers/stage controllers/PaymentConfirmation controllers/PaymentConsent contrlollers/paymentConsent.controller"; 
+import { acceptClientConsent, generateConsentLink, getPaymentConsentTermsAndConditions, toggleConsentRequired } from "../../../controllers/stage controllers/PaymentConfirmation controllers/PaymentConsent contrlollers/paymentConsent.controller"; 
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { checkPreviousStageCompleted } from "../../../middlewares/checkPreviousStageMiddleware";
 // import { TechnicalConsultationModel } from "../../../models/Stage Models/Cost Estimation Model/costEstimation.model";
@@ -29,9 +29,12 @@ paymentConsentRoutes.put("/toggleconsent/:projectId", multiRoleAuthMiddleware("C
 paymentConsentRoutes.post("/generatepayementconsentlink/:projectId", multiRoleAuthMiddleware("CTO", "owner", "staff",), checkPreviousStageCompleted(TechnicalConsultationModel), 
 // notToUpdateIfStageCompleted(PaymentConfirmationModel),
  checkIfStaffIsAssignedToStage(PaymentConfirmationModel), generateConsentLink);
-paymentConsentRoutes.post("/acceptconsent/:projectId/:token", multiRoleAuthMiddleware("client", "owner"), checkPreviousStageCompleted(TechnicalConsultationModel), 
+paymentConsentRoutes.post("/acceptconsent/:projectId/:token",
+  //  multiRoleAuthMiddleware("client", "owner"),
+    checkPreviousStageCompleted(TechnicalConsultationModel), 
 // notToUpdateIfStageCompleted(PaymentConfirmationModel),
  acceptClientConsent);
+ paymentConsentRoutes.get("/getconsentcontent/:projectId/:token", checkPreviousStageCompleted(TechnicalConsultationModel), getPaymentConsentTermsAndConditions);
 
 // step2
 
