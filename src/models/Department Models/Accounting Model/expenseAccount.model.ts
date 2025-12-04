@@ -46,18 +46,21 @@ const ExpenseSchema = new Schema<IExpenseAccount>(
 // ✅ Pre-save hook to auto-generate unique invoice number
 ExpenseSchema.pre("save", async function (next) {
   if (this.isNew && !this.expenseNumber) {
+        const currentYear = new Date().getFullYear();
+
+
     const lastDoc = await mongoose
       .model("ExpenseAccountModel")
-      .findOne({}, { expenseNumber: 1 })
+      .findOne({organizationId: this.organizationId}, { expenseNumber: 1 })
       .sort({ createdAt: -1 });
 
     let nextNumber = 1;
     if (lastDoc && lastDoc.expenseNumber) {
-      const match = lastDoc.expenseNumber.match(/\d+$/);
-      if (match) nextNumber = parseInt(match[0]) + 1;
+      const match = lastDoc.expenseNumber.match(new RegExp(`EXP-${currentYear}-(\\d+)$`));
+      if (match) nextNumber = parseInt(match[1]) + 1;
     }
 
-    this.expenseNumber = `EXP-${String(nextNumber).padStart(4, "0")}`;
+    this.expenseNumber = `EXP-${currentYear}-${String(nextNumber).padStart(3, "0")}`;
   }
   next();
 });

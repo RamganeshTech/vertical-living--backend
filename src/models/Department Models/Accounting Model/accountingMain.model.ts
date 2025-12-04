@@ -219,7 +219,6 @@ const accountingSchema = new Schema<IAccounting>({
   },
 
 
-
   // ✅ NEW FIELDS
   deptGeneratedDate: { type: Date, default: null }, // Indexed for Date Range Filter
   deptNumber: { type: String, default: null }, // Indexed for Search

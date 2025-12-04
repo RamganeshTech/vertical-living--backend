@@ -628,6 +628,10 @@ import { BillAccountModel } from "../../../models/Department Models/Accounting M
 
 export async function generateTransactionNumber(organizationId: string | Types.ObjectId): Promise<string> {
   // Find last transaction for this org
+
+      const currentYear = new Date().getFullYear();
+
+
   const lastDoc = await AccountingModel.findOne({ organizationId })
     .sort({ createdAt: -1 })
     .select("recordNumber");
@@ -635,13 +639,13 @@ export async function generateTransactionNumber(organizationId: string | Types.O
   let nextNumber = 1;
 
   if (lastDoc?.recordNumber) {
-    const match = lastDoc.recordNumber.match(/ACC-REC-(\d+)/);
+        const match = lastDoc.recordNumber.match(new RegExp(`ACC-${currentYear}-(\\d+)$`));
     if (match) {
       nextNumber = parseInt(match[1], 10) + 1;
     }
   }
 
-  return `ACC-REC-${String(nextNumber).padStart(3, "0")}`;
+    return `ACC-${currentYear}-${String(nextNumber).padStart(3, "0")}`;
 }
 
 
@@ -735,6 +739,8 @@ const formatLedgerItem = (item: any) => {
   let docTax = 0;
   let docDiscount = 0;
   let docNotes = "";
+  let docTaxPercent = 0
+  let docDiscountPercent =0
 
   // Check type based on deptRecordFrom
   const type = item.deptRecordFrom; // "Bill Acc", "Invoice Acc", "Expense Acc"
@@ -747,7 +753,10 @@ const formatLedgerItem = (item: any) => {
     docTotal = source.grandTotal;
     docTax = source.taxAmount;
     docDiscount = source.discountAmount;
+    docTaxPercent = source.taxPercentage;
+    docDiscountPercent = source.discountPercentage;
     docNotes = source.notes;
+
   } 
   else if (type === "Invoice" || type === "Retail Invoice") {
     docNumber = source.invoiceNumber || source.retailInvoiceNumber;
@@ -757,6 +766,8 @@ const formatLedgerItem = (item: any) => {
     docTotal = source.grandTotal;
     docTax = source.taxAmount;
     docDiscount = source.discountAmount;
+    docTaxPercent = source.taxPercentage;
+    docDiscountPercent = source.discountPercentage;
     docNotes = source.customerNotes;
   } 
   else if (type === "Expense") {

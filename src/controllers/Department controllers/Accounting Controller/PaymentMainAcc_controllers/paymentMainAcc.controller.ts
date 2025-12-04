@@ -87,10 +87,17 @@ export const getAllPaymentsAcc = async (req: Request, res: Response): Promise<an
             if (maxAmount) filter.grandTotal.$lte = Number(maxAmount);
         }
 
+        //  if (minAmount || maxAmount) {
+        //     filter["grandTotal.totalAmount"] = {};
+
+        //     if (minAmount) filter["grandTotal.totalAmount"].$gte = Number(minAmount);
+        //     if (maxAmount) filter["grandTotal.totalAmount"].$lte = Number(maxAmount);
+        // }
+
         if (startDate || endDate) {
-            filter.paymentDate = {};
-            if (startDate) filter.paymentDate.$gte = new Date(startDate as string);
-            if (endDate) filter.paymentDate.$lte = new Date(endDate as string);
+            filter.dueDate = {};
+            if (startDate) filter.dueDate.$gte = new Date(startDate as string);
+            if (endDate) filter.dueDate.$lte = new Date(endDate as string);
         }
 
         // --- 4. Execute Query (With Pagination) ---
@@ -148,9 +155,9 @@ export const getSinglePaymentAcc = async (req: Request, res: Response): Promise<
 
         const payment = await PaymentMainAccountModel.findById(id)
             .populate("projectId", "_id projectName")
-            .populate("accountingRef")
-            .populate("paymentPersonId", "vendorName customerName companyName")
-            .populate("fromSectionId")// Optional: Populate person details
+            // .populate("accountingRef")
+            .populate("paymentPersonId", "vendorName customerName companyName customerLanguage address vendorLanguage phone mainImage")
+            // .populate("fromSectionId")// Optional: Populate person details
 
 
         if (!payment) {

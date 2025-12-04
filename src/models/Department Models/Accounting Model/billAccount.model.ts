@@ -130,18 +130,20 @@ const BillAccountSchema = new Schema<IBillAccount>(
 // ✅ Pre-save hook to auto-generate unique invoice number
 BillAccountSchema.pre("save", async function (next) {
     if (this.isNew && !this.billNumber) {
+          const currentYear = new Date().getFullYear();
+          
         const lastDoc = await mongoose
             .model("BillAccountModel")
-            .findOne({}, { billNumber: 1 })
+            .findOne({organizationId: this.organizationId}, { billNumber: 1 })
             .sort({ createdAt: -1 });
 
         let nextNumber = 1;
         if (lastDoc && lastDoc.billNumber) {
-            const match = lastDoc.billNumber.match(/\d+$/);
-            if (match) nextNumber = parseInt(match[0]) + 1;
+            const match = lastDoc.billNumber.match(/(\d+)$/);
+            if (match) nextNumber = parseInt(match[1]) + 1;
         }
 
-        this.billNumber = `BILL-${String(nextNumber).padStart(4, "0")}`;
+        this.billNumber = `Bill-${currentYear}-${String(nextNumber).padStart(3, "0")}`;
     }
     next();
 });

@@ -11,33 +11,25 @@ import { syncAccountingRecord } from "../accounting.controller";
 // Helper function to generate unique invoice number
 const generateInvoiceNumber = async (organizationId: string): Promise<string> => {
     try {
-        const orgId = organizationId.toString();
+         const orgId = organizationId.toString();
+        const currentYear = new Date().getFullYear();
+
 
         // Get all invoices for this organization
-        const invoices = await RetailInvoiceAccountModel.find(
+        const lastInvoice  = await RetailInvoiceAccountModel.findOne(
             { organizationId: new mongoose.Types.ObjectId(orgId) },
             { invoiceNumber: 1 }
         ).lean();
         // console.log("invoices", invoices)
-        if (invoices.length === 0) {
-            return `RET-INV-${orgId.slice(0, 5)}-1`;
+        
+
+        let nextNumber = 1;
+        if (lastInvoice?.invoiceNumber) {
+            const match = lastInvoice.invoiceNumber.match(/-(\d+)$/);
+            if (match) nextNumber = parseInt(match[1], 10) + 1;
         }
 
-        // Extract the unique numbers from all invoice numbers
-        const numbers = invoices
-            .map(invoice => {
-                if (!invoice.invoiceNumber) return 0;
-                const parts = invoice.invoiceNumber.split('-');
-                const lastPart = parts[parts.length - 1];
-                return parseInt(lastPart) || 0;
-            })
-            .filter(num => num > 0);
-
-        // Find the maximum number
-        const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
-
-        // Return new invoice number with incremented value
-        return `RET-INV-${orgId.slice(0, 5)}-${maxNumber + 1}`;
+        return `RET-INV-${currentYear}-${String(nextNumber).padStart(3, "0")}`;
     } catch (error) {
         throw new Error("Error generating invoice number");
     }

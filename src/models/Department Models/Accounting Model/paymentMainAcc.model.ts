@@ -16,6 +16,7 @@ export interface IPaymentMainAcc extends Document {
     accountingRef: Types.ObjectId | null;
     // vendorName: string;
     // customerName: string;
+    fromSectionNumber: string;
     paymentNumber: string,
     paymentDate: Date | null,
     dueDate: Date,
@@ -29,9 +30,11 @@ export interface IPaymentMainAcc extends Document {
 
     taxPercentage?: number;
     taxAmount?: number;
+    paymentType?: string,
+    advancedAmount?: IGrandTotal;
 
-    grandTotal: number;
-
+    grandTotal: number
+    amountRemaining: IGrandTotal
 
     notes: string | null;
     // images: IBillUploads[],
@@ -75,6 +78,30 @@ const PaymentAccItemSchema = new Schema<IPaymentItem>(
     },
     { _id: true }
 );
+
+
+export interface IGrandTotal {
+    totalAmount: number; // quantity * rate
+    status: string,  // or "paid"
+    orderId: string,        // Razorpay order ID
+    paymentId: string,
+    transactionId: string
+    paidAt: Date | null
+    failureReason: string | null
+    fees: number | null
+    tax: number | null
+}
+
+
+const grandTotalSchema = new Schema<IGrandTotal>({
+    totalAmount: { type: Number, default: 0 },
+    status: { type: String, default: null },
+    orderId: { type: String, default: null }, // Razorpay order/fund_account_id
+    paymentId: { type: String, default: null }, // Razorpay payout_id
+    transactionId: { type: String, default: null }, // UTR number
+    paidAt: { type: Date, default: null },
+    failureReason: { type: String, default: null },
+})
 
 
 // export interface IBillUploads extends IUploadPdf { }
@@ -137,17 +164,23 @@ const PaymentMainAccountSchema = new Schema<IPaymentMainAcc>(
         },
         // vendorName: { type: String, default: null },
         fromSection: { type: String, default: null },
+        fromSectionNumber: {type: String, default:null},
         paymentNumber: { type: String, },
         paymentDate: { type: Date, default: new Date() },
         dueDate: { type: Date, default: new Date() },
         subject: { type: String, default: null },
         items: { type: [PaymentAccItemSchema], default: [] },
         totalAmount: { type: Number, default: 0 },
+        
+        advancedAmount: { type: grandTotalSchema, default: {} },
+        paymentType: {type: String, default: null},
         discountPercentage: { type: Number, default: 0 },
         discountAmount: { type: Number, default: 0 },
         taxPercentage: { type: Number, default: 0 },
         taxAmount: { type: Number, default: 0 },
         grandTotal: { type: Number, default: 0 },
+
+        amountRemaining: { type: grandTotalSchema, default: {} },
         notes: { type: String, default: null },
         // images: { type: [BillUploadSchema], default: [] },
         // pdfData: { type: BillUploadSchema, default: null },
@@ -164,18 +197,21 @@ const PaymentMainAccountSchema = new Schema<IPaymentMainAcc>(
 // ✅ Pre-save hook to auto-generate unique invoice number
 PaymentMainAccountSchema.pre("save", async function (next) {
     if (this.isNew && !this.paymentNumber) {
+          const currentYear = new Date().getFullYear();
+
+
         const lastDoc = await mongoose
             .model("PaymentMainAccountsModel")
-            .findOne({}, { paymentNumber: 1 })
+            .findOne({organizationId: this.organizationId}, { paymentNumber: 1 })
             .sort({ createdAt: -1 });
 
         let nextNumber = 1;
         if (lastDoc && lastDoc.paymentNumber) {
-            const match = lastDoc.paymentNumber.match(/\d+$/);
-            if (match) nextNumber = parseInt(match[0]) + 1;
+            const match = lastDoc.paymentNumber.match(/(\d+)$/);
+            if (match) nextNumber = parseInt(match[1]) + 1;
         }
 
-        this.paymentNumber = `PAY-${String(nextNumber).padStart(4, "0")}`;
+        this.paymentNumber = `PAY-${currentYear}-${String(nextNumber).padStart(3, "0")}`;
     }
     next();
 });

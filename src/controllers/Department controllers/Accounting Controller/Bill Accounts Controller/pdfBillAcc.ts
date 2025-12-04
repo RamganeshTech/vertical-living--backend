@@ -133,7 +133,7 @@ function drawBillTotalsSection(
     if (billData.advancedAmount) {
         const amtText = `Advance Amt`
 
-        drawBillTotalLine(page, amtText, `-INR ${billData.advancedAmount.toLocaleString('en-IN', {
+        drawBillTotalLine(page, amtText, `INR ${billData.advancedAmount.toLocaleString('en-IN', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         })}`, totalsLeft, currentY, boldFont);

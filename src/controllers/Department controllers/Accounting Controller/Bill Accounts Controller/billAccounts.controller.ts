@@ -37,12 +37,6 @@ const calculateBillTotals = (
     let grandTotal = amountAfterDiscount + taxAmount;
 
 
-    if (paymentType === "pay advanced, balance later") {
-        const advance = advancedAmount || 0;
-        grandTotal = Math.max(0, grandTotal - advance); // Prevent negative
-    }
-
-
     return {
         totalAmount,
         discountAmount,
@@ -227,13 +221,9 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
 
         // Calculate bill totals
         const totals = calculateBillTotals(
-
             processedItems,
             discountPercentage || 0,
             taxPercentage || 0,
-            advancedAmount || 0,
-            paymentType
-
         );
 
 
@@ -354,7 +344,7 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
 export const getBills = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { organizationId, vendorId, page = 1, limit = 10, date, search, sortBy = 'createdAt',
-            sortOrder = 'desc', billFromDate, billToDate, createdFromDate, createdToDate, minAmount , maxAmount } = req.query;
+            sortOrder = 'desc', billFromDate, billToDate, createdFromDate, createdToDate, minAmount, maxAmount } = req.query;
 
 
         // Build cache key based on query parameters
@@ -425,7 +415,7 @@ export const getBills = async (req: RoleBasedRequest, res: Response): Promise<an
             filter.createdAt = filterRange;
         }
 
-         if (minAmount || maxAmount) {
+        if (minAmount || maxAmount) {
             filter.grandTotal = {};
             if (minAmount) {
                 filter.grandTotal.$gte = parseFloat(minAmount as string);
@@ -553,14 +543,13 @@ export const getBillById = async (req: RoleBasedRequest, res: Response): Promise
         const cacheKey = `billaccount:${id}`;
 
         // Try to get from cache
+        await redisClient.del(cacheKey);
         const cachedData = await redisClient.get(cacheKey);
         if (cachedData) {
             return res.status(200).json(JSON.parse(cachedData));
         }
 
         const bill = await BillAccountModel.findById(id)
-        // .populate('vendorId', 'name email phone')
-        // .populate('organizationId', 'name');
 
         if (!bill) {
             res.status(404).json({
@@ -1088,23 +1077,25 @@ export const sendBillToPayment = async (req: Request, res: Response): Promise<an
         }
 
 
-        // 3. Prepare the Accounting Items (Mapped from Bill)
-        const paymentItems = bill.items.map((item: any) => ({
-            itemName: item.itemName,
-            quantity: item.quantity,
-            rate: item.rate,
-            unit: item.unit || "",
-            totalCost: item.totalCost,
-            dueDate: bill.dueDate,
-            status: "pending",
-            orderId: "",
-            paymentId: "",
-            transactionId: "",
-            paidAt: null,
-            failureReason: "",
-            fees: null,
-            tax: null
-        }));
+        const paymentItems = bill.items.map((item: any, index: number) => {
+
+            return {
+                itemName: item.itemName,
+                quantity: item.quantity,
+                rate: item.rate,
+                unit: item.unit || "",
+                totalCost: item.totalCost,
+                dueDate: bill.dueDate,
+                status: "pending",
+                orderId: "",
+                paymentId: "",
+                transactionId: "",
+                paidAt: null,
+                failureReason: "",
+                fees: null,
+                tax: null
+            }
+        });
 
 
         const newPayemnt = await createPaymentMainAccUtil({
@@ -1117,6 +1108,7 @@ export const sendBillToPayment = async (req: Request, res: Response): Promise<an
             fromSectionModel: "BillAccountModel",
             fromSectionId: bill._id as Types.ObjectId,
             fromSection: "Bill",
+            fromSectionNumber: bill.billNumber,
             paymentDate: null,
             dueDate: bill.dueDate,
             subject: bill.subject,
@@ -1126,7 +1118,34 @@ export const sendBillToPayment = async (req: Request, res: Response): Promise<an
             discountAmount: bill.discountAmount || 0,
             taxPercentage: bill.taxPercentage || 0,
             taxAmount: bill.taxAmount || 0,
-            grandTotal: bill.grandTotal || 0,
+            grandTotal: bill.grandTotal,
+            paymentType: bill.paymentType,
+            advancedAmount: {
+                totalAmount: bill?.advancedAmount || 0,
+                status: 'pending',
+                orderId: "",
+                paymentId: "",
+                transactionId: "",
+                paidAt: null,
+                failureReason: null,
+                fees: null,
+                tax: null,
+            },
+            amountRemaining: {
+                totalAmount: Math.max(
+                    (bill?.grandTotal || 0) - (bill?.advancedAmount || 0),
+                    0
+                ),
+                status: 'pending',
+                orderId: "",
+                paymentId: "",
+                transactionId: "",
+                paidAt: null,
+                failureReason: null,
+                fees: null,
+                tax: null,
+            },
+
             notes: bill.notes || null,
             isSyncedWithAccounting: false,
             generalStatus: "pending"
