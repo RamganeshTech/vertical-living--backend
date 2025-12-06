@@ -7,7 +7,7 @@ export interface IPaymentMainAcc extends Document {
     paymentPersonId: Types.ObjectId | null;
     paymentPersonName: string
     paymentPersonModel: string | null;
-    fromSection: string
+    fromSection: string      //expense, 
     fromSectionModel: string | null
     fromSectionId: Types.ObjectId | null
     // vendorId: Types.ObjectId;

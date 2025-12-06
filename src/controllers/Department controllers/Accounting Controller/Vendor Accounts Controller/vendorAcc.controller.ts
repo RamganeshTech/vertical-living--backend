@@ -16,6 +16,10 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
             req.body.phone = JSON.parse(req.body.phone);
         }
 
+         if (req.body.location && typeof req.body.location === 'string') {
+            req.body.location = JSON.parse(req.body.location);
+        }
+
         // Convert string numbers to actual numbers
         if (req.body.openingBalance && typeof req.body.openingBalance === 'string') {
             req.body.openingBalance = parseFloat(req.body.openingBalance);
@@ -41,7 +45,7 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
         if (req.body.email) {
             const existingCustomer = await VendorAccountModel.findOne({
                 email: req.body.email,
-                projectId: req.body.projectId
+                // projectId: req.body.projectId
             });
 
             if (existingCustomer) {
@@ -54,46 +58,24 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
 
         const uploadedFiles = req.files as { [fieldname: string]: (Express.Multer.File & { location: string })[] };
 
-
-        let mainImage: any | null = null;
-
-
-
-        if (uploadedFiles && uploadedFiles['mainImage'] && uploadedFiles['mainImage'][0]) {
-            const file = uploadedFiles['mainImage'][0];
-
-            // YOU MUST SAVE THIS AS AN OBJECT, NOT A STRING
-            mainImage = {
-                type: "image",
-                url: file.location, // This is the S3 URL
-                originalName: file.originalname,
-                uploadedAt: new Date()
-            };
-        }
-
-
-
-
-        // Handle uploaded files (if any)
+ // Handle uploaded files (if any)
         const documents: any[] = [];
+        const shopImages: any[] = [];
+        // let mainImage: any | null = null;
 
-        // if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-        //     const files = req.files as (Express.Multer.File & { location: string })[];
 
-        //     files.forEach((file) => {
-        //         // const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
-        //         // const documentType = fileExtension === 'pdf' ? 'pdf' : 'image';
-        //         const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
 
-        //         documents.push({
-        //             type: type,
-        //             url: file.location,
-        //             originalName: file.originalname,
-        //             uploadedAt: new Date()
-        //         });
-        //     });
+        // if (uploadedFiles && uploadedFiles['mainImage'] && uploadedFiles['mainImage'][0]) {
+        //     const file = uploadedFiles['mainImage'][0];
+
+        //     // YOU MUST SAVE THIS AS AN OBJECT, NOT A STRING
+        //     mainImage = {
+        //         type: "image",
+        //         url: file.location, // This is the S3 URL
+        //         originalName: file.originalname,
+        //         uploadedAt: new Date()
+        //     };
         // }
-
 
         if (uploadedFiles && uploadedFiles['files'] && uploadedFiles['files'].length > 0) {
             uploadedFiles['files'].forEach((file) => {
@@ -107,17 +89,50 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
             });
         }
 
-        if (req.body.location && req.body.location.mapUrl) {
-            const { lat, lng } = await getCoordinatesFromGoogleMapUrl(req.body.location.mapUrl);
-
-            // Save the extracted coords
-            req.body.location.latitude = lat;
-            req.body.location.longitude = lng;
+         if (uploadedFiles && uploadedFiles['shopImages'] && uploadedFiles['shopImages'].length > 0) {
+            uploadedFiles['shopImages'].forEach((file) => {
+                const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
+                shopImages.push({
+                    type: type,
+                    url: file.location,
+                    originalName: file.originalname,
+                    uploadedAt: new Date()
+                });
+            });
         }
 
+        // if (req.body.location && req.body.location.mapUrl) {
+        //     const { lat, lng } = await getCoordinatesFromGoogleMapUrl(req.body.location.mapUrl);
+
+        //     // Save the extracted coords
+        //     req.body.location.latitude = lat;
+        //     req.body.location.longitude = lng;
+        // }
+
+         // 5. Handle Location / Map URL logic
+        // Even though mapUrl is not in schema, we use it to calculate lat/lng
+          const mapUrlToProcess = req.body?.mapUrl ? req.body.mapUrl : null;
+
+        if (mapUrlToProcess) {
+            // Extract coordinates
+            const { lat, lng } = await getCoordinatesFromGoogleMapUrl(mapUrlToProcess);
+            
+            // Ensure location object exists
+            if (!req.body.location) { 
+                req.body.location = {}; 
+            }
+            
+            // Assign values to match the Schema
+            req.body.location.latitude = lat;
+            req.body.location.longitude = lng;
+            req.body.mapUrl = mapUrlToProcess; // <--- Now we SAVE this
+            
+            // Clean up root level mapUrl if it existed (to keep req.body clean)
+            // if (req.body.mapUrl) delete req.body.mapUrl; 
+        }
 
         // Create customer
-        const vendor = new VendorAccountModel({ ...req.body, documents, mainImage });
+        const vendor = new VendorAccountModel({ ...req.body, documents, shopImages  });
         await vendor.save();
 
         // Invalidate cache for the organiziaotns's customer list
@@ -163,6 +178,14 @@ export const updateVendor = async (req: RoleBasedRequest, res: Response): Promis
                 message: 'Document field is not allowed'
             });
         }
+
+         if (req.body?.shopImages) {
+            return res.status(400).json({
+                ok: false,
+                message: 'ShopImages is not allowed'
+            });
+        }
+
         // Validate request body
         const validationResult = validateUpdateVendor(req.body);
 
@@ -200,12 +223,17 @@ export const updateVendor = async (req: RoleBasedRequest, res: Response): Promis
         }
 
 
-        if (req.body.location && req.body.location.mapUrl) {
-            const { lat, lng } = await getCoordinatesFromGoogleMapUrl(req.body.location.mapUrl);
-
-            // Save the extracted coords
-            req.body.location.latitude = lat;
-            req.body.location.longitude = lng;
+           // Handle Map URL Update
+        if (req.body.mapUrl) {
+            const { lat, lng } = await getCoordinatesFromGoogleMapUrl(req.body.mapUrl);
+            
+            // Update location with new coords, preserving existing address/fields
+            req.body.location = {
+                ...(req.body.location || existingVendor.location || {}),
+                latitude: lat,
+                longitude: lng
+            };
+            // req.body.mapUrl is already at the root, so it will update automatically via $set
         }
 
 
@@ -387,6 +415,79 @@ export const updateVendorDoc = async (req: RoleBasedRequest, res: Response): Pro
         });
     }
 }
+
+
+export const updateVendorShopImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+
+        const { id } = req.params;
+
+        // Validate vendor ID
+        if (!validateMongoId(id)) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Invalid vendor ID format'
+            });
+        }
+
+
+        const shopImages: any[] = [];
+
+        if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+            const files = req.files as (Express.Multer.File & { location: string })[];
+
+            files.forEach((file) => {
+                // const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+                // const documentType = fileExtension === 'pdf' ? 'pdf' : 'image';
+                const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
+
+                shopImages.push({
+                    type: type,
+                    url: file.location,
+                    originalName: file.originalname,
+                    uploadedAt: new Date()
+                });
+            });
+        }
+
+        // Update Vendor - push documents to array
+        const updatedVendor = await VendorAccountModel.findByIdAndUpdate(
+            id,
+            { $push: { shopImages: { $each: shopImages } } }, // Use $each to push multiple documents
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedVendor) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Vendor not found',
+            });
+        }
+        // Invalidate cache
+        const cacheKey = `vendor:${id}`;
+        await redisClient.del(cacheKey);
+
+        const cachePattern = `vendors:organizationId:${updatedVendor.organizationId}:*`;
+        const keys = await redisClient.keys(cachePattern);
+        if (keys.length > 0) {
+            await redisClient.del(keys);
+        }
+
+        return res.status(200).json({
+            ok: true,
+            message: 'vendo rshop images updated',
+            data: updatedVendor
+        });
+    } catch (error: any) {
+        console.error('Error updating Vendor:', error);
+        return res.status(500).json({
+            ok: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+}
+
 /**
  * Delete a customer
  * DELETE /api/customers/:id
@@ -745,7 +846,7 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
         let modifiedvendor = vendors.map(vendor => {
             return {
                 _id: vendor._id,
-                vendorName: `${vendor.firstName} ${vendor.lastName}`,
+                vendorName: `${vendor.firstName}`,
                 email: vendor.email
             }
         })

@@ -1,8 +1,11 @@
 import { Request, Response } from "express";
-import mongoose from "mongoose";
+import mongoose, {Types} from "mongoose";
 import { RoleBasedRequest } from "../../../../types/types";
 import redisClient from "../../../../config/redisClient";
 import { IVendorPayment, IVendorPaymentItems, VendorPaymentAccountModel } from "../../../../models/Department Models/Accounting Model/vendorPaymentAcc.model";
+import { syncAccountingRecord } from "../accounting.controller";
+import { AccountingModel } from "../../../../models/Department Models/Accounting Model/accountingMain.model";
+import { createPaymentMainAccUtil } from "../PaymentMainAcc_controllers/paymentMainAcc.controller";
 
 // Helper function to generate unique purchase number
 // Helper function to calculate purchase totals
@@ -14,10 +17,6 @@ const calculateVendorPaymentTotals = (
     // Calculate total amount from items
     const totalAmount = items.reduce((sum, item) => {
         return sum + (item.billAmount || 0);
-    }, 0);
-
-    const totalAmountDue = items.reduce((sum, item) => {
-        return sum + (item.amountDue || 0);
     }, 0);
 
     // Calculate discount amount
@@ -34,7 +33,6 @@ const calculateVendorPaymentTotals = (
 
     return {
         totalAmount,
-        totalAmountDue
         // discountAmount,
         // taxAmount,
         // grandTotal
@@ -73,6 +71,10 @@ const validateVendorPaymentData = (data: ExceptPaymentNumber): { isValid: boolea
         errors.push(`total amount should be a  non negative number`);
     }
 
+    if (data?.items && data?.items?.length === 0) {
+        errors.push(`Atleast one item should be provided`);
+
+    }
 
     if (data?.items && Array.isArray(data.items) && data?.items?.length > 0) {
         data.items.forEach((item: IVendorPaymentItems, index: number) => {
@@ -80,8 +82,8 @@ const validateVendorPaymentData = (data: ExceptPaymentNumber): { isValid: boolea
                 errors.push(`${index + 1}: bill amount should be a  non negative number`);
             }
 
-            if (typeof item.amountDue !== "number" || item.amountDue < 0) {
-                errors.push(`${index + 1}: amount due should be a  non negative number`);
+            if (typeof item.itemName !== "string" || item.itemName?.trim() === "") {
+                errors.push(`${index + 1}: item Name should be a filled`);
             }
 
             // if (typeof item.rate === 'number' && item.rate < 0) {
@@ -92,9 +94,9 @@ const validateVendorPaymentData = (data: ExceptPaymentNumber): { isValid: boolea
             //     errors.push(`Item ${index + 1}: Quantity cannot be negative`);
             // }
 
-            if (item.paymentMadeOn && isNaN(new Date(item.paymentMadeOn).getTime())) {
-                errors.push(`${index + 1}: Payment made on should be a date`);
-            }
+            // if (item.paymentDate && isNaN(new Date(item.paymentDate).getTime())) {
+            //     errors.push(`${index + 1}: Payment made on should be a date`);
+            // }
         });
     }
 
@@ -110,7 +112,7 @@ const validateVendorPaymentData = (data: ExceptPaymentNumber): { isValid: boolea
     // });
 
 
-    const numericFields: (keyof ExceptPaymentNumber)[] = ['totalAmount', 'totalDueAmount'];
+    const numericFields: (keyof ExceptPaymentNumber)[] = ['totalAmount'];
 
     numericFields.forEach((field) => {
         const value = data[field];
@@ -158,29 +160,33 @@ export const createVendorPayment = async (req: RoleBasedRequest, res: Response):
     try {
         const {
             vendorId,
+            projectId,
             organizationId,
             vendorName,
-            paymentDate,
+            vendorPaymentDate,
             paymentMode,
+            paymentTerms,
             paidThrough,
             items,
             totalAmount = 0,
-            totalDueAmount = 0,
             notes,
         } = req.body;
 
         // Validate purchase data
         const validation = validateVendorPaymentData({
-            vendorId, organizationId, vendorName,
-            paymentDate,
+            vendorId,
+            projectId,
+            organizationId, vendorName,
+            vendorPaymentDate,
             paymentMode,
-            paidThrough, totalAmount, totalDueAmount, items, notes,
+            paymentTerms,
+            paidThrough, totalAmount, items, notes,
         });
 
         if (!validation.isValid) {
             res.status(400).json({
                 ok: false,
-                message: "Validation failed",
+                message: `Validation failed. ${validation.errors[0]}`,
                 errors: validation.errors
             });
             return;
@@ -198,21 +204,54 @@ export const createVendorPayment = async (req: RoleBasedRequest, res: Response):
         );
 
         // Create purchase object
-        const newPurchase = await VendorPaymentAccountModel.create({
+        const newPurchase = new VendorPaymentAccountModel({
             organizationId,
+            projectId: projectId || null,
             vendorId: vendorId || null,
             vendorName: vendorName?.trim(),
-            paymentDate,
+            vendorPaymentDate,
             paymentMode,
             paidThrough,
             items,
             totalAmount: totals.totalAmount,
-            totalDueAmount: totals.totalAmountDue,
             notes: notes || null
         });
 
+
+        await newPurchase.save();
         // Save to database
         // const savedPurchase = await newPurchase.save();
+
+        // We use the utility here because it handles Generating the Unique Record ID
+        await syncAccountingRecord({
+            organizationId: newPurchase.organizationId,
+            projectId: newPurchase?.projectId || null,
+
+            // Reference Links
+            referenceId: newPurchase._id,
+            referenceModel: "VendorPaymentModel", // Must match Schema
+
+            deptGeneratedDate: newPurchase?.vendorPaymentDate || null,
+            deptNumber: newPurchase?.paymentNumber || null,
+            deptDueDate: (newPurchase as any)?.dueDate || null,
+
+            // Categorization
+            deptRecordFrom: "Vendor Payment",
+
+            // Person Details
+            assoicatedPersonName: newPurchase.vendorName,
+            assoicatedPersonId: newPurchase?.vendorId || null,
+            assoicatedPersonModel: "VendorAccountModel", // Assuming this is your Vendor Model
+
+            // Financials
+            amount: newPurchase?.totalAmount || 0, // Utility takes care of grandTotal logic if passed
+            notes: newPurchase?.notes || "",
+
+            // Defaults for Creation
+            status: "pending",
+            paymentId: null
+        });
+
 
         // Invalidate related caches
         await invalidateVendorPaymentCache(organizationId, vendorId);
@@ -238,8 +277,8 @@ export const getVendorPayment = async (req: RoleBasedRequest, res: Response): Pr
     try {
         const { organizationId, vendorId, page = 1, limit = 10, date, search, sortBy = 'createdAt',
             sortOrder = 'desc',
-            paymentFromDate,
-            paymentToDate,
+            vendorPaymentToDate,
+            vendorPaymentFromDate,
             createdFromDate,
             createdToDate,
 
@@ -247,7 +286,7 @@ export const getVendorPayment = async (req: RoleBasedRequest, res: Response): Pr
 
 
         // Build cache key based on query parameters
-        const cacheKey = `vendorpayment:org:${organizationId || 'all'}:vendor:${vendorId || 'all'}:page:${page}:limit:${limit}:date:${date || 'all'}:search${search || "all"}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:paymentFromDate:${paymentFromDate || "all"}:paymentToDate:${paymentToDate || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
+        const cacheKey = `vendorpayment:org:${organizationId || 'all'}:vendor:${vendorId || 'all'}:page:${page}:limit:${limit}:date:${date || 'all'}:search${search || "all"}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:vendorPaymentFromDate:${vendorPaymentFromDate || "all"}:vendorPaymentFromDate:${vendorPaymentFromDate || "all"}:sort:${sortBy || "all"}:${sortOrder || "desc"}`;
 
         // Try to get from cache
         const cachedData = await redisClient.get(cacheKey);
@@ -282,7 +321,7 @@ export const getVendorPayment = async (req: RoleBasedRequest, res: Response): Pr
 
 
 
-          if (createdFromDate || createdToDate) {
+        if (createdFromDate || createdToDate) {
             const filterRange: any = {};
 
             if (createdFromDate) {
@@ -316,15 +355,15 @@ export const getVendorPayment = async (req: RoleBasedRequest, res: Response): Pr
 
 
 
-        if (paymentFromDate || paymentToDate) {
+        if (vendorPaymentToDate || vendorPaymentFromDate) {
             const filterRange: any = {};
 
-            if (paymentFromDate) {
-                const from = new Date(paymentFromDate as string);
+            if (vendorPaymentFromDate) {
+                const from = new Date(vendorPaymentFromDate as string);
                 if (isNaN(from.getTime())) {
                     res.status(400).json({
                         ok: false,
-                        message: "Invalid paymentFromDate format. Use ISO string (e.g. 2025-10-23)."
+                        message: "Invalid vendorPaymentFromDate format. Use ISO string (e.g. 2025-10-23)."
                     });
                     return;
                 }
@@ -332,12 +371,12 @@ export const getVendorPayment = async (req: RoleBasedRequest, res: Response): Pr
                 filterRange.$gte = from;
             }
 
-            if (paymentToDate) {
-                const to = new Date(paymentToDate as string);
+            if (vendorPaymentToDate) {
+                const to = new Date(vendorPaymentToDate as string);
                 if (isNaN(to.getTime())) {
                     res.status(400).json({
                         ok: false,
-                        message: "Invalid paymentToDate format. Use ISO string (e.g. 2025-10-23)."
+                        message: "Invalid vendorPaymentToDate format. Use ISO string (e.g. 2025-10-23)."
                     });
                     return;
                 }
@@ -345,7 +384,7 @@ export const getVendorPayment = async (req: RoleBasedRequest, res: Response): Pr
                 filterRange.$lte = to;
             }
 
-            filter.paymentDate = filterRange;
+            filter.vendorPaymentDate = filterRange;
         }
 
 
@@ -493,99 +532,136 @@ export const getVendorPaymentById = async (req: RoleBasedRequest, res: Response)
 };
 
 // UPDATE purchase
-// export const updatepurchase = async (req: Request, res: Response): Promise<any> => {
-//     try {
-//         const { id } = req.params;
-//         const updateData = req.body;
+export const updatepurchase = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
 
-//         // Validate ID format
-//         if (!mongoose.Types.ObjectId.isValid(id)) {
-//             res.status(400).json({
-//                 ok: false,
-//                 message: "Invalid purchase ID format"
-//             });
-//             return;
-//         }
+        // Validate ID format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            res.status(400).json({
+                ok: false,
+                message: "Invalid purchase ID format"
+            });
+            return;
+        }
 
-//         // Check if purchase exists
-//         const existingpurchase = await VendorPaymentAccountModel.findById(id);
-//         if (!existingpurchase) {
-//             res.status(404).json({
-//                 ok: false,
-//                 message: "purchase not found"
-//             });
-//             return;
-//         }
+        // Check if purchase exists
+        const existingpurchase = await VendorPaymentAccountModel.findById(id);
+        if (!existingpurchase) {
+            res.status(404).json({
+                ok: false,
+                message: "purchase not found"
+            });
+            return;
+        }
 
-//         // Validate update data
-//         const validation = validatepurchaseData({
-//             ...existingpurchase.toObject(),
-//             ...updateData
-//         });
+        // Validate update data
+        const validation = validateVendorPaymentData({
+            ...existingpurchase.toObject(),
+            ...updateData
+        });
 
-//         if (!validation.isValid) {
-//             res.status(400).json({
-//                 ok: false,
-//                 message: "Validation failed",
-//                 errors: validation.errors
-//             });
-//             return;
-//         }
+        if (!validation.isValid) {
+            return res.status(400).json({
+                ok: false,
+                message: `Validation failed. ${validation.errors[0]}`,
+                errors: validation.errors
+            });
 
-//         // If items are being updated, recalculate totals
-//         if (updateData.items) {
-//             const processedItems = updateData.items.map((item: any) => ({
-//                 ...item,
-//                 totalCost: (item.quantity || 0) * (item.rate || 0)
-//             }));
+        }
 
-//             const totals = calculateVendorPaymentTotals(
-//                 processedItems,
-//                 updateData.discountPercentage ?? existingpurchase.discountPercentage ?? 0,
-//                 updateData.taxPercentage ?? existingpurchase.taxPercentage ?? 0
-//             );
+        // If items are being updated, recalculate totals
+        if (updateData.items) {
+            const processedItems = updateData.items.map((item: any) => ({
+                ...item,
+                totalCost: (item.quantity || 0) * (item.rate || 0)
+            }));
 
-//             updateData.items = processedItems;
-//             updateData.totalAmount = totals.totalAmount;
-//             updateData.discountAmount = totals.discountAmount;
-//             updateData.taxAmount = totals.taxAmount;
-//             updateData.grandTotal = totals.grandTotal;
-//         } else if (updateData.discountPercentage !== undefined || updateData.taxPercentage !== undefined) {
-//             // Recalculate if discount or tax percentage changed
-//             const totals = calculateVendorPaymentTotals(
-//                 existingpurchase.items,
-//                 updateData.discountPercentage ?? existingpurchase.discountPercentage ?? 0,
-//                 updateData.taxPercentage ?? existingpurchase.taxPercentage ?? 0
-//             );
+            const totals = calculateVendorPaymentTotals(
+                processedItems,
+                // updateData.discountPercentage ?? existingpurchase.discountPercentage ?? 0,
+                // updateData.taxPercentage ?? existingpurchase.taxPercentage ?? 0
+            );
 
-//             updateData.totalAmount = totals.totalAmount;
-//             updateData.discountAmount = totals.discountAmount;
-//             updateData.taxAmount = totals.taxAmount;
-//             updateData.grandTotal = totals.grandTotal;
-//         }
+            updateData.items = processedItems;
+            updateData.totalAmount = totals.totalAmount;
+            // updateData.discountAmount = totals.discountAmount;
+            // updateData.taxAmount = totals.taxAmount;
+            // updateData.grandTotal = totals.grandTotal;
+        } else if (updateData.discountPercentage !== undefined || updateData.taxPercentage !== undefined) {
+            // Recalculate if discount or tax percentage changed
+            const totals = calculateVendorPaymentTotals(
+                existingpurchase.items,
+                //     updateData.discountPercentage ?? existingpurchase.discountPercentage ?? 0,
+                //     updateData.taxPercentage ?? existingpurchase.taxPercentage ?? 0
+            );
 
-//         // Update purchase
-//         const updatedpurchase = await VendorPaymentAccountModel.findByIdAndUpdate(
-//             id,
-//             updateData,
-//             { new: true, runValidators: true }
-//         ).populate('vendorId', 'name email')
-//             .populate('organizationId', 'name');
+            updateData.totalAmount = totals.totalAmount;
+            // updateData.discountAmount = totals.discountAmount;
+            // updateData.taxAmount = totals.taxAmount;
+            // updateData.grandTotal = totals.grandTotal;
+        }
 
-//         res.status(200).json({
-//             ok: true,
-//             message: "purchase updated successfully",
-//             data: updatedpurchase
-//         });
-//     } catch (error: any) {
-//         console.error("Error updating purchase:", error);
-//         res.status(500).json({
-//             ok: false,
-//             message: "Error updating purchase",
-//             error: error.message
-//         });
-//     }
-// };
+        // Update purchase
+        const updatedpurchase = await VendorPaymentAccountModel.findByIdAndUpdate(
+            id,
+            updateData,
+            { new: true, runValidators: true }
+        )
+
+        if (!updatedpurchase) {
+            return res.status(400).json({
+                ok: false,
+                message: `vendor purchase order not found`,
+            });
+        }
+
+
+        const isExiting = await AccountingModel.findOneAndUpdate(
+            {
+                referenceId: updatedpurchase._id,
+                referenceModel: "VendorPaymentModel"
+            },
+            {
+                $set: {
+                    // Update fields that might have changed in the bill
+                    amount: updatedpurchase.totalAmount,
+                    notes: updatedpurchase.notes,
+                    projectId: updatedpurchase?.projectId || null,
+                    assoicatedPersonName: updatedpurchase.vendorName,
+
+                    deptGeneratedDate: updatedpurchase?.vendorPaymentDate || null,
+                    deptNumber: updatedpurchase?.paymentNumber || "VEN-PAY-2025-001",
+                    deptDueDate: (updatedpurchase as any)?.dueDate || null,
+
+                    // Optional: Update person ID if vendor changed
+                    assoicatedPersonId: updatedpurchase?.vendorId || null,
+                    // IMPORTANT: We DO NOT include 'status' or 'paymentId' here.
+                    // Those are controlled by the Payment Controller.
+                }
+            },
+            { new: true }
+        );
+
+
+        await invalidateVendorPaymentCache((updatedpurchase as any).organizationId, id);
+
+
+        return res.status(200).json({
+            ok: true,
+            message: "purchase updated successfully",
+            data: updatedpurchase
+        });
+    } catch (error: any) {
+        console.error("Error updating purchase:", error);
+        res.status(500).json({
+            ok: false,
+            message: "Error updating purchase",
+            error: error.message
+        });
+    }
+};
 
 // DELETE purchase
 
@@ -635,3 +711,129 @@ export const deleteVendorPayment = async (req: RoleBasedRequest, res: Response):
         });
     }
 };
+
+
+
+export const sendVendorPaymentToPayment = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { vendorId } = req.params; // We expect the Bill ID to be sent
+
+        // 1. Validate Bill ID
+        if (!mongoose.Types.ObjectId.isValid(vendorId)) {
+            return res.status(400).json({
+                ok: false,
+                message: "Invalid ID format"
+            });
+        }
+
+        // 2. Fetch the Bill
+        const vendorPay = await VendorPaymentAccountModel.findById(vendorId);
+        if (!vendorPay) {
+            return res.status(404).json({
+                ok: false,
+                message: "Vendor Payment Order not found"
+            });
+        }
+
+
+        if (vendorPay?.isSyncWithPaymentsSection) {
+            return res.status(400).json({ message: "Vendor Payment Already sent to the payment section", ok: false })
+        }
+
+
+        const paymentItems = vendorPay.items.map((item: IVendorPaymentItems, index: number) => {
+
+            return {
+                itemName: item.itemName,
+                quantity: 1,
+                rate: item.billAmount,
+                unit: "nos",
+                totalCost: item.billAmount,
+                dueDate: null,
+                status: "pending",
+                orderId: "",
+                paymentId: "",
+                transactionId: "",
+                paidAt: null,
+                failureReason: "",
+                fees: null,
+                tax: null
+            }
+        });
+
+
+        const newPayemnt = await createPaymentMainAccUtil({
+            paymentPersonId: vendorPay.vendorId || null,
+            paymentPersonModel: vendorPay?.vendorId ? "VendorAccountModel" : null,
+            paymentPersonName: vendorPay?.vendorName || "",
+            organizationId: vendorPay.organizationId,
+            accountingRef: null,
+            projectId: vendorPay?.projectId as Types.ObjectId || null,
+            fromSectionModel: "VendorPaymentModel",
+            fromSectionId: vendorPay._id as Types.ObjectId,
+            fromSection: "Vendor Payment",
+            fromSectionNumber: vendorPay.paymentNumber,
+            paymentDate: null,
+            dueDate: (vendorPay as any)?.dueDate || null,
+            subject: "",
+            items: paymentItems,
+            totalAmount: vendorPay.totalAmount || 0,
+            discountPercentage:  0,
+            discountAmount:  0,
+            taxPercentage: 0,
+            taxAmount:  0,
+            grandTotal: vendorPay?.totalAmount,
+            paymentType: vendorPay.paymentTerms,
+            advancedAmount: {
+                totalAmount:  0,
+                status: 'pending',
+                orderId: "",
+                paymentId: "",
+                transactionId: "",
+                paidAt: null,
+                failureReason: null,
+                fees: null,
+                tax: null,
+            },
+            amountRemaining: {
+                totalAmount: vendorPay.totalAmount,
+                status: 'pending',
+                orderId: "",
+                paymentId: "",
+                transactionId: "",
+                paidAt: null,
+                failureReason: null,
+                fees: null,
+                tax: null,
+            },
+
+            notes: vendorPay?.notes || null,
+            isSyncedWithAccounting: false,
+            generalStatus: "pending"
+        })
+
+        vendorPay.isSyncWithPaymentsSection = true;
+        await vendorPay.save()
+
+
+
+
+        await invalidateVendorPaymentCache((vendorPay as any).organizationId, vendorId);
+
+
+
+        return res.status(201).json({
+            ok: true,
+            message: "Sent to Payments Section successfully",
+            data: newPayemnt
+        });
+
+    } catch (error: any) {
+        console.error("Error sending bill to payement:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Error processing request",
+            error: error.message
+        });
+    }
+}

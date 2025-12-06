@@ -9,32 +9,33 @@ export interface IUpload {
 }
 
 export interface ICustomer extends Document {
-    customerType: "business" | "individual";
-
     organizationId: Types.ObjectId;
     projectId: Types.ObjectId;
     clientId: Types.ObjectId;
-    // salutation?: string;
     firstName: string | null;
-    lastName: string | null;
     companyName: string | null;
-    //   displayName: string;
+    mainImage?: IUpload | null
     email: string | null;
     phone: {
         work: string | null;
         mobile: string | null;
-    };
-    customerLanguage?: string | null;
+    }
 
-    // Other Details
+
     pan?: string | null;
+    tan?: string | null;
+    gstin?: string | null;
+    language?: string | null;
+
+
+    bankAccNo: string | null
+    accHolderName: string | null,
+    bankName: string | null
+    bankBranch: string | null
+    ifscCode: string | null
+    // Other Details
     currency?: string;
-    accountsReceivable?: string | null;
-    openingBalance?: number;
-    paymentTerms?: string;
-    enablePortal?: boolean;
     documents?: IUpload[];
-    // customerOwner?: mongoose.Types.ObjectId;
 }
 
 
@@ -48,40 +49,38 @@ const fileSchema = new Schema<IUpload>({
 
 const CustomerSchema = new Schema<ICustomer>(
     {
-        customerType: {
-            type: String,
-            enum: ["business", "individual"],
-            default: "business",
-        },
 
-        organizationId: {type:Schema.Types.ObjectId, ref:"OrganizationModel"},
-        clientId: {type:Schema.Types.ObjectId, ref:"ClientModel"},
-        projectId: {type:Schema.Types.ObjectId, ref:"ProjectModel"},
-        //   salutation: { type: String },
+
+        organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
+        clientId: { type: Schema.Types.ObjectId, ref: "ClientModel" },
+        projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel" },
         firstName: { type: String, default: null },
-        lastName: { type: String, default: null },
 
         companyName: { type: String, default: null },
-        // displayName: { type: String , default: null},
         email: { type: String, default: null },
         phone: {
-            work: { type: String, default: null },
+            work: { type: String, default: null },    //shoudl support landline also it shoudl allow 11 nunbers also for landline 
             mobile: { type: String, default: null },
         },
-        customerLanguage: { type: String, default: "English" },
 
-        // Other Details
+        
+        // Statutory  Details
+        language: { type: String, default: "English" },
         pan: { type: String, default: null },
+        tan: { type: String, default: null },
+        gstin: { type: String, default: null },
         currency: { type: String, default: "INR - Indian Rupee" },
-        accountsReceivable: { type: String, default: null },
-        openingBalance: { type: Number, default: 0 },
-        paymentTerms: { type: String, default: "Due on Receipt" },
-        enablePortal: { type: Boolean, default: false },
-        documents: { type: [fileSchema], default: [] },
-        // customerOwner: {
-        //   type: Schema.Types.ObjectId,
-        //   ref: "User",
-        // },
+
+        // bank details
+        bankAccNo: { type: String, default: null },
+        accHolderName: { type: String, default: null },
+        bankName: { type: String, default: null },
+        bankBranch: { type: String, default: null },
+        ifscCode: { type: String, default: null },
+
+        mainImage: { type: fileSchema, default: null },
+         documents: { type: [fileSchema], default: [] },
+        
     },
     { timestamps: true }
 );

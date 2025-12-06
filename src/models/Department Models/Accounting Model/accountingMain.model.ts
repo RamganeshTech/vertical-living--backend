@@ -195,7 +195,7 @@ export interface IAccounting extends Document {
   assoicatedPersonName: string;
   assoicatedPersonId: mongoose.Types.ObjectId;
 
-  deptRecordFrom: "Retail Invoice" | "Invoice" | "Bill" | "Expense" // To show badge color
+  deptRecordFrom: "Retail Invoice" | "Invoice" | "Bill" | "Expense" | "Vendor Payment" // To show badge color
   assoicatedPersonModel: string | null
   amount: number
   status: string | null;
@@ -244,7 +244,7 @@ const accountingSchema = new Schema<IAccounting>({
   assoicatedPersonId: { type: Schema.Types.ObjectId, refPath: "assoicatedPersonModel", default: null },
   assoicatedPersonModel: { type: String, default: null },
 
-  deptRecordFrom: { type: String, default: null },   // bill, expense, subcontract 
+  deptRecordFrom: { type: String, default: null },   //"Retail Invoice" | "Invoice" | "Bill" | "Expense" | "Vendor Payment"
 
   amount: {
     type: Number,

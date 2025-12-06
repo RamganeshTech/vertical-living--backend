@@ -8,18 +8,18 @@ export const validateCreateVendor = (data: any): ValidationResult => {
         errors.push({ field: 'organizationId', message: 'Invalid organization Id format' });
     }
     
-    // projectId validation
-    if (data?.projectId && !validateMongoId(data.projectId)) {
-        // errors.push({ field: 'projectId', message: 'Project ID is required' });
-        errors.push({ field: 'projectId', message: 'Invalid project ID format' });
-    }
+    // // projectId validation
+    // if (data?.projectId && !validateMongoId(data.projectId)) {
+    //     // errors.push({ field: 'projectId', message: 'Project ID is required' });
+    //     errors.push({ field: 'projectId', message: 'Invalid project ID format' });
+    // }
 
-    // clientId validation
-    if (data?.clientId && !validateMongoId(data.clientId)) {
-        // errors.push({ field: 'clientId', message: 'Client ID is required' });
-        errors.push({ field: 'clientId', message: 'Invalid client ID format' });
-    // } else if () {
-    }
+    // // clientId validation
+    // if (data?.clientId && !validateMongoId(data.clientId)) {
+    //     // errors.push({ field: 'clientId', message: 'Client ID is required' });
+    //     errors.push({ field: 'clientId', message: 'Invalid client ID format' });
+    // // } else if () {
+    // }
 
     // Business vs Individual specific validations
     // if (data.customerType === 'business') {
@@ -45,11 +45,11 @@ export const validateCreateVendor = (data: any): ValidationResult => {
 
     // Phone validation (optional but must be valid if provided)
     if (data.phone) {
-        if (data.phone.work && data.phone.work.trim() !== '') {
-            if (!validatePhone(data.phone.work)) {
-                errors.push({ field: 'phone.work', message: 'Invalid work phone format' });
-            }
-        }
+        // if (data.phone.work && data.phone.work.trim() !== '') {
+        //     if (!validatePhone(data.phone.work)) {
+        //         errors.push({ field: 'phone.work', message: 'Invalid work phone format' });
+        //     }
+        // }
         if (data.phone.mobile && data.phone.mobile.trim() !== '') {
             if (!validatePhone(data.phone.mobile)) {
                 errors.push({ field: 'phone.mobile', message: 'Invalid mobile phone format' });
@@ -58,11 +58,11 @@ export const validateCreateVendor = (data: any): ValidationResult => {
     }
 
     // PAN validation (optional but must be valid if provided)
-    if (data.pan && data.pan.trim() !== '') {
-        if (!validatePAN(data.pan)) {
-            errors.push({ field: 'pan', message: 'Invalid PAN format (e.g., ABCDE1234F)' });
-        }
-    }
+    // if (data.pan && data.pan.trim() !== '') {
+    //     if (!validatePAN(data.pan)) {
+    //         errors.push({ field: 'pan', message: 'Invalid PAN format (e.g., ABCDE1234F)' });
+    //     }
+    // }
 
     // Opening balance validation
     // if (data.openingBalance !== undefined && data.openingBalance !== null) {
@@ -102,15 +102,15 @@ export const validateUpdateVendor = (data: any): ValidationResult => {
     }
     
 
-    // projectId validation (if provided)
-    if (data.projectId && !validateMongoId(data.projectId)) {
-        errors.push({ field: 'projectId', message: 'Invalid project ID format' });
-    }
+    // // projectId validation (if provided)
+    // if (data.projectId && !validateMongoId(data.projectId)) {
+    //     errors.push({ field: 'projectId', message: 'Invalid project ID format' });
+    // }
 
-    // clientId validation (if provided)
-    if (data.clientId && !validateMongoId(data.clientId)) {
-        errors.push({ field: 'clientId', message: 'Invalid client ID format' });
-    }
+    // // clientId validation (if provided)
+    // if (data.clientId && !validateMongoId(data.clientId)) {
+    //     errors.push({ field: 'clientId', message: 'Invalid client ID format' });
+    // }
 
     // Email validation (if provided)
     if (data.email && data.email.trim() !== '' && data.email !== null) {
@@ -121,11 +121,11 @@ export const validateUpdateVendor = (data: any): ValidationResult => {
 
     // Phone validation (if provided)
     if (data.phone) {
-        if (data.phone.work && data.phone.work.trim() !== '' && data.phone.work !== null) {
-            if (!validatePhone(data.phone.work)) {
-                errors.push({ field: 'phone.work', message: 'Invalid work phone format' });
-            }
-        }
+        // if (data.phone.work && data.phone.work.trim() !== '' && data.phone.work !== null) {
+        //     if (!validatePhone(data.phone.work)) {
+        //         errors.push({ field: 'phone.work', message: 'Invalid work phone format' });
+        //     }
+        // }
         if (data.phone.mobile && data.phone.mobile.trim() !== '' && data.phone.mobile !== null) {
             if (!validatePhone(data.phone.mobile)) {
                 errors.push({ field: 'phone.mobile', message: 'Invalid mobile phone format' });
@@ -134,11 +134,11 @@ export const validateUpdateVendor = (data: any): ValidationResult => {
     }
 
     // PAN validation (if provided)
-    if (data.pan && data.pan.trim() !== '' && data.pan !== null) {
-        if (!validatePAN(data.pan)) {
-            errors.push({ field: 'pan', message: 'Invalid PAN format (e.g., ABCDE1234F)' });
-        }
-    }
+    // if (data.pan && data.pan.trim() !== '' && data.pan !== null) {
+    //     if (!validatePAN(data.pan)) {
+    //         errors.push({ field: 'pan', message: 'Invalid PAN format (e.g., ABCDE1234F)' });
+    //     }
+    // }
 
     // Opening balance validation (if provided)
     // if (data.openingBalance !== undefined && data.openingBalance !== null) {

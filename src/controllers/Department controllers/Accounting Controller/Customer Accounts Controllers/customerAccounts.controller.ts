@@ -21,15 +21,15 @@ export const createCustomer = async (req: RoleBasedRequest, res: Response): Prom
             req.body.phone = JSON.parse(req.body.phone);
         }
 
-        // Convert string numbers to actual numbers
-        if (req.body.openingBalance && typeof req.body.openingBalance === 'string') {
-            req.body.openingBalance = parseFloat(req.body.openingBalance);
-        }
+        // // Convert string numbers to actual numbers
+        // if (req.body.openingBalance && typeof req.body.openingBalance === 'string') {
+        //     req.body.openingBalance = parseFloat(req.body.openingBalance);
+        // }
 
-        // Convert string boolean to actual boolean
-        if (req.body.enablePortal !== undefined && typeof req.body.enablePortal === 'string') {
-            req.body.enablePortal = req.body.enablePortal === 'true';
-        }
+        // // Convert string boolean to actual boolean
+        // if (req.body.enablePortal !== undefined && typeof req.body.enablePortal === 'string') {
+        //     req.body.enablePortal = req.body.enablePortal === 'true';
+        // }
 
         // Validate request body
         const validationResult = validateCreateCustomer(req.body);
@@ -58,16 +58,30 @@ export const createCustomer = async (req: RoleBasedRequest, res: Response): Prom
         }
 
         // Handle uploaded files (if any)
+       const uploadedFiles = req.files as { [fieldname: string]: (Express.Multer.File & { location: string })[] };
+
+
+        // let mainImage: any | null = null;
+
+
+
+        // if (uploadedFiles && uploadedFiles['mainImage'] && uploadedFiles['mainImage'][0]) {
+        //     const file = uploadedFiles['mainImage'][0];
+
+        //     // YOU MUST SAVE THIS AS AN OBJECT, NOT A STRING
+        //     mainImage = {
+        //         type: "image",
+        //         url: file.location, // This is the S3 URL
+        //         originalName: file.originalname,
+        //         uploadedAt: new Date()
+        //     };
+        // }
+
         const documents: any[] = [];
 
-        if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-            const files = req.files as (Express.Multer.File & { location: string })[];
-
-            files.forEach((file) => {
-                // const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
-                // const documentType = fileExtension === 'pdf' ? 'pdf' : 'image';
+        if (uploadedFiles && uploadedFiles['files'] && uploadedFiles['files'].length > 0) {
+            uploadedFiles['files'].forEach((file) => {
                 const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
-
                 documents.push({
                     type: type,
                     url: file.location,
@@ -83,7 +97,8 @@ export const createCustomer = async (req: RoleBasedRequest, res: Response): Prom
 
         // Invalidate cache for the organiziaotns's customer list
         // const cachePattern = `customers:organizationId:${req.body.organizationId}:*`;
-        const cachePattern = `customers:*:organizationId:${req.body.organizationId}*`;
+        const cachePattern = `customers:organizationId:${req.body.organizationId}:*`;
+
         const keys = await redisClient.keys(cachePattern);
         if (keys.length > 0) {
             await redisClient.del(keys);
@@ -176,8 +191,14 @@ export const updateCustomer = async (req: RoleBasedRequest, res: Response): Prom
         await redisClient.del(cacheKey);
 
         // const cachePattern = `customers:organizationId:${existingCustomer.organizationId}:*`;
-        const cachePattern = `customers:*:organizationId:${req.body.organizationId}*`;
+        // const cachePattern = `customers:*:organizationId:${req.body.organizationId}*`;
 
+        // const keys = await redisClient.keys(cachePattern);
+        // if (keys.length > 0) {
+        //     await redisClient.del(keys);
+        // }
+
+        const cachePattern = `customers:organizationId:${req.body.organizationId}:*`;
         const keys = await redisClient.keys(cachePattern);
         if (keys.length > 0) {
             await redisClient.del(keys);
@@ -270,7 +291,80 @@ export const updateCustomerDoc= async (req: RoleBasedRequest, res: Response): Pr
             error: error.message
         });
     }
+
 }
+
+
+
+
+
+export const updateCustomerMainImage = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { customerId } = req.params;
+
+        // 1. Check if file exists
+        // Note: Since we use imageUploadToS3.single('mainImage'), the file is in req.file (not req.files)
+        const file = req.file as (Express.Multer.File & { location: string });
+
+        if (!file) {
+            return res.status(400).json({
+                ok: false,
+                message: 'No image file provided'
+            });
+        }
+
+
+        const mainImageObject = {
+            url: file.location,
+            originalName: file.originalname,
+            type: "image",
+            uploadedAt: new Date()
+        };
+
+
+
+        // 2. Update Database
+        const updatedCustomer = await CustomerAccountModel.findByIdAndUpdate(
+            customerId,
+            { mainImage: mainImageObject },
+            { new: true } // Return updated doc
+        );
+
+        if (!updatedCustomer) {
+            return res.status(404).json({
+                ok: false,
+                message: 'Vendor not found'
+            });
+        }
+
+        const cacheKey = `customer:${updatedCustomer._id}`;
+        await redisClient.del(cacheKey);
+
+        // const cachePattern = `customers:organizationId:${existingVendor.organizationId}:*`;
+        const cachePattern = `customer:organizationId:${req.body.organizationId}*`;
+
+        const keys = await redisClient.keys(cachePattern);
+        if (keys.length > 0) {
+            await redisClient.del(keys);
+        }
+
+        return res.status(200).json({
+            ok: true,
+            message: 'cusotmer image updated successfully',
+            data: {
+                mainImage: updatedCustomer?.mainImage
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Error updating shop image:', error);
+        return res.status(500).json({
+            ok: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+};
 /**
  * Delete a customer
  * DELETE /api/customers/:id
@@ -396,7 +490,7 @@ export const getAllCustomers = async (req: RoleBasedRequest, res: Response): Pro
             projectId,
             // firstName,
             // lastName,
-            customerType,
+            // customerType,
             createdFromDate ,
               createdToDate,
             search,
@@ -431,12 +525,12 @@ export const getAllCustomers = async (req: RoleBasedRequest, res: Response): Pro
         }
 
         // Validate customerType if provided
-        if (customerType && !['business', 'individual'].includes(customerType as string)) {
-            return res.status(400).json({
-                ok: false,
-                message: 'Invalid customer type. Must be "business" or "individual"'
-            });
-        }
+        // if (customerType && !['business', 'individual'].includes(customerType as string)) {
+        //     return res.status(400).json({
+        //         ok: false,
+        //         message: 'Invalid customer type. Must be "business" or "individual"'
+        //     });
+        // }
 
         // Build filter object
         const filter: any = {};
@@ -449,9 +543,9 @@ export const getAllCustomers = async (req: RoleBasedRequest, res: Response): Pro
             filter.projectId = projectId;
         }
 
-        if (customerType) {
-            filter.customerType = customerType;
-        }
+        // if (customerType) {
+        //     filter.customerType = customerType;
+        // }
 
 
         if (createdFromDate || createdToDate) {
@@ -500,7 +594,7 @@ export const getAllCustomers = async (req: RoleBasedRequest, res: Response): Pro
         if (search) {
             filter.$or = [
                 { firstName: { $regex: search, $options: 'i' } },
-                { lastName: { $regex: search, $options: 'i' } },
+                // { lastName: { $regex: search, $options: 'i' } },
                 { companyName: { $regex: search, $options: 'i' } },
                 { email: { $regex: search, $options: 'i' } },
                 { 'phone.work': { $regex: search, $options: 'i' } },
@@ -509,7 +603,7 @@ export const getAllCustomers = async (req: RoleBasedRequest, res: Response): Pro
         }
 
         // Create cache key based on filters
-        const cacheKey = `customers:organizationId:${organizationId || 'all'}:page:${pageNum}:limit:${limitNum}:type:${customerType || 'all'}:search:${search || 'none'}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:sort:${sortBy}:${sortOrder}`;
+        const cacheKey = `customers:organizationId:${organizationId || 'all'}:page:${pageNum}:limit:${limitNum}:search:${search || 'none'}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:sort:${sortBy}:${sortOrder}`;
 
         // Check cache
         const cachedData = await redisClient.get(cacheKey);
@@ -560,7 +654,7 @@ export const getAllCustomers = async (req: RoleBasedRequest, res: Response): Pro
             },
             filters: {
                 organizationId: organizationId || null,
-                customerType: customerType || null,
+                // customerType: customerType || null,
                 // firstName: firstName || null,
                 // lastName: lastName || null,
                 search: search || null
@@ -637,7 +731,7 @@ export const getAllCustomerDropDown = async (req: Request, res: Response): Promi
         let modifiedCustomer = customers.map(user=> {
             return {
                 _id: user._id, 
-                customerName: `${user.firstName} ${user.lastName}`,
+                customerName: `${user.firstName}`,
                 email: user.email
             }
         })

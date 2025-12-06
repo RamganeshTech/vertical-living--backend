@@ -34,8 +34,9 @@ const uploadToS3 = async (pdfBytes: any, fileName: any) => {
 const generateOrderHistoryPDF = async (projectId: string, organizationId: string) => {
     try {
         // Fetch order history data
+        // Fetch order history data
         const orderHistory = await OrderMaterialHistoryModel.findOne({ projectId })
-            .populate('projectId', 'projectName')
+            .populate('projectId', 'projectName _id')
 
 
         if (!orderHistory) {
@@ -43,13 +44,13 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
         }
 
 
-        const isNewPdf = Array.isArray(orderHistory.generatedLink) && orderHistory.generatedLink.length > 0;
         let nextNumber = 1;
+        const isNewPdf = Array.isArray(orderHistory.generatedLink) && orderHistory.generatedLink.length > 0;
 
         if (isNewPdf) {
             // Extract all numbers from refUniquePdf (format: projectName-<number>-pdf)
             const numbers = orderHistory.generatedLink.map(ele => {
-                const match = ele.refUniquePdf?.match(/-(\d+)-pdf$/);
+                const match = ele.refUniquePdf?.match(/-(\d+)$/);
                 return match ? parseInt(match[1], 10) : 0; // Extract the number part
             });
 
@@ -57,8 +58,15 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
             nextNumber = Math.max(...numbers, 0) + 1;
         }
 
-        // Construct the new refUniquePdf
-        const refUniquePdf = `${(orderHistory.projectId as any).projectName}-${nextNumber}-pdf`;
+
+        const currentYear = new Date().getFullYear()
+
+
+        // Always 3-digit format
+        const paddedNumber = String(nextNumber).padStart(3, "0");
+        const rawProjectId = (orderHistory.projectId as any)._id.toString().slice(-3);
+
+        const refUniquePdf = `ORD-${rawProjectId}-${currentYear}-${paddedNumber}`;
 
 
         // Create a new PDF document
@@ -143,7 +151,7 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
 
         const heading = "MATERIAL ORDER";
 
-        const referenceId = `Pdf Reference Id: ${refUniquePdf}`; // e.g. projectName-01-pdf
+        const referenceId = `Order Number: ${refUniquePdf}`; // e.g. projectName-01-pdf
 
         // Measure text widths
         const headingWidth = boldFont.widthOfTextAtSize(heading, 18);
@@ -195,161 +203,161 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
 
 
 
-// // FIRST VERSION
-//           // ========== IMAGES SECTION - AFTER PROJECT DETAILS ==========
-//         // Check if images exist and have URLs
-//         const hasImages = orderHistory.images && 
-//                          Array.isArray(orderHistory.images) && 
-//                          orderHistory.images.length > 0 &&
-//                          orderHistory.images.some(img => img && img.url && img.url.trim() !== '');
+        // // FIRST VERSION
+        //           // ========== IMAGES SECTION - AFTER PROJECT DETAILS ==========
+        //         // Check if images exist and have URLs
+        //         const hasImages = orderHistory.images && 
+        //                          Array.isArray(orderHistory.images) && 
+        //                          orderHistory.images.length > 0 &&
+        //                          orderHistory.images.some(img => img && img.url && img.url.trim() !== '');
 
-//         if (hasImages) {
-//             // Add heading for images section
-//             page.drawText("Images:", {
-//                 x: 50,
-//                 y: yPosition,
-//                 size: 14,
-//                 font: boldFont,
-//                 color: rgb(0.2, 0.2, 0.2),
-//             });
-//             yPosition -= 25;
+        //         if (hasImages) {
+        //             // Add heading for images section
+        //             page.drawText("Images:", {
+        //                 x: 50,
+        //                 y: yPosition,
+        //                 size: 14,
+        //                 font: boldFont,
+        //                 color: rgb(0.2, 0.2, 0.2),
+        //             });
+        //             yPosition -= 25;
 
-//             const imageWidth = 150; // Fixed width for images
-//             const imageHeight = 150; // Fixed height for images
-//             const margin = 20; // Margin between images
-//             const imagesPerRow = Math.floor((width - 100) / (imageWidth + margin));
-            
-//             let currentRow = 0;
-//             let currentCol = 0;
+        //             const imageWidth = 150; // Fixed width for images
+        //             const imageHeight = 150; // Fixed height for images
+        //             const margin = 20; // Margin between images
+        //             const imagesPerRow = Math.floor((width - 100) / (imageWidth + margin));
 
-//             // Filter valid images (with URLs)
-//             const validImages = orderHistory.images.filter(img => img && img.url && img.url.trim() !== '');
+        //             let currentRow = 0;
+        //             let currentCol = 0;
 
-//             for (let i = 0; i < validImages.length; i++) {
-//                 const image = validImages[i];
-                
-//                 // Check if we need a new page
-//                 if (yPosition < imageHeight + 100) {
-//                     page = pdfDoc.addPage([595, 842]);
-//                     yPosition = height - 50;
-//                     currentRow = 0;
-//                     currentCol = 0;
-//                 }
+        //             // Filter valid images (with URLs)
+        //             const validImages = orderHistory.images.filter(img => img && img.url && img.url.trim() !== '');
 
-//                 try {
-//                     // Calculate position
-//                     const xPos = 50 + (currentCol * (imageWidth + margin));
-//                     const yPos = yPosition - imageHeight;
+        //             for (let i = 0; i < validImages.length; i++) {
+        //                 const image = validImages[i];
 
-//                     // Fetch and embed image
-//                     const imageRes = await fetch(image?.url!);
-                    
-//                     // Check if response is OK
-//                     if (!imageRes.ok) {
-//                         console.warn(`Failed to fetch image ${i+1}: ${imageRes.statusText}`);
-//                         continue;
-//                     }
+        //                 // Check if we need a new page
+        //                 if (yPosition < imageHeight + 100) {
+        //                     page = pdfDoc.addPage([595, 842]);
+        //                     yPosition = height - 50;
+        //                     currentRow = 0;
+        //                     currentCol = 0;
+        //                 }
 
-//                     const imageBuffer = await imageRes.arrayBuffer();
-                    
-//                     // Check if buffer has data
-//                     if (!imageBuffer || imageBuffer.byteLength === 0) {
-//                         console.warn(`Image ${i+1} has empty buffer`);
-//                         continue;
-//                     }
+        //                 try {
+        //                     // Calculate position
+        //                     const xPos = 50 + (currentCol * (imageWidth + margin));
+        //                     const yPos = yPosition - imageHeight;
 
-//                     // Try to determine image type and embed
-//                     let embeddedImage;
-//                     try {
-//                         // Try as JPEG
-//                         embeddedImage = await pdfDoc.embedJpg(imageBuffer);
-//                     } catch (jpgError) {
-//                         try {
-//                             // Try as PNG
-//                             embeddedImage = await pdfDoc.embedPng(imageBuffer);
-//                         } catch (pngError) {
-//                             console.warn(`Failed to embed image ${i+1}: Not a valid JPEG or PNG`);
-//                             continue;
-//                         }
-//                     }
+        //                     // Fetch and embed image
+        //                     const imageRes = await fetch(image?.url!);
 
-//                     // Calculate scaling to fit within fixed dimensions while maintaining aspect ratio
-//                     const imgDims = embeddedImage.scale(1);
-//                     const scale = Math.min(
-//                         imageWidth / imgDims.width,
-//                         imageHeight / imgDims.height
-//                     );
-                    
-//                     const scaledWidth = imgDims.width * scale;
-//                     const scaledHeight = imgDims.height * scale;
+        //                     // Check if response is OK
+        //                     if (!imageRes.ok) {
+        //                         console.warn(`Failed to fetch image ${i+1}: ${imageRes.statusText}`);
+        //                         continue;
+        //                     }
 
-//                     // Center image in the allocated space
-//                     const xOffset = xPos + (imageWidth - scaledWidth) / 2;
-//                     const yOffset = yPos + (imageHeight - scaledHeight) / 2;
+        //                     const imageBuffer = await imageRes.arrayBuffer();
 
-//                     // Draw image with border
-//                     page.drawRectangle({
-//                         x: xPos,
-//                         y: yPos,
-//                         width: imageWidth,
-//                         height: imageHeight,
-//                         borderColor: rgb(0.8, 0.8, 0.8),
-//                         borderWidth: 1,
-//                         color: rgb(0.95, 0.95, 0.95), // Light background for transparency
-//                     });
+        //                     // Check if buffer has data
+        //                     if (!imageBuffer || imageBuffer.byteLength === 0) {
+        //                         console.warn(`Image ${i+1} has empty buffer`);
+        //                         continue;
+        //                     }
 
-//                     page.drawImage(embeddedImage, {
-//                         x: xOffset,
-//                         y: yOffset,
-//                         width: scaledWidth,
-//                         height: scaledHeight,
-//                     });
+        //                     // Try to determine image type and embed
+        //                     let embeddedImage;
+        //                     try {
+        //                         // Try as JPEG
+        //                         embeddedImage = await pdfDoc.embedJpg(imageBuffer);
+        //                     } catch (jpgError) {
+        //                         try {
+        //                             // Try as PNG
+        //                             embeddedImage = await pdfDoc.embedPng(imageBuffer);
+        //                         } catch (pngError) {
+        //                             console.warn(`Failed to embed image ${i+1}: Not a valid JPEG or PNG`);
+        //                             continue;
+        //                         }
+        //                     }
 
-//                     // Add image number
-//                     page.drawText(`Image ${i + 1}`, {
-//                         x: xPos + 5,
-//                         y: yPos - 15,
-//                         size: 8,
-//                         font: regularFont,
-//                         color: rgb(0.5, 0.5, 0.5),
-//                     });
+        //                     // Calculate scaling to fit within fixed dimensions while maintaining aspect ratio
+        //                     const imgDims = embeddedImage.scale(1);
+        //                     const scale = Math.min(
+        //                         imageWidth / imgDims.width,
+        //                         imageHeight / imgDims.height
+        //                     );
 
-//                     // Update column position
-//                     currentCol++;
-                    
-//                     // Move to next row if needed
-//                     if (currentCol >= imagesPerRow) {
-//                         currentCol = 0;
-//                         currentRow++;
-//                         yPosition -= (imageHeight + margin + 25); // Add space for next row + label
-//                     }
+        //                     const scaledWidth = imgDims.width * scale;
+        //                     const scaledHeight = imgDims.height * scale;
 
-//                 } catch (error) {
-//                     console.warn(`Failed to process image ${i+1}:`, error);
-//                     // Continue with next image even if one fails
-//                     continue;
-//                 }
-//             }
+        //                     // Center image in the allocated space
+        //                     const xOffset = xPos + (imageWidth - scaledWidth) / 2;
+        //                     const yOffset = yPos + (imageHeight - scaledHeight) / 2;
 
-//             // After all images, update yPosition for next section
-//             if (currentCol > 0) {
-//                 yPosition -= (imageHeight + margin + 25);
-//             }
-            
-//             // Add some space after images section
-//             yPosition -= 30;
-//         }
+        //                     // Draw image with border
+        //                     page.drawRectangle({
+        //                         x: xPos,
+        //                         y: yPos,
+        //                         width: imageWidth,
+        //                         height: imageHeight,
+        //                         borderColor: rgb(0.8, 0.8, 0.8),
+        //                         borderWidth: 1,
+        //                         color: rgb(0.95, 0.95, 0.95), // Light background for transparency
+        //                     });
+
+        //                     page.drawImage(embeddedImage, {
+        //                         x: xOffset,
+        //                         y: yOffset,
+        //                         width: scaledWidth,
+        //                         height: scaledHeight,
+        //                     });
+
+        //                     // Add image number
+        //                     page.drawText(`Image ${i + 1}`, {
+        //                         x: xPos + 5,
+        //                         y: yPos - 15,
+        //                         size: 8,
+        //                         font: regularFont,
+        //                         color: rgb(0.5, 0.5, 0.5),
+        //                     });
+
+        //                     // Update column position
+        //                     currentCol++;
+
+        //                     // Move to next row if needed
+        //                     if (currentCol >= imagesPerRow) {
+        //                         currentCol = 0;
+        //                         currentRow++;
+        //                         yPosition -= (imageHeight + margin + 25); // Add space for next row + label
+        //                     }
+
+        //                 } catch (error) {
+        //                     console.warn(`Failed to process image ${i+1}:`, error);
+        //                     // Continue with next image even if one fails
+        //                     continue;
+        //                 }
+        //             }
+
+        //             // After all images, update yPosition for next section
+        //             if (currentCol > 0) {
+        //                 yPosition -= (imageHeight + margin + 25);
+        //             }
+
+        //             // Add some space after images section
+        //             yPosition -= 30;
+        //         }
         // ========== END IMAGES SECTION ==========
 
 
         // SECOND VERSION
 
-                // ========== IMAGES SECTION - AFTER PROJECT DETAILS ==========
+        // ========== IMAGES SECTION - AFTER PROJECT DETAILS ==========
         // Check if images exist and have URLs
-        const hasImages = orderHistory.images && 
-                         Array.isArray(orderHistory.images) && 
-                         orderHistory.images.length > 0 &&
-                         orderHistory.images.some(img => img && img.url && img.url.trim() !== '');
+        const hasImages = orderHistory.images &&
+            Array.isArray(orderHistory.images) &&
+            orderHistory.images.length > 0 &&
+            orderHistory.images.some(img => img && img.url && img.url.trim() !== '');
 
         if (hasImages) {
             // Add heading for images section
@@ -366,10 +374,10 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
             const maxImageHeight = 150; // Maximum height for images
             const margin = 30; // Margin between images
             const imagesPerRow = 3; // Fixed to 3 images per row
-            
+
             // Filter valid images (with URLs)
             const validImages = orderHistory.images.filter(img => img && img.url && img.url.trim() !== '');
-            
+
             // Calculate available width for each image in the row
             const totalAvailableWidth = width - 100; // 50px margin on each side
             const imageWidth = (totalAvailableWidth - ((imagesPerRow - 1) * margin)) / imagesPerRow;
@@ -380,14 +388,14 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
 
             for (let i = 0; i < validImages.length; i++) {
                 const image = validImages[i];
-                
+
                 // Check if we need a new page
                 if (yPosition < imageHeight + 100) {
                     page = pdfDoc.addPage([595, 842]);
                     yPosition = height - 50;
                     currentRow = 0;
                     currentCol = 0;
-                    
+
                     // Redraw "Images:" heading on new page
                     page.drawText("Images (continued):", {
                         x: 50,
@@ -406,10 +414,10 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
 
                     // Fetch and embed image
                     const imageRes = await fetch(image?.url!);
-                    
+
                     // Check if response is OK
                     if (!imageRes.ok) {
-                        console.warn(`Failed to fetch image ${i+1}: ${imageRes.statusText}`);
+                        console.warn(`Failed to fetch image ${i + 1}: ${imageRes.statusText}`);
                         currentCol++;
                         if (currentCol >= imagesPerRow) {
                             currentCol = 0;
@@ -420,10 +428,10 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
                     }
 
                     const imageBuffer = await imageRes.arrayBuffer();
-                    
+
                     // Check if buffer has data
                     if (!imageBuffer || imageBuffer.byteLength === 0) {
-                        console.warn(`Image ${i+1} has empty buffer`);
+                        console.warn(`Image ${i + 1} has empty buffer`);
                         currentCol++;
                         if (currentCol >= imagesPerRow) {
                             currentCol = 0;
@@ -443,7 +451,7 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
                             // Try as PNG
                             embeddedImage = await pdfDoc.embedPng(imageBuffer);
                         } catch (pngError) {
-                            console.warn(`Failed to embed image ${i+1}: Not a valid JPEG or PNG`);
+                            console.warn(`Failed to embed image ${i + 1}: Not a valid JPEG or PNG`);
                             currentCol++;
                             if (currentCol >= imagesPerRow) {
                                 currentCol = 0;
@@ -456,13 +464,13 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
 
                     // Get original image dimensions
                     const imgDims = embeddedImage.scale(1);
-                    
+
                     // Calculate scaling to fit within the allocated width/height while maintaining aspect ratio
                     const scale = Math.min(
                         imageWidth / imgDims.width,
                         imageHeight / imgDims.height
                     );
-                    
+
                     const scaledWidth = imgDims.width * scale;
                     const scaledHeight = imgDims.height * scale;
 
@@ -482,7 +490,7 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
                     const imageNumber = `Image ${i + 1}`;
                     const numberWidth = regularFont.widthOfTextAtSize(imageNumber, 9);
                     const numberX = xPos + (imageWidth - numberWidth) / 2;
-                    
+
                     page.drawText(imageNumber, {
                         x: numberX,
                         y: yPos - 15,
@@ -493,7 +501,7 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
 
                     // Update column position
                     currentCol++;
-                    
+
                     // Move to next row if needed
                     if (currentCol >= imagesPerRow) {
                         currentCol = 0;
@@ -502,7 +510,7 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
                     }
 
                 } catch (error) {
-                    console.warn(`Failed to process image ${i+1}:`, error);
+                    console.warn(`Failed to process image ${i + 1}:`, error);
                     // Continue with next image even if one fails
                     currentCol++;
                     if (currentCol >= imagesPerRow) {
@@ -518,7 +526,7 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
             if (currentCol > 0) {
                 yPosition -= (imageHeight + margin + 20);
             }
-            
+
             // Add some space after images section
             yPosition -= 30;
         }
@@ -829,23 +837,10 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
             orderHistory.generatedLink = []
             orderHistory?.generatedLink.push(pdfData as IPdfGenerator)
         }
-        
+
         console.log("orderHistory.generatedLink", orderHistory.generatedLink)
 
-        // const ProcurementNewItems: any[] = [];
-
-        // // Flatten subItems into one array
-        // orderHistory.selectedUnits.forEach(unit => {
-        //     unit.subItems.forEach((subItem:any) => {
-        //         const { _id, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
-        //         ProcurementNewItems.push({
-        //             ...rest,
-        //             _id: new mongoose.Types.ObjectId() // always refresh ID
-        //         });
-        //     });
-        // });
-
-
+      
         const ProcurementNewItems: any[] = [];
         const subItemMap: Record<string, any> = {}; // key = subItemName
 
@@ -920,7 +915,7 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
     try {
         // Fetch order history data
         const orderHistory = await OrderMaterialHistoryModel.findOne({ projectId })
-            .populate('projectId', 'projectName')
+            .populate('projectId', 'projectName _id')
 
 
         if (!orderHistory) {
@@ -928,13 +923,13 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
         }
 
 
-        const isNewPdf = Array.isArray(orderHistory.generatedLink) && orderHistory.generatedLink.length > 0;
         let nextNumber = 1;
+        const isNewPdf = Array.isArray(orderHistory.generatedLink) && orderHistory.generatedLink.length > 0;
 
         if (isNewPdf) {
             // Extract all numbers from refUniquePdf (format: projectName-<number>-pdf)
             const numbers = orderHistory.generatedLink.map(ele => {
-                const match = ele.refUniquePdf?.match(/-(\d+)-pdf$/);
+                const match = ele.refUniquePdf?.match(/-(\d+)$/);
                 return match ? parseInt(match[1], 10) : 0; // Extract the number part
             });
 
@@ -942,8 +937,18 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
             nextNumber = Math.max(...numbers, 0) + 1;
         }
 
+
+        const currentYear = new Date().getFullYear()
+
+
+        // Always 3-digit format
+        const paddedNumber = String(nextNumber).padStart(3, "0");
+        const rawProjectId = (orderHistory.projectId as any)._id.toString().slice(-3);
+
+        const refUniquePdf = `ORD-${rawProjectId}-${currentYear}-${paddedNumber}`;
+
         // Construct the new refUniquePdf
-        const refUniquePdf = `${(orderHistory.projectId as any).projectName}-${nextNumber}-pdf`;
+        // const refUniquePdf = `ORD-${(orderHistory.projectId as any)._id.slice(0, 3)}-${currentYear}-${nextNumber}`;
 
 
         // Create a new PDF document
@@ -1028,7 +1033,7 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
 
         const heading = "MATERIAL ORDER";
 
-        const referenceId = `Pdf Reference Id: ${refUniquePdf}`; // e.g. projectName-01-pdf
+        const referenceId = `Order Number: ${refUniquePdf}`; // e.g. projectName-01-pdf
 
         // Measure text widths
         const headingWidth = boldFont.widthOfTextAtSize(heading, 18);
@@ -1079,7 +1084,7 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
         }
 
 
-         // Shop Details Section
+        // Shop Details Section
         if (orderHistory?.publicUnits?.shopDetails) {
             page.drawText("Shop Details:", {
                 x: 50,
@@ -1137,7 +1142,7 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
         }
 
 
-            yPosition -= 20;
+        yPosition -= 20;
 
 
         // Process each unit and its sub-items
@@ -1334,27 +1339,27 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
         const ProcurementNewItems: any[] = [];
         const subItemMap: Record<string, any> = {}; // key = subItemName
 
-            orderHistory?.publicUnits?.subItems?.forEach((subItem: any) => {
-                const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
+        orderHistory?.publicUnits?.subItems?.forEach((subItem: any) => {
+            const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
 
-                const name = rest.subItemName?.trim().toLowerCase() || "";
-                const unitKey = rest.unit?.trim().toLowerCase() || "";
-                const key = `${name}__${unitKey}`; // combine name + unit
+            const name = rest.subItemName?.trim().toLowerCase() || "";
+            const unitKey = rest.unit?.trim().toLowerCase() || "";
+            const key = `${name}__${unitKey}`; // combine name + unit
 
-                if (key) {
-                    if (subItemMap[key]) {
-                        // Already exists with same name+unit → add quantity
-                        subItemMap[key].quantity += rest.quantity || 0;
-                    } else {
-                        // Create fresh entry
-                        subItemMap[key] = {
-                            ...rest,
-                            quantity: rest.quantity || 0,
-                            _id: new mongoose.Types.ObjectId() // always refresh ID
-                        };
-                    }
+            if (key) {
+                if (subItemMap[key]) {
+                    // Already exists with same name+unit → add quantity
+                    subItemMap[key].quantity += rest.quantity || 0;
+                } else {
+                    // Create fresh entry
+                    subItemMap[key] = {
+                        ...rest,
+                        quantity: rest.quantity || 0,
+                        _id: new mongoose.Types.ObjectId() // always refresh ID
+                    };
                 }
-            });
+            }
+        });
 
         // Convert map back to array
         Object.values(subItemMap).forEach((item: any) => ProcurementNewItems.push(item));
@@ -1384,7 +1389,7 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
         await orderHistory.save();
 
 
-        
+
         // console.log("orderhisoty", orderHistory)
 
         return {
@@ -1408,32 +1413,28 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
 export const gerneateCommonOrdersPdf = async (id: string) => {
     try {
         // Fetch order history data
-        const orderHistory = await CommonOrderHistoryModel.findById(id).populate("organizationId")
-
-
+        const orderHistory = await CommonOrderHistoryModel
+            .findById(id)
+            .populate("organizationId");
 
         if (!orderHistory) {
-            throw new Error('Order history not found for the given project ID');
+            throw new Error("Order history not found");
         }
 
-
-        const isNewPdf = Array.isArray(orderHistory?.pdfLink) && orderHistory?.pdfLink.length > 0;
         let nextNumber = 1;
 
-        if (isNewPdf) {
-            // Extract all numbers from refUniquePdf (format: projectName-<number>-pdf)
-            const numbers = orderHistory.pdfLink.map((ele: any) => {
-                const match = ele.refUniquePdf?.match(/-(\d+)-pdf$/);
-                return match ? parseInt(match[1], 10) : 0; // Extract the number part
+        if (Array.isArray(orderHistory.pdfLink) && orderHistory.pdfLink.length > 0) {
+            const numbers = orderHistory.pdfLink.map((item: any) => {
+                const match = item.refUniquePdf?.match(/-(\d+)$/);
+                return match ? parseInt(match[1], 10) : 0;
             });
 
-            // Find the max number and increment
-            nextNumber = Math.max(...numbers, 0) + 1;
+            nextNumber = Math.max(...numbers) + 1;
         }
 
-        // Construct the new refUniquePdf
-        const refUniquePdf = `cmn-${orderHistory.projectName}-${nextNumber}-pdf`;
+        const currentYear = new Date().getFullYear();
 
+        const refUniquePdf = `CMN-ORD-${orderHistory.projectName}-${currentYear}-${nextNumber}`;
 
         // Create a new PDF document
         const pdfDoc = await PDFDocument.create();
@@ -1506,7 +1507,7 @@ export const gerneateCommonOrdersPdf = async (id: string) => {
 
         const heading = "MATERIAL ORDER";
 
-        const referenceId = `Pdf Reference Id: ${refUniquePdf}`; // e.g. projectName-01-pdf
+        const referenceId = `Order Number: ${refUniquePdf}`; // e.g. projectName-01-pdf
 
         type OrgPopulated = { organizationPhoneNo?: string };
         const PhoneNo = (orderHistory.organizationId as OrgPopulated)?.organizationPhoneNo ? `Ph No: ${(orderHistory.organizationId as OrgPopulated)?.organizationPhoneNo || ""}` : null;
@@ -1871,10 +1872,59 @@ export const gerneateCommonOrdersPdf = async (id: string) => {
 
         console.log("orderHistory.pdfLink", orderHistory.pdfLink)
 
+         const ProcurementNewItems: any[] = [];
+        const subItemMap: Record<string, any> = {}; // key = subItemName
+
+        orderHistory.selectedUnits.forEach(unit => {
+            unit.subItems.forEach((subItem: any) => {
+                const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
+
+                const name = rest.subItemName?.trim().toLowerCase() || "";
+                const unitKey = rest.unit?.trim().toLowerCase() || "";
+                const key = `${name}__${unitKey}`; // combine name + unit
+
+                if (key) {
+                    if (subItemMap[key]) {
+                        // Already exists with same name+unit → add quantity
+                        subItemMap[key].quantity += rest.quantity || 0;
+                    } else {
+                        // Create fresh entry
+                        subItemMap[key] = {
+                            ...rest,
+                            quantity: rest.quantity || 0,
+                            _id: new mongoose.Types.ObjectId() // always refresh ID
+                        };
+                    }
+                }
+            });
+        });
+
+        // Convert map back to array
+        Object.values(subItemMap).forEach((item: any) => ProcurementNewItems.push(item));
+
+        // console.log("procurement", ProcurementNewItems)
+        await ProcurementModelNew.create({
+            organizationId: orderHistory.organizationId._id,
+            // projectId: projectId,
+            shopDetails: orderHistory.shopDetails,
+            deliveryLocationDetails: orderHistory.deliveryLocationDetails,
+            selectedUnits: ProcurementNewItems,
+            refPdfId: refUniquePdf,
+            totalCost: 0
+        })
         // Clear subItems from each selectedUnit
+
         orderHistory.selectedUnits.forEach(unit => {
             unit.subItems = [];
         });
+        // orderHistory.images = [];
+
+
+
+        // Clear subItems from each selectedUnit
+        // orderHistory.selectedUnits.forEach(unit => {
+        //     unit.subItems = [];
+        // });
 
         await orderHistory.save();
 

@@ -9,40 +9,54 @@ export interface IUpload {
 }
 
 export interface IVendorLocation {
-    address: string | null; // Human readable string (e.g. "123 Main St, New York")
     latitude: number | null; // e.g. 40.7128
     longitude: number | null; // e.g. -74.0060
 }
 
 
 export interface IVendor extends Document {
-    // customerType: "business" | "individual";
     organizationId: Types.ObjectId;
-    // projectId: Types.ObjectId;
     clientId: Types.ObjectId;
-    // salutation?: string;
     firstName: string | null;
-    lastName: string | null;
     companyName: string | null;
-    //   displayName: string;
+    shopDisplayName: string | null
+    vendorCategory: string | null
+
+    shopFullAddress?: string | null,
     email: string | null;
     phone: {
-        work: string | null;
+        work: string | null; //shoudl support landline also it shoudl allow 11 nunbers also for landline 
         mobile: string | null;
     };
-    vendorLanguage?: string | null;
+    location?: IVendorLocation;
+    mapUrl?: string | null
+    language?: string | null;
+    shopImages?: IUpload[]
+
 
     // Other Details
     pan?: string | null;
-    currency?: string;
-    accountsPayable?: string | null;
+    tan?: string | null;
+    gstin?: string | null;
+    msmeNo?: string | null;
+    cin?: string | null;
+    businessStructure: string | null
+
+    bankAccNo: string | null
+    accHolderName: string | null,
+    bankName: string | null
+    upiId?: string | null
+    bankBranch: string | null
+    ifscCode: string | null
+    paymentTerms: string | null
     openingBalance?: number;
-    paymentTerms?: string;
-    TDS: string;
+
+    currency?: string;
+    // accountsPayable?: string | null;
+    // TDS: string;
     documents?: IUpload[];
     // customerOwner?: mongoose.Types.ObjectId;
 
-    location?: IVendorLocation;
     mainImage?: IUpload
 
 }
@@ -58,39 +72,51 @@ const fileSchema = new Schema<IUpload>({
 const VendorSchema = new Schema<IVendor>(
     {
         organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
-        clientId: { type: Schema.Types.ObjectId, ref: "ClientModel" },
+        clientId: { type: Schema.Types.ObjectId, ref: "ClientModel", default: null },
         //   salutation: { type: String },
         firstName: { type: String, default: null },
-        // lastName: { type: String, default: null },
-
         companyName: { type: String, default: null },
-        // displayName: { type: String , default: null},
+        shopDisplayName: { type: String, default: null },
+        vendorCategory: { type: String, default: null }, // Added
+
         email: { type: String, default: null },
         phone: {
             work: { type: String, default: null },
             mobile: { type: String, default: null },
         },
-        vendorLanguage: { type: String, default: "English" },
+        language: { type: String, default: "English" },
+        shopFullAddress: { type: String, default: null }, // Added
 
-        // Other Details
-        pan: { type: String, default: null },
-        currency: { type: String, default: "INR - Indian Rupee" },
-        accountsPayable: { type: String, default: null },
-        openingBalance: { type: Number, default: 0 },
-        paymentTerms: { type: String, default: "Due on Receipt" },
-        // enablePortal: { type: Boolean, default: false },
-        TDS: { type: String, default: null },
-        documents: { type: [fileSchema], default: [] },
-        // customerOwner: {
-        //   type: Schema.Types.ObjectId,
-        //   ref: "User",
-        // },
+        mapUrl: {type:String, default:null},
+
         location: {
-            address: { type: String, default: null },
-            mapUrl: { type: String }, // Store the raw link
             latitude: { type: Number, default: null },
             longitude: { type: Number, default: null }
         },
+
+        // Statutory Details (Added)
+        pan: { type: String, default: null },
+        tan: { type: String, default: null },
+        gstin: { type: String, default: null },
+        msmeNo: { type: String, default: null },
+        cin: { type: String, default: null },
+        businessStructure: { type: String, default: null },
+
+        // Banking Details (Added)
+        bankAccNo: { type: String, default: null },
+        accHolderName: { type: String, default: null },
+        bankName: { type: String, default: null },
+        upiId: { type: String, default: null },
+        bankBranch: { type: String, default: null },
+        ifscCode: { type: String, default: null },
+
+        // Financials
+        currency: { type: String, default: "INR - Indian Rupee" },
+        openingBalance: { type: Number, default: 0 },
+        paymentTerms: { type: String, default: "Due on Receipt" },
+
+        shopImages: { type: [fileSchema], default: [] }, // Added
+        documents: { type: [fileSchema], default: [] },
         mainImage: { type: fileSchema, default: null }
     },
     { timestamps: true }

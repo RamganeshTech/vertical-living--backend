@@ -195,8 +195,6 @@ export const sendPaymentToAcc = async (req: Request, res: Response): Promise<any
         if (!payment) {
             return res.status(404).json({ success: false, message: "Payment record not found" });
         }
-
-
         
 
         const result = await AccountingModel.findOneAndUpdate(

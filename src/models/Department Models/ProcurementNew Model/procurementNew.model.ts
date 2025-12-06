@@ -38,7 +38,7 @@ const procurementItemSchema = new Schema<IProcurementItemsNew>({
 
 const procurementPurchaseOrderSchema = new Schema<IProcurementNew>({
   organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
-  projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", },
+  projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", default:null },
   shopDetails: ShopSchemaProcurement,
   deliveryLocationDetails: DeliveryLocationDetailsSchema,
   selectedUnits: { type: [procurementItemSchema], default: [] },

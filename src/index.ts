@@ -114,6 +114,8 @@ import SubContractRoutesNew from './routers/SubContract Routes/subContractNew.ro
 import razorpayRoutes from './routers/Razorpay_routes/razorpay.routes';
 import BillNewAccountRoutes from './routers/Department Routes/Accounting Routes/billNewAccounts.routes';
 import paymentAccRoutes from './routers/Department Routes/Accounting Routes/paymentMainAccount.routes';
+import desingRoutes from './routers/Design_Lab_routes/designLab.routes';
+import designRoutes from './routers/Design_Lab_routes/designLab.routes';
 
 
 // Extend Socket interface for custom properties
@@ -298,6 +300,7 @@ app.use('/api/publicordermaterial', publicOrderMaterialRoutes)
 app.use('/api/shoplibdetails', shopLibRoutes)
 app.use('/api/materialarrivalcheck', materialArrivalRoutes)
 app.use('/api/worktasks', workTaskRoutes)
+app.use('/api/designlab', designRoutes)
 
 // REPORTS
 app.use('/api/workreports', workReportRoutes)

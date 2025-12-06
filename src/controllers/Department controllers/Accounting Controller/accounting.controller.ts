@@ -623,6 +623,7 @@ import Razorpay from "razorpay";
 import crypto from 'crypto';
 import { getDecryptedRazorpayConfig } from "../../RazoryPay_controllers/razorpay.controllers";
 import { BillAccountModel } from "../../../models/Department Models/Accounting Model/billAccount.model";
+import { IVendorPaymentItems } from "../../../models/Department Models/Accounting Model/vendorPaymentAcc.model";
 
 
 
@@ -668,7 +669,7 @@ export const syncAccountingRecord = async (
     deptNumber: string | null;
     deptDueDate: Date | null;
 
-    deptRecordFrom: "Retail Invoice" | "Invoice" | "Bill" | "Expense";   //bill, expense, subcontract
+    deptRecordFrom: "Retail Invoice" | "Invoice" | "Bill" | "Expense" | "Vendor Payment";   //bill, expense, subcontract
     assoicatedPersonName?: string;
     assoicatedPersonId?: any;
     assoicatedPersonModel?: string;
@@ -743,7 +744,7 @@ const formatLedgerItem = (item: any) => {
   let docDiscountPercent =0
 
   // Check type based on deptRecordFrom
-  const type = item.deptRecordFrom; // "Bill Acc", "Invoice Acc", "Expense Acc"
+  const type = item.deptRecordFrom; // "Bill", "Invoice", "Expense"
 
   if (type === "Bill") {
     docNumber = source.billNumber;
@@ -774,6 +775,25 @@ const formatLedgerItem = (item: any) => {
     docNumber = source.expenseNumber;
     docDate = source.expenseDate;
     docItems = source.items || []; // Some expenses might not have items
+    docTotal = source.amount;
+    docNotes = source.notes;
+  }else if (type === "Vendor Payment") {
+    docNumber = source.paymentNumber;
+    docDate = source.vendorPaymentDate;
+
+    const convertedItems = source.items.map((item:IVendorPaymentItems)=>{
+      return (
+        {
+          itemName: item.itemName,
+          unit: "nos",
+          quantity: 1,
+          rate: item.billAmount,
+          totalCost: item.billAmount,
+        }
+      )
+    })
+
+    docItems = convertedItems || []; // Some expenses might not have items
     docTotal = source.amount;
     docNotes = source.notes;
   }
