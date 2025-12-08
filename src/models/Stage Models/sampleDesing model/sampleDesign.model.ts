@@ -1,6 +1,6 @@
 import mongoose, { Types, Schema } from "mongoose";
 import { type } from "os";
-import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
+// import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 
 export interface IFileItem {

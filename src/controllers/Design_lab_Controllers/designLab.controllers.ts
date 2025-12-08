@@ -386,6 +386,139 @@ export const updateDesignLab = async (
     }
 };
 
+
+// NEWLY VERISON OF UPDATE
+
+// Helper to format S3 file data
+const mapFileToUploadUpdate = (file: Express.Multer.File & { location: string }) => ({
+    url: file.location,
+    type: file.mimetype as "pdf" | "image",
+    originalname: file.originalname,
+    // key: (file as any).key || file.filename, // Depends on your S3 config
+    uploadedAt: new Date()
+});
+
+
+
+
+
+export const updateDesignLabNew = async (
+    req: RoleBasedRequest,
+    res: Response
+): Promise<any> => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ ok: false, message: "Invalid Design Lab ID" });
+        }
+
+        // 1. SAFE PARSING of 'data'
+        let updateData: Partial<IDesignLab> | undefined; // Explicitly allow undefined initially
+
+        if (req.body.data) {
+            try {
+                updateData = typeof req.body.data === "string"
+                    ? JSON.parse(req.body.data)
+                    : req.body.data;
+            } catch (e) {
+                return res.status(400).json({ ok: false, message: "Invalid JSON format in 'data'" });
+            }
+        }
+
+        // --- CRITICAL FIX: Stop if data is missing ---
+        if (!updateData || typeof updateData !== 'object') {
+            return res.status(400).json({ 
+                ok: false, 
+                message: "Missing 'data' field in form-data. Ensure JSON is sent with key 'data'." 
+            });
+        }
+
+        // 2. Parse 'fileMapping'
+        let fileMapping: FileMapping[] = [];
+        if (req.body.fileMapping) {
+            try {
+                fileMapping = typeof req.body.fileMapping === "string"
+                    ? JSON.parse(req.body.fileMapping)
+                    : req.body.fileMapping;
+            } catch (e) {
+                return res.status(400).json({ ok: false, message: "Invalid JSON format in 'fileMapping'" });
+            }
+        }
+
+        // 3. Handle Files
+        const files = (req.files as (Express.Multer.File & { location: string })[]) || [];
+
+        if (files.length > 0) {
+            if (files.length !== fileMapping.length) {
+                return res.status(400).json({
+                    ok: false,
+                    message: `Mismatch: Received ${files.length} files but ${fileMapping.length} mappings.`
+                });
+            }
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const mapping = fileMapping[i];
+                const uploadData = mapFileToUpload(file);
+
+                if (mapping.target === "reference") {
+                    if (!updateData.referenceImages) updateData.referenceImages = [];
+                    updateData.referenceImages.push(uploadData);
+                } 
+                else if (mapping.target === "material") {
+                    const { componentIndex, materialIndex } = mapping;
+                    
+                    // Defensive check for array existence
+                    if (
+                        componentIndex !== undefined &&
+                        materialIndex !== undefined &&
+                        updateData.components?.[componentIndex]?.materials?.[materialIndex]
+                    ) {
+                        updateData.components[componentIndex].materials[materialIndex].image = uploadData;
+                    }
+                }
+            }
+        }
+
+        // 4. CLEANUP (Defensive Deletes)
+        // Since we checked updateData is an object above, these will not crash now.
+        delete updateData.designCode;
+        delete updateData.organizationId;
+        delete (updateData as any)._id;
+        delete (updateData as any).createdAt;
+        delete (updateData as any).updatedAt;
+        delete (updateData as any).__v;
+
+        // 5. ATOMIC UPDATE
+        const updatedDesignLab = await DesignLabModel.findByIdAndUpdate(
+            id,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedDesignLab) {
+            return res.status(404).json({ ok: false, message: "Design Lab not found" });
+        }
+
+        return res.status(200).json({
+            ok: true,
+            message: "Design Lab updated successfully",
+            data: updatedDesignLab,
+        });
+
+    } catch (error: any) {
+        console.error("Error updating Design Lab:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Failed to update Design Lab new ",
+            error: error.message,
+        });
+    }
+};
+
+
+
 // ==========================================
 // 3. DELETE DESIGN LAB
 // ==========================================
@@ -711,7 +844,7 @@ export const deleteReferenceImage = async (
             message: "Reference image deleted successfully",
             data: {
                 deletedImage,
-                remainingImages: designLab.referenceImages.length,
+                remainingImagesLength: designLab.referenceImages.length,
                 referenceImages: designLab.referenceImages,
             },
         });

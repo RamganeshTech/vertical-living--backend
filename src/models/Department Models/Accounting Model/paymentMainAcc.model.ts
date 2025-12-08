@@ -19,7 +19,7 @@ export interface IPaymentMainAcc extends Document {
     fromSectionNumber: string;
     paymentNumber: string,
     paymentDate: Date | null,
-    dueDate: Date,
+    dueDate: Date | null,
     subject: string,
     items?: IPaymentItem[],
 

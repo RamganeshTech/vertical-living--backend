@@ -187,15 +187,17 @@ export interface IAccounting extends Document {
   // ----------------------------------------------------------
 
 
+  orderMaterialDeptNumber?: string | null;
+  orderMaterialRefId?: Types.ObjectId | null 
 
   paymentId: mongoose.Types.ObjectId | null;
-  referenceId: mongoose.Types.ObjectId;
-  referenceModel: string;
+  referenceId: mongoose.Types.ObjectId | null;
+  referenceModel: string | null;
 
-  assoicatedPersonName: string;
-  assoicatedPersonId: mongoose.Types.ObjectId;
+  assoicatedPersonName: string | null;
+  assoicatedPersonId: mongoose.Types.ObjectId | null;
 
-  deptRecordFrom: "Retail Invoice" | "Invoice" | "Bill" | "Expense" | "Vendor Payment" // To show badge color
+  deptRecordFrom: "Retail Invoice" | "Invoice" | "Bill" | "Expense" | "Vendor Payment" | "Procurement" | null // To show badge color
   assoicatedPersonModel: string | null
   amount: number
   status: string | null;
@@ -223,6 +225,10 @@ const accountingSchema = new Schema<IAccounting>({
   deptGeneratedDate: { type: Date, default: null }, // Indexed for Date Range Filter
   deptNumber: { type: String, default: null }, // Indexed for Search
   deptDueDate: { type: Date, default: null, },
+  
+  orderMaterialDeptNumber: { type: String, },
+  orderMaterialRefId: { type: Schema.Types.ObjectId, refPath: "OrderMaterialHistoryModel", default: null },
+
 
   referenceId: { type: Schema.Types.ObjectId, refPath: "referenceModel", default: null },
   referenceModel: {

@@ -120,7 +120,7 @@
 
 
 import mongoose, { model, Schema, Types } from 'mongoose'
-import procurementLogger from '../../../Plugins/ProcurementDeptPluggin';
+// import procurementLogger from '../../../Plugins/ProcurementDeptPluggin';
 
 export interface InstallationUpload {
     type: "image" | "pdf";

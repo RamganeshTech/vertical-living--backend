@@ -368,7 +368,7 @@ export const generateProcurementPdf = async (id: String) => {
                 });
 
                 // Table headers
-                const headers = ['S.No', 'Material Item', 'Quantity', 'Unit'];
+                const headers = ['S.No', 'Material Item', 'Quantity', 'Unit', "Rate", "Total"];
                 headers.forEach((header, index) => {
                     page.drawText(header, {
                         x: columnPositions[index],
@@ -410,7 +410,9 @@ export const generateProcurementPdf = async (id: String) => {
                             // subItem.refId || "N/A",
                             subItem.subItemName || 'N/A',
                             (subItem.quantity || 0).toString(),
-                            subItem.unit || 'N/A'
+                            subItem.unit || 'N/A',
+                            (subItem.rate || 0).toString(),
+                            (subItem.totalCost || 0).toString()
                         ];
 
                         rowData.forEach((data, colIndex) => {

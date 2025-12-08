@@ -630,7 +630,7 @@ import { IVendorPaymentItems } from "../../../models/Department Models/Accountin
 export async function generateTransactionNumber(organizationId: string | Types.ObjectId): Promise<string> {
   // Find last transaction for this org
 
-      const currentYear = new Date().getFullYear();
+  const currentYear = new Date().getFullYear();
 
 
   const lastDoc = await AccountingModel.findOne({ organizationId })
@@ -640,13 +640,13 @@ export async function generateTransactionNumber(organizationId: string | Types.O
   let nextNumber = 1;
 
   if (lastDoc?.recordNumber) {
-        const match = lastDoc.recordNumber.match(new RegExp(`ACC-${currentYear}-(\\d+)$`));
+    const match = lastDoc.recordNumber.match(new RegExp(`ACC-${currentYear}-(\\d+)$`));
     if (match) {
       nextNumber = parseInt(match[1], 10) + 1;
     }
   }
 
-    return `ACC-${currentYear}-${String(nextNumber).padStart(3, "0")}`;
+  return `ACC-${currentYear}-${String(nextNumber).padStart(3, "0")}`;
 }
 
 
@@ -660,7 +660,7 @@ export const syncAccountingRecord = async (
 
     // Source (Bill/Expense)
     referenceId: any;
-    referenceModel: string;
+    referenceModel: string | null;
 
     // Payment (Optional - passed only when creating payment)
     paymentId?: any;
@@ -669,10 +669,14 @@ export const syncAccountingRecord = async (
     deptNumber: string | null;
     deptDueDate: Date | null;
 
-    deptRecordFrom: "Retail Invoice" | "Invoice" | "Bill" | "Expense" | "Vendor Payment";   //bill, expense, subcontract
+    deptRecordFrom: "Retail Invoice" | "Invoice" | "Bill" | "Expense" | "Vendor Payment" | "Procurement" | null;   //bill, expense, subcontract
+
+    orderMaterialDeptNumber?: string | null;
+    orderMaterialRefId?: string | null
+
     assoicatedPersonName?: string;
-    assoicatedPersonId?: any;
-    assoicatedPersonModel?: string;
+    assoicatedPersonId?: any | null;
+    assoicatedPersonModel?: string | null;
     amount?: number;
     status?: string | null;
     notes?: string;
@@ -741,7 +745,7 @@ const formatLedgerItem = (item: any) => {
   let docDiscount = 0;
   let docNotes = "";
   let docTaxPercent = 0
-  let docDiscountPercent =0
+  let docDiscountPercent = 0
 
   // Check type based on deptRecordFrom
   const type = item.deptRecordFrom; // "Bill", "Invoice", "Expense"
@@ -758,7 +762,7 @@ const formatLedgerItem = (item: any) => {
     docDiscountPercent = source.discountPercentage;
     docNotes = source.notes;
 
-  } 
+  }
   else if (type === "Invoice" || type === "Retail Invoice") {
     docNumber = source.invoiceNumber || source.retailInvoiceNumber;
     docDate = source.invoiceDate;
@@ -770,18 +774,18 @@ const formatLedgerItem = (item: any) => {
     docTaxPercent = source.taxPercentage;
     docDiscountPercent = source.discountPercentage;
     docNotes = source.customerNotes;
-  } 
+  }
   else if (type === "Expense") {
     docNumber = source.expenseNumber;
     docDate = source.expenseDate;
     docItems = source.items || []; // Some expenses might not have items
     docTotal = source.amount;
     docNotes = source.notes;
-  }else if (type === "Vendor Payment") {
+  } else if (type === "Vendor Payment") {
     docNumber = source.paymentNumber;
     docDate = source.vendorPaymentDate;
 
-    const convertedItems = source.items.map((item:IVendorPaymentItems)=>{
+    const convertedItems = source.items.map((item: IVendorPaymentItems) => {
       return (
         {
           itemName: item.itemName,
@@ -803,15 +807,15 @@ const formatLedgerItem = (item: any) => {
   // linked in the same way as Bills (money going OUT).
   // We only show payment details if it exists.
   const paymentDetails = item.paymentId ? {
-      id: payment._id,
-      number: payment.paymentNumber,
-      date: payment.paymentDate,
-      status: payment.generalStatus,
-      orderId: payment.orderId,
-      transactionId: payment.transactionId,
-      amountPaid: payment.grandTotal,
-      // We include items here so you can compare Source Items vs Payment Items
-      items: payment.items || [] 
+    id: payment._id,
+    number: payment.paymentNumber,
+    date: payment.paymentDate,
+    status: payment.generalStatus,
+    orderId: payment.orderId,
+    transactionId: payment.transactionId,
+    amountPaid: payment.grandTotal,
+    // We include items here so you can compare Source Items vs Payment Items
+    items: payment.items || []
   } : null;
 
   // 3. DETERMINE STATUS
@@ -821,7 +825,7 @@ const formatLedgerItem = (item: any) => {
     _id: item._id,
     recordNumber: item.recordNumber,
     createdAt: item.createdAt,
-    
+
     // High Level Info
     type: type,
     amount: item.amount,
@@ -843,11 +847,11 @@ const formatLedgerItem = (item: any) => {
       deptNumber: docNumber, // Normalized Number
       deptGeneratedDate: docDate,     // Normalized Date
       deptDueDate: docDueDate,
-      
+
       // Financials
       grandTotal: docTotal,
       taxAmount: docTax,
-      
+
       // Content
       items: docItems, // <--- The Items Array
       notes: docNotes
@@ -923,7 +927,7 @@ export const getAllAccountingRecords = async (req: Request, res: Response): Prom
       status,
       // personName,
       deptRecordFrom,
-      
+
       // Search & Range Filters
       search,
       startDate,
@@ -944,7 +948,7 @@ export const getAllAccountingRecords = async (req: Request, res: Response): Prom
     if (projectId) filter.projectId = new mongoose.Types.ObjectId(projectId as string);
     if (deptRecordFrom) filter.deptRecordFrom = deptRecordFrom;
     if (status) filter.status = status;
-    
+
     // Direct Person Name Search (Strict/Regex)
     // if (personName) filter.assoicatedPersonName = { $regex: personName as string, $options: "i" };
 
@@ -1036,7 +1040,7 @@ export const getSingleAccountingRecord = async (req: Request, res: Response): Pr
     //   .populate("referenceId") // Get full Bill details/ expense details also 
     //   .populate("paymentId");  // Get full Payment details
 
-       const record = await AccountingModel.findById(id)
+    const record = await AccountingModel.findById(id)
       .populate("projectId", "projectName _id")
       // 1. Populate Reference (Bill, Invoice, or Expense)
       .populate({

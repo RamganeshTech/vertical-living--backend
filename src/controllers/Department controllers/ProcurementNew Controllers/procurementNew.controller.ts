@@ -1,8 +1,12 @@
 import { Request, Response } from "express";
-import ProcurementModelNew from "../../../models/Department Models/ProcurementNew Model/procurementNew.model";
+import ProcurementModelNew, { IProcurementItemsNew } from "../../../models/Department Models/ProcurementNew Model/procurementNew.model";
 import { generateProcurementPdf } from "./procurementPdf";
 import { createShipmentUtil } from "../Logistics Controllers/logistics.controller";
 import { decryptCryptoToken, encryptCryptoToken } from "../../../utils/common features/utils";
+import crypto from 'crypto';
+import mongoose, { Types } from "mongoose";
+import { createPaymentMainAccUtil } from "../Accounting Controller/PaymentMainAcc_controllers/paymentMainAcc.controller";
+import { AccountingModel } from "../../../models/Department Models/Accounting Model/accountingMain.model";
 
 export const getProcurementNewDetails = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -21,7 +25,7 @@ export const getProcurementNewDetails = async (req: Request, res: Response): Pro
         //     return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
         // }
 
-        const doc = await ProcurementModelNew.find(filters).sort({ createdAt: -1 });
+        const doc = await ProcurementModelNew.find(filters).sort({ createdAt: -1 }).populate("projectId", "projectName _id")
         if (!doc) return res.status(200).json({ ok: true, message: "Data not found", data: [] });
 
         // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
@@ -278,103 +282,321 @@ export const deleteProcurementPdf = async (req: Request, res: Response): Promise
 
 
 
+
+
+const ALGO = "aes-256-cbc";
+
+// Unique, safe 32-byte key only for procurement links
+const PROCUREMENT_SECRET = crypto
+    .createHash("sha256")
+    .update("PROCUREMENT_UNIQUE_SECRET_KEY_12345")
+    .digest(); // <-- ALWAYS 32 bytes
+
+const encryptProcurementToken = (payload: object) => {
+    const iv = crypto.randomBytes(16);
+
+    const cipher = crypto.createCipheriv(ALGO, PROCUREMENT_SECRET, iv);
+
+    const encrypted = Buffer.concat([
+        cipher.update(JSON.stringify(payload), "utf8"),
+        cipher.final(),
+    ]);
+
+    return iv.toString("base64") + ":" + encrypted.toString("base64");
+};
+
+
+export const decryptProcurementToken = (token: string) => {
+    try {
+        // Token format: iv:encrypted
+        const [ivStr, encryptedData] = token.split(":");
+        if (!ivStr || !encryptedData) {
+            throw new Error("Invalid token format");
+        }
+
+        const iv = Buffer.from(ivStr, "base64");
+        const encryptedBuffer = Buffer.from(encryptedData, "base64");
+
+        const decipher = crypto.createDecipheriv(ALGO, PROCUREMENT_SECRET, iv);
+
+        const decrypted = Buffer.concat([
+            decipher.update(encryptedBuffer),
+            decipher.final()
+        ]);
+
+        return JSON.parse(decrypted.toString("utf8"));
+    } catch (err) {
+        throw new Error("Failed to decrypt token: " + (err as Error).message);
+    }
+};
+
+
 //  public usage
 export const generateSecureProcurementLink = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { orderId, itemId } = req.params;
+        const { orderId } = req.params;
 
-        const token = encryptCryptoToken({
-            orderId,
-            itemId,
-            createdAt: Date.now() // for expiry checks later if needed
-        });
+
+        const token = crypto.randomBytes(16).toString("hex");
+
+        // const token = encryptProcurementToken({
+        //     orderId,
+        //     createdAt: Date.now() // for expiry checks later if needed
+        // });
+
+        const procurement = await ProcurementModelNew.findByIdAndUpdate(orderId, { generatedLink: token }, { new: true })
+
+        if (!procurement) {
+            return res.status(404).json({ ok: false, message: "Order not found" });
+        }
+
+        // const generatedLink = `${process.env.FRONTEND_URL}/${procurement?.organizationId}/procurement/public/${token}`;
+
+
+        // procurement.generatedLink = generatedLink
+        // await procurement.save();
 
         return res.json({
             ok: true,
-            message: "Secure link generated",
-            data: { token }
+            message: "Secure token generated",
+            data: { token: procurement.generatedLink }
         });
     } catch (err: any) {
         return res.status(500).json({ ok: false, message: err.message });
     }
 };
 
-export const updateProcurementItemRate = async (req: Request, res: Response): Promise<any> => {
+
+
+export const getProcurementItemsPublic = async (req: Request, res: Response): Promise<any> => {
     try {
-        // const { orderId, itemId } = req.params;
-        const { token } = req.params;
+        const { token, orderId } = req.query;
+        // const decodedToken = decodeURIComponent(token as string);
 
-        const { rate } = req.body;
-
-        if (!rate || rate < 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Rate must be a valid positive number"
-            });
+        if (!token) {
+            return res.status(400).json({ ok: false, message: "Token not provided" });
         }
 
+        // const decoded = decryptProcurementToken(decodedToken);
 
-        const decoded = decryptCryptoToken(token);
-        const { orderId, itemId } = decoded;
+        // if (decoded.type !== "PROCUREMENT_RATE")
+        //     return res.status(400).json({ ok: false, message: "Invalid token type" });
 
+        if (!orderId) {
+            return res.status(400).json({ ok: false, message: "Order Id is not provided" });
+        }
 
         const order = await ProcurementModelNew.findById(orderId);
-        if (!order) {
-            return res.status(404).json({
-                success: false,
-                message: "Purchase order not found"
-            });
-        }
 
-        const item = (order.selectedUnits as any).id(itemId);
-        if (!item) {
-            return res.status(404).json({
-                success: false,
-                message: "Item not found in selectedUnits"
-            });
-        }
+        if (!order)
+            return res.status(404).json({ ok: false, message: "Order not found" });
 
-        // Prevent update if already filled
-        if (item.rate && item.rate > 0) {
-            return res.status(403).json({
-                success: false,
-                message: "Rate already submitted — cannot update again"
-            });
-        }
+        // if (order.isConfirmedRate)
+        //     return res.status(403).json({ ok: false, message: "Rates already submitted" });
 
-        // Update rate & total cost
-        item.rate = rate;
-        const qty = item.quantity || 0;
-        item.totalCost = qty * rate;
-
-        // Recalculate order total cost
-        order.totalCost = order.selectedUnits.reduce(
-            (sum, u) => sum + (u.totalCost || 0), 0
-        );
-
-        await order.save();
-
-        return res.status(200).json({
-            success: true,
-            message: "Item rate updated successfully",
+        return res.json({
+            ok: true,
             data: {
-                item,
-                updatedOrderTotalCost: order.totalCost
+                selectedUnits: order?.selectedUnits,
+                shopDetails: order.shopDetails,
+                deliveryLocationDetails: order.deliveryLocationDetails,
+                isConfirmedRate: order.isConfirmedRate
             }
         });
 
-    } catch (error:any) {
-        console.error("Error updating procurement item rate:", error);
+    } catch (err: any) {
+        return res.status(500).json({ ok: false, message: err.message });
+    }
+};
+
+
+
+//  UPDATE ALL THE PROCUREMENT RATE
+export const updateProcurementItemRate = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { token, orderId } = req.query;
+        // const decodedToken = decodeURIComponent(token as string);
+
+        if (!token) {
+            return res.status(400).json({ ok: false, message: "Token not provided" });
+        }
+
+
+        if (!orderId) {
+            return res.status(400).json({ ok: false, message: "Order Id not provided" });
+        }
+
+
+        const { selectedUnits } = req.body; // full items array sent by shopkeeper
+
+        if (!Array.isArray(selectedUnits) || selectedUnits.length === 0)
+            return res.status(400).json({ ok: false, message: "Invalid selectedUnits data" });
+
+        const order = await ProcurementModelNew.findById(orderId);
+
+        if (!order)
+            return res.status(404).json({ ok: false, message: "Purchase order not found" });
+
+        // ❌ Block edits if already submitted
+        if (order.isConfirmedRate)
+            return res.status(403).json({ ok: false, message: "Final submission already done" });
+
+        // --- VALIDATION AND UPDATE ---
+        // Compare incoming data with database items
+        const updatedItems = order.selectedUnits.map((existingItem) => {
+            const updatedItem = selectedUnits.find(u => u._id === String(existingItem._id));
+
+            if (!updatedItem)
+                throw new Error(`Item missing: ${existingItem._id}`);
+
+            // ❌ Prevent changing quantity, unit, itemName
+            if (
+                updatedItem.quantity !== existingItem.quantity ||
+                updatedItem.unit !== existingItem.unit ||
+                updatedItem.subItemName !== existingItem.subItemName
+            ) {
+                throw new Error("You cannot modify itemName, qty or unit.");
+            }
+
+            // Validate rate
+            if (updatedItem.rate == null || updatedItem.rate < 0) {
+                throw new Error(`Invalid rate for item ${existingItem.subItemName}`);
+            }
+
+            // Update rate
+            existingItem.rate = updatedItem.rate;
+            existingItem.totalCost = (existingItem.quantity ?? 0) * updatedItem.rate;
+
+            return existingItem;
+        });
+
+        // Assign updated items
+        order.selectedUnits = updatedItems;
+
+        // Recalculate total order cost
+        order.totalCost = updatedItems.reduce(
+            (sum, item) => sum + (item.totalCost || 0),
+            0
+        );
+
+        // Mark as confirmed
+        order.isConfirmedRate = true;
+
+        await order.save();
+
+        return res.json({
+            ok: true,
+            message: "All rates updated & submitted successfully",
+            data: {
+                selectedUnits: order.selectedUnits,
+                totalCost: order.totalCost,
+                isConfirmedRate: order.isConfirmedRate
+            }
+        });
+
+    } catch (error: any) {
+        console.error("Update procurement error:", error);
         return res.status(500).json({
-            success: false,
-            message: "Internal Server Error",
-            error: error.message
+            ok: false,
+            message: error.message || "Internal Server Error"
+        });
+    }
+};
+
+
+export const updateProcurementSingleItemRate = async (req: Request, res: Response): Promise<any> => {
+    try {
+        // 1. Extract Data
+        // token, orderId, itemId come from Query String (?token=...&orderId=...&itemId=...)
+        const { token, orderId, itemId } = req.query;
+
+        // rate comes from Body ({ rate: 500 })
+        const { rate } = req.body;
+
+        // 2. Validations
+        if (!token || !orderId || !itemId) {
+            return res.status(400).json({ ok: false, message: "Missing required parameters (token, orderId, itemId)" });
+        }
+
+        if (rate === undefined || rate === null || rate < 0) {
+            return res.status(400).json({ ok: false, message: "Invalid rate provided" });
+        }
+
+        // // 3. Security Check: Validate Token
+        // const decoded = decryptCryptoToken(token as string);
+
+
+        // 4. Find the Order
+        const order = await ProcurementModelNew.findById(orderId);
+
+        if (!order) {
+            return res.status(404).json({ ok: false, message: "Order not found" });
+        }
+
+        // if (order.isConfirmedRate) {
+        //     return res.status(403).json({ ok: false, message: "Price confirmed no changes allowed." });
+        // }
+
+        // 5. Check if Order is Locked (Optional)
+        // If you want to allow edits even after confirmation, remove this block.
+        // Usually, we block edits if the vendor has already hit "Submit Final".
+        if (order?.isConfirmedRate) {
+            return res.status(403).json({ ok: false, message: "Rates are already confirmed and locked." });
+        }
+
+        // 6. Find the Specific Item in selectedUnits
+        const itemIndex = order.selectedUnits.findIndex((u) => u._id.toString() === itemId);
+
+        if (itemIndex === -1) {
+            return res.status(404).json({ ok: false, message: "Item not found in this order" });
+        }
+
+        const targetItem = order.selectedUnits[itemIndex];
+
+        // 7. Update Logic
+        // Update Rate
+        targetItem.rate = Number(rate);
+
+        // Recalculate Item Total (Quantity * New Rate)
+        // Default quantity to 0 if missing to avoid NaN
+        const qty = targetItem.quantity || 0;
+        targetItem.totalCost = qty * Number(rate);
+
+        // Update the array
+        order.selectedUnits[itemIndex] = targetItem;
+
+        // 8. Recalculate Grand Total for the whole Order
+        order.totalCost = order.selectedUnits.reduce((acc, curr) => acc + (curr.totalCost || 0), 0);
+
+        // 9. Save Changes
+        await order.save();
+
+        return res.json({
+            ok: true,
+            message: "Item rate updated",
+            data: {
+                itemId: targetItem._id,
+                updatedRate: targetItem.rate,
+                updatedItemTotal: targetItem.totalCost,
+                grandTotal: order.totalCost
+            }
+        });
+
+    } catch (error: any) {
+        console.error("Update single item error:", error);
+        return res.status(500).json({
+            ok: false,
+            message: error.message || "Internal Server Error"
         });
     }
 };
 
 
 
+
+
+
+// end of public controlers
 
 export const deleteprocurement = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -454,26 +676,152 @@ export const syncLogisticsDept = async (req: Request, res: Response): Promise<an
 
 
 
-export const SyncAccountingFromProcurement = async (req: Request, res: Response): Promise<any> => {
+export const sendProcurementToPayment = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { organizationId, projectId } = req.params;
-        const { totalCost, upiId } = req.body;
+        const { procurementId } = req.params; // We expect the Bill ID to be sent
 
-        if (!organizationId || !projectId) {
-            return res.status(400).json({ ok: false, message: "OrganizationId and  ProjectId is required" });
+        // 1. Validate Bill ID
+        if (!mongoose.Types.ObjectId.isValid(procurementId)) {
+            return res.status(400).json({
+                ok: false,
+                message: "Invalid procurement ID format"
+            });
         }
 
-            // const doc = await createAccountingEntry({
-            //     organizationId,
-            //     projectId,
-            //     fromDept: "procurement",
-            //     totalCost,
-            //     upiId
-            // });
+        // 2. Fetch the Bill
+        const procurement = await ProcurementModelNew.findById(procurementId);
+        if (!procurement) {
+            return res.status(404).json({
+                ok: false,
+                message: "Procurement not found"
+            });
+        }
 
-        res.status(201).json({ ok: true, message:"feaure coming soon" });
-    } catch (err: any) {
-        console.error("Error sending logistics entry to accounting:", err);
-        res.status(500).json({ ok: false, message: err.message });
+
+        if (procurement?.isSyncWithPaymentsSection) {
+            return res.status(400).json({ message: "Procurement Already sent to the payment section", ok: false })
+        }
+
+
+        const paymentItems = procurement.selectedUnits.map((item: IProcurementItemsNew, index: number) => {
+            return {
+                itemName: item.subItemName,
+                quantity: item.quantity,
+                rate: item.rate,
+                unit: item.unit || "",
+                totalCost: item.totalCost,
+                dueDate: null,
+                status: "pending",
+                orderId: "",
+                paymentId: "",
+                transactionId: "",
+                paidAt: null,
+                failureReason: "",
+                fees: null,
+                tax: null
+            }
+        });
+
+
+        const newPayemnt = await createPaymentMainAccUtil({
+            paymentPersonId: null,
+            paymentPersonModel: null,
+            paymentPersonName: procurement?.shopDetails?.contactPerson || "",
+            organizationId: procurement?.organizationId,
+            accountingRef: null,
+            projectId: procurement?.projectId || null,
+            fromSectionModel: "ProcurementModelNew",
+            fromSectionId: procurement._id as Types.ObjectId,
+            fromSection: "Procurement",
+            fromSectionNumber: procurement?.procurementNumber || procurement?.refPdfId || "",
+            paymentDate: null,
+            dueDate: null,
+            subject: "",
+            items: paymentItems,
+            totalAmount: procurement.totalCost || 0,
+            discountPercentage: 0,
+            discountAmount: 0,
+            taxPercentage: 0,
+            taxAmount: 0,
+            grandTotal: procurement.totalCost || 0,
+            paymentType: "",
+            advancedAmount: {
+                totalAmount: 0,
+                status: 'pending',
+                orderId: "",
+                paymentId: "",
+                transactionId: "",
+                paidAt: null,
+                failureReason: null,
+                fees: null,
+                tax: null,
+            },
+            amountRemaining: {
+                totalAmount: procurement?.totalCost || 0,
+                status: 'pending',
+                orderId: "",
+                paymentId: "",
+                transactionId: "",
+                paidAt: null,
+                failureReason: null,
+                fees: null,
+                tax: null,
+            },
+
+            notes: null,
+            isSyncedWithAccounting: false,
+            generalStatus: "pending"
+        })
+
+        procurement.isConfirmedRate = true;
+        procurement.isSyncWithPaymentsSection = true;
+        await procurement.save()
+
+
+        await AccountingModel.findOneAndUpdate(
+            {
+                orderMaterialRefId: procurement.fromDeptRefId,
+            },
+            {
+                $set: {
+                    // Update fields that might have changed in the bill
+                    amount: procurement?.totalCost,
+                    projectId: procurement?.projectId || null,
+                    assoicatedPersonName: procurement?.shopDetails?.contactPerson || null,
+
+                    deptGeneratedDate: (procurement as any).updatedAt || (procurement as any).createdAt || null,
+                    deptNumber: procurement?.procurementNumber || null,
+                    deptDueDate: null,
+
+                    referenceId: procurement._id!,
+                    referenceModel: "ProcurementModelNew",
+
+                    // Optional: Update person ID if vendor changed
+                    assoicatedPersonId: null,
+
+                    // IMPORTANT: We DO NOT include 'status' or 'paymentId' here.
+                    // Those are controlled by the Payment Controller.
+                }
+            },
+            { new: true }
+        );
+
+
+        // await invalidateBillCache((bill as any).organizationId, (bill as any).vendorId, bill._id as string);
+
+
+        return res.status(201).json({
+            ok: true,
+            message: "Sent to Payments Section successfully",
+            data: newPayemnt
+        });
+
+    } catch (error: any) {
+        console.error("Error sending Procurement order to payement:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Error processing request",
+            error: error.message
+        });
     }
 }

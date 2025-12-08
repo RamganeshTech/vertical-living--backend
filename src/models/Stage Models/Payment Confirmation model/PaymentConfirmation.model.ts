@@ -1,5 +1,5 @@
 import { model, Schema, Types } from "mongoose";
-import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
+// import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 
 

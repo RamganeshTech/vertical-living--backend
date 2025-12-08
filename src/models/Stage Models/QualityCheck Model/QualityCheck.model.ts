@@ -140,7 +140,7 @@ export interface IQualityCheckup extends Document {
 
 
 import { Schema, model, Types, Document } from "mongoose";
-import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
+// import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 const UploadSchema = new Schema<QualityCheckUpload>({
   type: { type: String, enum: ["image"],  },

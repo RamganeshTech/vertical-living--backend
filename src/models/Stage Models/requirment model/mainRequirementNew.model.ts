@@ -1,5 +1,5 @@
 import mongoose, { Schema, Types } from "mongoose";
-import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
+// import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 export interface Iupload {
     type?: "image" | "pdf"  | "video",

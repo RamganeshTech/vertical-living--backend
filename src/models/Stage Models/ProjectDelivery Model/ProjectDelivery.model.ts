@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { Schema, Types, Document } from "mongoose";
-import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
+// import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 
 

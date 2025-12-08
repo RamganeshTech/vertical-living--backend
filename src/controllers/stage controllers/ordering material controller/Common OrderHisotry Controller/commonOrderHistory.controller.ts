@@ -4,8 +4,8 @@ import { Response } from 'express';
 import { IOrderHistorytimer, OrderSubItems } from '../../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
 import { RoleBasedRequest } from '../../../../types/types';
 import { CommonOrderHistoryModel } from './../../../../models/Stage Models/Ordering Material Model/CommonOrderMaterialHistory Model/commonOrderMaterialHistory.model';
-import { handleSetStageDeadline, timerFunctionlity } from '../../../../utils/common features/timerFuncitonality';
-import { generateOrderHistoryPDF, gerneateCommonOrdersPdf } from '../pdfOrderHistory.controller';
+import { timerFunctionlity } from '../../../../utils/common features/timerFuncitonality';
+import {  gerneateCommonOrdersPdf } from '../pdfOrderHistory.controller';
 
 export const createCommonOrderProjectName = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {

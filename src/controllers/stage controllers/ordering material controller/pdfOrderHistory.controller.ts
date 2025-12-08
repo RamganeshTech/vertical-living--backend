@@ -4,9 +4,10 @@ import { s3, S3_BUCKET } from "../../../utils/s3Uploads/s3Client";
 import { IPdfGenerator, OrderMaterialHistoryModel } from '../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
 import { Request, Response } from 'express';
 import { ok } from 'assert';
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { CommonOrderHistoryModel } from '../../../models/Stage Models/Ordering Material Model/CommonOrderMaterialHistory Model/commonOrderMaterialHistory.model';
 import ProcurementModelNew from '../../../models/Department Models/ProcurementNew Model/procurementNew.model';
+import { syncAccountingRecord } from '../../Department controllers/Accounting Controller/accounting.controller';
 
 export const COMPANY_LOGO = "https://th.bing.com/th/id/OIP.Uparc9uI63RDb82OupdPvwAAAA?w=80&h=80&c=1&bgcl=c77779&r=0&o=6&dpr=1.3&pid=ImgRC";
 export const COMPANY_NAME = "Vertical Living";
@@ -36,7 +37,7 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
         // Fetch order history data
         // Fetch order history data
         const orderHistory = await OrderMaterialHistoryModel.findOne({ projectId })
-            .populate('projectId', 'projectName _id')
+            .populate('projectId', 'projectName _id organizationId')
 
 
         if (!orderHistory) {
@@ -840,7 +841,7 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
 
         console.log("orderHistory.generatedLink", orderHistory.generatedLink)
 
-      
+
         const ProcurementNewItems: any[] = [];
         const subItemMap: Record<string, any> = {}; // key = subItemName
 
@@ -879,8 +880,49 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
             deliveryLocationDetails: orderHistory.deliveryLocationDetails,
             selectedUnits: ProcurementNewItems,
             refPdfId: refUniquePdf,
+
+            fromDeptNumber: refUniquePdf,
+            fromDeptName: "Order Material",
+            fromDeptModel: "OrderMaterialHistoryModel",
+            fromDeptRefId: orderHistory._id as Types.ObjectId,
             totalCost: 0
-        })
+        });
+
+
+
+
+        await syncAccountingRecord({
+            organizationId: (orderHistory.projectId as any).organizationId! || null,
+            projectId: orderHistory?.projectId || null,
+
+            // Reference Links
+            referenceId: null,
+            referenceModel: null, // Must match Schema
+            deptRecordFrom: null,
+
+            deptGeneratedDate: null,
+            deptNumber: null,
+            deptDueDate: null,
+
+            // Categorization
+
+            orderMaterialDeptNumber: refUniquePdf,
+            orderMaterialRefId: (orderHistory as any)._id,
+
+            // Person Details
+            assoicatedPersonName: "",
+            assoicatedPersonId: null,
+            assoicatedPersonModel: null, // Assuming this is your Vendor Model
+
+            // Financials
+            amount: 0, // Utility takes care of grandTotal logic if passed
+            notes: "",
+
+            // Defaults for Creation
+            status: "pending",
+            paymentId: null
+        });
+
         // Clear subItems from each selectedUnit
 
         orderHistory.selectedUnits.forEach(unit => {
@@ -1372,7 +1414,16 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
             deliveryLocationDetails: orderHistory.deliveryLocationDetails,
             selectedUnits: ProcurementNewItems,
             refPdfId: refUniquePdf,
-            totalCost: 0
+            totalCost: 0,
+
+
+
+            fromDeptNumber: refUniquePdf,
+            fromDeptName: "Order Material",
+            fromDeptModel: "OrderMaterialHistoryModel",
+            fromDeptRefId: orderHistory._id as Types.ObjectId,
+
+
         })
         // Clear subItems from each selectedUnit
 
@@ -1872,7 +1923,7 @@ export const gerneateCommonOrdersPdf = async (id: string) => {
 
         console.log("orderHistory.pdfLink", orderHistory.pdfLink)
 
-         const ProcurementNewItems: any[] = [];
+        const ProcurementNewItems: any[] = [];
         const subItemMap: Record<string, any> = {}; // key = subItemName
 
         orderHistory.selectedUnits.forEach(unit => {
@@ -1910,7 +1961,16 @@ export const gerneateCommonOrdersPdf = async (id: string) => {
             deliveryLocationDetails: orderHistory.deliveryLocationDetails,
             selectedUnits: ProcurementNewItems,
             refPdfId: refUniquePdf,
-            totalCost: 0
+            totalCost: 0,
+
+
+
+            fromDeptNumber: refUniquePdf,
+            fromDeptName: "Common Order Material",
+            fromDeptModel: "CommonOrderHistoryModel",
+            fromDeptRefId: orderHistory._id as Types.ObjectId,
+
+
         })
         // Clear subItems from each selectedUnit
 

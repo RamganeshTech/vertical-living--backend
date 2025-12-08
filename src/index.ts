@@ -60,8 +60,6 @@ import externalUnitRoutes from './routers/ExternalUnit Routes/externalUnit.route
 // CRON JOBs
 import './utils/cronJobs/ReminderEmail/checkDeadLines'
 import mongoose from 'mongoose';
-import procurementLogger from './Plugins/ProcurementDeptPluggin';
-import procurementRoutes from './routers/Department Routes/procurement routes/procurement.route';
 import HRRoutes from './routers/Department Routes/HR.routes';
 import commonOrderRoutes from './routers/Stage routes/order Material routes/Common OrderMaterial Routes/commonOrderMaterial.routes';
 import InventoryRoutes from './routers/Stage routes/Inventory Routes/inventory.routes';
@@ -340,7 +338,6 @@ app.use('/api/shortlisteddesign', shortlistedDesignRoutes)
 app.use('/api/currentactivestage', currentActiveStage)
 
 // PROCUREMENT API
-app.use('/api/procurement', procurementRoutes)
 
 app.use('/api/department/hr', HRRoutes)
 app.use('/api/department/logistics', LogisticsRoutes)

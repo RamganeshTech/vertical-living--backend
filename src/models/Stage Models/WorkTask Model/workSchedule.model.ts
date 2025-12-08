@@ -1,7 +1,7 @@
 // models/WorkSchedule.model.ts
 import mongoose, { Schema, Document, Types } from "mongoose";
 import { IWorkPlan, IWorkSchedule, uploadSchema } from './WorkTask.model';
-import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
+// import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 // interface WorkScheduleDocument extends Omit<IWorkSchedule, "_id">, Document {
 //   _id: Types.ObjectId;

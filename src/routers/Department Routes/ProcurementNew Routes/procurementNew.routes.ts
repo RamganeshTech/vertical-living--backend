@@ -1,30 +1,36 @@
 // logistics.routes.ts
 import express from "express";
-import { createShipment,  deleteShipment,  getAllShipments,  getSingleLogisticsShipment,  updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
+import { createShipment, deleteShipment, getAllShipments, getSingleLogisticsShipment, updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
-import { deleteprocurement, deleteProcurementPdf, generateProcurementPDFController, generateSecureProcurementLink, getProcurementNewDetails, getProcurementNewSingleItem, SyncAccountingFromProcurement, syncLogisticsDept, updateProcurementDeliveryLocationDetails, updateProcurementItemRate, updateProcurementShopDetails, updateProcurementTotalCost } from "../../../controllers/Department controllers/ProcurementNew Controllers/procurementNew.controller";
+import { deleteprocurement, deleteProcurementPdf, generateProcurementPDFController, generateSecureProcurementLink, getProcurementItemsPublic, getProcurementNewDetails, getProcurementNewSingleItem, sendProcurementToPayment, syncLogisticsDept, updateProcurementDeliveryLocationDetails, updateProcurementItemRate, updateProcurementShopDetails, updateProcurementSingleItemRate, updateProcurementTotalCost } from "../../../controllers/Department controllers/ProcurementNew Controllers/procurementNew.controller";
 
 const procurementNewRoutes = express.Router();
 
 procurementNewRoutes.put("/updateshop/:id", multiRoleAuthMiddleware("owner", "CTO", "staff"), updateProcurementShopDetails);
 procurementNewRoutes.put("/updatedelivery/:id", multiRoleAuthMiddleware("owner", "CTO", "staff"), updateProcurementDeliveryLocationDetails);
 procurementNewRoutes.delete("/deleteprocurement/:id", multiRoleAuthMiddleware("owner", "CTO", "staff"), deleteprocurement);
-procurementNewRoutes.get("/getprocurementall",  multiRoleAuthMiddleware("owner", "CTO", "staff"),getProcurementNewDetails);
-procurementNewRoutes.put("/updatetotalcost/:id",  multiRoleAuthMiddleware("owner", "CTO", "staff"),updateProcurementTotalCost);
-procurementNewRoutes.get("/getprocurementsingle/:id",   getProcurementNewSingleItem);
-procurementNewRoutes.patch("/generatepdf/:id",  multiRoleAuthMiddleware("owner", "CTO", "staff"), generateProcurementPDFController);
+procurementNewRoutes.get("/getprocurementall", multiRoleAuthMiddleware("owner", "CTO", "staff"), getProcurementNewDetails);
+// not in use
+// procurementNewRoutes.put("/updatetotalcost/:id",  multiRoleAuthMiddleware("owner", "CTO", "staff"),updateProcurementTotalCost);
 
-procurementNewRoutes.delete('/deletepdf/:id/:pdfId', multiRoleAuthMiddleware("owner", "staff", "CTO",),   deleteProcurementPdf)
-procurementNewRoutes.post('/synclogistics/:id', multiRoleAuthMiddleware("owner", "staff", "CTO",),   syncLogisticsDept)
-procurementNewRoutes.put('/public/updaterate',  updateProcurementItemRate)
-procurementNewRoutes.post('/gereratetoken', multiRoleAuthMiddleware("owner", "staff", "CTO",),  generateSecureProcurementLink)
+procurementNewRoutes.get("/getprocurementsingle/:id", getProcurementNewSingleItem);
+procurementNewRoutes.patch("/generatepdf/:id", multiRoleAuthMiddleware("owner", "CTO", "staff"), generateProcurementPDFController);
+
+procurementNewRoutes.delete('/deletepdf/:id/:pdfId', multiRoleAuthMiddleware("owner", "staff", "CTO",), deleteProcurementPdf)
+procurementNewRoutes.post('/generatetoken/:orderId', multiRoleAuthMiddleware("owner", "staff", "CTO",), generateSecureProcurementLink)
+// not used below one
+procurementNewRoutes.put('/public/updaterate', updateProcurementItemRate)
+
+procurementNewRoutes.get('/public/get', getProcurementItemsPublic)
+procurementNewRoutes.put("/public/item/update", updateProcurementSingleItemRate);
 
 
-procurementNewRoutes.post(
-  "/syncaccounting/:organizationId/:projectId",
-  multiRoleAuthMiddleware("owner", "staff", "CTO"),
-  SyncAccountingFromProcurement
 
-);
+procurementNewRoutes.post('/synctopayments/:procurementId', multiRoleAuthMiddleware("owner", "staff", "CTO",), sendProcurementToPayment)
+// procurementNewRoutes.post('/synclogistics/:id', multiRoleAuthMiddleware("owner", "staff", "CTO",), syncLogisticsDept)
+// procurementNewRoutes.post(
+//   "/syncaccounting/:organizationId/:projectId",
+//   multiRoleAuthMiddleware("owner", "staff", "CTO"),
+//   SyncAccountingFromProcurement);
 
 export default procurementNewRoutes;

@@ -69,7 +69,7 @@
 // models/shortListed.model.ts
 
 import mongoose, { Schema, Document, Types } from "mongoose";
-import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
+// import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 interface ShortlistedDesign {
   url: string;

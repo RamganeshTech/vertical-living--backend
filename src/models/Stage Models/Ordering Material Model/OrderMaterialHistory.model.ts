@@ -80,9 +80,6 @@
 
 
 import { model, Schema, Types } from "mongoose";
-import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
-import { DimensionRangeSchema } from "../../externalUnit model/CommonExternal model/commonExternal.model";
-import { IWardrobeExternal } from "../../externalUnit model/WardrobeExternal Model/wardrobeExternal.model";
 
 
 

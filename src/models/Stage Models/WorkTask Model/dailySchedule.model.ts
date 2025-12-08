@@ -1,7 +1,7 @@
 // models/DailySchedule.model.ts
 import mongoose, { Schema, Document } from "mongoose";
 // import { IDailyTask, IDailySchedule, uploadSchema } from './WorkTask.model';
-import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
+// import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
 
 // interface DailyScheduleDocument extends IDailySchedule, Document { }
 

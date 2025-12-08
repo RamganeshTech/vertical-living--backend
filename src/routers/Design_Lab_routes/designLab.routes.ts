@@ -8,7 +8,9 @@ import {  createDesignLab,
     uploadReferenceImages,
     deleteReferenceImage,
     uploadMaterialImage,
-    deleteMaterialImage, } from "../../controllers/Design_lab_Controllers/designLab.controllers";
+    deleteMaterialImage,
+    // updateDesignLabneW,
+    updateDesignLabNew, } from "../../controllers/Design_lab_Controllers/designLab.controllers";
 import { imageUploadToS3, processUploadFiles } from "../../utils/s3Uploads/s3upload";
 
 
@@ -42,6 +44,24 @@ designRoutes.put(
     "/updatedesign/:id",
     multiRoleAuthMiddleware("owner", "staff", "CTO"),
     updateDesignLab
+);
+
+
+//  NEW VERSION OF UPDATE CONTORLLER
+
+designRoutes.put(
+    "/updatedesignnew/:id",
+    // 1. Auth Check
+    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    
+    // 2. Multer Middleware (Accepts array of files with field name 'files')
+    imageUploadToS3.array("files"),
+    
+    // 3. Optional: Process headers/metadata if your app uses this
+    processUploadFiles,
+    
+    // 4. The Controller Logic
+    updateDesignLabNew
 );
 
 designRoutes.delete(

@@ -72,7 +72,7 @@ export interface IWorkPlan {
 
 // models/ProjectStageSchedule.model.ts
 import mongoose, { Schema, Document } from "mongoose";
-import procurementLogger from '../../../Plugins/ProcurementDeptPluggin';
+// import procurementLogger from '../../../Plugins/ProcurementDeptPluggin';
 
 
 export const uploadSchema = new Schema<IUploadFile>({
