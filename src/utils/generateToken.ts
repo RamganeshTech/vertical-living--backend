@@ -1,5 +1,5 @@
 import crypto from "crypto";
 
-export const generateOrderingToken = () => {
+export const generateOrderingToken:any = () => {
   return crypto.randomBytes(16).toString("hex");
 };

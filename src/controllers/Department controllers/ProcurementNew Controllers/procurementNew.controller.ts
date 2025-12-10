@@ -7,40 +7,146 @@ import crypto from 'crypto';
 import mongoose, { Types } from "mongoose";
 import { createPaymentMainAccUtil } from "../Accounting Controller/PaymentMainAcc_controllers/paymentMainAcc.controller";
 import { AccountingModel } from "../../../models/Department Models/Accounting Model/accountingMain.model";
+import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
+
+// export const getProcurementNewDetails = async (req: Request, res: Response): Promise<any> => {
+//     try {
+//         const { projectId, organizationId } = req.query;
+
+//         const filters: any = { organizationId };
+
+//         if (projectId) filters.projectId = projectId; // ✅ properly assign
+//         // 
+
+//         // const redisMainKey = `stage:OrderMaterialHistoryModel:${projectId}`
+//         // // await redisClient.del(redisMainKey)
+//         // const cachedData = await redisClient.get(redisMainKey)
+
+//         // if (cachedData) {
+//         //     return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+//         // }
+
+//         const doc = await ProcurementModelNew.find(filters).sort({ createdAt: -1 }).populate("projectId", "projectName _id")
+//         if (!doc) return res.status(200).json({ ok: true, message: "Data not found", data: [] });
+
+//         // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+//         // await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: doc })
+
+
+//         return res.status(200).json({ ok: true, data: doc, message: "data found" });
+
+//     }
+//     catch (error: any) {
+//         console.log("error ", error)
+//         return res.status(500).json({ ok: false, message: error.message });
+//     }
+// }
+
+
 
 export const getProcurementNewDetails = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { projectId, organizationId } = req.query;
+        const {
+            organizationId,
+            projectId,
+            page,
+            limit,
+            search,
+            isSyncWithPaymentsSection,
+            isConfirmedRate,
+            minAmount,
+            maxAmount,
+            fromDate,
 
+            toDate
+        } = req.query;
+
+        if (!organizationId) {
+            return res.status(400).json({ ok: false, message: "Organization ID is required" });
+        }
+
+        // --- 1. Pagination Setup ---
+        const pageNumber = parseInt(page as string) || 1;
+        const pageSize = parseInt(limit as string) || 10;
+        const skip = (pageNumber - 1) * pageSize;
+
+        // --- 2. Build Query Filters ---
         const filters: any = { organizationId };
 
-        if (projectId) filters.projectId = projectId; // ✅ properly assign
-        // 
+        if (projectId) filters.projectId = projectId;
 
-        // const redisMainKey = `stage:OrderMaterialHistoryModel:${projectId}`
-        // // await redisClient.del(redisMainKey)
-        // const cachedData = await redisClient.get(redisMainKey)
+        // Boolean Filters (Convert string "true"/"false" to boolean)
+        if (isSyncWithPaymentsSection !== undefined && isSyncWithPaymentsSection !== "") {
+            filters.isSyncWithPaymentsSection = isSyncWithPaymentsSection === 'true';
+        }
 
-        // if (cachedData) {
-        //     return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
+        // if (isConfirmedRate !== undefined && isConfirmedRate !== "") {
+        //     filters.isConfirmedRate = isConfirmedRate === 'true';
         // }
 
-        const doc = await ProcurementModelNew.find(filters).sort({ createdAt: -1 }).populate("projectId", "projectName _id")
-        if (!doc) return res.status(200).json({ ok: true, message: "Data not found", data: [] });
+        // Number Filter
+        if (minAmount || maxAmount) {
+            filters.totalCost = {};
+            if (minAmount) filters.totalCost.$gte = Number(minAmount);
+            if (maxAmount) filters.totalCost.$lte = Number(maxAmount);
+        }
 
-        // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
-        // await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: doc })
+        // Date Range Filter (CreatedAt)
+        if (fromDate || toDate) {
+            filters.createdAt = {};
+            if (fromDate) {
+                filters.createdAt.$gte = new Date(fromDate as string);
+            }
+            if (toDate) {
+                // Set time to end of day for the 'toDate'
+                const endOfDay = new Date(toDate as string);
+                endOfDay.setHours(23, 59, 59, 999);
+                filters.createdAt.$lte = endOfDay;
+            }
+        }
 
+        // Search Logic (Procurement #, Shop Name, Order Material #)
+        if (search) {
+            const searchRegex = { $regex: search, $options: "i" };
+            filters.$or = [
+                { procurementNumber: searchRegex },
+                { fromDeptNumber: searchRegex }, // Order Material Ref
+                { "shopDetails.shopName": searchRegex },
+                { "shopDetails.contactPerson": searchRegex },
+                { "deliveryLocationDetails.siteName": searchRegex },
+                { "deliveryLocationDetails.siteSupervisor": searchRegex }
+            ];
+        }
 
-        return res.status(200).json({ ok: true, data: doc, message: "data found" });
+        // --- 3. Execute Query ---
+        const totalDocs = await ProcurementModelNew.countDocuments(filters);
 
+        const docs = await ProcurementModelNew.find(filters)
+            .sort({ createdAt: -1 }) // Newest first
+            .skip(skip)
+            .limit(pageSize)
+            .populate("projectId", "projectName _id");
+
+        // --- 4. Prepare Response for Infinite Query ---
+        const hasNextPage = skip + docs.length < totalDocs;
+
+        return res.status(200).json({
+            ok: true,
+            message: "Data fetched successfully",
+            data: {
+                items: docs,
+                currentPage: pageNumber,
+                totalPages: Math.ceil(totalDocs / pageSize),
+                totalItems: totalDocs,
+                hasNextPage
+            }
+        });
+
+    } catch (error: any) {
+        console.error("Get Procurement Error:", error);
+        return res.status(500).json({ ok: false, message: error.message || "Internal Server Error" });
     }
-    catch (error: any) {
-        console.log("error ", error)
-        return res.status(500).json({ ok: false, message: error.message });
-    }
-}
-
+};
 
 
 export const getProcurementNewSingleItem = async (req: Request, res: Response): Promise<any> => {
@@ -72,6 +178,186 @@ export const getProcurementNewSingleItem = async (req: Request, res: Response): 
 
 
 
+export const createProcurementOrder = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const {
+            organizationId,
+            projectId,
+            fromDeptNumber,
+            fromDeptRefId,
+            selectedUnits = [],
+            shopDetails,
+            deliveryLocationDetails
+        } = req.body;
+
+        // -------------------------
+        // Basic validations
+        // -------------------------
+        if (!organizationId || !projectId) {
+            return res.status(400).json({
+                ok: false,
+                message: "organizationId and projectId are required"
+            });
+        }
+
+
+
+        if (!fromDeptNumber) {
+            return res.status(400).json({
+                ok: false,
+                message: "fromDeptNumber is required"
+            });
+        }
+
+        // -------------------------
+        // Validate Phone Number (if provided)
+        // -------------------------
+        if (deliveryLocationDetails?.phoneNumber?.trim() &&
+            deliveryLocationDetails.phoneNumber.length !== 10) {
+
+            return res.status(400).json({
+                ok: false,
+                message: "Site Location Phone Number should be 10 digits"
+            });
+        }
+
+        if (shopDetails?.phoneNumber?.trim() &&
+            shopDetails.phoneNumber.length !== 10) {
+
+            return res.status(400).json({
+                ok: false,
+                message: "Shop Details Phone Number should be 10 digits"
+            });
+        }
+
+
+        // // -------------------------
+        // // Calculate totalCost from selectedUnits
+        // // -------------------------
+        // const calculatedTotalCost = selectedUnits.reduce((acc: number, item: any) => {
+        //     const qty = item.quantity || 0;
+        //     const rate = item.rate || 0;
+        //     return acc + qty * rate;
+        // }, 0);
+
+        // -------------------------
+        // Generate procurement number (simple pattern)
+        // -------------------------
+
+        // -------------------------
+        // Create Document
+        // -------------------------
+
+        const isExisting = await ProcurementModelNew.findOne({ fromDeptNumber })
+
+        let quoteNumber = 1;
+        if (isExisting) {
+            quoteNumber = (isExisting?.quoteNumber || 1) + 1
+        }
+
+
+        const newProcurement = new ProcurementModelNew({
+            organizationId,
+            projectId,
+
+            quoteNumber: quoteNumber || 1,
+            fromDeptNumber: fromDeptNumber || null,
+            fromDeptRefId: fromDeptRefId ? new Types.ObjectId(fromDeptRefId) : null,
+            fromDeptName: "Order Material",
+            fromDeptModel: "OrderMaterialHistoryModel",
+
+            shopDetails: shopDetails || {},
+            deliveryLocationDetails: deliveryLocationDetails || {},
+
+            selectedUnits,
+            totalCost: 0,
+
+            refPdfId: null,
+            procurementPdfs: [],
+            generatedLink: null,
+            isConfirmedRate: false,
+            isSyncWithPaymentsSection: false
+        });
+
+
+        const isSaved = await newProcurement.save()
+        console.log("isSaved", isSaved)
+
+        if (!isSaved?._id) {
+            return res.status(400).json({
+                ok: false,
+                message: "Failed to create procurement order"
+            });
+        }
+
+        // NOTE: You can integrate Redis cache here if needed
+        // const redisKey = `stage:ProcurementModelNew:${projectId}`;
+        // await redisClient.set(redisKey, JSON.stringify(newProcurement), { EX: 600 });
+
+        return res.status(201).json({
+            ok: true,
+            message: "Procurement order created successfully",
+            data: newProcurement
+        });
+    } catch (error: any) {
+        console.error("Error creating procurement order:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Server error"
+        });
+    }
+};
+
+
+export const getOrderMaterialRefPdfDetails = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params; // OrderMaterialHistory _id
+
+        if (!projectId) {
+            return res.status(400).json({
+                ok: false,
+                message: "projectId is required"
+            });
+        }
+
+        // ------------------------------------
+        // Fetch the order material history doc
+        // ------------------------------------
+        const doc = await OrderMaterialHistoryModel.findOne({ projectId })
+            .select("_id projectId generatedLink")
+            .populate("projectId", "_id projectName");
+
+        if (!doc) {
+            return res.status(200).json({
+                ok: true,
+                message: "Order Material not found for this project"
+            });
+        }
+
+        const orderNumbers = doc?.generatedLink?.map(ele => {
+            return {
+                refUniquePdf: ele.refUniquePdf, //fromDeptNumber
+                fromDeptRefId: doc._id!,
+            }
+        })
+
+        // -------------------------------------------------
+        // SUCCESS RESPONSE
+        // -------------------------------------------------
+        return res.status(200).json({
+            ok: true,
+            message: "Order material pdf reference fetched",
+            data: orderNumbers || []
+        });
+
+    } catch (error: any) {
+        console.error("Error fetching ref pdf number:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Server error"
+        });
+    }
+};
 
 export const updateProcurementDeliveryLocationDetails = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -164,6 +450,7 @@ export const updateProcurementShopDetails = async (req: Request, res: Response):
 };
 
 
+// not used
 export const updateProcurementTotalCost = async (req: Request, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
@@ -306,7 +593,7 @@ const encryptProcurementToken = (payload: object) => {
 };
 
 
-export const decryptProcurementToken = (token: string) => {
+const decryptProcurementToken = (token: string) => {
     try {
         // Token format: iv:encrypted
         const [ivStr, encryptedData] = token.split(":");
@@ -411,7 +698,7 @@ export const getProcurementItemsPublic = async (req: Request, res: Response): Pr
 
 
 
-//  UPDATE ALL THE PROCUREMENT RATE
+//  UPDATE ALL THE PROCUREMENT RATE (not used)
 export const updateProcurementItemRate = async (req: Request, res: Response): Promise<any> => {
     try {
         const { token, orderId } = req.query;
@@ -622,6 +909,7 @@ export const deleteprocurement = async (req: Request, res: Response): Promise<an
 };
 
 
+//  not used
 export const syncLogisticsDept = async (req: Request, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
@@ -734,9 +1022,12 @@ export const sendProcurementToPayment = async (req: Request, res: Response): Pro
             fromSectionId: procurement._id as Types.ObjectId,
             fromSection: "Procurement",
             fromSectionNumber: procurement?.procurementNumber || procurement?.refPdfId || "",
+            orderMaterialDeptNumber: procurement?.fromDeptNumber || null,
+            orderMaterialRefId: (procurement as any)?.fromDeptRefId || null,
             paymentDate: null,
             dueDate: null,
             subject: "",
+            procurementDeptValidation: "verified by procurement department",
             items: paymentItems,
             totalAmount: procurement.totalCost || 0,
             discountPercentage: 0,

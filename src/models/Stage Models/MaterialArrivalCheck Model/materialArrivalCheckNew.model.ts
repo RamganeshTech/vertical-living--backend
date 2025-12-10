@@ -11,27 +11,27 @@ export interface IMaterialArrivalTimer {
 
 
 export interface IUploadFile {
-    type: "image" | "pdf";
-    url: string;
-    originalName?: string;
-    uploadedAt?: Date;
+  type: "image" | "pdf";
+  url: string;
+  originalName?: string;
+  uploadedAt?: Date;
 }
 
 
-export interface MaterialArrivalSingle{
-     image: IUploadFile | null,
-    quantity: number,
-    // customId: string,
-    unitName: string,
-    isVerified: boolean
+export interface MaterialArrivalSingle {
+  image: IUploadFile | null,
+  quantity: number,
+  // customId: string,
+  unitName: string,
+  isVerified: boolean
 }
 
 export interface IMaterialArrival {
   projectId: Types.ObjectId;
   status: "pending" | "completed";
-    assignedTo: Types.ObjectId;
+  assignedTo: Types.ObjectId;
   isEditable: boolean;
-  materialArrivalList: {};
+  materialArrivalList: IMaterialOrdered[];
   timer: IMaterialArrivalTimer;
   generatedLink: string | null;
 }
@@ -50,19 +50,68 @@ const TimerSchema = new Schema<IMaterialArrivalTimer>({
 // Upload file schema
 const UploadSchema = new Schema<IUploadFile>({
   type: { type: String, enum: ["image", "pdf"] },
-  url: { type: String,  },
+  url: { type: String, },
   originalName: { type: String },
   uploadedAt: { type: Date, default: new Date() },
 }, { _id: false });
 
 
 const MaterialSchema = new Schema<MaterialArrivalSingle>({
-    image: {type: UploadSchema, default:null},
-    quantity: {type: Number, default: 0},
-    // customId: {type: String, default: null},
-    unitName: {type: String, default: null},
-    isVerified: {type: Boolean, default:false}
+  image: { type: UploadSchema, default: null },
+  quantity: { type: Number, default: 0 },
+  // customId: {type: String, default: null},
+  unitName: { type: String, default: null },
+  isVerified: { type: Boolean, default: false }
 })
+
+
+
+const materialArrivalSubItems = new Schema<MaterialArrivalSingle>({
+  image: { type: UploadSchema, default: null },
+  quantity: { type: Number, default: 0 },
+  // customId: {type: String, default: null},
+  unitName: { type: String, default: null },
+})
+
+
+interface IMaterialOrder {
+  images: IUploadFile[];
+  isVerified: boolean;
+  subItemName: string;
+  refId: string;
+  arrivedQuantity: number;
+  orderedQuantity: number;
+  unit: string;
+}
+
+export const MaterialOrderSubItemSchema = new Schema<IMaterialOrder>({
+  subItemName: { type: String, default: null },
+  refId: { type: String, default: null },
+  orderedQuantity: { type: Number, default: null },
+  unit: { type: String, default: null },
+  arrivedQuantity: { type: Number, default: 0 },
+  images: { type: [UploadSchema], default: [] },
+  isVerified: { type: Boolean, default: false }
+}, { _id: true })
+
+
+export interface IMaterialOrdered {
+  orderMaterialDeptNumber: string | null;
+  procurementDeptNumber: string | null;
+  paymentDeptNumber: string | null;
+  logisticsDeptNumber: string | null;
+  subItems: IMaterialOrder[]
+  orderedImages: IUploadFile[]
+}
+
+const materialOrderedSchema = new Schema<IMaterialOrdered>({
+  orderMaterialDeptNumber: { type: String, default: null },
+  procurementDeptNumber: { type: String, default: null },
+  paymentDeptNumber: { type: String, default: null },
+  logisticsDeptNumber: { type: String, default: null },
+  orderedImages: { type: [UploadSchema], default: [] },
+  subItems: { type: [MaterialOrderSubItemSchema], default: [] },
+}, { _id: true })
 
 
 // Main schema
@@ -72,18 +121,18 @@ const MaterialArrivalSchema = new Schema<IMaterialArrival>({
   isEditable: { type: Boolean, default: true },
 
   materialArrivalList: {
-   type: [MaterialSchema], default:[]
+    type: [materialOrderedSchema], default: []
   },
-    assignedTo:{
-      type: Schema.Types.ObjectId,
-      default: null,
-      ref:"StaffModel"
-    },
+  assignedTo: {
+    type: Schema.Types.ObjectId,
+    default: null,
+    ref: "StaffModel"
+  },
   timer: { type: TimerSchema, required: true },
   generatedLink: { type: String, default: null },
 }, { timestamps: true });
 
-MaterialArrivalSchema.index({projectId:1})
+MaterialArrivalSchema.index({ projectId: 1 })
 
 // MaterialArrivalSchema.plugin(procurementLogger);
 

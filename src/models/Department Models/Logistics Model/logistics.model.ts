@@ -8,6 +8,8 @@ export interface IShipmentItem {
   quantity: number;
   weight?: number;
   description?: string;
+  unit: string,
+  totalCost: number,
 }
 
 export interface ILogisticsShipment {
@@ -37,6 +39,15 @@ export interface ILogisticsShipment {
   // assignedTo?: Types.ObjectId;
   notes?: string;
 
+
+  orderMaterialDeptNumber: string | null
+  orderMaterialRefId: Types.ObjectId | null
+
+  procurementDeptNumber: string | null
+  procurementRefId: Types.ObjectId | null
+
+  paymentDeptNumber: string | null,
+  paymentRefId: Types.ObjectId | null,
 
   // currentLocation: {
   //   latitude: number,
@@ -85,6 +96,8 @@ export const LogisticsShipmentSchema = new Schema<ILogisticsShipment>({
   items: [{
     name: String,
     quantity: Number,
+    unit: String,
+    totalCost: Number,
     weight: Number,
     description: String
   }],
@@ -97,6 +110,48 @@ export const LogisticsShipmentSchema = new Schema<ILogisticsShipment>({
   actualPickupTime: { type: Date, default: null },
   actualDeliveryTime: { type: Date, default: null },
   notes: { type: String, default: null },
+
+
+
+
+
+
+
+
+  orderMaterialDeptNumber: {
+    type: String,   // used to store the refUniquePdf property value of the ordeing material's pdf
+    default: null
+  },
+
+  orderMaterialRefId: {
+    type: Schema.Types.ObjectId,
+    ref: "OrderMaterialHistoryModel",
+    default: null
+  },
+
+
+
+  procurementDeptNumber: {
+    type: String,   // used to store the refUniquePdf property value of the ordeing material's pdf
+    default: null
+  },
+
+  procurementRefId: {
+    type: Schema.Types.ObjectId,
+    ref: "ProcurementModelNew",
+    default: null
+  },
+
+  paymentDeptNumber: {
+    type: String,   // used to store the refUniquePdf property value of the ordeing material's pdf
+    default: null
+  },
+
+  paymentRefId: {
+    type: Schema.Types.ObjectId,
+    ref: "PaymentMainAccountsModel",
+    default: null
+  },
 
   // trackingId: {
   //   type: String,
@@ -127,8 +182,8 @@ export const LogisticsShipmentSchema = new Schema<ILogisticsShipment>({
   //   }
   // ],
   // token: { type: String, default: null },
-  
-  trackingLink: { type: String, default: null}
+
+  trackingLink: { type: String, default: null }
 }, { _id: true, timestamps: true });
 
 

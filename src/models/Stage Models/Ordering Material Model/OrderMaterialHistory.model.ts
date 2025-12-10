@@ -1,88 +1,4 @@
-// import { model, Schema, Types } from "mongoose";
-// import procurementLogger from "../../../Plugins/ProcurementDeptPluggin";
-
-
-
-
-// export interface IOrderHistorytimer {
-//   startedAt: Date | null;
-//   completedAt: Date | null;
-//   deadLine: Date | null;
-//   reminderSent: boolean
-// }
-
-// export interface OrderedMaterialSingle {
-//     unitId: Types.ObjectId;
-//     category: string; // e.g., "bedCot", "tv", etc.
-//     customId: string; // e.g., "bedCot", "tv", etc.
-//     quantity: number;
-//     image: string;
-//     singleUnitCost: number;
-// }
-
-// export interface IOrderedMaterialHistory {
-//     _id?: Types.ObjectId;
-//     projectId: Types.ObjectId;
-//     status: "pending" | "completed";
-//     isEditable: boolean;
-//     selectedUnits: OrderedMaterialSingle[];
-//     totalCost: number;
-//      assignedTo: Types.ObjectId;
-
-//       timer: IOrderHistorytimer;
-//       generatedLink:string
-// }
-
-
-
-
-
-// // Timer schema
-// const TimerSchema = new Schema<IOrderHistorytimer>({
-//   startedAt: { type: Date, default: null },
-//   completedAt: { type: Date, default: null },
-//   deadLine: { type: Date, default: null },
-//   reminderSent: { type: Boolean, default: false },
-// }, { _id: false });
-
-// const orderedUnits = new Schema<OrderedMaterialSingle>({
-//     unitId: { type: Schema.Types.ObjectId }, // ID of BedCot, TVUnit, etc.
-//     category: { type: String },
-//     image: { type: String, default: null },
-//     customId: { type: String, default: null },
-//     quantity: { type: Number, default: 1 },
-//     // 👇 cost for 1 unit (from master or overridden)
-//     singleUnitCost: { type: Number, default: 0 },
-// }, { _id: true })
-
-// const OrderHistorySchema = new Schema<IOrderedMaterialHistory>({
-//     projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", required: true },
-//     status: { type: String, enum: ["pending", "completed"], default: "pending" },
-//     isEditable: { type: Boolean, default: true },
-//     assignedTo: {
-//         type: Schema.Types.ObjectId,
-//         ref: "StaffModel",
-//         default: null,
-//     },
-//     timer: { type: TimerSchema, required: true },
-//    selectedUnits: { type: [orderedUnits], default: [] },
-//     totalCost: { type: Number, },
-//     generatedLink: {type: String,}
-// }, { timestamps: true });
-
-// OrderHistorySchema.index({projectId:1})
-
-// OrderHistorySchema.plugin(procurementLogger);
-
-// export const OrderMaterialHistoryModel = model("OrderMaterialHistoryModel", OrderHistorySchema);
-
-
-
-
 import { model, Schema, Types } from "mongoose";
-
-
-
 
 export interface IOrderHistorytimer {
     startedAt: Date | null;
@@ -90,7 +6,6 @@ export interface IOrderHistorytimer {
     deadLine: Date | null;
     reminderSent: boolean
 }
-
 
 export interface OrderMaterialSiteDetail {
     siteName: string,
@@ -106,14 +21,12 @@ export interface OrderMaterialShopDetails {
     phoneNumber: string | null,
 }
 
-
 export interface OrderSubItems {
     subItemName: string,
     refId: string,
     quantity: number,
     unit: string,
 }
-
 
 export interface IOrderDimention {
     height: number;
@@ -155,10 +68,12 @@ export interface IOrderedMaterialHistory {
     totalCost: number;
     assignedTo: Types.ObjectId;
     timer: IOrderHistorytimer;
-    generatedLink: IPdfGenerator[]
+    generatedLink: IPdfGenerator[],
+
+    orderedItems: IOrderedItems[]
 }
 
-export interface IPdfGenerator extends Document {
+export interface IPdfGenerator {
     _id?: Types.ObjectId;   // unique id for each item
     url: string | null;
     refUniquePdf: string
@@ -227,7 +142,7 @@ export const PublicUnitsSchema = new Schema<IPublicUnits>({
 
 
 const orderedUnits = new Schema<OrderedMaterialSingle>({
-    unitId: { type: Schema.Types.ObjectId }, // ID of BedCot, TVUnit, etc.
+    unitId: { type: Schema.Types.ObjectId, default: null }, // ID of BedCot, TVUnit, etc.
     category: { type: String },
     image: { type: String, default: null },
     customId: { type: String, default: null },
@@ -236,6 +151,31 @@ const orderedUnits = new Schema<OrderedMaterialSingle>({
     dimention: { type: DimentionSchema, default: null },
     singleUnitCost: { type: Number, default: 0 },
     subItems: { type: [OrderSubItemSchema], default: [] }
+}, { _id: true })
+
+
+export interface IOrderedItems {
+    orderMaterialNumber: string,
+    selectedUnits: OrderedMaterialSingle[]
+    shopDetails: OrderMaterialShopDetails | null;
+    isPublicOrder: boolean
+    deliveryLocationDetails: OrderMaterialSiteDetail;
+    images: IPdfGenerator[]
+    pdfLink: IPdfGenerator | null;
+    isSyncWithProcurement: boolean,
+    createdAt: Date
+}
+
+const orderedItems = new Schema<IOrderedItems>({
+    orderMaterialNumber: { type: String, default: null },
+    selectedUnits: { type: [orderedUnits], default: [] },
+    shopDetails: { type: ShopDetailsSchema, default: null },
+    deliveryLocationDetails: { type: DeliveryLocationDetailsSchema, default: null },
+    images: { type: [pdfGeneratorSchema], default: [] },
+    pdfLink: { type: pdfGeneratorSchema, default: null },
+    isSyncWithProcurement: { type: Boolean, default: false },
+    isPublicOrder: { type: Boolean, default: false },
+    createdAt: { type: Date, default: new Date() }
 }, { _id: true })
 
 const OrderHistorySchema = new Schema<IOrderedMaterialHistory>({
@@ -253,11 +193,12 @@ const OrderHistorySchema = new Schema<IOrderedMaterialHistory>({
     selectedUnits: { type: [orderedUnits], default: [] },
 
     publicUnits: { type: PublicUnitsSchema, default: {} },
-    images:{ type: [pdfGeneratorSchema], default: [] },
+    images: { type: [pdfGeneratorSchema], default: [] },
 
     // ✨ NEW: Simple change tracking ✨
     publicUnitsVersion: { type: Number, default: 0 }, // Increment on each public change
     needsStaffReview: { type: Boolean, default: false }, // Flag for staff
+    orderedItems: { type: [orderedItems], default: [] },
 
     totalCost: { type: Number, },
     generatedLink: { type: [pdfGeneratorSchema], default: [] }

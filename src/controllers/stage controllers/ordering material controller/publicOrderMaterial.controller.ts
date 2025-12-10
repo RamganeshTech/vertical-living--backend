@@ -278,7 +278,7 @@ export const publicdeleteSubItemFromUnit = async (req: Request, res: Response): 
 
 export const generatePublicOrderMaterialPDFController = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { projectId, organizationId } = req.params;
+        const { projectId, organizationId, orderItemId } = req.params;
 
         if (!projectId) {
             return res.status(400).json({
@@ -287,7 +287,7 @@ export const generatePublicOrderMaterialPDFController = async (req: Request, res
             });
         }
 
-        const result = await generatePublicOrderHistoryPdf(projectId, organizationId);
+        const result = await generatePublicOrderHistoryPdf(projectId, organizationId, orderItemId);
 
         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: result.data.orderHistory })
 
@@ -300,6 +300,114 @@ export const generatePublicOrderMaterialPDFController = async (req: Request, res
         });
     }
 }
+
+
+
+export const submitPublicOrders = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params;
+
+        if (!projectId) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Project ID is required'
+            });
+        }
+
+
+        const orderDoc = await OrderMaterialHistoryModel.findOne(
+            { projectId }
+        );
+
+        if (!orderDoc) {
+            return res.status(404).json({ message: "PDF not found", ok: false });
+        }
+
+        let nextNumber = 1;
+        const isNewPdf = Array.isArray(orderDoc.orderedItems) && orderDoc.orderedItems.length > 0;
+
+        if (isNewPdf) {
+            // Extract all numbers from refUniquePdf (format: projectName-<number>-pdf)
+            const numbers = orderDoc.orderedItems.map(ele => {
+                const match = ele.orderMaterialNumber?.match(/-(\d+)$/);
+                return match ? parseInt(match[1], 10) : 0; // Extract the number part
+            });
+
+            // Find the max number and increment
+            nextNumber = Math.max(...numbers, 0) + 1;
+        }
+
+
+        const currentYear = new Date().getFullYear()
+
+
+        // Always 3-digit format
+        const paddedNumber = String(nextNumber).padStart(3, "0");
+        const rawProjectId = (orderDoc.projectId as any)._id.toString().slice(-3);
+
+        const orderNumber = `ORD-${rawProjectId}-${currentYear}-${paddedNumber}`;
+
+        const selectedUnits = [{
+            unitId: null,
+            category: "",
+            image: null,
+            customId: null,
+            quantity: 1,
+            unitName: "",
+            dimention: null,
+            singleUnitCost: 0,
+            subItems: orderDoc?.publicUnits?.subItems || []
+        }];
+        const shopDetails = orderDoc?.publicUnits?.shopDetails;
+        const deliveryLocationDetails = orderDoc.deliveryLocationDetails;
+        const images = orderDoc.images;
+
+        if (orderDoc?.orderedItems && Array.from(orderDoc.orderedItems) && orderDoc.orderedItems.length > 0) {
+            orderDoc.orderedItems.push({
+                selectedUnits,
+                shopDetails,
+                deliveryLocationDetails,
+                images,
+                pdfLink: null,
+                orderMaterialNumber: orderNumber,
+                isSyncWithProcurement: false,
+                createdAt: new Date(),
+                isPublicOrder: true
+            })
+        } else {
+            orderDoc.orderedItems = [{
+                selectedUnits,
+                shopDetails,
+                deliveryLocationDetails,
+                images,
+                pdfLink: null,
+                orderMaterialNumber: orderNumber,
+                isSyncWithProcurement: false,
+                createdAt: new Date(),
+                isPublicOrder: true
+
+            }]
+        }
+
+
+
+        orderDoc.publicUnits.subItems = []
+        await orderDoc.save()
+
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+
+
+        return res.status(200).json({ data: orderDoc, message: "updated in the orderedItems", ok: true });
+
+    } catch (error: any) {
+        console.error('PDF generation controller error:', error);
+        return res.status(500).json({
+            ok: false,
+            message: error.message || 'Internal server error'
+        });
+    }
+};
 
 
 

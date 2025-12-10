@@ -6,8 +6,7 @@ import { BillAccountModel } from "../../../../models/Department Models/Accountin
 import { COMPANY_LOGO, uploadToS3 } from "../../../stage controllers/ordering material controller/pdfOrderHistory.controller";
 import { generateBillAccBillPdf } from "./pdfBillAcc";
 import { AccountingModel } from "../../../../models/Department Models/Accounting Model/accountingMain.model";
-import { generateTransactionNumber, syncAccountingRecord } from "../accounting.controller";
-import { PaymentMainAccountModel } from "../../../../models/Department Models/Accounting Model/paymentMainAcc.model";
+import { syncAccountingRecord } from "../accounting.controller";
 import { createPaymentMainAccUtil } from "../PaymentMainAcc_controllers/paymentMainAcc.controller";
 
 // Helper function to generate unique bill number
@@ -1109,6 +1108,10 @@ export const sendBillToPayment = async (req: Request, res: Response): Promise<an
             fromSectionId: bill._id as Types.ObjectId,
             fromSection: "Bill",
             fromSectionNumber: bill.billNumber,
+
+            orderMaterialDeptNumber: null,
+            orderMaterialRefId: null,
+
             paymentDate: null,
             dueDate: bill.dueDate,
             subject: bill.subject,

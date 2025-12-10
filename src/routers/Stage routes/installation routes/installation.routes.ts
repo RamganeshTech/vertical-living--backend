@@ -16,7 +16,6 @@ import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3
 import InstallationModel from "../../../models/Stage Models/installation model/Installation.model";
 import { notToUpdateIfStageCompleted } from "../../../middlewares/notToUpdateIfStageCompleted";
 import { checkIfStaffIsAssignedToStage } from "../../../middlewares/checkIfStaffIsAssignedToStage";
-import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
 
 const installationRoutes = Router();
 

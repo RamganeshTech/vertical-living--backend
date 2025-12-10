@@ -10,6 +10,13 @@ export interface IPaymentMainAcc extends Document {
     fromSection: string      //expense, 
     fromSectionModel: string | null
     fromSectionId: Types.ObjectId | null
+
+
+    orderMaterialDeptNumber: string | null
+    orderMaterialRefId: Types.ObjectId | null
+
+    procurementDeptValidation: string
+
     // vendorId: Types.ObjectId;
     // customerId: Types.ObjectId;
     projectId: Types.ObjectId;
@@ -164,16 +171,36 @@ const PaymentMainAccountSchema = new Schema<IPaymentMainAcc>(
         },
         // vendorName: { type: String, default: null },
         fromSection: { type: String, default: null },
-        fromSectionNumber: {type: String, default:null},
+        fromSectionNumber: { type: String, default: null },
+
+        orderMaterialDeptNumber: {
+            type: String,   // used to store the refUniquePdf property value of the ordeing material's pdf
+            default: null
+        },
+
+        orderMaterialRefId: {
+            type: Schema.Types.ObjectId,
+            ref: "OrderMaterialHistoryModel",
+            default: null
+        },
+
+        procurementDeptValidation: {
+            type: String,
+            default: null,
+        },
+
+
+
+
         paymentNumber: { type: String, },
         paymentDate: { type: Date, default: new Date() },
         dueDate: { type: Date, default: new Date() },
         subject: { type: String, default: null },
         items: { type: [PaymentAccItemSchema], default: [] },
         totalAmount: { type: Number, default: 0 },
-        
+
         advancedAmount: { type: grandTotalSchema, default: {} },
-        paymentType: {type: String, default: null},
+        paymentType: { type: String, default: null },  // related to bill section
         discountPercentage: { type: Number, default: 0 },
         discountAmount: { type: Number, default: 0 },
         taxPercentage: { type: Number, default: 0 },
@@ -197,12 +224,12 @@ const PaymentMainAccountSchema = new Schema<IPaymentMainAcc>(
 // ✅ Pre-save hook to auto-generate unique invoice number
 PaymentMainAccountSchema.pre("save", async function (next) {
     if (this.isNew && !this.paymentNumber) {
-          const currentYear = new Date().getFullYear();
+        const currentYear = new Date().getFullYear();
 
 
         const lastDoc = await mongoose
             .model("PaymentMainAccountsModel")
-            .findOne({organizationId: this.organizationId}, { paymentNumber: 1 })
+            .findOne({ organizationId: this.organizationId }, { paymentNumber: 1 })
             .sort({ createdAt: -1 });
 
         let nextNumber = 1;

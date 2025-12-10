@@ -32,7 +32,7 @@ const uploadToS3 = async (pdfBytes: any, fileName: any) => {
 };
 
 // Main PDF generation function
-const generateOrderHistoryPDF = async (projectId: string, organizationId: string) => {
+const generateOrderHistoryPDF = async (projectId: string, organizationId: string, orderItemId: string) => {
     try {
         // Fetch order history data
         // Fetch order history data
@@ -45,29 +45,36 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
         }
 
 
-        let nextNumber = 1;
-        const isNewPdf = Array.isArray(orderHistory.generatedLink) && orderHistory.generatedLink.length > 0;
+        let orderItem = orderHistory.orderedItems.find((order: any) => order._id.toString() === orderItemId.toString())
 
-        if (isNewPdf) {
-            // Extract all numbers from refUniquePdf (format: projectName-<number>-pdf)
-            const numbers = orderHistory.generatedLink.map(ele => {
-                const match = ele.refUniquePdf?.match(/-(\d+)$/);
-                return match ? parseInt(match[1], 10) : 0; // Extract the number part
-            });
+        if (!orderItem) {
+            throw new Error('Order Item not found');
 
-            // Find the max number and increment
-            nextNumber = Math.max(...numbers, 0) + 1;
         }
 
+        // let nextNumber = 1;
+        // const isNewPdf = Array.isArray(orderHistory.generatedLink) && orderHistory.generatedLink.length > 0;
 
-        const currentYear = new Date().getFullYear()
+        // if (isNewPdf) {
+        //     // Extract all numbers from refUniquePdf (format: projectName-<number>-pdf)
+        //     const numbers = orderHistory.generatedLink.map(ele => {
+        //         const match = ele.refUniquePdf?.match(/-(\d+)$/);
+        //         return match ? parseInt(match[1], 10) : 0; // Extract the number part
+        //     });
+
+        //     // Find the max number and increment
+        //     nextNumber = Math.max(...numbers, 0) + 1;
+        // }
 
 
-        // Always 3-digit format
-        const paddedNumber = String(nextNumber).padStart(3, "0");
-        const rawProjectId = (orderHistory.projectId as any)._id.toString().slice(-3);
+        // const currentYear = new Date().getFullYear()
 
-        const refUniquePdf = `ORD-${rawProjectId}-${currentYear}-${paddedNumber}`;
+
+        // // Always 3-digit format
+        // const paddedNumber = String(nextNumber).padStart(3, "0");
+        // const rawProjectId = (orderHistory.projectId as any)._id.toString().slice(-3);
+
+        const refUniquePdf = orderItem?.orderMaterialNumber;
 
 
         // Create a new PDF document
@@ -150,9 +157,9 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
         // });
         // yPosition -= 20;
 
-        const heading = "MATERIAL ORDER";
+        const heading = "Order Material";
 
-        const referenceId = `Order Number: ${refUniquePdf}`; // e.g. projectName-01-pdf
+        const referenceId = `Order Id: ${refUniquePdf}`; // e.g. projectName-01-pdf
 
         // Measure text widths
         const headingWidth = boldFont.widthOfTextAtSize(heading, 18);
@@ -355,10 +362,10 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
 
         // ========== IMAGES SECTION - AFTER PROJECT DETAILS ==========
         // Check if images exist and have URLs
-        const hasImages = orderHistory.images &&
-            Array.isArray(orderHistory.images) &&
-            orderHistory.images.length > 0 &&
-            orderHistory.images.some(img => img && img.url && img.url.trim() !== '');
+        const hasImages = orderItem?.images &&
+            Array.isArray(orderItem?.images) &&
+            orderItem?.images.length > 0 &&
+            orderItem?.images.some(img => img && img.url && img.url.trim() !== '');
 
         if (hasImages) {
             // Add heading for images section
@@ -377,7 +384,7 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
             const imagesPerRow = 3; // Fixed to 3 images per row
 
             // Filter valid images (with URLs)
-            const validImages = orderHistory.images.filter(img => img && img.url && img.url.trim() !== '');
+            const validImages = orderItem.images.filter(img => img && img.url && img.url.trim() !== '');
 
             // Calculate available width for each image in the row
             const totalAvailableWidth = width - 100; // 50px margin on each side
@@ -652,7 +659,7 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
         // Process each unit and its sub-items
         let serialNumber = 1;
 
-        for (const unit of orderHistory?.selectedUnits) {
+        for (const unit of orderItem?.selectedUnits) {
 
 
             //no room condition - only show unit if it has subitems
@@ -832,103 +839,18 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
             _id: new mongoose.Types.ObjectId()
         };
 
-        if (Array.isArray(orderHistory.generatedLink)) {
-            orderHistory?.generatedLink?.push(pdfData as IPdfGenerator);
-        } else {
-            orderHistory.generatedLink = []
-            orderHistory?.generatedLink.push(pdfData as IPdfGenerator)
-        }
+        // if (Array.isArray(orderHistory.generatedLink)) {
+        //     orderHistory?.generatedLink?.push(pdfData as IPdfGenerator);
+        // } else {
+        //     orderHistory.generatedLink = []
+        //     orderHistory?.generatedLink.push(pdfData as IPdfGenerator)
+        // }
 
-        console.log("orderHistory.generatedLink", orderHistory.generatedLink)
-
-
-        const ProcurementNewItems: any[] = [];
-        const subItemMap: Record<string, any> = {}; // key = subItemName
-
-        orderHistory.selectedUnits.forEach(unit => {
-            unit.subItems.forEach((subItem: any) => {
-                const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
-
-                const name = rest.subItemName?.trim().toLowerCase() || "";
-                const unitKey = rest.unit?.trim().toLowerCase() || "";
-                const key = `${name}__${unitKey}`; // combine name + unit
-
-                if (key) {
-                    if (subItemMap[key]) {
-                        // Already exists with same name+unit → add quantity
-                        subItemMap[key].quantity += rest.quantity || 0;
-                    } else {
-                        // Create fresh entry
-                        subItemMap[key] = {
-                            ...rest,
-                            quantity: rest.quantity || 0,
-                            _id: new mongoose.Types.ObjectId() // always refresh ID
-                        };
-                    }
-                }
-            });
-        });
-
-        // Convert map back to array
-        Object.values(subItemMap).forEach((item: any) => ProcurementNewItems.push(item));
-
-        // console.log("procurement", ProcurementNewItems)
-        await ProcurementModelNew.create({
-            organizationId,
-            projectId: projectId,
-            shopDetails: orderHistory.shopDetails,
-            deliveryLocationDetails: orderHistory.deliveryLocationDetails,
-            selectedUnits: ProcurementNewItems,
-            refPdfId: refUniquePdf,
-
-            fromDeptNumber: refUniquePdf,
-            fromDeptName: "Order Material",
-            fromDeptModel: "OrderMaterialHistoryModel",
-            fromDeptRefId: orderHistory._id as Types.ObjectId,
-            totalCost: 0
-        });
+        // console.log("orderHistory.generatedLink", orderHistory.generatedLink)
 
 
 
-
-        await syncAccountingRecord({
-            organizationId: (orderHistory.projectId as any).organizationId! || null,
-            projectId: orderHistory?.projectId || null,
-
-            // Reference Links
-            referenceId: null,
-            referenceModel: null, // Must match Schema
-            deptRecordFrom: null,
-
-            deptGeneratedDate: null,
-            deptNumber: null,
-            deptDueDate: null,
-
-            // Categorization
-
-            orderMaterialDeptNumber: refUniquePdf,
-            orderMaterialRefId: (orderHistory as any)._id,
-
-            // Person Details
-            assoicatedPersonName: "",
-            assoicatedPersonId: null,
-            assoicatedPersonModel: null, // Assuming this is your Vendor Model
-
-            // Financials
-            amount: 0, // Utility takes care of grandTotal logic if passed
-            notes: "",
-
-            // Defaults for Creation
-            status: "pending",
-            paymentId: null
-        });
-
-        // Clear subItems from each selectedUnit
-
-        orderHistory.selectedUnits.forEach(unit => {
-            unit.subItems = [];
-        });
-        orderHistory.images = [];
+        orderItem.pdfLink = pdfData
 
 
 
@@ -938,8 +860,10 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
 
         return {
             ok: true,
-            pdfUrl: uploadResult.Location,
-            data: orderHistory,
+            data: {
+                orderHistory,
+                pdfUrl: uploadResult.Location
+            },
             message: 'PDF generated successfully'
         };
 
@@ -953,7 +877,7 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
 
 
 // Main PDF generation function
-export const generatePublicOrderHistoryPdf = async (projectId: string, organizationId: string) => {
+export const generatePublicOrderHistoryPdf = async (projectId: string, organizationId: string, orderItemId: string) => {
     try {
         // Fetch order history data
         const orderHistory = await OrderMaterialHistoryModel.findOne({ projectId })
@@ -965,30 +889,41 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
         }
 
 
-        let nextNumber = 1;
-        const isNewPdf = Array.isArray(orderHistory.generatedLink) && orderHistory.generatedLink.length > 0;
+        let orderItem = orderHistory.orderedItems.find((order: any) => order._id.toString() === orderItemId.toString())
 
-        if (isNewPdf) {
-            // Extract all numbers from refUniquePdf (format: projectName-<number>-pdf)
-            const numbers = orderHistory.generatedLink.map(ele => {
-                const match = ele.refUniquePdf?.match(/-(\d+)$/);
-                return match ? parseInt(match[1], 10) : 0; // Extract the number part
-            });
+        if (!orderItem) {
+            throw new Error('Order Item not found');
 
-            // Find the max number and increment
-            nextNumber = Math.max(...numbers, 0) + 1;
         }
 
+        // let nextNumber = 1;
+        // const isNewPdf = Array.isArray(orderHistory.generatedLink) && orderHistory.generatedLink.length > 0;
 
-        const currentYear = new Date().getFullYear()
+        // if (isNewPdf) {
+        //     // Extract all numbers from refUniquePdf (format: projectName-<number>-pdf)
+        //     const numbers = orderHistory.generatedLink.map(ele => {
+        //         const match = ele.refUniquePdf?.match(/-(\d+)$/);
+        //         return match ? parseInt(match[1], 10) : 0; // Extract the number part
+        //     });
+
+        //     // Find the max number and increment
+        //     nextNumber = Math.max(...numbers, 0) + 1;
+        // }
 
 
-        // Always 3-digit format
-        const paddedNumber = String(nextNumber).padStart(3, "0");
-        const rawProjectId = (orderHistory.projectId as any)._id.toString().slice(-3);
+        // const currentYear = new Date().getFullYear()
 
-        const refUniquePdf = `ORD-${rawProjectId}-${currentYear}-${paddedNumber}`;
 
+        // // Always 3-digit format
+        // const paddedNumber = String(nextNumber).padStart(3, "0");
+        // const rawProjectId = (orderHistory.projectId as any)._id.toString().slice(-3);
+
+
+        const refUniquePdf = orderItem?.orderMaterialNumber;
+
+
+
+        // const refUniquePdf = `ORD-${rawProjectId}-${currentYear}-${paddedNumber}`;
         // Construct the new refUniquePdf
         // const refUniquePdf = `ORD-${(orderHistory.projectId as any)._id.slice(0, 3)}-${currentYear}-${nextNumber}`;
 
@@ -1075,7 +1010,7 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
 
         const heading = "MATERIAL ORDER";
 
-        const referenceId = `Order Number: ${refUniquePdf}`; // e.g. projectName-01-pdf
+        const referenceId = `Order Id: ${refUniquePdf}`; // e.g. projectName-01-pdf
 
         // Measure text widths
         const headingWidth = boldFont.widthOfTextAtSize(heading, 18);
@@ -1355,76 +1290,66 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
             _id: new mongoose.Types.ObjectId()
         };
 
-        if (Array.isArray(orderHistory.generatedLink)) {
-            orderHistory?.generatedLink?.push(pdfData as IPdfGenerator);
-        } else {
-            orderHistory.generatedLink = []
-            orderHistory?.generatedLink.push(pdfData as IPdfGenerator)
-        }
+        // if (Array.isArray(orderHistory.generatedLink)) {
+        //     orderHistory?.generatedLink?.push(pdfData as IPdfGenerator);
+        // } else {
+        //     orderHistory.generatedLink = []
+        //     orderHistory?.generatedLink.push(pdfData as IPdfGenerator)
+        // }
 
-        console.log("orderHistory.generatedLink", orderHistory.generatedLink)
+        // console.log("orderHistory.generatedLink", orderHistory.generatedLink)
+
+
 
         // const ProcurementNewItems: any[] = [];
+        // const subItemMap: Record<string, any> = {}; // key = subItemName
 
-        // // Flatten subItems into one array
-        // orderHistory.selectedUnits.forEach(unit => {
-        //     unit.subItems.forEach((subItem:any) => {
-        //         const { _id, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
-        //         ProcurementNewItems.push({
-        //             ...rest,
-        //             _id: new mongoose.Types.ObjectId() // always refresh ID
-        //         });
-        //     });
+        // orderHistory?.publicUnits?.subItems?.forEach((subItem: any) => {
+        //     const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
+
+        //     const name = rest.subItemName?.trim().toLowerCase() || "";
+        //     const unitKey = rest.unit?.trim().toLowerCase() || "";
+        //     const key = `${name}__${unitKey}`; // combine name + unit
+
+        //     if (key) {
+        //         if (subItemMap[key]) {
+        //             // Already exists with same name+unit → add quantity
+        //             subItemMap[key].quantity += rest.quantity || 0;
+        //         } else {
+        //             // Create fresh entry
+        //             subItemMap[key] = {
+        //                 ...rest,
+        //                 quantity: rest.quantity || 0,
+        //                 _id: new mongoose.Types.ObjectId() // always refresh ID
+        //             };
+        //         }
+        //     }
         // });
 
+        // // Convert map back to array
+        // Object.values(subItemMap).forEach((item: any) => ProcurementNewItems.push(item));
 
-        const ProcurementNewItems: any[] = [];
-        const subItemMap: Record<string, any> = {}; // key = subItemName
-
-        orderHistory?.publicUnits?.subItems?.forEach((subItem: any) => {
-            const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
-
-            const name = rest.subItemName?.trim().toLowerCase() || "";
-            const unitKey = rest.unit?.trim().toLowerCase() || "";
-            const key = `${name}__${unitKey}`; // combine name + unit
-
-            if (key) {
-                if (subItemMap[key]) {
-                    // Already exists with same name+unit → add quantity
-                    subItemMap[key].quantity += rest.quantity || 0;
-                } else {
-                    // Create fresh entry
-                    subItemMap[key] = {
-                        ...rest,
-                        quantity: rest.quantity || 0,
-                        _id: new mongoose.Types.ObjectId() // always refresh ID
-                    };
-                }
-            }
-        });
-
-        // Convert map back to array
-        Object.values(subItemMap).forEach((item: any) => ProcurementNewItems.push(item));
-
-        // console.log("procurement", ProcurementNewItems)
-        await ProcurementModelNew.create({
-            organizationId,
-            projectId: projectId,
-            shopDetails: orderHistory.publicUnits.shopDetails,
-            deliveryLocationDetails: orderHistory.deliveryLocationDetails,
-            selectedUnits: ProcurementNewItems,
-            refPdfId: refUniquePdf,
-            totalCost: 0,
+        // // console.log("procurement", ProcurementNewItems)
+        // await ProcurementModelNew.create({
+        //     organizationId,
+        //     projectId: projectId,
+        //     shopDetails: orderHistory.publicUnits.shopDetails,
+        //     deliveryLocationDetails: orderHistory.deliveryLocationDetails,
+        //     selectedUnits: ProcurementNewItems,
+        //     refPdfId: refUniquePdf,
+        //     totalCost: 0,
+        //     isSyncWithPaymentsSection: false,
+        //     isConfirmedRate: false,
 
 
 
-            fromDeptNumber: refUniquePdf,
-            fromDeptName: "Order Material",
-            fromDeptModel: "OrderMaterialHistoryModel",
-            fromDeptRefId: orderHistory._id as Types.ObjectId,
+        //     fromDeptNumber: refUniquePdf,
+        //     fromDeptName: "Order Material",
+        //     fromDeptModel: "OrderMaterialHistoryModel",
+        //     fromDeptRefId: orderHistory._id as Types.ObjectId,
 
 
-        })
+        // })
         // Clear subItems from each selectedUnit
 
         orderHistory.publicUnits.subItems = [];
@@ -1435,6 +1360,10 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
             phoneNumber: null
         };
         orderHistory.needsStaffReview = false;
+
+
+        orderItem.pdfLink = pdfData
+
 
 
         await orderHistory.save();
@@ -1906,7 +1835,7 @@ export const gerneateCommonOrdersPdf = async (id: string) => {
         const fileName = `order-material/order-${orderHistory.projectName}-${Date.now()}.pdf`;
         const uploadResult = await uploadToS3(pdfBytes, fileName);
 
-        const pdfData = {
+        const pdfData: any = {
             url: uploadResult.Location,
             refUniquePdf, // <-- now has projectName-uniquenumber-pdf
             pdfName: "Order Material",
@@ -1915,10 +1844,10 @@ export const gerneateCommonOrdersPdf = async (id: string) => {
         };
 
         if (Array.isArray(orderHistory.pdfLink)) {
-            orderHistory?.pdfLink?.push(pdfData as IPdfGenerator);
+            orderHistory?.pdfLink?.push(pdfData);
         } else {
             orderHistory.pdfLink = []
-            orderHistory?.pdfLink.push(pdfData as IPdfGenerator)
+            orderHistory?.pdfLink.push(pdfData)
         }
 
         console.log("orderHistory.pdfLink", orderHistory.pdfLink)
@@ -1963,6 +1892,8 @@ export const gerneateCommonOrdersPdf = async (id: string) => {
             refPdfId: refUniquePdf,
             totalCost: 0,
 
+            isSyncWithPaymentsSection: false,
+            isConfirmedRate: false,
 
 
             fromDeptNumber: refUniquePdf,

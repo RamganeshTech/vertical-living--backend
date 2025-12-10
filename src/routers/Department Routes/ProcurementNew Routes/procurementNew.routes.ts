@@ -2,7 +2,7 @@
 import express from "express";
 import { createShipment, deleteShipment, getAllShipments, getSingleLogisticsShipment, updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
-import { deleteprocurement, deleteProcurementPdf, generateProcurementPDFController, generateSecureProcurementLink, getProcurementItemsPublic, getProcurementNewDetails, getProcurementNewSingleItem, sendProcurementToPayment, syncLogisticsDept, updateProcurementDeliveryLocationDetails, updateProcurementItemRate, updateProcurementShopDetails, updateProcurementSingleItemRate, updateProcurementTotalCost } from "../../../controllers/Department controllers/ProcurementNew Controllers/procurementNew.controller";
+import { createProcurementOrder, deleteprocurement, deleteProcurementPdf, generateProcurementPDFController, generateSecureProcurementLink, getOrderMaterialRefPdfDetails, getProcurementItemsPublic, getProcurementNewDetails, getProcurementNewSingleItem, sendProcurementToPayment, syncLogisticsDept, updateProcurementDeliveryLocationDetails, updateProcurementItemRate, updateProcurementShopDetails, updateProcurementSingleItemRate, updateProcurementTotalCost } from "../../../controllers/Department controllers/ProcurementNew Controllers/procurementNew.controller";
 
 const procurementNewRoutes = express.Router();
 
@@ -27,6 +27,8 @@ procurementNewRoutes.put("/public/item/update", updateProcurementSingleItemRate)
 
 
 procurementNewRoutes.post('/synctopayments/:procurementId', multiRoleAuthMiddleware("owner", "staff", "CTO",), sendProcurementToPayment)
+procurementNewRoutes.post('/create', multiRoleAuthMiddleware("owner", "staff", "CTO",), createProcurementOrder)
+procurementNewRoutes.get('/getordermaterial/fromdeptnumbers/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), getOrderMaterialRefPdfDetails)
 // procurementNewRoutes.post('/synclogistics/:id', multiRoleAuthMiddleware("owner", "staff", "CTO",), syncLogisticsDept)
 // procurementNewRoutes.post(
 //   "/syncaccounting/:organizationId/:projectId",

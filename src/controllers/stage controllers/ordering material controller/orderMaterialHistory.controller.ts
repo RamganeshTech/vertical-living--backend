@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import mongoose from "mongoose"
+import mongoose, { Types } from "mongoose"
 import redisClient from "../../../config/redisClient";
 // import { SelectedModularUnitModel } from "../../../models/Modular Units Models/All Unit Model/SelectedModularUnit Model/selectedUnit.model";
-import { IOrderHistorytimer, OrderedMaterialSingle, OrderMaterialHistoryModel, OrderSubItems } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
+import { OrderedMaterialSingle, OrderMaterialHistoryModel, OrderSubItems } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import { handleSetStageDeadline, timerFunctionlity } from "../../../utils/common features/timerFuncitonality";
 import { syncMaterialArrivalNew } from "../MaterialArrival controllers/materialArrivalCheckNew.controller";
@@ -19,6 +19,8 @@ import { updateInventoryRemainingQuantity } from "../Inventory controllers/inven
 import { InventoryModel } from "../../../models/Stage Models/Inventory Model/inventroy.model";
 import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
 import { IFileItem } from "../../../models/Stage Models/sampleDesing model/sampleDesign.model";
+import ProcurementModelNew from "../../../models/Department Models/ProcurementNew Model/procurementNew.model";
+import { syncAccountingRecord } from "../../Department controllers/Accounting Controller/accounting.controller";
 
 // export const syncOrderingMaterialsHistory = async (projectId: string) => {
 
@@ -1050,7 +1052,7 @@ export const uploadOrderMaterialImages = async (req: Request, res: Response): Pr
         });
 
 
-        
+
         const orderingDoc = await OrderMaterialHistoryModel.findOneAndUpdate({ projectId }, {
             $push: { images: { $each: mappedFiles } }
         }, { new: true });
@@ -1259,11 +1261,10 @@ export const orderMaterialHistoryCompletionStatus = async (req: Request, res: Re
 
 
 
-
 // Controller function
-export const generateOrderHistoryPDFController = async (req: Request, res: Response): Promise<any> => {
+export const submitOrderMaterial = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { projectId, organizationId } = req.params;
+        const { projectId } = req.params;
 
         if (!projectId) {
             return res.status(400).json({
@@ -1272,9 +1273,322 @@ export const generateOrderHistoryPDFController = async (req: Request, res: Respo
             });
         }
 
-        const result = await generateOrderHistoryPDF(projectId, organizationId);
 
-        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: result.data })
+        const orderDoc = await OrderMaterialHistoryModel.findOne(
+            { projectId }
+        );
+
+        if (!orderDoc) {
+            return res.status(404).json({ message: "PDF not found", ok: false });
+        }
+
+
+        const filteredUnits = orderDoc.selectedUnits.filter(unit =>
+            Array.isArray(unit?.subItems) && unit?.subItems?.length > 0
+        );
+
+        if (filteredUnits?.length === 0) {
+            return res.status(400).json({
+                ok: false,
+                message: "No valid units found. Each selected unit must have at least one sub-item."
+            });
+        }
+
+
+        let nextNumber = 1;
+        const isNewPdf = Array.isArray(orderDoc.orderedItems) && orderDoc.orderedItems.length > 0;
+
+        if (isNewPdf) {
+            // Extract all numbers from refUniquePdf (format: projectName-<number>-pdf)
+            const numbers = orderDoc.orderedItems.map(ele => {
+                const match = ele.orderMaterialNumber?.match(/-(\d+)$/);
+                return match ? parseInt(match[1], 10) : 0; // Extract the number part
+            });
+
+            // Find the max number and increment
+            nextNumber = Math.max(...numbers, 0) + 1;
+        }
+
+
+        const currentYear = new Date().getFullYear()
+
+
+        // Always 3-digit format
+        const paddedNumber = String(nextNumber).padStart(3, "0");
+        const rawProjectId = (orderDoc.projectId as any)._id.toString().slice(-3);
+
+        const orderNumber = `ORD-${rawProjectId}-${currentYear}-${paddedNumber}`;
+
+        // const selectedUnits = orderDoc.selectedUnits;
+        // const shopDetails = orderDoc.shopDetails;
+        // const deliveryLocationDetails = orderDoc.deliveryLocationDetails;
+        // const images = orderDoc.images;
+
+
+
+
+        const newOrderEntry = {
+            selectedUnits: filteredUnits,   // <-- ONLY FILTERED UNITS ARE ADDED
+            shopDetails: orderDoc.shopDetails,
+            deliveryLocationDetails: orderDoc.deliveryLocationDetails,
+            images: orderDoc.images,
+            pdfLink: null,
+            orderMaterialNumber: orderNumber,
+            createdAt: new Date(),
+            isSyncWithProcurement: false,
+            isPublicOrder: false
+        };
+
+
+        if (orderDoc?.orderedItems && Array.from(orderDoc.orderedItems) && orderDoc.orderedItems.length > 0) {
+            orderDoc.orderedItems.push(newOrderEntry)
+        } else {
+            orderDoc.orderedItems = [newOrderEntry]
+        }
+
+
+        orderDoc.selectedUnits.forEach(unit => {
+            unit.subItems = [];
+        });
+        orderDoc.images = [];
+
+        await orderDoc.save()
+
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+
+
+        return res.status(200).json({ data: orderDoc, message: "updated in the orderedItems", ok: true });
+
+    } catch (error: any) {
+        console.error('PDF generation controller error:', error);
+        return res.status(500).json({
+            ok: false,
+            message: error.message || 'Internal server error'
+        });
+    }
+};
+
+
+
+
+export const getSingleOrderedItem = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, orderItemId } = req.params;
+
+        // const redisMainKey = `stage:OrderMaterialHistoryModel:${projectId}`
+        // const cachedData = await redisClient.get(redisMainKey)
+
+        // if (cachedData) {
+
+        //     cachedData.orderedItems
+        //     return res.status(200).json({ message: "data fetched from the cache for single order item", data: JSON.parse(cachedData), ok: true })
+        // }
+
+        const doc = await OrderMaterialHistoryModel.findOne({ projectId });
+        if (!doc) return res.status(404).json({ ok: false, message: "Data not found" });
+
+
+        const orderItem = doc.orderedItems.find((order:any)=> order._id.toString() === orderItemId.toString())
+
+        // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
+        // await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: doc })
+
+
+        return res.status(200).json({ ok: true, data: orderItem , message:"fetched single order item"});
+
+
+    } catch (error: any) {
+        console.error('PDF generation controller error:', error);
+        return res.status(500).json({
+            ok: false,
+            message: error.message || 'Internal server error'
+        });
+    }
+
+}
+
+
+
+
+
+export const placeOrderToProcurement = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, orderItemId, organizationId } = req.params;
+
+        if (!projectId) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Project ID is required'
+            });
+        }
+
+        if (!orderItemId) {
+            return res.status(400).json({
+                ok: false,
+                message: 'OrderItemId is required'
+            });
+        }
+
+        if (!organizationId) {
+            return res.status(400).json({
+                ok: false,
+                message: 'organizationId is required'
+            });
+        }
+
+
+        // const result = await generateOrderHistoryPDF(projectId, organizationId);
+
+        const orderDoc = await OrderMaterialHistoryModel.findOne(
+            { projectId }
+        );
+
+        if (!orderDoc) {
+            return res.status(404).json({ message: "Order Material not found", ok: false });
+        }
+
+        let orderItem = orderDoc.orderedItems.find((order: any) => order._id.toString() === orderItemId.toString())
+
+        if(!orderItem){
+            return res.status(404).json({ message: "Order Item not available", ok: false });
+        }
+
+
+        if (orderItem?.isSyncWithProcurement) {
+            return res.status(404).json({ message: "Order Item is already sent to procurement", ok: false });
+        }
+
+
+        
+
+        const ProcurementNewItems: any[] = [];
+        const subItemMap: Record<string, any> = {}; // key = subItemName
+
+        orderItem.selectedUnits.forEach(unit => {
+            unit.subItems.forEach((subItem: any) => {
+                const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
+
+                const name = rest.subItemName?.trim().toLowerCase() || "";
+                const unitKey = rest.unit?.trim().toLowerCase() || "";
+                const key = `${name}__${unitKey}`; // combine name + unit
+
+                if (key) {
+                    if (subItemMap[key]) {
+                        // Already exists with same name+unit → add quantity
+                        subItemMap[key].quantity += rest.quantity || 0;
+                    } else {
+                        // Create fresh entry
+                        subItemMap[key] = {
+                            ...rest,
+                            quantity: rest.quantity || 0,
+                            _id: new mongoose.Types.ObjectId() // always refresh ID
+                        };
+                    }
+                }
+            });
+        });
+
+        // Convert map back to array
+        Object.values(subItemMap).forEach((item: any) => ProcurementNewItems.push(item));
+
+        // console.log("procurement", ProcurementNewItems)
+        await ProcurementModelNew.create({
+            organizationId,
+            projectId: projectId,
+            shopDetails: orderItem.shopDetails,
+            deliveryLocationDetails: orderItem.deliveryLocationDetails,
+            selectedUnits: ProcurementNewItems,
+            refPdfId: orderItemId,
+            isSyncWithPaymentsSection: false,
+            isConfirmedRate: false,
+
+            fromDeptNumber: orderItem?.orderMaterialNumber,
+            fromDeptName: "Order Material",
+            fromDeptModel: "OrderMaterialHistoryModel",
+            fromDeptRefId: orderDoc._id as Types.ObjectId,
+            totalCost: 0
+        });
+
+        await syncAccountingRecord({
+            organizationId: organizationId! || null,
+            projectId: orderDoc?.projectId || null,
+
+            // Reference Links
+            referenceId: null,
+            referenceModel: null, // Must match Schema
+            deptRecordFrom: null,
+
+            deptGeneratedDate: null,
+            deptNumber: null,
+            deptDueDate: null,
+
+            // Categorization
+
+            orderMaterialDeptNumber: orderItem?.orderMaterialNumber,
+            orderMaterialRefId: (orderDoc as any)._id,
+
+            // Person Details
+            assoicatedPersonName: "",
+            assoicatedPersonId: null,
+            assoicatedPersonModel: null, // Assuming this is your Vendor Model
+
+            // Financials
+            amount: 0, // Utility takes care of grandTotal logic if passed
+            notes: "",
+
+            // Defaults for Creation
+            status: "pending",
+            paymentId: null
+        });
+
+        // Clear subItems from each selectedUnit
+
+        if (orderItem) {
+            orderItem.isSyncWithProcurement = true;
+        }
+
+        await orderDoc.save()
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+
+
+        return res.status(200).json({ data: orderDoc, message: "updated in the orderedItems", ok: true });
+
+
+    } catch (error: any) {
+        console.error('PDF generation controller error:', error);
+        return res.status(500).json({
+            ok: false,
+            message: error.message || 'Internal server error'
+        });
+    }
+}
+
+
+
+// Controller function
+export const generateOrderHistoryPDFController = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, organizationId, orderItemId } = req.params;
+
+        if (!projectId) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Project ID is required'
+            });
+        }
+
+        if (!orderItemId) {
+            return res.status(400).json({
+                ok: false,
+                message: 'OrderItemId is required'
+            });
+        }
+
+        const result = await generateOrderHistoryPDF(projectId, organizationId, orderItemId);
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: result?.data?.orderHistory })
 
 
         res.status(200).json(result);

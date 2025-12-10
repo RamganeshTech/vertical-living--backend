@@ -1,5 +1,5 @@
 import express from 'express';
-import { generatePublicOrderMaterialPDFController, getProjectforPublicUsage, publicaddSubItemToUnit, publicdeleteSubItemFromUnit, publicgetSubItem, publicupdateSubItemInUnit, updatePublicShopDetails } from '../../../controllers/stage controllers/ordering material controller/publicOrderMaterial.controller';
+import { generatePublicOrderMaterialPDFController, getProjectforPublicUsage, publicaddSubItemToUnit, publicdeleteSubItemFromUnit, publicgetSubItem, publicupdateSubItemInUnit, submitPublicOrders, updatePublicShopDetails } from '../../../controllers/stage controllers/ordering material controller/publicOrderMaterial.controller';
 
 const publicOrderMaterialRoutes = express.Router()
 
@@ -12,8 +12,10 @@ publicOrderMaterialRoutes.delete("/:projectId/deletesubitem/:subItemId",  public
 publicOrderMaterialRoutes.put("/:projectId/updatesubitem/:subItemId",  publicupdateSubItemInUnit);
 publicOrderMaterialRoutes.get("/:projectId/getpublicsubitems",  publicgetSubItem);
 
+//  new one
+publicOrderMaterialRoutes.put("/:projectId/submitpublicorder", submitPublicOrders);
 
-publicOrderMaterialRoutes.patch('/generatelink/:projectId/:organizationId',   generatePublicOrderMaterialPDFController)
+publicOrderMaterialRoutes.patch('/generatelink/:projectId/:organizationId/:orderItemId',   generatePublicOrderMaterialPDFController)
 publicOrderMaterialRoutes.get('/getprojects/:organizationId',   getProjectforPublicUsage)
 publicOrderMaterialRoutes.put('/:projectId/shop', updatePublicShopDetails)
 

@@ -12,7 +12,7 @@ export interface IProcurementNew {
   shopDetails: ProcurementOrderDetaisl,
   deliveryLocationDetails: OrderMaterialSiteDetail,
 
-  shopQuoteNumber: string,
+  quoteNumber: number,
   fromDeptNumber: string;
   fromDeptRefId: Types.ObjectId;
   fromDeptModel: string;
@@ -53,7 +53,7 @@ const procurementPurchaseOrderSchema = new Schema<IProcurementNew>({
   organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
   projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", default: null },
 
-  shopQuoteNumber: { type: String, default: null },  //store the shop quote number if provided.
+  quoteNumber: { type: Number, default: null },  //store the shop quote number if provided.
   fromDeptNumber: { type: String, default: null },  //order mateiral history models pdfs unique number
   fromDeptRefId: { type: Schema.Types.ObjectId, refPath:"fromDeptModel", default: null },  //order mateiral history models pdfs unique number
   fromDeptName: { type: String, default: "Order Material" },
@@ -70,7 +70,7 @@ const procurementPurchaseOrderSchema = new Schema<IProcurementNew>({
   generatedLink: { type: String, default: null },
   isSyncWithPaymentsSection: {
             type: Boolean,
-            default: false
+            // default: false
         }
 }, {
   timestamps: true
