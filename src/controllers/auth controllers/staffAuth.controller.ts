@@ -26,13 +26,12 @@ const registerStaff = async (req: Request, res: Response) => {
 
         try {
             const decoded = Buffer.from(invite, "base64").toString("utf-8");
-            ({ organizationId, role, expiresAt, ownerId, specificRole = [] } = JSON.parse(decoded));
+            ({ organizationId, role, expiresAt, ownerId } = JSON.parse(decoded));
         } catch (error) {
             return res.status(400).json({ message: "Invalid invitation link", ok: false });
         }
 
 
-        console.log("specificRole", specificRole)
 
         // 3. Validate expiry
         if (!expiresAt || new Date(expiresAt) < new Date()) {
@@ -45,11 +44,24 @@ const registerStaff = async (req: Request, res: Response) => {
         }
 
         // 5. Check for duplicate staff
-        const staffExists = await StaffModel.findOne({ email: email });
+        // const staffExists = await StaffModel.findOne({ email: email });
+        const staffExists = await StaffModel.findOne({
+            $or: [{ email: email }, { phoneNo: phoneNo }]
+        });
 
         if (staffExists) {
-            return res.status(409).json({ message: "Staff with this email already exists", ok: false });
+            // Logic to give a specific error message
+            if (staffExists.email === email) {
+                return res.status(400).json({ message: "A staff member with this Email already exists." });
+            }
+            if (staffExists.phoneNo === phoneNo) {
+                return res.status(400).json({ message: "A staff member with this Phone Number already exists." });
+            }
         }
+
+        // if (staffExists) {
+        //     return res.status(409).json({ message: "Staff with this email already exists", ok: false });
+        // }
 
         // 6. Hash password
         const salt = await bcrypt.genSalt(10);
@@ -61,14 +73,14 @@ const registerStaff = async (req: Request, res: Response) => {
             password: hashedPassword, // Make sure to hash this in middleware
             phoneNo,
             staffName,
-            specificRole: specificRole || null,
+            permission: {},
             role,
             organizationId: [organizationId],
             ownerId
         });
 
-        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role, specificRole:staff.specificRole }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role, specificRole:staff.specificRole }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role, permission: staff.permission }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role, permission: staff.permission }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("staffaccesstoken", token, {
             httpOnly: true,
@@ -90,7 +102,19 @@ const registerStaff = async (req: Request, res: Response) => {
 
         await redisClient.del(`getusers:${role}:${organizationId}`)
 
-        res.status(201).json({ message: "Staff registered successfully", data: staff, ok: true });
+        res.status(201).json({
+            message: "Staff registered successfully", data: {
+
+                staffId: staff._id,
+                staffName: staff.staffName,
+                email: staff.email,
+                phoneNo: staff.phoneNo,
+                organizationId: staff.organizationId,
+                role: staff.role,
+                permission: staff?.permission || {}
+
+            }, ok: true
+        });
 
 
 
@@ -103,7 +127,7 @@ const registerStaff = async (req: Request, res: Response) => {
             phoneNo: staff.phoneNo,
             role: "staff",
             email: staff.email,
-            empSpecificRole: specificRole,
+
         })
             .catch(err => console.log("syncEmployee error in Hr Dept from Staff model", err))
 
@@ -116,6 +140,9 @@ const registerStaff = async (req: Request, res: Response) => {
         }
     }
 };
+
+
+
 
 
 
@@ -179,6 +206,8 @@ const loginStaff = async (req: Request, res: Response) => {
                 phoneNo: staff.phoneNo,
                 organizationId: staff.organizationId,
                 role: staff.role,
+                permission: staff?.permission || {}
+
             },
             ok: true
         });
@@ -305,6 +334,7 @@ const staffIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             phoneNo: isExist.phoneNo,
             staffName: isExist.staffName,
             isauthenticated: true,
+            permission: isExist?.permission || {}
         }
 
         await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })

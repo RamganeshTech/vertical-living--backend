@@ -50,7 +50,7 @@ const registerCTO = async (req: Request, res: Response) => {
 
         if (CTOExists) {
             return res.status(409).json({
-                message: "CTO with this email, name, or phone number already exists",
+                message: "CTO with this email, or phone number already exists",
                 ok: false
             });
         }
@@ -88,22 +88,34 @@ const registerCTO = async (req: Request, res: Response) => {
             maxAge: 1000 * 60 * 60 * 24 * 7
         }
         )
+        await redisClient.del(`getusers:${role}:${organizationId}`)
 
-        res.status(201).json({ message: "CTO registered successfully", data: CTO, ok: true });
 
-          syncEmployee({
-                        organizationId,
-                        empId: CTO._id,
-                        employeeModel: "CTOModel",
-                        empRole: "organization_staff", 
-                        name: CTO.CTOName,
-                        phoneNo: CTO.phoneNo,
-                        email: CTO.email,
-                        empSpecificRole: [],
-                        role:"CTO"
-                    })
-                        .catch((err) => console.log("syncEmployee error in Hr Dept from CTO model", err))
-                
+        res.status(201).json({
+            message: "CTO registered successfully", data: {
+                CTOId: CTO._id,
+                CTOName: CTO.CTOName,
+                email: CTO.email,
+                phoneNo: CTO.phoneNo,
+                organizationId: CTO.organizationId,
+                role: CTO.role,
+                permission: CTO?.permission || {}
+
+            }, ok: true
+        });
+
+        syncEmployee({
+            organizationId,
+            empId: CTO._id,
+            employeeModel: "CTOModel",
+            empRole: "organization_staff",
+            name: CTO.CTOName,
+            phoneNo: CTO.phoneNo,
+            email: CTO.email,
+            role: "CTO",
+        })
+            .catch((err) => console.log("syncEmployee error in Hr Dept from CTO model", err))
+
     } catch (error) {
         if (error instanceof Error) {
             console.error("CTO registration failed:", error);
@@ -112,6 +124,10 @@ const registerCTO = async (req: Request, res: Response) => {
         }
     }
 };
+
+
+
+
 
 
 
@@ -126,7 +142,7 @@ const loginCTO = async (req: Request, res: Response) => {
         }
 
         // Find CTO by email
-        const CTO = await CTOModel.findOne({ email});
+        const CTO = await CTOModel.findOne({ email });
         if (!CTO) {
             res.status(404).json({ message: "Invalid email or password", ok: false });
             return
@@ -170,6 +186,8 @@ const loginCTO = async (req: Request, res: Response) => {
                 phoneNo: CTO.phoneNo,
                 organizationId: CTO.organizationId,
                 role: CTO.role,
+                permission: CTO?.permission || {}
+
             },
             ok: true
         });
@@ -295,8 +313,10 @@ const CTOIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             phoneNo: isExist.phoneNo,
             CTOName: isExist.CTOName,
             isauthenticated: true,
+            permission: isExist?.permission || {}
+
         }
-        
+
         await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })
 
 
@@ -317,9 +337,9 @@ const CTOIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
 
 const CTOforgotPassword = async (req: Request, res: Response): Promise<any> => {
     try {
-    const { email } = req.body;
+        const { email } = req.body;
 
-    // Check if the email exists in the database
+        // Check if the email exists in the database
         const cto = await CTOModel.findOne({ email });
 
         if (!cto) {
@@ -353,7 +373,7 @@ const CTOforgotPassword = async (req: Request, res: Response): Promise<any> => {
 
         return res.status(200).json({
             message: 'Password reset email sent. Please check your registered email inbox.',
-            ok:true
+            ok: true
         });
     } catch (error) {
         console.error('Error handling forgot password request: ', error);
@@ -363,11 +383,11 @@ const CTOforgotPassword = async (req: Request, res: Response): Promise<any> => {
 
 const CTOResetForgotPassword = async (req: Request, res: Response): Promise<any> => {
     try {
-    const { token, password } = req.body;
+        const { token, password } = req.body;
 
-    if (!token || !password) {
-        return res.status(400).json({ message: "Invalid request. Token and password are required.", error: true, ok: false });
-    }
+        if (!token || !password) {
+            return res.status(400).json({ message: "Invalid request. Token and password are required.", error: true, ok: false });
+        }
 
 
         // Hash the received token to match the stored one

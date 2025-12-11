@@ -1,4 +1,5 @@
 import mongoose, { Schema, Types } from "mongoose"
+import { DepartmentPermission } from "../staff model/staff.model";
 
 interface ICTO extends Document {
     email: string,
@@ -6,6 +7,9 @@ interface ICTO extends Document {
     CTOName: string,
     phoneNo: string,
     role: string;
+    permission: {
+        [department: string]: DepartmentPermission;
+    };
     organizationId?: [Types.ObjectId];
     projectId?: [Types.ObjectId];
     ownerId: Types.ObjectId | null
@@ -38,13 +42,17 @@ const CTOSchema: Schema<ICTO> = new Schema({
         enum: ["CTO", null],
         default: null
     },
-    
+    permission: {
+        type: Object,
+        default: {}
+    },
+
     organizationId: {
         type: [Schema.Types.ObjectId],
         ref: "OrganizationModel",
         default: []
     },
-     projectId: {
+    projectId: {
         type: [Schema.Types.ObjectId],
         ref: "ProjectModel",
         default: []

@@ -27,7 +27,7 @@ const userlogin = async (req: Request, res: Response) => {
         if (!user) {
             return res.status(404).json({ message: "invalid credentials", error: true, ok: false })
         }
-// console.log("matching", user)
+        // console.log("matching", user)
 
         const isMatching = await bcrypt.compare(password, user?.password)
 
@@ -35,7 +35,7 @@ const userlogin = async (req: Request, res: Response) => {
             return res.status(404).json({ message: "invalid credentials", error: true, ok: false })
         }
 
-// console.log("matching", isMatching)
+        // console.log("matching", isMatching)
         let token = jwt.sign({ _id: user._id, username: user.username, organization: user.organizationId, role: user.role }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
         let refreshToken = jwt.sign({ _id: user._id, username: user.username, organization: user.organizationId, role: user.role }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
@@ -58,7 +58,12 @@ const userlogin = async (req: Request, res: Response) => {
 
         res.status(200).json({
             message: `${user.username} loggeg in successfully`,
-            data: { userId: user._id, role: "owner", userName: user.username, email: user.email, phoneNo: user.phoneNo },
+            data: {
+                userId: user._id, role: "owner", userName: user.username, email: user.email, phoneNo: user.phoneNo,
+
+                permission: user?.permission || {}
+
+            },
             ok: true,
             error: false
         })
@@ -156,10 +161,11 @@ const registerUser = async (req: Request, res: Response) => {
 
 
         res.status(200).json({
-            message: `${user.username} account created successfull`, 
-            ok: true, 
+            message: `${user.username} account created successfull`,
+            ok: true,
             error: false,
-            data: { userId: user._id, role: "owner", userName: user.username, email: user.email, phoneNo: user.phoneNo },
+               
+            data: { userId: user._id, role: "owner", userName: user.username, email: user.email, phoneNo: user.phoneNo ,  permission: user?.permission || {} },
         })
 
     }
@@ -240,9 +246,10 @@ const isAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             phoneNo: isExist.phoneNo,
             userName: isExist.username,
             isauthenticated: true,
+            permission: isExist?.permission || {}
         }
 
-        await redisClient.set(redisUserKey, JSON.stringify(data), {EX: 60 * 10})
+        await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })
 
         res.status(200).json({
             message: "user is authenticated", ok: true,
@@ -259,9 +266,9 @@ const isAuthenticated = async (req: RoleBasedRequest, res: Response) => {
 
 const forgotPassword = async (req: Request, res: Response): Promise<any> => {
     try {
-    const { email } = req.body;
+        const { email } = req.body;
 
-    // Check if the email exists in the database
+        // Check if the email exists in the database
         const user = await UserModel.findOne({ email });
 
         if (!user) {
@@ -295,7 +302,7 @@ const forgotPassword = async (req: Request, res: Response): Promise<any> => {
 
         return res.status(200).json({
             message: 'Password reset email sent. Please check your registered email inbox.',
-            ok:true
+            ok: true
         });
     } catch (error) {
         console.error('Error handling forgot password request: ', error);

@@ -10,9 +10,9 @@ import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail"
 import { syncEmployee } from "../Department controllers/HRMain controller/HrMain.controllers";
 
 // Helper: Token generator
-const generateWorkerTokens = (workerId: string, role: string, workerName: string, projectId: string[], specificRole:string[]) => {
-  const workeraccesstoken = jwt.sign({ _id: workerId, role, workerName, projectId, specificRole }, process.env.JWT_WORKER_ACCESS_SECRET!, { expiresIn: "1d" });
-  const workerrefreshtoken = jwt.sign({ _id: workerId, role, workerName, projectId, specificRole }, process.env.JWT_WORKER_REFRESH_SECRET!, { expiresIn: "7d" });
+const generateWorkerTokens = (workerId: string, role: string, workerName: string, projectId: string[]) => {
+  const workeraccesstoken = jwt.sign({ _id: workerId, role, workerName, projectId }, process.env.JWT_WORKER_ACCESS_SECRET!, { expiresIn: "1d" });
+  const workerrefreshtoken = jwt.sign({ _id: workerId, role, workerName, projectId }, process.env.JWT_WORKER_REFRESH_SECRET!, { expiresIn: "7d" });
   return { workeraccesstoken, workerrefreshtoken };
 };
 
@@ -87,7 +87,7 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
     const projectIdStrings = newWorker.projectId.map(id => id.toString());
 
 
-    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((newWorker as any)._id.toString(), newWorker.role, newWorker.workerName, projectIdStrings, newWorker.specificRole);
+    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((newWorker as any)._id.toString(), newWorker.role, newWorker.workerName, projectIdStrings);
 
     res.cookie("workeraccesstoken", workeraccesstoken, {
       httpOnly: true,
@@ -109,9 +109,21 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
       message: "Worker registered successfully",
       workeraccesstoken,
       workerrefreshtoken,
-      data: newWorker,
+      data: {
+        workerId: newWorker._id,
+        role: newWorker.role,
+        email: newWorker.email,
+        phoneNo: newWorker.phoneNo,
+        workerName: newWorker.workerName,
+        isauthenticated: true,
+        permission: newWorker?.permission || {}
+      },
       ok: true
     });
+
+
+    await redisClient.del(`getusers:${role}:${organizationId}`)
+
 
     syncEmployee({
       organizationId,
@@ -121,7 +133,6 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
       name: newWorker.workerName,
       phoneNo: newWorker.phoneNo!,
       email: newWorker.email,
-      empSpecificRole: specificRole,
       role: "worker"
     })
       .catch((err) => console.log("syncEmployee error in Hr Dept from Worker model", err))
@@ -132,6 +143,10 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ message: "Server error", error: (error as Error).message, ok: false });
   }
 };
+
+
+
+
 
 
 const loginWorker = async (req: Request, res: Response): Promise<void> => {
@@ -164,7 +179,7 @@ const loginWorker = async (req: Request, res: Response): Promise<void> => {
     const projectIdStrings = worker.projectId.map(id => id.toString());
 
 
-    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((worker as any)._id.toString(), worker.role, worker.workerName, projectIdStrings, worker.specificRole);
+    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((worker as any)._id.toString(), worker.role, worker.workerName, projectIdStrings);
 
     res.cookie("workeraccesstoken", workeraccesstoken, {
       httpOnly: true,
@@ -186,7 +201,16 @@ const loginWorker = async (req: Request, res: Response): Promise<void> => {
       message: "Login successful",
       workeraccesstoken,
       workerrefreshtoken,
-      data: worker,
+      data: {
+        workerId: worker._id,
+        role: worker.role,
+        email: worker.email,
+        phoneNo: worker.phoneNo,
+        workerName: worker.workerName,
+        isauthenticated: true,
+        permission: worker?.permission || {}
+
+      },
       ok: true
     });
 
@@ -312,6 +336,8 @@ const workerIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
       phoneNo: isExist.phoneNo,
       workerName: isExist.workerName,
       isauthenticated: true,
+      permission: isExist?.permission || {}
+
     }
 
     await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })

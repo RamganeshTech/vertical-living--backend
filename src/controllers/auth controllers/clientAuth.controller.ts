@@ -62,7 +62,9 @@ const clientLogin = async (req: Request, res: Response) => {
                 clientName: client.clientName,
                 email: client.email,
                 phoneNo: client.phoneNo,
-                role: "client"
+                role: "client",
+                permission: client?.permission || {}
+
             },
             ok: true, error: false
         })
@@ -256,7 +258,7 @@ const registerClient = async (req: Request, res: Response) => {
             role,
             organizationId: [organizationId],
             ownerId,
-            projectId
+            projectId,
         })
 
         let token = jwt.sign({ _id: client._id, clientName: client.clientName, role: client.role, ownerId: client.ownerId }, process.env.JWT_CLIENT_ACCESS_SECRET as string, { expiresIn: "1d" })
@@ -287,7 +289,9 @@ const registerClient = async (req: Request, res: Response) => {
                 clientName: client.clientName,
                 email: client.email,
                 phoneNo: client.phoneNo,
-                role: "client"
+                role: "client",
+                permission: client?.permission || {}
+
             }
         })
 
@@ -299,6 +303,11 @@ const registerClient = async (req: Request, res: Response) => {
         }
     }
 }
+
+
+
+
+
 
 const clientRefreshToken = async (req: Request, res: Response) => {
     try {
@@ -370,6 +379,8 @@ const isClientAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             phoneNo: isExist.phoneNo,
             clientName: isExist.clientName,
             isauthenticated: true,
+            permission: isExist?.permission || {}
+
         }
 
         await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })
@@ -387,7 +398,7 @@ const isClientAuthenticated = async (req: RoleBasedRequest, res: Response) => {
 }
 
 const clientForgotPassword = async (req: Request, res: Response): Promise<any> => {
-    
+
     // Check if the email exists in the database
     try {
         const { email } = req.body;
@@ -424,7 +435,7 @@ const clientForgotPassword = async (req: Request, res: Response): Promise<any> =
 
         return res.status(200).json({
             message: 'Password reset email sent. Please check your registered email inbox.',
-            ok:true
+            ok: true
         });
     } catch (error) {
         console.error('Error handling forgot password request: ', error);
@@ -434,11 +445,11 @@ const clientForgotPassword = async (req: Request, res: Response): Promise<any> =
 
 const clientResetForgotPassword = async (req: Request, res: Response): Promise<any> => {
     try {
-    const { token, password } = req.body;
+        const { token, password } = req.body;
 
-    if (!token || !password) {
-        return res.status(400).json({ message: "Invalid request. Token and password are required.", error: true, ok: false });
-    }
+        if (!token || !password) {
+            return res.status(400).json({ message: "Invalid request. Token and password are required.", error: true, ok: false });
+        }
 
 
         // Hash the received token to match the stored one

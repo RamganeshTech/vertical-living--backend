@@ -53,7 +53,6 @@ export interface IEmployee {
   employeeModel?: "UserModel" | "StaffModel" | "CTOModel" | "WorkerModel";
   empRole: "organization_staff" | "nonorganization_staff",
   role: string
-  empSpecificRole: string[]
   personalInfo?: IPersonalInfo;
   employment?: IEmployment;
   documents?: IDocument[];
@@ -140,7 +139,6 @@ const EmployeeSchema = new Schema<IEmployee>({
   },
   empRole: { type: String, default: null },
   role: { type: String, default: null },
-  empSpecificRole: { type: [String], default: null },
   personalInfo: { type: PersonalInfoSchema, default: {} },
   employment: { type: EmploymentSchema, default: {} },
   documents: { type: [DocumentSchema], default: [] },

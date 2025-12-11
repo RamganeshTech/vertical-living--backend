@@ -1,5 +1,6 @@
 // models/Worker.ts
 import mongoose, { Schema, Document, Types } from "mongoose";
+import { DepartmentPermission } from "../staff model/staff.model";
 
 export interface IWorker extends Document {
     workerName: string;
@@ -7,7 +8,10 @@ export interface IWorker extends Document {
     phoneNo?: string;
     password: string;
     role: string;
-    specificRole: string[];
+    // specificRole: string[];
+    permission: {
+        [department: string]: DepartmentPermission;
+    };
     projectId: Types.ObjectId[];
     organizationId: Types.ObjectId[];
     invitedBy: Types.ObjectId;
@@ -19,12 +23,16 @@ export interface IWorker extends Document {
 
 const workerSchema = new Schema<IWorker>({
     workerName: { type: String },
-    email: { type: String, required: true},
+    email: { type: String, required: true },
     phoneNo: { type: String },
     password: { type: String, required: true },
     role: { type: String, required: true },
-    specificRole: { type: [String],  default:[]},
-    projectId: { type: [Schema.Types.ObjectId], ref: "ProjectModel", required: true, default: [] },
+    // specificRole: { type: [String],  default:[]},
+    permission: {
+        type: Object,
+        default: {}
+    },
+    projectId: { type: [Schema.Types.ObjectId], ref: "ProjectModel", default: [] },
     organizationId: { type: [Schema.Types.ObjectId], ref: "OrganizationModel", required: true, default: [] },
     invitedBy: {
         type: Schema.Types.ObjectId,

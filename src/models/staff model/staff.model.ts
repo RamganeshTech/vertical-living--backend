@@ -1,12 +1,25 @@
 import mongoose, { Schema, Types } from "mongoose"
 
+
+
+export interface DepartmentPermission {
+    create?: boolean;
+    edit?: boolean;
+    delete?: boolean;
+    list?: boolean;
+}
+
+
 export interface IStaff extends Document {
     email: string,
     password: string,
     staffName: string,
     phoneNo: string,
     role: string;
-    specificRole: string[];
+    // perMission: string[];
+    permission: {
+        [department: string]: DepartmentPermission;
+    };
     organizationId?: [Types.ObjectId];
     ownerId: Types.ObjectId | null
     resetPasswordToken?: string;
@@ -23,7 +36,7 @@ const StaffSchema: Schema<IStaff> = new Schema({
     password: {
         type: String,
         require: true,
-        maxlength: [100, "password should be under 100 characters"]
+        // maxlength: [100, "password should be under 100 characters"]
     },
     staffName: {
         type: String,
@@ -38,10 +51,11 @@ const StaffSchema: Schema<IStaff> = new Schema({
         enum: ["staff", null],
         default: null
     },
-     specificRole: {
-        type: [String],
-        default: []
-    },
+   permission:{
+    type:Object,
+    default:{}
+   },
+    
     organizationId: {
         type: [Schema.Types.ObjectId],
         ref: "OrganizationModel",

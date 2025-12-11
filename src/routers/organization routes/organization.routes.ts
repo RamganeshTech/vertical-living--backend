@@ -1,5 +1,5 @@
 import express, { RequestHandler } from 'express';
-import { createOrganziation, deleteOrganization, getClientByProject, getCTOByOrganization, getMyOrganizations, getOrganizationById, getStaffsByOrganization, getWorkersByProject, inviteClient, inviteCTO, inviteStaff, inviteWorkerByStaff, removeCTOFromOrganization, removeStaffFromOrganization, removeWorkerFromProject, toggleSpecificRole, updateOrganizationDetails } from '../../controllers/organization controllers/organiziation.controllers';
+import { createOrganziation, deleteOrganization, deleteUserById, getAllUsersByOrganization, getClientByProject, getCTOByOrganization, getMyOrganizations, getOrganizationById, getSingleUserById, getStaffsByOrganization, getWorkersByProject, inviteClient, inviteCTO, inviteStaff, inviteWorkerByStaff, registerUserWithoutLink, removeCTOFromOrganization, removeStaffFromOrganization, removeWorkerFromProject, updateOrganizationDetails, updateUserPermissions } from '../../controllers/organization controllers/organiziation.controllers';
 import userAuthenticatedMiddleware from '../../middlewares/userAuthMiddleware';
 import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
 
@@ -35,7 +35,11 @@ orgsRouter.get('/getclientsofproject/:orgId/:projectId', multiRoleAuthMiddleware
 
 
 
-orgsRouter.put('/assignspecificrole/:organizationId/:role/:userId', multiRoleAuthMiddleware("CTO", "staff", "owner"), toggleSpecificRole)
+orgsRouter.post('/registeruser/:organizationId/:role', multiRoleAuthMiddleware("owner"), registerUserWithoutLink)
+orgsRouter.put('/updatepermission/:userId', multiRoleAuthMiddleware("owner"), updateUserPermissions)
+orgsRouter.get('/getalluser/:organizationId', multiRoleAuthMiddleware("owner"), getAllUsersByOrganization)
+orgsRouter.get('/getsingleuser/:userId', multiRoleAuthMiddleware("owner"), getSingleUserById)
+orgsRouter.delete('/deleteuser/:userId', multiRoleAuthMiddleware("owner"), deleteUserById)
 
 
 export default orgsRouter

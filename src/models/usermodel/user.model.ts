@@ -1,4 +1,5 @@
 import mongoose, { Schema, Types } from "mongoose"
+import { DepartmentPermission } from "../staff model/staff.model";
 
 interface IUser extends Document {
     email: string,
@@ -6,6 +7,9 @@ interface IUser extends Document {
     username: string,
     phoneNo: string,
     role: string;
+    permission: {
+        [department: string]: DepartmentPermission;
+    };
     organizationId?: [Types.ObjectId];
     projectId?: [Types.ObjectId];
     resetPasswordToken?: string;
@@ -37,15 +41,19 @@ const UserSchema: Schema<IUser> = new Schema({
         enum: ["owner", null],
         default: null
     },
+    permission: {
+        type: Object,
+        default: {}
+    },
     organizationId: {
         type: [Schema.Types.ObjectId],
         ref: "OrganizationModel",
-        default:[]
+        default: []
     },
-     projectId: {
+    projectId: {
         type: [Schema.Types.ObjectId],
         ref: "ProjectModel",
-        default:[]
+        default: []
     },
     resetPasswordToken: { type: String },  // Token for password reset
     resetPasswordExpire: { type: Number },

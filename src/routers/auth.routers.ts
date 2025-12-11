@@ -6,8 +6,9 @@ import { loginWorker, refreshTokenWorker, registerWorker, workerforgotPassword, 
 import staffAuthenticatedMiddleware from '../middlewares/staffAuthMiddleware';
 import workerAuthenticatedMiddleware from '../middlewares/workerAuthMiddleware';
 import CTOAuthenticatedMiddleware from '../middlewares/CTOAuthMiddleware';
-import { CTOforgotPassword, CTOIsAuthenticated, CTOLogout, CTOResetForgotPassword, loginCTO, refreshTokenCTO, registerCTO } from '../controllers/auth controllers/CTOAuth.controller';
+import { CTOforgotPassword, CTOIsAuthenticated, CTOLogout, CTOResetForgotPassword, loginCTO, refreshTokenCTO, registerCTO, } from '../controllers/auth controllers/CTOAuth.controller';
 import { multiRoleAuthMiddleware } from '../middlewares/multiRoleAuthMiddleware';
+import { registerUserWithoutLink } from '../controllers/organization controllers/organiziation.controllers';
 
 
 const authRoutes = express.Router()
@@ -23,15 +24,15 @@ authRoutes.post('/resetpassword', resetForgotPassword as RequestHandler)
 
 authRoutes.delete('/deleteuser/:userId', deleteuser as RequestHandler)
 
-    
+
 // STAFFS ROUTES
 authRoutes.post('/staff/login', loginStaff as RequestHandler)
 authRoutes.post('/staff/registerstaff', registerStaff as RequestHandler)
 authRoutes.post('/staff/logout', staffLogout as RequestHandler)
 authRoutes.get('/staff/refreshtoken', refreshTokenStaff as RequestHandler)
-authRoutes.get('/staff/isauthenticated',  multiRoleAuthMiddleware("staff"), staffIsAuthenticated as RequestHandler)
-authRoutes.post('/staff/forgotpassword',  staffforgotPassword as RequestHandler)
-authRoutes.post('/staff/resetpassword',  staffResetForgotPassword as RequestHandler)
+authRoutes.get('/staff/isauthenticated', multiRoleAuthMiddleware("staff"), staffIsAuthenticated as RequestHandler)
+authRoutes.post('/staff/forgotpassword', staffforgotPassword as RequestHandler)
+authRoutes.post('/staff/resetpassword', staffResetForgotPassword as RequestHandler)
 
 
 
@@ -40,7 +41,7 @@ authRoutes.post('/worker/login', loginWorker as RequestHandler)
 authRoutes.post('/worker/registerworker', registerWorker as RequestHandler)
 authRoutes.post('/worker/logout', workerLogout as RequestHandler)
 authRoutes.get('/worker/refreshtoken', refreshTokenWorker as RequestHandler)
-authRoutes.get('/worker/isauthenticated',  multiRoleAuthMiddleware("worker"), workerIsAuthenticated as RequestHandler)
+authRoutes.get('/worker/isauthenticated', multiRoleAuthMiddleware("worker"), workerIsAuthenticated as RequestHandler)
 authRoutes.post('/worker/forgotpassword', workerforgotPassword as RequestHandler)
 authRoutes.post('/worker/resetpassword', workerResetForgotPassword as RequestHandler)
 
@@ -52,12 +53,12 @@ authRoutes.post('/CTO/login', loginCTO as RequestHandler)
 authRoutes.post('/CTO/registerCTO', registerCTO as RequestHandler)
 authRoutes.post('/CTO/logout', CTOLogout as RequestHandler)
 authRoutes.get('/CTO/refreshtoken', refreshTokenCTO as RequestHandler)
-authRoutes.get('/CTO/isauthenticated',  multiRoleAuthMiddleware("CTO"), CTOIsAuthenticated as RequestHandler)
+authRoutes.get('/CTO/isauthenticated', multiRoleAuthMiddleware("CTO"), CTOIsAuthenticated as RequestHandler)
 authRoutes.post('/CTO/forgotpassword', CTOforgotPassword as RequestHandler)
 authRoutes.post('/CTO/resetpassword', CTOResetForgotPassword as RequestHandler)
 
 
-
+authRoutes.post("/:role/create", registerUserWithoutLink)
 
 
 export default authRoutes

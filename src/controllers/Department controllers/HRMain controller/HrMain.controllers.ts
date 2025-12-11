@@ -22,7 +22,6 @@ interface SyncEmployeeParams {
   name: string;
   phoneNo: string | number;
   email: string;
-  empSpecificRole: string[] | null
   role: string | null
 }
 
@@ -36,7 +35,7 @@ const sourceModels: any = {
 /**
  * 1. Auto-generate HR Employee from existing model
  */
-export const syncEmployee = async ({ organizationId, empId, employeeModel, empRole, name, phoneNo, email, empSpecificRole, role }: SyncEmployeeParams) => {
+export const syncEmployee = async ({ organizationId, empId, employeeModel, empRole, name, phoneNo, email, role }: SyncEmployeeParams) => {
   // console.log("empId", empId, "employeeModel", employeeModel,)
   if (!empId || !employeeModel || !organizationId) {
     console.log("no empId or employeeModel or organiiaotnID is provided ")
@@ -70,7 +69,6 @@ export const syncEmployee = async ({ organizationId, empId, employeeModel, empRo
         email,
         phoneNo: phoneNo,
       },
-      empSpecificRole:empSpecificRole,
       role:role,
       employment: {
         department: null

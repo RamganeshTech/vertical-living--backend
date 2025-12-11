@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import { RoleBasedRequest } from "../../types/types";
 import UserModel from "../../models/usermodel/user.model";
 import OrganizationModel from "../../models/organization models/organization.model";
@@ -11,7 +11,8 @@ import { syncAllMixedRoutes } from "../Modular Units Controllers/modularUnit.con
 import redisClient from "../../config/redisClient";
 import { EmployeeModel } from "../../models/Department Models/HR Model/HRMain.model";
 import { WorkerModel } from "../../models/worker model/worker.model";
-
+import bcrypt from "bcrypt"
+import { Model } from "mongoose";
 
 const createOrganziation = async (req: RoleBasedRequest, res: Response) => {
     try {
@@ -266,7 +267,7 @@ const getStaffsByOrganization = async (req: RoleBasedRequest, res: Response) => 
 // POST /api/staff/invite
 const inviteStaff = async (req: RoleBasedRequest, res: Response) => {
     try {
-        const { organizationId, specificRole = [] } = req.body;
+        const { organizationId } = req.body;
         const user = req.user
         if (!organizationId) {
             res.status(400).json({
@@ -281,14 +282,13 @@ const inviteStaff = async (req: RoleBasedRequest, res: Response) => {
 
 
 
-        console.log("specificRole", specificRole)
+        console.log("specificRole")
 
-        
+
         // Payload with expiry
         const invitationPayload = {
             organizationId,
             role: "staff",
-            specificRole,
             expiresAt,
             ownerId: user?.ownerId || user?._id
         };
@@ -472,7 +472,7 @@ const removeCTOFromOrganization = async (req: RoleBasedRequest, res: Response) =
 const inviteWorkerByStaff = async (req: RoleBasedRequest, res: Response): Promise<void> => {
 
     try {
-        const { projectId, organizationId , specificRole = []} = req.body;
+        const { projectId, organizationId } = req.body;
         const user = req.user
 
         if (!projectId) {
@@ -483,11 +483,9 @@ const inviteWorkerByStaff = async (req: RoleBasedRequest, res: Response): Promis
             return;
         }
 
-
         const inviteLink = generateWorkerInviteLink({
             projectId,
             organizationId: organizationId,
-            specificRole,
             role: "worker",
             expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
             invitedBy: user?.ownerId! || user?._id!,
@@ -657,106 +655,394 @@ const getClientByProject = async (req: RoleBasedRequest, res: Response): Promise
 
 
 
-const toggleSpecificRole = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+
+
+//  toggle roles 
+
+
+// // Helper to sanitize permissions (Make sure values are booleans)
+// export const sanitizePermissions = (perms: any) => {
+//     if (!perms || typeof perms !== 'object') return {};
+
+//     const cleanPerms: any = {};
+
+//     // Iterate through departments (e.g., "accounts", "hr")
+//     for (const [dept, actions] of Object.entries(perms)) {
+//         if (typeof actions === 'object' && actions !== null) {
+//             cleanPerms[dept] = {
+//                 create: !!(actions as any).create, // !! converts to true/false strictly
+//                 edit: !!(actions as any).edit,
+//                 delete: !!(actions as any).delete,
+//                 list: !!(actions as any).list,
+//             };
+//         }
+//     }
+//     return cleanPerms;
+// };
+
+
+
+
+
+//  STAFFS ROLE PERMISSIONS
+
+// Optional: Clean permissions helper
+const sanitizePermissions = (permissions: any) => {
+    const clean: any = {};
+    if (!permissions) return clean;
+    for (const dept in permissions) {
+        clean[dept] = {
+            create: !!permissions[dept]?.create,
+            edit: !!permissions[dept]?.edit,
+            delete: !!permissions[dept]?.delete,
+            list: !!permissions[dept]?.list,
+        };
+    }
+    return clean;
+};
+
+
+
+
+export const registerUserWithoutLink = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { role, userId, organizationId } = req.params;
-        const { specificRole } = req.body;
+
+        let { role, organizationId } = req.params;
+        const {
+            // cto, worker, client, staff
+            email,
+            password,
+            name,
+            phoneNo,
+            ownerId,
+            permissions,
+        } = req.body;
+
+        if (!role || !["cto", "worker", "client", "staff"].includes(role.toLowerCase())) {
+            return res.status(400).json({ message: "Invalid role" });
+        }
+
+        // Select model based on role
+        let Model: undefined | any;
+        let nameField: string = "";
+        switch (role.toLowerCase()) {
+            case "cto":
+                Model = CTOModel;
+                nameField = "CTOName";
+                break;
+            case "worker":
+                Model = WorkerModel;
+                nameField = "workerName";
+                break;
+            case "client":
+                Model = ClientModel;
+                nameField = "clientName";
+                break;
+            case "staff":
+                Model = StaffModel;
+                nameField = "staffName";
+                break;
+        }
 
 
-
-        // 1. Validation
-        if (!role) {
-            return res.status(400).json({ message: "Role is required in body." });
+        if (!Model) {
+            return res.status(400).json({ ok: false, message: "Model is not avaialble , check the role you have provided" });
         }
 
 
 
-        if (!specificRole) {
-            return res.status(400).json({ message: "Specific Role is required in body." });
-        }
-
-
-
-
-        // 2. Select Model Dynamically
-        let Model: any;
-        if (role === 'staff') {
-            Model = StaffModel;
-        } else if (role === 'worker') {
-            Model = WorkerModel;
-        } else {
-            return res.status(400).json({ message: "Invalid user type. Must be 'staff' or 'worker'." });
-        }
-
-
-
-
-        // 3. Find User
-        const user = await Model.findOne({_id:userId, organizationId: { $in: [organizationId] }});
-        if (!user) {
-            return res.status(404).json({ message: `${role} not found.` });
-        }
-
-
-         // --- Handle Field Initialization (If field doesn't exist yet) ---
-        if (!user.specificRole) {
-            user.specificRole = [];
-        }
-
-
-      
-
-        // 4. Toggle Logic
-        // We check if the role exists in the array
-        const roleIndex = user.specificRole.indexOf(role);
-        let action = "";
-
-        if (roleIndex > -1) {
-            // CASE A: Role exists -> REMOVE IT
-            user.specificRole.splice(roleIndex, 1);
-            action = "removed";
-        } else {
-            // CASE B: Role does not exist -> ADD IT
-            user.specificRole.push(role);
-            action = "added";
-        }
-
-
-         // 5. Sync with Employee Model
-        // We find the employee where empId matches the Staff/Worker _id
-        const employee = await EmployeeModel.findOne({ empId: userId , organizationId});
-
-        if (employee) {
-            // Initialize field if missing in Employee model
-            if (!employee.empSpecificRole) {
-                employee.empSpecificRole = [];
+        // Check if user exists
+        const userExists = await Model.findOne({ $or: [{ email }, { phoneNo }] });
+        if (userExists) {
+            if (userExists.email === email) {
+                return res.status(400).json({ ok: false, message: "A user with this email already exists." });
             }
-
-            // We mirror the User's array exactly to the Employee's array 
-            // This ensures they are always perfectly in sync
-            employee.empSpecificRole = [...user.specificRole];
-            
-            await employee.save();
+            if (userExists.phoneNo === phoneNo) {
+                return res.status(400).json({ ok: false, message: "A user with this phone number already exists." });
+            }
         }
 
-        // 5. Save Changes
-        await user.save();
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
-        return res.status(200).json({
+        // Clean permissions
+        const cleanPermissions = sanitizePermissions(permissions);
+
+
+        const storedRole = role.toLowerCase() === "cto" ? "CTO" : role.toLowerCase();
+
+
+        // Create user
+        const newUser = await Model.create({
+            email,
+            password: hashedPassword,
+            [nameField]: name,
+            phoneNo,
+            organizationId: organizationId ? [organizationId] : [],
+            ownerId,
+            projectId: role === "client" ? null : [],
+            role: storedRole, // you can adjust CTO/worker/client roles separately if needed
+            permissions: cleanPermissions,
+        });
+
+
+        if (role.toLowerCase() === "cto") {
+            role = "CTO"
+        }
+        await redisClient.del(`getusers:${role}:${organizationId}`)
+
+
+        return res.status(201).json({
             ok: true,
-            message: `Role '${role}' has been ${action}.`,
-            action: action, // 'added' or 'removed' (useful for frontend toast)
-            updatedRoles: user.specificRole,
-            hrModelSynced: !!employee,
-            data:user
+            message: `${role.charAt(0).toUpperCase() + role.slice(1)} registered successfully`,
+            data: newUser,
         });
 
     } catch (error: any) {
-        console.error("Error toggling role:", error);
-        return res.status(500).json({ message: "Internal Server Error", error: error.message });
+        console.error(error);
+        return res.status(500).json({ message: error.message || "Server Error" });
     }
 };
 
+
+
+// ==========================================
+// 2. UPDATE PERMISSIONS
+// ==========================================
+
+export const updateUserPermissions = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { userId } = req.params; // ID from URL
+        const { permission } = req.body;
+
+        // 1️⃣ Try to find the user in all models
+        let user: any = await StaffModel.findById(userId);
+        let ModelName = "Staff";
+
+        if (!user) {
+            user = await WorkerModel.findById(userId);
+            ModelName = "Worker";
+        }
+        if (!user) {
+            user = await ClientModel.findById(userId);
+            ModelName = "Client";
+        }
+        if (!user) {
+            user = await CTOModel.findById(userId);
+            ModelName = "CTO";
+        }
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found in any model" });
+        }
+
+
+        console.log("user", user)
+
+        // 2️⃣ Sanitize permissions
+        const cleanPermissions = sanitizePermissions(permission);
+
+        console.log("clean permissions", cleanPermissions)
+
+        // 3️⃣ Update permissions
+        user.permission = cleanPermissions
+        user.markModified('permission'); // Important for Mongoose Object fields
+        // // 4️⃣ Save
+        await user.save();
+
+
+        const redisUserKey = `userAuth:${userId}`
+
+        await redisClient.del(redisUserKey)
+
+
+        return res.status(200).json({
+            ok: true,
+            message: `Permissions updated successfully for ${ModelName}`,
+            data: user
+        });
+
+    } catch (error: any) {
+        console.error(error);
+        return res.status(500).json({ message: error.message || "Server Error" });
+    }
+};
+
+export const getAllUsersByOrganization = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { organizationId } = req.params;
+
+        if (!organizationId) {
+            return res.status(400).json({ ok: false, message: "organizationId is required" });
+        }
+
+        const userModels = [
+            { model: CTOModel, nameKey: "CTOName", role: "CTO" },
+            { model: WorkerModel, nameKey: "workerName", role: "worker" },
+            { model: ClientModel, nameKey: "clientName", role: "client" },
+            { model: StaffModel, nameKey: "staffName", role: "staff" },
+        ];
+
+        const promises = userModels.map(async (entry) => {
+            const { model, nameKey, role }: { model: any, nameKey: string, role: string } = entry;
+
+            const users = await model.find({
+                organizationId: organizationId
+            }).select("-password").lean();
+
+            return users.map((user: any) => ({
+                _id: user._id,
+                name: user[nameKey] || "Unknown",
+                email: user.email,
+                phoneNo: user.phoneNo,
+                role: user.role || role,
+
+                // ⭐ corrected to always use "permissions"
+                permission: user.permission || {},
+
+                organizationId: user.organizationId,
+                ownerId: user.ownerId,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
+            }));
+        });
+
+        const results = await Promise.all(promises);
+        const finalUsers = results.flat();
+
+        return res.status(200).json({
+            ok: true,
+            count: finalUsers.length,
+            data: finalUsers,
+        });
+
+    } catch (error: any) {
+        console.error(error);
+        return res.status(500).json({ ok: false, message: error.message || "Server Error" });
+    }
+};
+
+
+export const getSingleUserById = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({ ok: false, message: "userId is required" });
+        }
+
+        // List of models to check
+        const userModels = [
+            { model: CTOModel, role: "cto", nameKey: "CTOName" },
+            { model: WorkerModel, role: "worker", nameKey: "workerName" },
+            { model: ClientModel, role: "client", nameKey: "clientName" },
+            { model: StaffModel, role: "staff", nameKey: "staffName" },
+        ];
+
+        for (const entry of userModels) {
+            const { model, role, nameKey }: { model: any, nameKey: string, role: string } = entry;
+
+            // Fetch the user but exclude password
+            const user = await model.findById(userId).select("-password");
+
+            if (user) {
+                return res.status(200).json({
+                    ok: true,
+                    message: "get the data",
+                    data: {
+                        _id: user._id,
+                        name: user[nameKey] || null,
+                        email: user.email || null,
+                        phoneNo: user.phoneNo || null,
+                        role,
+                        organizationId: user.organizationId || [],
+
+                        // Always use "permission" not "permissions"
+                        permission: user.permission || [],
+
+                        // Attach raw user data as needed
+                        ...user.toObject(),
+                    }
+                });
+            }
+        }
+
+        return res.status(404).json({
+            ok: false,
+            data: null,
+            message: "User not found in any model",
+        });
+
+    } catch (error: any) {
+        console.error("GetSingleUser Error:", error);
+        return res.status(500).json({ ok: false, message: error.message || "Server Error" });
+    }
+};
+
+
+
+
+export const deleteUserById = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({ ok: false, message: "userId is required" });
+        }
+
+        const userModels = [
+            { model: CTOModel, role: "CTO" },
+            { model: WorkerModel, role: "worker" },
+            { model: ClientModel, role: "client" },
+            { model: StaffModel, role: "staff" },
+        ];
+
+        const deletedRole = "";
+        // Loop through models
+        for (const entry of userModels) {
+            let { model, role }: { model: any, role: string } = entry;
+
+            // ⭐ OPTIMIZATION: Just try to delete directly.
+            // If user exists, 'deletedUser' will contain the data.
+            // If not, it will be null.
+            const deletedUser = await model.findByIdAndDelete(userId);
+
+
+            if (deletedUser) {
+
+                if (role.toLowerCase() === "cto") {
+                    role = "CTO"
+                }
+
+                const orgId = Array.isArray(deletedUser.organizationId) ? deletedUser.organizationId[0] : deletedUser.organizationId;
+                await redisClient.del(`getusers:${role}:${orgId}`)
+
+
+
+                return res.status(200).json({
+                    ok: true,
+                    message: `${role} deleted successfully`,
+                    deletedId: userId,
+                    // Optional: return name of deleted person for UI feedback
+                    name: deletedUser['staffName'] || deletedUser['clientName'] || deletedUser['workerName'] || deletedUser['CTOName']
+                });
+            }
+        }
+
+
+
+        // If loop finishes, no user was found/deleted
+        return res.status(404).json({
+            ok: false,
+            message: "User not found in any model",
+        });
+
+    } catch (error: any) {
+        console.error("Delete Error:", error);
+        return res.status(500).json({ ok: false, message: error.message || "Server Error" });
+    }
+};
 
 
 export {
@@ -780,5 +1066,4 @@ export {
 
     inviteClient,
     getClientByProject,
-    toggleSpecificRole
 }
