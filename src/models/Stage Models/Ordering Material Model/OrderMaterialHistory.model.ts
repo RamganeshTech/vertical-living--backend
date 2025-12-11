@@ -59,16 +59,19 @@ export interface IOrderedMaterialHistory {
     deliveryLocationDetails: OrderMaterialSiteDetail,
     shopDetails: OrderMaterialShopDetails,
     isEditable: boolean;
-    selectedUnits: OrderedMaterialSingle[];
+    // selectedUnits: OrderedMaterialSingle[];
+
+    currentOrder: ICurrentOrder
     publicUnits: IPublicUnits;
     publicUnitsVersion: number
     needsStaffReview: boolean
+
     images: IPdfGenerator[]
 
     totalCost: number;
     assignedTo: Types.ObjectId;
     timer: IOrderHistorytimer;
-    generatedLink: IPdfGenerator[],
+    // generatedLink: IPdfGenerator[],
 
     orderedItems: IOrderedItems[]
 }
@@ -118,6 +121,43 @@ const DimentionSchema = new Schema<IOrderDimention>({
 })
 
 
+
+// const orderedUnits = new Schema<OrderedMaterialSingle>({
+//     unitId: { type: Schema.Types.ObjectId, default: null }, // ID of BedCot, TVUnit, etc.
+//     category: { type: String },
+//     image: { type: String, default: null },
+//     customId: { type: String, default: null },
+//     quantity: { type: Number, default: 1 },
+//     unitName: { type: String, default: null },
+//     dimention: { type: DimentionSchema, default: null },
+//     singleUnitCost: { type: Number, default: 0 },
+//     subItems: { type: [OrderSubItemSchema], default: [] }
+// }, { _id: true })
+
+
+export interface IOrderedItems {
+    orderMaterialNumber: string,
+    subItems: OrderSubItems[]
+    shopDetails: OrderMaterialShopDetails | null;
+    isPublicOrder: boolean
+    deliveryLocationDetails: OrderMaterialSiteDetail;
+    images: IPdfGenerator[]
+    pdfLink: IPdfGenerator | null;
+    isSyncWithProcurement: boolean,
+    createdAt: Date
+}
+
+
+export interface ICurrentOrder {
+    orderMaterialNumber: string;
+    subItems: OrderSubItems[]
+}
+
+
+
+
+
+
 export const pdfGeneratorSchema = new Schema<IPdfGenerator>({
     url: { type: String, default: null },
     refUniquePdf: { type: String, default: null },
@@ -140,35 +180,9 @@ export const PublicUnitsSchema = new Schema<IPublicUnits>({
     subItems: { type: [OrderSubItemSchema], default: [] },
 }, { _id: false })
 
-
-const orderedUnits = new Schema<OrderedMaterialSingle>({
-    unitId: { type: Schema.Types.ObjectId, default: null }, // ID of BedCot, TVUnit, etc.
-    category: { type: String },
-    image: { type: String, default: null },
-    customId: { type: String, default: null },
-    quantity: { type: Number, default: 1 },
-    unitName: { type: String, default: null },
-    dimention: { type: DimentionSchema, default: null },
-    singleUnitCost: { type: Number, default: 0 },
-    subItems: { type: [OrderSubItemSchema], default: [] }
-}, { _id: true })
-
-
-export interface IOrderedItems {
-    orderMaterialNumber: string,
-    selectedUnits: OrderedMaterialSingle[]
-    shopDetails: OrderMaterialShopDetails | null;
-    isPublicOrder: boolean
-    deliveryLocationDetails: OrderMaterialSiteDetail;
-    images: IPdfGenerator[]
-    pdfLink: IPdfGenerator | null;
-    isSyncWithProcurement: boolean,
-    createdAt: Date
-}
-
 const orderedItems = new Schema<IOrderedItems>({
     orderMaterialNumber: { type: String, default: null },
-    selectedUnits: { type: [orderedUnits], default: [] },
+    subItems: { type: [OrderSubItemSchema], default: [] },
     shopDetails: { type: ShopDetailsSchema, default: null },
     deliveryLocationDetails: { type: DeliveryLocationDetailsSchema, default: null },
     images: { type: [pdfGeneratorSchema], default: [] },
@@ -177,6 +191,14 @@ const orderedItems = new Schema<IOrderedItems>({
     isPublicOrder: { type: Boolean, default: false },
     createdAt: { type: Date, default: new Date() }
 }, { _id: true })
+
+
+const currentOrder = new Schema<ICurrentOrder>({
+    orderMaterialNumber: { type: String, default: null },
+    subItems: { type: [OrderSubItemSchema], default: [] },
+}, { _id: true })
+
+
 
 const OrderHistorySchema = new Schema<IOrderedMaterialHistory>({
     projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", required: true },
@@ -190,7 +212,8 @@ const OrderHistorySchema = new Schema<IOrderedMaterialHistory>({
     shopDetails: ShopDetailsSchema,
     deliveryLocationDetails: DeliveryLocationDetailsSchema,
     timer: { type: TimerSchema, required: true },
-    selectedUnits: { type: [orderedUnits], default: [] },
+    // selectedUnits: { type: [orderedUnits], default: [] },
+    currentOrder: { type: currentOrder, default: {} },
 
     publicUnits: { type: PublicUnitsSchema, default: {} },
     images: { type: [pdfGeneratorSchema], default: [] },
@@ -200,8 +223,8 @@ const OrderHistorySchema = new Schema<IOrderedMaterialHistory>({
     needsStaffReview: { type: Boolean, default: false }, // Flag for staff
     orderedItems: { type: [orderedItems], default: [] },
 
-    totalCost: { type: Number, },
-    generatedLink: { type: [pdfGeneratorSchema], default: [] }
+    // totalCost: { type: Number, },
+    // generatedLink: { type: [pdfGeneratorSchema], default: [] }
 }, { timestamps: true });
 
 OrderHistorySchema.index({ projectId: 1 })

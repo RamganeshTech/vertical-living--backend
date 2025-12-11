@@ -22,7 +22,8 @@ interface SyncEmployeeParams {
   name: string;
   phoneNo: string | number;
   email: string;
-  specificRole: string | null
+  empSpecificRole: string[] | null
+  role: string | null
 }
 
 const sourceModels: any = {
@@ -35,7 +36,7 @@ const sourceModels: any = {
 /**
  * 1. Auto-generate HR Employee from existing model
  */
-export const syncEmployee = async ({ organizationId, empId, employeeModel, empRole, name, phoneNo, email, specificRole }: SyncEmployeeParams) => {
+export const syncEmployee = async ({ organizationId, empId, employeeModel, empRole, name, phoneNo, email, empSpecificRole, role }: SyncEmployeeParams) => {
   // console.log("empId", empId, "employeeModel", employeeModel,)
   if (!empId || !employeeModel || !organizationId) {
     console.log("no empId or employeeModel or organiiaotnID is provided ")
@@ -69,8 +70,10 @@ export const syncEmployee = async ({ organizationId, empId, employeeModel, empRo
         email,
         phoneNo: phoneNo,
       },
+      empSpecificRole:empSpecificRole,
+      role:role,
       employment: {
-        department: specificRole || null
+        department: null
       }
     });
   }
@@ -96,7 +99,7 @@ export const syncEmployee = async ({ organizationId, empId, employeeModel, empRo
           empId: empId,
           employeeModel: employeeModel,
           empRole: empRole || "organization_staff",
-          "employment.department":specificRole ? specificRole : isCreated?.employment?.department || null,
+          // "employment.department": empSpecificRole ? empSpecificRole : isCreated?.employment?.department || null,
           "personalInfo.email": email ? email : isCreated?.personalInfo?.email || null,
           "personalInfo.phoneNo": phoneNo ? phoneNo : isCreated?.personalInfo?.phoneNo || null,
           "personalInfo.empName": name ? name : isCreated?.personalInfo?.empName || null
@@ -108,7 +111,7 @@ export const syncEmployee = async ({ organizationId, empId, employeeModel, empRo
   }
 
   await HREmployeeModel.findOneAndUpdate(
-    { organizationId },
+    { organizationId }, 
     {
       $addToSet: { employeeDetails: newEmployee!._id }, // avoids duplicates
     },

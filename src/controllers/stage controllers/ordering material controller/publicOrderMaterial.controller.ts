@@ -347,24 +347,28 @@ export const submitPublicOrders = async (req: Request, res: Response): Promise<a
 
         const orderNumber = `ORD-${rawProjectId}-${currentYear}-${paddedNumber}`;
 
-        const selectedUnits = [{
-            unitId: null,
-            category: "",
-            image: null,
-            customId: null,
-            quantity: 1,
-            unitName: "",
-            dimention: null,
-            singleUnitCost: 0,
-            subItems: orderDoc?.publicUnits?.subItems || []
-        }];
+        // const selectedUnits = [{
+        //     unitId: null,
+        //     category: "",
+        //     image: null,
+        //     customId: null,
+        //     quantity: 1,
+        //     unitName: "",
+        //     dimention: null,
+        //     singleUnitCost: 0,
+        //     subItems: orderDoc?.publicUnits?.subItems || []
+        // }];
+
+
+        const subItems = orderDoc?.publicUnits?.subItems || []
         const shopDetails = orderDoc?.publicUnits?.shopDetails;
         const deliveryLocationDetails = orderDoc.deliveryLocationDetails;
         const images = orderDoc.images;
 
         if (orderDoc?.orderedItems && Array.from(orderDoc.orderedItems) && orderDoc.orderedItems.length > 0) {
             orderDoc.orderedItems.push({
-                selectedUnits,
+                // selectedUnits,
+                subItems:subItems,
                 shopDetails,
                 deliveryLocationDetails,
                 images,
@@ -376,7 +380,8 @@ export const submitPublicOrders = async (req: Request, res: Response): Promise<a
             })
         } else {
             orderDoc.orderedItems = [{
-                selectedUnits,
+                // selectedUnits,
+                subItems:subItems,
                 shopDetails,
                 deliveryLocationDetails,
                 images,

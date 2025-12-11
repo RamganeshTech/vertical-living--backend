@@ -22,71 +22,6 @@ import { IFileItem } from "../../../models/Stage Models/sampleDesing model/sampl
 import ProcurementModelNew from "../../../models/Department Models/ProcurementNew Model/procurementNew.model";
 import { syncAccountingRecord } from "../../Department controllers/Accounting Controller/accounting.controller";
 
-// export const syncOrderingMaterialsHistory = async (projectId: string) => {
-
-//     let existing = await OrderMaterialHistoryModel.findOne({ projectId });
-
-//     const Units = await SelectedModularUnitModel.findOne({ projectId })
-
-
-
-//     let totalCost;
-//     let selected: any[];
-//     if (!Units) {
-//         totalCost = 0
-//         selected = []
-//     } else {
-//         totalCost = Units.totalCost
-//         selected = Units.selectedUnits.map((doc: any) => {
-//             const { _id, ...rest } = doc.toObject(); // ✅ remove _id and convert to plain object
-//             return { ...rest };
-//         });
-//     }
-//     const timer: IOrderHistorytimer = {
-//         startedAt: new Date(),
-//         completedAt: null,
-//         deadLine: null,
-//         reminderSent: false,
-//     };
-
-
-
-
-//     if (!existing) {
-//         existing = new OrderMaterialHistoryModel({
-//             projectId: projectId,
-//             status: "pending",
-//             isEditable: true,
-//             assignedTo: null,
-//             timer,
-//             selectedUnits: selected,
-//             totalCost,
-//         });
-//     }
-//     else {
-//         existing.timer = timer
-//         existing.totalCost += totalCost
-//         selected.forEach((newUnit: any) => {
-//             const existingUnit = existing?.selectedUnits?.find(
-//                 (unit: any) => unit.customId === newUnit.customId
-//             );
-
-//             if (existingUnit) {
-//                 // ✅ If exists, increase quantity
-//                 existingUnit.quantity += newUnit.quantity || 0;
-//             } else {
-//                 // ✅ If not exists, push new (with new _id auto-generated)
-//                 existing?.selectedUnits.push(newUnit);
-//             }
-//         });
-//     }
-//     await existing.save()
-//     await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: existing })
-
-// }
-
-
-
 
 export const restoreInventoryQuantities = async ({
     projectId,
@@ -176,6 +111,439 @@ export const bulkDeductInventoryQuantities = async ({
     }
 };
 
+
+// OLD VERSION
+// export const syncOrderingMaterialsHistory = async (projectId: string) => {
+//     let existing = await OrderMaterialHistoryModel.findOne({ projectId });
+
+//     // Fetch the stage selection mode
+//     // const stageSelection = await getStageSelectionUtil(projectId);
+//     // const mode = stageSelection?.mode || "Manual Flow";
+
+//     let selected: OrderedMaterialSingle[] = [];
+//     let totalCost = 0;
+
+//     // if (mode?.mode === "Modular Units") {
+//     //     const units = await SelectedModularUnitModel.findOne({ projectId });
+
+//     //     const isExternalExists = await SelectedExternalModel.findOne({ projectId })
+
+//     //     // external units condition
+//     //     if (isExternalExists && isExternalExists?.selectedUnits?.length) {
+//     //         let selectedUnits = isExternalExists.selectedUnits
+
+//     //         // const findSingleQuantityPrice = (height: number, width: number, depth: number, unitPrice: number) => {
+//     //         //     const h = Number(height);
+//     //         //     const w = Number(width);
+//     //         //     const d = Number(depth);
+
+//     //         //     const heightFt = h / 304.8;
+//     //         //     const widthFt = w / 304.8;
+//     //         //     const depthFt = d / 304.8;
+
+//     //         //     const cubicFeet = heightFt * widthFt * depthFt;
+//     //         //     // console.log("cal cubic feet", cubicFeet)
+//     //         //     // const price = cubicFeet * unitPrice * quantity;
+//     //         //     // console.log("cal price before ceilt", price)
+//     //         //     // return Math.floor(price); // No decimals, always rounded up
+
+
+//     //         //     const pricePerUnit = Math.ceil(cubicFeet * unitPrice); // ⬅️ round per unit
+//     //         //     return pricePerUnit
+
+//     //         // }
+//     //         // console.log("Geetting inside of selected Units in the external block")
+
+//     //         for (let unit of selectedUnits) {
+//     //             // const { _id, ...res } = (unit as any).toObject()
+//     //             const { unitCode, unitName, price, category, dimention, quantity, image, totalPrice } = unit
+//     //             const { height = 0, width = 0, depth = 0 } = dimention as any || {}
+
+//     //             // const singleUnitCost = findSingleQuantityPrice(height, width, depth, price)
+
+//     //             let externalUnits: any = {
+//     //                 customId: unitCode,
+//     //                 // name: unitName,
+//     //                 unitName,
+//     //                 category: category,
+//     //                 singleUnitCost: totalPrice,
+//     //                 quantity: quantity,
+//     //                 dimention,
+//     //                 unitId: (unit as any)._id,
+//     //                 image: image?.url,
+//     //                 subItems: []
+//     //             }
+
+//     //             selected.push(externalUnits)
+//     //             // console.log("selected Units in the external block", selected)
+//     //         }
+//     //         totalCost = isExternalExists?.totalCost || 0
+//     //     }
+
+
+//     //     // moudlar units condiiton
+//     //     if (units) {
+//     //         totalCost += units.totalCost || 0;
+//     //         const modularUnits = units.selectedUnits.map((doc: any) => {
+//     //             const { _id, ...rest } = doc.toObject();
+//     //             return { ...rest, dimention: null };
+//     //         });
+
+//     //         selected = selected.concat(modularUnits);
+//     //     }
+
+
+//     // } else if (mode?.mode === "Manual Flow") {
+
+//     //     console.log("gettin g into the manual flow")
+
+//     //     // 1. Get material confirmation data (with packages)
+//     //     const materialRoomData = await MaterialRoomConfirmationModel.findOne({ projectId }).lean();
+//     //     if (!materialRoomData) {
+//     //         console.log("material room stage not found");
+//     //         return;
+//     //     }
+
+//     //     // ✅ pick only the selected package
+//     //     const selectedPackageLevel = materialRoomData.packageSelected || "economy";
+//     //     const selectedPackage = (materialRoomData.package || []).find(
+//     //         (pkg) => pkg.level === selectedPackageLevel
+//     //     );
+
+//     //     if (!selectedPackage) {
+//     //         console.log("No matching package found:", selectedPackageLevel);
+//     //         return;
+//     //     }
+
+//     //     const rooms = selectedPackage.rooms || [];
+
+//     //     // 2. Get cost estimation data
+//     //     const costEstimationData = await CostEstimationModel.findOne({ projectId }).lean();
+//     //     if (!costEstimationData) {
+//     //         console.log("cost estimation stage not found");
+//     //         return;
+//     //     }
+
+//     //     const materialEstimationRooms = costEstimationData.materialEstimation || [];
+
+//     //     // 3. Build cost lookup map by room name + itemName
+//     //     const costMap: Record<string, Record<string, number>> = {};
+//     //     materialEstimationRooms.forEach((room) => {
+//     //         costMap[room.name] = {};
+//     //         (room.materials || []).forEach((material) => {
+//     //             costMap[room.name][material.key] = material.totalCost || 0;
+//     //         });
+//     //     });
+
+//     //     // 4. Build selectedUnits array for OrderMaterialHistory
+//     //     // const selected: any[] = [];
+
+//     //     rooms.forEach((room: IMaterialRoom) => {
+//     //         (room.roomFields || []).forEach((item: any) => {
+//     //             const unitName = item.itemName;
+//     //             const quantity = item.quantity || 0;
+//     //             const unitCost = costMap?.[room.name]?.[item.itemName] || 0;
+
+//     //             if (quantity <= 0) return; // skip zero quantity
+
+//     //             selected.push({
+//     //                 unitId: null, // optional if you track IDs
+//     //                 category: room.name, // room name as category
+//     //                 image: null,
+//     //                 customId: null,
+//     //                 unitName, // itemName from schema
+//     //                 dimention: null,
+//     //                 quantity,
+//     //                 singleUnitCost: unitCost,
+
+//     //                 // ✅ materialItems become subItems
+//     //                 subItems: (item.materialItems || []).map((mat: IMaterialSubItems) => ({
+//     //                     materialName: mat.materialName,
+//     //                     unit: mat.unit,
+//     //                     quantity: mat.quantity,
+//     //                     price: mat.price,
+//     //                     labourCost: mat.labourCost,
+//     //                 })),
+//     //             });
+//     //         });
+//     //     });
+
+//     //     // 5. Calculate total cost
+//     //     totalCost = selected.reduce(
+//     //         (acc, item) => acc + item.quantity * item.singleUnitCost,
+//     //         0
+//     //     );
+
+//     //     console.log("slected in the first else condition", selected)
+
+
+//     // }
+
+//     // Build timer
+
+
+
+//     // 1. Get material confirmation data (with packages)
+//     const requirementData = await RequirementFormModel.findOne({ projectId }).lean();
+//     if (!requirementData) {
+//         console.log("❌ Requirement form not found");
+//         return;
+//     }
+
+//     const requirementRooms = requirementData.rooms || [];
+
+//     // 2. Build selectedItems from requirement data
+//     for (const room of requirementRooms) {
+//         for (const item of room.items || []) {
+//             const { itemName, quantity = 0, unit = "nos" } = item;
+//             if (!itemName || quantity <= 0) continue;
+
+//             selected.push({
+//                 unitId: null,
+//                 category: null,
+//                 image: null,
+//                 customId: null,
+//                 dimention: null,
+//                 unitName: itemName,
+//                 quantity,
+//                 singleUnitCost: 0,
+//                 subItems: [], // will try to attach below if already exists
+//             });
+//         }
+//     }
+
+//     // 3. Timer
+//     const timer = {
+//         startedAt: new Date(),
+//         completedAt: null,
+//         deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+//         reminderSent: false,
+//     };
+
+//     // 4. If no existing record ➡️ Create new
+//     if (!existing) {
+
+//         existing = new OrderMaterialHistoryModel({
+//             projectId,
+//             status: "pending",
+//             isEditable: true,
+//             assignedTo: null,
+//             selectedUnits: selected,
+//             totalCost,
+//             timer,
+//             deliveryLocationDetails: {
+//                 siteName: "",
+//                 address: "",
+//                 siteSupervisor: "",
+//                 phoneNumber: "",
+//             },
+//             shopDetails: {
+//                 shopName: "",
+//                 address: "",
+//                 contactPerson: "",
+//                 phoneNumber: "",
+//             },
+//             generatedLink: []
+//         });
+
+//     } else {
+//         // 5. Update when record exists
+//         existing.timer = timer;
+//         existing.totalCost = 0; // Always 0 as per requirements
+
+//         for (const newUnit of selected) {
+//             // ⚠️ Match using item name
+//             const existingUnit = existing.selectedUnits?.find(
+//                 (unit: any) => unit.unitName === newUnit.unitName
+//             );
+
+//             if (!existingUnit) {
+//                 // New item → push
+//                 existing.selectedUnits.push(newUnit);
+//             } else {
+//                 // Exists → check if quantity changed
+//                 if (existingUnit.quantity !== newUnit.quantity) {
+//                     existingUnit.quantity = newUnit.quantity;
+//                 }
+
+//                 if (existingUnit.singleUnitCost !== newUnit.singleUnitCost) {
+//                     existingUnit.singleUnitCost = newUnit.singleUnitCost;
+//                 }
+
+//                 // Preserve subItems if already exists
+//                 newUnit.subItems = existingUnit.subItems || [];
+//             }
+//         }
+//     }
+
+//     // 6. Save record
+//     await existing.save();
+
+//     console.log("✅ Synced requirement form to order history");
+
+//     // return existing;
+
+//     // const timer: IOrderHistorytimer = {
+//     //     startedAt: new Date(),
+//     //     completedAt: null,
+//     //     deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+//     //     reminderSent: false,
+//     // };
+
+//     // if (!existing) {
+//     //     const commonOrders = {
+//     //         customId: null,
+//     //         // name: unitName,
+//     //         unitName: "Common Orders",
+//     //         category: null,
+//     //         singleUnitCost: 0,
+//     //         quantity: 0,
+//     //         dimention: null,
+//     //         unitId: null,
+//     //         image: null,
+//     //         subItems: []
+//     //     }
+//     //     selected.push(commonOrders)
+//     //     existing = new OrderMaterialHistoryModel({
+//     //         projectId,
+//     //         status: "pending",
+//     //         isEditable: true,
+//     //         assignedTo: null,
+//     //         timer,
+//     //         selectedUnits: selected,
+//     //         totalCost,
+//     //         genreatedLink: []
+//     //     });
+//     // } else {
+//     //     // existing.timer = timer;
+//     //     // existing.totalCost += totalCost;
+
+//     //     // selected.forEach((newUnit: any) => {
+//     //     //     const existingUnit = existing?.selectedUnits?.find(
+//     //     //         (unit: any) => unit.customId === newUnit.customId
+//     //     //     );
+
+//     //     //     if (existingUnit) {
+//     //     //         // ✅ Only update quantity if the new unit is modular
+//     //     //         if (newUnit.customId.toLowerCase().includes("modular")) {
+//     //     //             existingUnit.quantity += newUnit.quantity || 0;
+//     //     //         } else {
+//     //     //             existing?.selectedUnits.push(newUnit);
+//     //     //         }
+//     //     //     } else {
+//     //     //         // ✅ If not found, push new unit
+//     //     //         existing?.selectedUnits.push(newUnit);
+//     //     //     }
+//     //     // });
+
+//     //     existing.timer = timer;
+//     //     existing.totalCost = totalCost;
+
+
+
+//     //     console.log("selectedUnits", selected)
+
+//     //     // selected.forEach((newUnit: OrderedMaterialSingle) => {
+//     //     for (const newUnit of selected) {
+//     //         const existingUnit = existing?.selectedUnits?.find(
+//     //             (unit: any) => unit.unitName === newUnit.unitName
+//     //         );
+
+//     //         console.log("existing units", existingUnit)
+//     //         if (!existingUnit) {
+//     //             // ✅ Only update quantity if the new unit is modular
+//     //             existing?.selectedUnits.push(newUnit);
+//     //         } else {
+//     //             // Exists — update quantity only if changed
+//     //             if (existingUnit.quantity !== newUnit.quantity) {
+//     //                 existingUnit.quantity = newUnit.quantity;
+//     //                 // Optional: update cost if it might have changed
+
+//     //                 // // Also update other fields if you want:
+//     //                 // existingUnit.category = newUnit.category;
+//     //                 // existingUnit.image = newUnit.image;
+//     //                 // existingUnit.customId = newUnit.customId;
+//     //                 // existingUnit.subItems = newUnit.subItems || [];
+//     //             }
+
+//     //             if (existingUnit.singleUnitCost !== newUnit.singleUnitCost) {
+//     //                 existingUnit.singleUnitCost = newUnit.singleUnitCost;
+//     //             }
+
+
+
+//     //             // existingUnit.subItems = newUnit?.subItems || []; // safely replace for simplicity
+
+
+
+//     //             // Make sure subItems exist
+//     //             const newSubItems = newUnit?.subItems || [];
+
+//     //             const existingRefIds = new Set<string>();
+//     //             existingUnit.subItems?.forEach((sub: any) => {
+//     //                 if (sub.refId) existingRefIds.add(sub.refId);
+//     //             });
+
+//     //             // Step 1: Find max existing number across all selectedUnits
+//     //             let maxNumber = 0;
+//     //             existing!.selectedUnits.forEach((u: any) => {
+//     //                 u.subItems.forEach((sub: any) => {
+//     //                     if (sub.refId) {
+//     //                         const num = parseInt(sub.refId.replace(/^\D+/, ""), 10);
+//     //                         if (!isNaN(num)) {
+//     //                             maxNumber = Math.max(maxNumber, num);
+//     //                         }
+//     //                     }
+//     //                 });
+//     //             });
+
+//     //             // Step 2: Define prefix from unitName
+//     //             let prefix = (newUnit.unitName || "").substring(0, 3).toUpperCase();
+//     //             if (prefix.length < 3) prefix = prefix.padEnd(3, "A");
+
+//     //             // Step 3: Process subItems
+//     //             const processedSubItems = newSubItems.map((sub: any) => {
+//     //                 if (sub.refId && existingRefIds.has(sub.refId)) {
+//     //                     // Existing refId: keep it
+//     //                     return sub;
+//     //                 } else {
+//     //                     // Generate new refId
+//     //                     maxNumber += 1;
+//     //                     const newRefId = `${prefix}-${maxNumber}`;
+//     //                     console.log("subItems", sub)
+//     //                     return {
+//     //                         // ...sub,
+//     //                         subItemName: sub.materialName,
+//     //                         quantity: sub.quantity,
+//     //                         unit: sub.unit,
+//     //                         refId: newRefId,
+//     //                     };
+//     //                 }
+//     //             });
+
+//     //             existingUnit.subItems =  processedSubItems;
+
+//     //             await bulkDeductInventoryQuantities({
+//     //                 projectId,
+//     //                 subItems: processedSubItems.map((sub: any) => ({
+//     //                     subItemName: sub.subItemName, // NOT materialName — it's already mapped
+//     //                     quantity: sub.quantity,
+//     //                 })),
+//     //             });
+
+//     //         }
+//     //     }
+//     // }
+
+//     // await existing.save();
+//     await populateWithAssignedToField({
+//         stageModel: OrderMaterialHistoryModel,
+//         projectId,
+//         dataToCache: existing,
+//     });
+// };
+
+
 export const syncOrderingMaterialsHistory = async (projectId: string) => {
     let existing = await OrderMaterialHistoryModel.findOne({ projectId });
 
@@ -183,199 +551,6 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
     // const stageSelection = await getStageSelectionUtil(projectId);
     // const mode = stageSelection?.mode || "Manual Flow";
 
-    let selected: OrderedMaterialSingle[] = [];
-    let totalCost = 0;
-
-    // if (mode?.mode === "Modular Units") {
-    //     const units = await SelectedModularUnitModel.findOne({ projectId });
-
-    //     const isExternalExists = await SelectedExternalModel.findOne({ projectId })
-
-    //     // external units condition
-    //     if (isExternalExists && isExternalExists?.selectedUnits?.length) {
-    //         let selectedUnits = isExternalExists.selectedUnits
-
-    //         // const findSingleQuantityPrice = (height: number, width: number, depth: number, unitPrice: number) => {
-    //         //     const h = Number(height);
-    //         //     const w = Number(width);
-    //         //     const d = Number(depth);
-
-    //         //     const heightFt = h / 304.8;
-    //         //     const widthFt = w / 304.8;
-    //         //     const depthFt = d / 304.8;
-
-    //         //     const cubicFeet = heightFt * widthFt * depthFt;
-    //         //     // console.log("cal cubic feet", cubicFeet)
-    //         //     // const price = cubicFeet * unitPrice * quantity;
-    //         //     // console.log("cal price before ceilt", price)
-    //         //     // return Math.floor(price); // No decimals, always rounded up
-
-
-    //         //     const pricePerUnit = Math.ceil(cubicFeet * unitPrice); // ⬅️ round per unit
-    //         //     return pricePerUnit
-
-    //         // }
-    //         // console.log("Geetting inside of selected Units in the external block")
-
-    //         for (let unit of selectedUnits) {
-    //             // const { _id, ...res } = (unit as any).toObject()
-    //             const { unitCode, unitName, price, category, dimention, quantity, image, totalPrice } = unit
-    //             const { height = 0, width = 0, depth = 0 } = dimention as any || {}
-
-    //             // const singleUnitCost = findSingleQuantityPrice(height, width, depth, price)
-
-    //             let externalUnits: any = {
-    //                 customId: unitCode,
-    //                 // name: unitName,
-    //                 unitName,
-    //                 category: category,
-    //                 singleUnitCost: totalPrice,
-    //                 quantity: quantity,
-    //                 dimention,
-    //                 unitId: (unit as any)._id,
-    //                 image: image?.url,
-    //                 subItems: []
-    //             }
-
-    //             selected.push(externalUnits)
-    //             // console.log("selected Units in the external block", selected)
-    //         }
-    //         totalCost = isExternalExists?.totalCost || 0
-    //     }
-
-
-    //     // moudlar units condiiton
-    //     if (units) {
-    //         totalCost += units.totalCost || 0;
-    //         const modularUnits = units.selectedUnits.map((doc: any) => {
-    //             const { _id, ...rest } = doc.toObject();
-    //             return { ...rest, dimention: null };
-    //         });
-
-    //         selected = selected.concat(modularUnits);
-    //     }
-
-
-    // } else if (mode?.mode === "Manual Flow") {
-
-    //     console.log("gettin g into the manual flow")
-
-    //     // 1. Get material confirmation data (with packages)
-    //     const materialRoomData = await MaterialRoomConfirmationModel.findOne({ projectId }).lean();
-    //     if (!materialRoomData) {
-    //         console.log("material room stage not found");
-    //         return;
-    //     }
-
-    //     // ✅ pick only the selected package
-    //     const selectedPackageLevel = materialRoomData.packageSelected || "economy";
-    //     const selectedPackage = (materialRoomData.package || []).find(
-    //         (pkg) => pkg.level === selectedPackageLevel
-    //     );
-
-    //     if (!selectedPackage) {
-    //         console.log("No matching package found:", selectedPackageLevel);
-    //         return;
-    //     }
-
-    //     const rooms = selectedPackage.rooms || [];
-
-    //     // 2. Get cost estimation data
-    //     const costEstimationData = await CostEstimationModel.findOne({ projectId }).lean();
-    //     if (!costEstimationData) {
-    //         console.log("cost estimation stage not found");
-    //         return;
-    //     }
-
-    //     const materialEstimationRooms = costEstimationData.materialEstimation || [];
-
-    //     // 3. Build cost lookup map by room name + itemName
-    //     const costMap: Record<string, Record<string, number>> = {};
-    //     materialEstimationRooms.forEach((room) => {
-    //         costMap[room.name] = {};
-    //         (room.materials || []).forEach((material) => {
-    //             costMap[room.name][material.key] = material.totalCost || 0;
-    //         });
-    //     });
-
-    //     // 4. Build selectedUnits array for OrderMaterialHistory
-    //     // const selected: any[] = [];
-
-    //     rooms.forEach((room: IMaterialRoom) => {
-    //         (room.roomFields || []).forEach((item: any) => {
-    //             const unitName = item.itemName;
-    //             const quantity = item.quantity || 0;
-    //             const unitCost = costMap?.[room.name]?.[item.itemName] || 0;
-
-    //             if (quantity <= 0) return; // skip zero quantity
-
-    //             selected.push({
-    //                 unitId: null, // optional if you track IDs
-    //                 category: room.name, // room name as category
-    //                 image: null,
-    //                 customId: null,
-    //                 unitName, // itemName from schema
-    //                 dimention: null,
-    //                 quantity,
-    //                 singleUnitCost: unitCost,
-
-    //                 // ✅ materialItems become subItems
-    //                 subItems: (item.materialItems || []).map((mat: IMaterialSubItems) => ({
-    //                     materialName: mat.materialName,
-    //                     unit: mat.unit,
-    //                     quantity: mat.quantity,
-    //                     price: mat.price,
-    //                     labourCost: mat.labourCost,
-    //                 })),
-    //             });
-    //         });
-    //     });
-
-    //     // 5. Calculate total cost
-    //     totalCost = selected.reduce(
-    //         (acc, item) => acc + item.quantity * item.singleUnitCost,
-    //         0
-    //     );
-
-    //     console.log("slected in the first else condition", selected)
-
-
-    // }
-
-    // Build timer
-
-
-
-    // 1. Get material confirmation data (with packages)
-    const requirementData = await RequirementFormModel.findOne({ projectId }).lean();
-    if (!requirementData) {
-        console.log("❌ Requirement form not found");
-        return;
-    }
-
-    const requirementRooms = requirementData.rooms || [];
-
-    // 2. Build selectedItems from requirement data
-    for (const room of requirementRooms) {
-        for (const item of room.items || []) {
-            const { itemName, quantity = 0, unit = "nos" } = item;
-            if (!itemName || quantity <= 0) continue;
-
-            selected.push({
-                unitId: null,
-                category: null,
-                image: null,
-                customId: null,
-                dimention: null,
-                unitName: itemName,
-                quantity,
-                singleUnitCost: 0,
-                subItems: [], // will try to attach below if already exists
-            });
-        }
-    }
-
-    // 3. Timer
     const timer = {
         startedAt: new Date(),
         completedAt: null,
@@ -386,13 +561,24 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
     // 4. If no existing record ➡️ Create new
     if (!existing) {
 
+        const currentYear = new Date().getFullYear()
+
+        // Always 3-digit format
+        const paddedNumber = String(1).padStart(3, "0");
+        const rawProjectId = projectId.toString().slice(-3);
+
+        const newOrderMaterialNumber = `ORD-${rawProjectId}-${currentYear}-${paddedNumber}`;
+
+
+        const orderMaterialNumber = newOrderMaterialNumber
+
         existing = new OrderMaterialHistoryModel({
             projectId,
             status: "pending",
             isEditable: true,
             assignedTo: null,
-            selectedUnits: selected,
-            totalCost,
+            // selectedUnits: selected,
+            orderedItems: [],
             timer,
             deliveryLocationDetails: {
                 siteName: "",
@@ -400,205 +586,27 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
                 siteSupervisor: "",
                 phoneNumber: "",
             },
+            currentOrder: {
+                orderMaterialNumber: orderMaterialNumber,
+                subItems: []
+            },
+            images: [],
             shopDetails: {
                 shopName: "",
                 address: "",
                 contactPerson: "",
                 phoneNumber: "",
             },
-            generatedLink: []
+            // generatedLink: []
         });
+        await existing.save();
 
-    } else {
-        // 5. Update when record exists
-        existing.timer = timer;
-        existing.totalCost = 0; // Always 0 as per requirements
-
-        for (const newUnit of selected) {
-            // ⚠️ Match using item name
-            const existingUnit = existing.selectedUnits?.find(
-                (unit: any) => unit.unitName === newUnit.unitName
-            );
-
-            if (!existingUnit) {
-                // New item → push
-                existing.selectedUnits.push(newUnit);
-            } else {
-                // Exists → check if quantity changed
-                if (existingUnit.quantity !== newUnit.quantity) {
-                    existingUnit.quantity = newUnit.quantity;
-                }
-
-                if (existingUnit.singleUnitCost !== newUnit.singleUnitCost) {
-                    existingUnit.singleUnitCost = newUnit.singleUnitCost;
-                }
-
-                // Preserve subItems if already exists
-                newUnit.subItems = existingUnit.subItems || [];
-            }
-        }
     }
 
     // 6. Save record
-    await existing.save();
 
     console.log("✅ Synced requirement form to order history");
 
-    // return existing;
-
-    // const timer: IOrderHistorytimer = {
-    //     startedAt: new Date(),
-    //     completedAt: null,
-    //     deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-    //     reminderSent: false,
-    // };
-
-    // if (!existing) {
-    //     const commonOrders = {
-    //         customId: null,
-    //         // name: unitName,
-    //         unitName: "Common Orders",
-    //         category: null,
-    //         singleUnitCost: 0,
-    //         quantity: 0,
-    //         dimention: null,
-    //         unitId: null,
-    //         image: null,
-    //         subItems: []
-    //     }
-    //     selected.push(commonOrders)
-    //     existing = new OrderMaterialHistoryModel({
-    //         projectId,
-    //         status: "pending",
-    //         isEditable: true,
-    //         assignedTo: null,
-    //         timer,
-    //         selectedUnits: selected,
-    //         totalCost,
-    //         genreatedLink: []
-    //     });
-    // } else {
-    //     // existing.timer = timer;
-    //     // existing.totalCost += totalCost;
-
-    //     // selected.forEach((newUnit: any) => {
-    //     //     const existingUnit = existing?.selectedUnits?.find(
-    //     //         (unit: any) => unit.customId === newUnit.customId
-    //     //     );
-
-    //     //     if (existingUnit) {
-    //     //         // ✅ Only update quantity if the new unit is modular
-    //     //         if (newUnit.customId.toLowerCase().includes("modular")) {
-    //     //             existingUnit.quantity += newUnit.quantity || 0;
-    //     //         } else {
-    //     //             existing?.selectedUnits.push(newUnit);
-    //     //         }
-    //     //     } else {
-    //     //         // ✅ If not found, push new unit
-    //     //         existing?.selectedUnits.push(newUnit);
-    //     //     }
-    //     // });
-
-    //     existing.timer = timer;
-    //     existing.totalCost = totalCost;
-
-
-
-    //     console.log("selectedUnits", selected)
-
-    //     // selected.forEach((newUnit: OrderedMaterialSingle) => {
-    //     for (const newUnit of selected) {
-    //         const existingUnit = existing?.selectedUnits?.find(
-    //             (unit: any) => unit.unitName === newUnit.unitName
-    //         );
-
-    //         console.log("existing units", existingUnit)
-    //         if (!existingUnit) {
-    //             // ✅ Only update quantity if the new unit is modular
-    //             existing?.selectedUnits.push(newUnit);
-    //         } else {
-    //             // Exists — update quantity only if changed
-    //             if (existingUnit.quantity !== newUnit.quantity) {
-    //                 existingUnit.quantity = newUnit.quantity;
-    //                 // Optional: update cost if it might have changed
-
-    //                 // // Also update other fields if you want:
-    //                 // existingUnit.category = newUnit.category;
-    //                 // existingUnit.image = newUnit.image;
-    //                 // existingUnit.customId = newUnit.customId;
-    //                 // existingUnit.subItems = newUnit.subItems || [];
-    //             }
-
-    //             if (existingUnit.singleUnitCost !== newUnit.singleUnitCost) {
-    //                 existingUnit.singleUnitCost = newUnit.singleUnitCost;
-    //             }
-
-
-
-    //             // existingUnit.subItems = newUnit?.subItems || []; // safely replace for simplicity
-
-
-
-    //             // Make sure subItems exist
-    //             const newSubItems = newUnit?.subItems || [];
-
-    //             const existingRefIds = new Set<string>();
-    //             existingUnit.subItems?.forEach((sub: any) => {
-    //                 if (sub.refId) existingRefIds.add(sub.refId);
-    //             });
-
-    //             // Step 1: Find max existing number across all selectedUnits
-    //             let maxNumber = 0;
-    //             existing!.selectedUnits.forEach((u: any) => {
-    //                 u.subItems.forEach((sub: any) => {
-    //                     if (sub.refId) {
-    //                         const num = parseInt(sub.refId.replace(/^\D+/, ""), 10);
-    //                         if (!isNaN(num)) {
-    //                             maxNumber = Math.max(maxNumber, num);
-    //                         }
-    //                     }
-    //                 });
-    //             });
-
-    //             // Step 2: Define prefix from unitName
-    //             let prefix = (newUnit.unitName || "").substring(0, 3).toUpperCase();
-    //             if (prefix.length < 3) prefix = prefix.padEnd(3, "A");
-
-    //             // Step 3: Process subItems
-    //             const processedSubItems = newSubItems.map((sub: any) => {
-    //                 if (sub.refId && existingRefIds.has(sub.refId)) {
-    //                     // Existing refId: keep it
-    //                     return sub;
-    //                 } else {
-    //                     // Generate new refId
-    //                     maxNumber += 1;
-    //                     const newRefId = `${prefix}-${maxNumber}`;
-    //                     console.log("subItems", sub)
-    //                     return {
-    //                         // ...sub,
-    //                         subItemName: sub.materialName,
-    //                         quantity: sub.quantity,
-    //                         unit: sub.unit,
-    //                         refId: newRefId,
-    //                     };
-    //                 }
-    //             });
-
-    //             existingUnit.subItems =  processedSubItems;
-
-    //             await bulkDeductInventoryQuantities({
-    //                 projectId,
-    //                 subItems: processedSubItems.map((sub: any) => ({
-    //                     subItemName: sub.subItemName, // NOT materialName — it's already mapped
-    //                     quantity: sub.quantity,
-    //                 })),
-    //             });
-
-    //         }
-    //     }
-    // }
-
-    // await existing.save();
     await populateWithAssignedToField({
         stageModel: OrderMaterialHistoryModel,
         projectId,
@@ -607,332 +615,312 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
 };
 
 
+// start old vrsion of updatig he items
+// export const addSubItemToUnit = async (req: Request, res: Response): Promise<any> => {
+//     try {
+//         const { projectId, unitId } = req.params;
+//         const { subItemName, quantity, unit } = req.body;
 
-// const manualInsertCustomOrders = async (projectId:string)=>{
-//      const commonOrders = {
-//             customId: null,
-//             // name: unitName,
-//             unitName: "Common Orders",
-//             category: null,
-//             singleUnitCost: 0,
-//             quantity: 1,
-//             dimention: null,
-//             unitId: new mongoose.Types.ObjectId(),
-//             image: null,
-//             subItems: []
+//         if (!projectId || !unitId) {
+//             return res.status(400).json({ ok: false, message: "Invalid projectId or unitId" });
 //         }
-//         console.log("getin ented")
-//       const orders =  await OrderMaterialHistoryModel.findOne({projectId})
 
-//       orders?.selectedUnits.push(commonOrders as any)
-//         if(orders){
-
-//             await orders.save()
+//         if (!subItemName?.trim()) {
+//             return res.status(400).json({ ok: false, message: "Mateial Item is mandatory" });
 //         }
-// }
-
-export const addSubItemToUnit = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { projectId, unitId } = req.params;
-        const { subItemName, quantity, unit } = req.body;
-
-        if (!projectId || !unitId) {
-            return res.status(400).json({ ok: false, message: "Invalid projectId or unitId" });
-        }
-
-        if (!subItemName?.trim()) {
-            return res.status(400).json({ ok: false, message: "Mateial Item is mandatory" });
-        }
-
-
-        if (quantity === null) {
-            return res.status(400).json({ ok: false, message: "Missing Quantity" });
-        }
-
-        if (!unit) {
-            return res.status(400).json({ ok: false, message: "Missing Unit" });
-        }
-
-        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
-        if (!orderDoc) {
-            return res.status(404).json({ ok: false, message: "Order history not found" });
-        }
-
-        // Find the unit inside selectedUnits by _id
-        const unitObj = (orderDoc.selectedUnits as any).id(unitId);
-        if (!unitObj) {
-            return res.status(404).json({ ok: false, message: "Unit not found in order history" });
-        }
 
 
+//         if (quantity === null) {
+//             return res.status(400).json({ ok: false, message: "Missing Quantity" });
+//         }
+
+//         if (!unit) {
+//             return res.status(400).json({ ok: false, message: "Missing Unit" });
+//         }
+
+//         const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+//         if (!orderDoc) {
+//             return res.status(404).json({ ok: false, message: "Order history not found" });
+//         }
+
+//         // Find the unit inside selectedUnits by _id
+//         const unitObj = (orderDoc.selectedUnits as any).id(unitId);
+//         if (!unitObj) {
+//             return res.status(404).json({ ok: false, message: "Unit not found in order history" });
+//         }
 
-        const isExists = unitObj.subItems.find((unit: OrderSubItems) => {
-            console.log("unit", unit.subItemName)
-            return unit?.subItemName?.toLowerCase()?.trim() === subItemName?.toLowerCase()?.trim()
-        })
 
 
-        if (isExists) {
-            return res.status(400).json({ message: "Material item already exists with the same name", ok: false })
-        }
+//         const isExists = unitObj.subItems.find((unit: OrderSubItems) => {
+//             console.log("unit", unit.subItemName)
+//             return unit?.subItemName?.toLowerCase()?.trim() === subItemName?.toLowerCase()?.trim()
+//         })
 
-        // 🔹 Find max number used across ALL units' subItems
-        let maxNumber = 0;
-        orderDoc.selectedUnits.forEach((u: any) => {
-            u.subItems.forEach((sub: any) => {
-                if (sub.refId) {
-                    const num = parseInt(sub.refId.replace(/^\D+/, ""), 10); // remove prefix, take number
-                    if (!isNaN(num)) {
-                        maxNumber = Math.max(maxNumber, num);
-                    }
-                }
-            });
-        });
 
-        // New refId = prefix + (maxNumber + 1)
-        let prefix = unitObj?.unitName.substring(0, 3).toUpperCase();
-        if (prefix.length < 3) {
-            prefix = prefix.padEnd(3, "A"); // e.g., "TV" -> "TVA"
-        }
-        const refId = `${prefix}-${maxNumber + 1}`;
+//         if (isExists) {
+//             return res.status(400).json({ message: "Material item already exists with the same name", ok: false })
+//         }
 
-        // Add new subItem
-        unitObj.subItems.push({
-            subItemName: subItemName?.trim(),
-            refId,
-            quantity,
-            unit
-        });
-
-
-        // Add new subItem
-        // unitObj.subItems.push({ subItemName: subItemName?.trim(), refId, quantity, unit });
-
-        await orderDoc.save();
-
-        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
-
-        res.json({ ok: true, message: "SubItem added", subItems: unitObj.subItems });
-
-        updateInventoryRemainingQuantity({ itemName: subItemName, orderedQuantity: quantity })
-    } catch (error: any) {
-        return res.status(500).json({ ok: false, message: error.message });
-    }
-};
-
-
-
-export const updateSubItemInUnit = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { projectId, unitId, subItemId } = req.params;
-        const { subItemName, quantity, unit } = req.body;
-        // console.log("subitem name", subItemName)
-        if (!projectId ||
-            !unitId ||
-            !subItemId) {
-            return res.status(400).json({ ok: false, message: "Invalid IDs" });
-        }
-
-        if (!subItemName?.trim()) {
-            return res.status(400).json({ message: "material name is requried", ok: false })
-        }
-
-        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
-        if (!orderDoc) {
-            return res.status(404).json({ ok: false, message: "Order history not found" });
-        }
-
-        const unitObj = (orderDoc.selectedUnits as any).id(unitId);
-        if (!unitObj) {
-            return res.status(404).json({ ok: false, message: "Unit not found" });
-        }
+//         // 🔹 Find max number used across ALL units' subItems
+//         let maxNumber = 0;
+//         orderDoc.selectedUnits.forEach((u: any) => {
+//             u.subItems.forEach((sub: any) => {
+//                 if (sub.refId) {
+//                     const num = parseInt(sub.refId.replace(/^\D+/, ""), 10); // remove prefix, take number
+//                     if (!isNaN(num)) {
+//                         maxNumber = Math.max(maxNumber, num);
+//                     }
+//                 }
+//             });
+//         });
 
-        const subItemObj = unitObj.subItems.id(subItemId);
-        if (!subItemObj) {
-            return res.status(404).json({ ok: false, message: "SubItem not found" });
-        }
+//         // New refId = prefix + (maxNumber + 1)
+//         let prefix = unitObj?.unitName.substring(0, 3).toUpperCase();
+//         if (prefix.length < 3) {
+//             prefix = prefix.padEnd(3, "A"); // e.g., "TV" -> "TVA"
+//         }
+//         const refId = `${prefix}-${maxNumber + 1}`;
 
+//         // Add new subItem
+//         unitObj.subItems.push({
+//             subItemName: subItemName?.trim(),
+//             refId,
+//             quantity,
+//             unit
+//         });
+
+
+//         // Add new subItem
+//         // unitObj.subItems.push({ subItemName: subItemName?.trim(), refId, quantity, unit });
+
+//         await orderDoc.save();
+
+//         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
 
-        // const isExists = unitObj.subItems.find((unit: OrderSubItems) => {
-        //     console.log("unit", unit.subItemName)
-        //     return unit?.subItemName?.toLowerCase() === subItemName?.toLowerCase()
-        // })
+//         res.json({ ok: true, message: "SubItem added", subItems: unitObj.subItems });
+
+//         updateInventoryRemainingQuantity({ itemName: subItemName, orderedQuantity: quantity })
+//     } catch (error: any) {
+//         return res.status(500).json({ ok: false, message: error.message });
+//     }
+// };
+
+
+
+// export const updateSubItemInUnit = async (req: Request, res: Response): Promise<any> => {
+//     try {
+//         const { projectId, unitId, subItemId } = req.params;
+//         const { subItemName, quantity, unit } = req.body;
+//         // console.log("subitem name", subItemName)
+//         if (!projectId ||
+//             !unitId ||
+//             !subItemId) {
+//             return res.status(400).json({ ok: false, message: "Invalid IDs" });
+//         }
+
+//         if (!subItemName?.trim()) {
+//             return res.status(400).json({ message: "material name is requried", ok: false })
+//         }
+
+//         const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+//         if (!orderDoc) {
+//             return res.status(404).json({ ok: false, message: "Order history not found" });
+//         }
+
+//         const unitObj = (orderDoc.selectedUnits as any).id(unitId);
+//         if (!unitObj) {
+//             return res.status(404).json({ ok: false, message: "Unit not found" });
+//         }
 
+//         const subItemObj = unitObj.subItems.id(subItemId);
+//         if (!subItemObj) {
+//             return res.status(404).json({ ok: false, message: "SubItem not found" });
+//         }
 
-        // if (isExists) {
-        //     return res.status(400).json({ message: "item already exists", ok: false })
-        // }
-
-
-        // ---- INVENTORY UPDATE PART ----
-        // Track old quantity before updating
-        const oldQuantity = subItemObj.quantity || 0;
-
 
-        subItemObj.subItemName = subItemName.trim();
-        if (quantity !== null) subItemObj.quantity = quantity;
-        if (!unit !== undefined) subItemObj.unit = unit;
+//         // const isExists = unitObj.subItems.find((unit: OrderSubItems) => {
+//         //     console.log("unit", unit.subItemName)
+//         //     return unit?.subItemName?.toLowerCase() === subItemName?.toLowerCase()
+//         // })
 
-        await orderDoc.save();
 
-        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+//         // if (isExists) {
+//         //     return res.status(400).json({ message: "item already exists", ok: false })
+//         // }
 
-        res.status(200).json({ ok: true, message: "SubItem updated", subItem: subItemObj });
 
-        // ---- INVENTORY UPDATE PART (background) ----
-        if (quantity !== null && quantity !== oldQuantity) {
-            const diff = quantity - oldQuantity;
+//         // ---- INVENTORY UPDATE PART ----
+//         // Track old quantity before updating
+//         const oldQuantity = subItemObj.quantity || 0;
 
-            (async () => {
-                try {
-                    if (diff > 0) {
-                        await updateInventoryRemainingQuantity({
-                            itemName: subItemName.trim(),
-                            orderedQuantity: diff,
-                        });
-                    } else if (diff < 0) {
-                        await InventoryModel.updateOne(
-                            { "subItems.itemName": subItemName.trim() },
-                            { $inc: { "subItems.$.remainingQuantity": Math.abs(diff) } }
-                        ).exec();
-                        console.log(
-                            `Inventory restored: Item "${subItemName}" increased by ${Math.abs(diff)}`
-                        );
-                    }
-                } catch (err) {
-                    console.error("Background inventory update failed:", err);
-                }
-            })();
-        }
-    } catch (error: any) {
-        return res.status(500).json({ ok: false, message: error.message });
-    }
-};
 
+//         subItemObj.subItemName = subItemName.trim();
+//         if (quantity !== null) subItemObj.quantity = quantity;
+//         if (!unit !== undefined) subItemObj.unit = unit;
 
+//         await orderDoc.save();
 
-export const deleteSubItemFromUnit = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { projectId, unitId, subItemId } = req.params;
+//         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
 
-        if (!projectId ||
-            !unitId ||
-            !subItemId) {
-            return res.status(400).json({ ok: false, message: "Invalid IDs" });
-        }
+//         res.status(200).json({ ok: true, message: "SubItem updated", subItem: subItemObj });
 
-        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
-        if (!orderDoc) {
-            return res.status(404).json({ ok: false, message: "Order history not found" });
-        }
+//         // ---- INVENTORY UPDATE PART (background) ----
+//         if (quantity !== null && quantity !== oldQuantity) {
+//             const diff = quantity - oldQuantity;
 
-        const unitObj = (orderDoc.selectedUnits as any).id(unitId);
-        if (!unitObj) {
-            return res.status(404).json({ ok: false, message: "Unit not found" });
-        }
+//             (async () => {
+//                 try {
+//                     if (diff > 0) {
+//                         await updateInventoryRemainingQuantity({
+//                             itemName: subItemName.trim(),
+//                             orderedQuantity: diff,
+//                         });
+//                     } else if (diff < 0) {
+//                         await InventoryModel.updateOne(
+//                             { "subItems.itemName": subItemName.trim() },
+//                             { $inc: { "subItems.$.remainingQuantity": Math.abs(diff) } }
+//                         ).exec();
+//                         console.log(
+//                             `Inventory restored: Item "${subItemName}" increased by ${Math.abs(diff)}`
+//                         );
+//                     }
+//                 } catch (err) {
+//                     console.error("Background inventory update failed:", err);
+//                 }
+//             })();
+//         }
+//     } catch (error: any) {
+//         return res.status(500).json({ ok: false, message: error.message });
+//     }
+// };
 
-        const subItemObj = unitObj.subItems.id(subItemId);
-        if (!subItemObj) {
-            return res.status(404).json({ ok: false, message: "SubItem not found" });
-        }
 
-        const { subItemName, quantity } = subItemObj;
 
+// export const deleteSubItemFromUnit = async (req: Request, res: Response): Promise<any> => {
+//     try {
+//         const { projectId, unitId, subItemId } = req.params;
 
-        unitObj.subItems.pull({ _id: subItemId });
-        await orderDoc.save();
+//         if (!projectId ||
+//             !unitId ||
+//             !subItemId) {
+//             return res.status(400).json({ ok: false, message: "Invalid IDs" });
+//         }
 
-        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+//         const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+//         if (!orderDoc) {
+//             return res.status(404).json({ ok: false, message: "Order history not found" });
+//         }
 
+//         const unitObj = (orderDoc.selectedUnits as any).id(unitId);
+//         if (!unitObj) {
+//             return res.status(404).json({ ok: false, message: "Unit not found" });
+//         }
 
-        res.json({ ok: true, message: "SubItem deleted", subItems: unitObj.subItems });
+//         const subItemObj = unitObj.subItems.id(subItemId);
+//         if (!subItemObj) {
+//             return res.status(404).json({ ok: false, message: "SubItem not found" });
+//         }
 
+//         const { subItemName, quantity } = subItemObj;
 
-        // ---- BACKGROUND INVENTORY UPDATE ----
-        (async () => {
-            try {
-                // add back deleted quantity to inventory
-                await InventoryModel.updateOne(
-                    { "subItems.itemName": subItemName.trim() },
-                    { $inc: { "subItems.$.remainingQuantity": quantity } }
-                ).exec();
 
-                console.log(`Inventory restored: "${subItemName}" increased by ${quantity}`);
-            } catch (err) {
-                console.error("Inventory update failed (deleteSubItemFromUnit):", err);
-            }
-        })();
-    } catch (error: any) {
-        return res.status(500).json({ ok: false, message: error.message });
-    }
-};
+//         unitObj.subItems.pull({ _id: subItemId });
+//         await orderDoc.save();
 
+//         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
 
 
-export const deleteAllSubUnits = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { projectId } = req.params;
+//         res.json({ ok: true, message: "SubItem deleted", subItems: unitObj.subItems });
 
-        if (!projectId) {
-            return res.status(400).json({ ok: false, message: "Invalid Project ID" });
-        }
 
-        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
-        if (!orderDoc) {
-            return res.status(404).json({ ok: false, message: "Order history not found" });
-        }
+//         // ---- BACKGROUND INVENTORY UPDATE ----
+//         (async () => {
+//             try {
+//                 // add back deleted quantity to inventory
+//                 await InventoryModel.updateOne(
+//                     { "subItems.itemName": subItemName.trim() },
+//                     { $inc: { "subItems.$.remainingQuantity": quantity } }
+//                 ).exec();
 
-        // orderDoc.selectedUnits.forEach(unit => {
-        //     unit.subItems = [];
-        // });
+//                 console.log(`Inventory restored: "${subItemName}" increased by ${quantity}`);
+//             } catch (err) {
+//                 console.error("Inventory update failed (deleteSubItemFromUnit):", err);
+//             }
+//         })();
+//     } catch (error: any) {
+//         return res.status(500).json({ ok: false, message: error.message });
+//     }
+// };
 
-        // await orderDoc.save();
 
 
-        // 🧮 Step 1: Collect all subItems to restore quantities
-        const allSubItemsToRestore: { subItemName: string; quantity: number }[] = [];
+// export const deleteAllSubUnits = async (req: Request, res: Response): Promise<any> => {
+//     try {
+//         const { projectId } = req.params;
 
-        orderDoc.selectedUnits.forEach(unit => {
-            unit.subItems.forEach(sub => {
-                if (sub.subItemName && sub.quantity > 0) {
-                    allSubItemsToRestore.push({
-                        subItemName: sub.subItemName,
-                        quantity: sub.quantity,
-                    });
-                }
-            });
+//         if (!projectId) {
+//             return res.status(400).json({ ok: false, message: "Invalid Project ID" });
+//         }
 
-            // Then clear subItems
-            unit.subItems = [];
-        });
+//         const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+//         if (!orderDoc) {
+//             return res.status(404).json({ ok: false, message: "Order history not found" });
+//         }
 
-        // 🛠️ Restore subItem quantities before saving
+//         // orderDoc.selectedUnits.forEach(unit => {
+//         //     unit.subItems = [];
+//         // });
 
+//         // await orderDoc.save();
 
-        await orderDoc.save();
 
-        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+//         // 🧮 Step 1: Collect all subItems to restore quantities
+//         const allSubItemsToRestore: { subItemName: string; quantity: number }[] = [];
 
+//         orderDoc.selectedUnits.forEach(unit => {
+//             unit.subItems.forEach(sub => {
+//                 if (sub.subItemName && sub.quantity > 0) {
+//                     allSubItemsToRestore.push({
+//                         subItemName: sub.subItemName,
+//                         quantity: sub.quantity,
+//                     });
+//                 }
+//             });
 
-        res.json({ ok: true, message: "All SubItem deleted", data: orderDoc.selectedUnits });
+//             // Then clear subItems
+//             unit.subItems = [];
+//         });
 
+//         // 🛠️ Restore subItem quantities before saving
 
-        // 🔁 Fire-and-forget to restore inventory without blocking response
-        setImmediate(async () => {
-            try {
-                await restoreInventoryQuantities({
-                    projectId,
-                    subItems: allSubItemsToRestore,
-                });
-            } catch (err: any) {
-                console.error("❌ Failed to restore inventory after deleteAllSubUnits:", err.message);
-            }
-        })
 
-    } catch (error: any) {
-        return res.status(500).json({ ok: false, message: error.message });
-    }
-};
+//         await orderDoc.save();
+
+//         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+
+
+//         res.json({ ok: true, message: "All SubItem deleted", data: orderDoc.selectedUnits });
+
+
+//         // 🔁 Fire-and-forget to restore inventory without blocking response
+//         setImmediate(async () => {
+//             try {
+//                 await restoreInventoryQuantities({
+//                     projectId,
+//                     subItems: allSubItemsToRestore,
+//                 });
+//             } catch (err: any) {
+//                 console.error("❌ Failed to restore inventory after deleteAllSubUnits:", err.message);
+//             }
+//         })
+
+//     } catch (error: any) {
+//         return res.status(500).json({ ok: false, message: error.message });
+//     }
+// };
+
+
+// end old vrsion of updatig he items
 
 
 export const updateDeliveryLocationDetails = async (req: Request, res: Response): Promise<any> => {
@@ -1222,6 +1210,304 @@ export const orderMaterialHistoryCompletionStatus = async (req: Request, res: Re
 
 
 
+//  NEWER VERSION
+
+
+
+
+export const addSubItemToUnitNew = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params;
+        const { subItemName, quantity, unit } = req.body;
+
+        if (!projectId) {
+            return res.status(400).json({ ok: false, message: "Invalid projectId" });
+        }
+
+        if (!subItemName?.trim()) {
+            return res.status(400).json({ ok: false, message: "Mateial Item is mandatory" });
+        }
+
+
+        if (quantity === null) {
+            return res.status(400).json({ ok: false, message: "Missing Quantity" });
+        }
+
+        if (!unit) {
+            return res.status(400).json({ ok: false, message: "Missing Unit" });
+        }
+
+        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+        if (!orderDoc) {
+            return res.status(404).json({ ok: false, message: "Order history not found" });
+        }
+
+        // Find the unit inside selectedUnits by _id
+        // const unitObj = (orderDoc.currentOrder as any).id(unitId);
+        // if (!unitObj) {
+        //     return res.status(404).json({ ok: false, message: "Unit not found in order history" });
+        // }
+
+
+
+        const isExists = orderDoc.currentOrder.subItems.find((unit: OrderSubItems) => {
+            console.log("unit", unit.subItemName)
+            return unit?.subItemName?.toLowerCase()?.trim() === subItemName?.toLowerCase()?.trim()
+        })
+
+
+        if (isExists) {
+            return res.status(400).json({ message: "Material item already exists with the same name", ok: false })
+        }
+
+        // 🔹 Find max number used across ALL units' subItems
+        let maxNumber = 0;
+        orderDoc.currentOrder.subItems.forEach((sub: OrderSubItems) => {
+            if (sub.refId) {
+                const num = parseInt(sub.refId.replace(/^\D+/, ""), 10); // remove prefix, take number
+                if (!isNaN(num)) {
+                    maxNumber = Math.max(maxNumber, num);
+                }
+            }
+        });
+
+        // New refId = prefix + (maxNumber + 1)
+        let prefix = "MAT"
+        const refId = `${prefix}-${maxNumber + 1}`;
+
+        // Add new subItem
+        orderDoc.currentOrder.subItems.push({
+            subItemName: subItemName?.trim(),
+            refId,
+            quantity,
+            unit
+        });
+
+
+        // Add new subItem
+        // unitObj.subItems.push({ subItemName: subItemName?.trim(), refId, quantity, unit });
+
+        await orderDoc.save();
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+
+        res.json({ ok: true, message: "SubItem added", subItems: orderDoc.currentOrder.subItems });
+
+        updateInventoryRemainingQuantity({ itemName: subItemName, orderedQuantity: quantity })
+    } catch (error: any) {
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+
+
+export const updateSubItemInUnitNew = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, subItemId } = req.params;
+        const { subItemName, quantity, unit } = req.body;
+        // console.log("subitem name", subItemName)
+        if (!projectId ||
+           
+            !subItemId) {
+            return res.status(400).json({ ok: false, message: "Invalid IDs" });
+        }
+
+        if (!subItemName?.trim()) {
+            return res.status(400).json({ message: "material name is requried", ok: false })
+        }
+
+        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+        if (!orderDoc) {
+            return res.status(404).json({ ok: false, message: "Order history not found" });
+        }
+
+        const subItemObj = (orderDoc.currentOrder.subItems as any).id(subItemId);
+        if (!subItemObj) {
+            return res.status(404).json({ ok: false, message: "SubItem not found" });
+        }
+
+
+        // const isExists = unitObj.subItems.find((unit: OrderSubItems) => {
+        //     console.log("unit", unit.subItemName)
+        //     return unit?.subItemName?.toLowerCase() === subItemName?.toLowerCase()
+        // })
+
+
+        // if (isExists) {
+        //     return res.status(400).json({ message: "item already exists", ok: false })
+        // }
+
+
+        // ---- INVENTORY UPDATE PART ----
+        // Track old quantity before updating
+        const oldQuantity = subItemObj.quantity || 0;
+
+
+        subItemObj.subItemName = subItemName.trim();
+        if (quantity !== null) subItemObj.quantity = quantity;
+        if (!unit !== undefined) subItemObj.unit = unit;
+
+        await orderDoc.save();
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+
+        res.status(200).json({ ok: true, message: "SubItem updated", subItem: subItemObj });
+
+        // ---- INVENTORY UPDATE PART (background) ----
+        if (quantity !== null && quantity !== oldQuantity) {
+            const diff = quantity - oldQuantity;
+
+            (async () => {
+                try {
+                    if (diff > 0) {
+                        await updateInventoryRemainingQuantity({
+                            itemName: subItemName.trim(),
+                            orderedQuantity: diff,
+                        });
+                    } else if (diff < 0) {
+                        await InventoryModel.updateOne(
+                            { "subItems.itemName": subItemName.trim() },
+                            { $inc: { "subItems.$.remainingQuantity": Math.abs(diff) } }
+                        ).exec();
+                        console.log(
+                            `Inventory restored: Item "${subItemName}" increased by ${Math.abs(diff)}`
+                        );
+                    }
+                } catch (err) {
+                    console.error("Background inventory update failed:", err);
+                }
+            })();
+        }
+    } catch (error: any) {
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+
+
+export const deleteSubItemFromUnitNew = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, subItemId } = req.params;
+
+        if (!projectId ||
+            !subItemId) {
+            return res.status(400).json({ ok: false, message: "Invalid IDs" });
+        }
+
+        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+        if (!orderDoc) {
+            return res.status(404).json({ ok: false, message: "Order history not found" });
+        }
+
+        // const unitObj = (orderDoc.selectedUnits as any).id(unitId);
+        // if (!unitObj) {
+        //     return res.status(404).json({ ok: false, message: "Unit not found" });
+        // }
+
+        const subItemObj = (orderDoc.currentOrder.subItems as any).id(subItemId);
+        if (!subItemObj) {
+            return res.status(404).json({ ok: false, message: "SubItem not found" });
+        }
+
+        const { subItemName, quantity } = subItemObj;
+
+
+        (orderDoc.currentOrder.subItems as any).pull({ _id: subItemId });
+        await orderDoc.save();
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+
+
+        res.json({ ok: true, message: "SubItem deleted", subItems: orderDoc.currentOrder.subItems });
+
+
+        // ---- BACKGROUND INVENTORY UPDATE ----
+        (async () => {
+            try {
+                // add back deleted quantity to inventory
+                await InventoryModel.updateOne(
+                    { "subItems.itemName": subItemName.trim() },
+                    { $inc: { "subItems.$.remainingQuantity": quantity } }
+                ).exec();
+
+                console.log(`Inventory restored: "${subItemName}" increased by ${quantity}`);
+            } catch (err) {
+                console.error("Inventory update failed (deleteSubItemFromUnit):", err);
+            }
+        })();
+    } catch (error: any) {
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+
+
+export const deleteAllSubUnitsNew = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params;
+
+        if (!projectId) {
+            return res.status(400).json({ ok: false, message: "Invalid Project ID" });
+        }
+
+        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+        if (!orderDoc) {
+            return res.status(404).json({ ok: false, message: "Order history not found" });
+        }
+
+        // orderDoc.selectedUnits.forEach(unit => {
+        //     unit.subItems = [];
+        // });
+
+        // await orderDoc.save();
+
+
+        // 🧮 Step 1: Collect all subItems to restore quantities
+        const allSubItemsToRestore: { subItemName: string; quantity: number }[] = [];
+
+        orderDoc.currentOrder.subItems.forEach(sub => {
+                if (sub.subItemName && sub.quantity > 0) {
+                    allSubItemsToRestore.push({
+                        subItemName: sub.subItemName,
+                        quantity: sub.quantity,
+                    });
+                }
+            // Then clear subItems
+        });
+        
+        orderDoc.currentOrder.subItems = [];
+        // 🛠️ Restore subItem quantities before saving
+
+
+        await orderDoc.save();
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+
+
+        res.json({ ok: true, message: "All SubItem deleted", data: orderDoc.currentOrder.subItems });
+
+
+        // 🔁 Fire-and-forget to restore inventory without blocking response
+        setImmediate(async () => {
+            try {
+                await restoreInventoryQuantities({
+                    projectId,
+                    subItems: allSubItemsToRestore,
+                });
+            } catch (err: any) {
+                console.error("❌ Failed to restore inventory after deleteAllSubUnits:", err.message);
+            }
+        })
+
+    } catch (error: any) {
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+
+
+//  END OF NEWER VERSION
+
 
 
 
@@ -1262,6 +1548,10 @@ export const orderMaterialHistoryCompletionStatus = async (req: Request, res: Re
 
 
 // Controller function
+
+
+
+
 export const submitOrderMaterial = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
@@ -1283,16 +1573,23 @@ export const submitOrderMaterial = async (req: Request, res: Response): Promise<
         }
 
 
-        const filteredUnits = orderDoc.selectedUnits.filter(unit =>
-            Array.isArray(unit?.subItems) && unit?.subItems?.length > 0
-        );
+        // const filteredUnits = orderDoc.selectedUnits.filter(unit =>
+        //     Array.isArray(unit?.subItems) && unit?.subItems?.length > 0
+        // );
 
-        if (filteredUnits?.length === 0) {
-            return res.status(400).json({
-                ok: false,
-                message: "No valid units found. Each selected unit must have at least one sub-item."
-            });
-        }
+
+
+        const isSafe = orderDoc?.currentOrder?.subItems && orderDoc.currentOrder?.subItems?.length > 0
+
+
+
+
+        // if (filteredUnits?.length === 0) {
+        //     return res.status(400).json({
+        //         ok: false,
+        //         message: "No valid units found. Each selected unit must have at least one sub-item."
+        //     });
+        // }
 
 
         let nextNumber = 1;
@@ -1319,16 +1616,12 @@ export const submitOrderMaterial = async (req: Request, res: Response): Promise<
 
         const orderNumber = `ORD-${rawProjectId}-${currentYear}-${paddedNumber}`;
 
-        // const selectedUnits = orderDoc.selectedUnits;
-        // const shopDetails = orderDoc.shopDetails;
-        // const deliveryLocationDetails = orderDoc.deliveryLocationDetails;
-        // const images = orderDoc.images;
 
-
+        // const orderNumber = orderDoc?.currentOrder.orderMaterialNumber;
 
 
         const newOrderEntry = {
-            selectedUnits: filteredUnits,   // <-- ONLY FILTERED UNITS ARE ADDED
+            subItems: orderDoc?.currentOrder?.subItems,   // <-- ONLY FILTERED UNITS ARE ADDED
             shopDetails: orderDoc.shopDetails,
             deliveryLocationDetails: orderDoc.deliveryLocationDetails,
             images: orderDoc.images,
@@ -1347,9 +1640,44 @@ export const submitOrderMaterial = async (req: Request, res: Response): Promise<
         }
 
 
-        orderDoc.selectedUnits.forEach(unit => {
-            unit.subItems = [];
-        });
+        // orderDoc.selectedUnits.forEach(unit => {
+        //     unit.subItems = [];
+        // });
+
+
+
+
+        // let nextNumber = 1;
+        // const isNewPdf = Array.isArray(orderDoc.orderedItems) && orderDoc.orderedItems.length > 0;
+
+        // if (isNewPdf) {
+        //     // Extract all numbers from refUniquePdf (format: projectName-<number>-pdf)
+        //     const numbers = orderDoc.orderedItems.map(ele => {
+        //         const match = ele.orderMaterialNumber?.match(/-(\d+)$/);
+        //         return match ? parseInt(match[1], 10) : 0; // Extract the number part
+        //     });
+
+        //     // Find the max number and increment
+        //     nextNumber = Math.max(...numbers, 0) + 1;
+        // }
+
+
+        // const currentYear = new Date().getFullYear()
+
+
+        // // Always 3-digit format
+        // const paddedNumber = String(nextNumber).padStart(3, "0");
+        // const rawProjectId = (orderDoc.projectId as any)._id.toString().slice(-3);
+
+
+
+        nextNumber = nextNumber + 1
+        const nextPadNumber = String(nextNumber).padStart(3, "0");
+
+        const newOrderMaterialNumber = `ORD-${rawProjectId}-${currentYear}-${nextPadNumber}`;
+
+        orderDoc.currentOrder.orderMaterialNumber = newOrderMaterialNumber
+        orderDoc.currentOrder.subItems = [];
         orderDoc.images = [];
 
         await orderDoc.save()
@@ -1389,13 +1717,13 @@ export const getSingleOrderedItem = async (req: Request, res: Response): Promise
         if (!doc) return res.status(404).json({ ok: false, message: "Data not found" });
 
 
-        const orderItem = doc.orderedItems.find((order:any)=> order._id.toString() === orderItemId.toString())
+        const orderItem = doc.orderedItems.find((order: any) => order._id.toString() === orderItemId.toString())
 
         // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
         // await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: doc })
 
 
-        return res.status(200).json({ ok: true, data: orderItem , message:"fetched single order item"});
+        return res.status(200).json({ ok: true, data: orderItem, message: "fetched single order item" });
 
 
     } catch (error: any) {
@@ -1407,9 +1735,6 @@ export const getSingleOrderedItem = async (req: Request, res: Response): Promise
     }
 
 }
-
-
-
 
 
 export const placeOrderToProcurement = async (req: Request, res: Response): Promise<any> => {
@@ -1450,7 +1775,7 @@ export const placeOrderToProcurement = async (req: Request, res: Response): Prom
 
         let orderItem = orderDoc.orderedItems.find((order: any) => order._id.toString() === orderItemId.toString())
 
-        if(!orderItem){
+        if (!orderItem) {
             return res.status(404).json({ message: "Order Item not available", ok: false });
         }
 
@@ -1460,13 +1785,37 @@ export const placeOrderToProcurement = async (req: Request, res: Response): Prom
         }
 
 
-        
+
 
         const ProcurementNewItems: any[] = [];
         const subItemMap: Record<string, any> = {}; // key = subItemName
 
-        orderItem.selectedUnits.forEach(unit => {
-            unit.subItems.forEach((subItem: any) => {
+        // orderItem.selectedUnits.forEach(unit => {
+
+        //     unit.subItems.forEach((subItem: any) => {
+        //         const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
+
+        //         const name = rest.subItemName?.trim().toLowerCase() || "";
+        //         const unitKey = rest.unit?.trim().toLowerCase() || "";
+        //         const key = `${name}__${unitKey}`; // combine name + unit
+
+        //         if (key) {
+        //             if (subItemMap[key]) {
+        //                 // Already exists with same name+unit → add quantity
+        //                 subItemMap[key].quantity += rest.quantity || 0;
+        //             } else {
+        //                 // Create fresh entry
+        //                 subItemMap[key] = {
+        //                     ...rest,
+        //                     quantity: rest.quantity || 0,
+        //                     _id: new mongoose.Types.ObjectId() // always refresh ID
+        //                 };
+        //             }
+        //         }
+        //     });
+        // });
+
+ orderItem.subItems.forEach((subItem:any) => {
                 const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
 
                 const name = rest.subItemName?.trim().toLowerCase() || "";
@@ -1486,8 +1835,9 @@ export const placeOrderToProcurement = async (req: Request, res: Response): Prom
                         };
                     }
                 }
-            });
         });
+
+
 
         // Convert map back to array
         Object.values(subItemMap).forEach((item: any) => ProcurementNewItems.push(item));
@@ -1788,5 +2138,3 @@ export const getPublicDetails = async (req: Request, res: Response): Promise<any
 
     }
 }
-
-

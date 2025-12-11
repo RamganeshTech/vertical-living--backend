@@ -70,4 +70,12 @@ HRRoutes.delete(
   deleteEmployeeDocument
 );
 
+
+// Delete employee document
+HRRoutes.delete(
+  "/:empId/deletedocument/:docId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  deleteEmployeeDocument
+);
+
 export default HRRoutes;

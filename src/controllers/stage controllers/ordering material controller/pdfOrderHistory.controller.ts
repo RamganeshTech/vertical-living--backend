@@ -659,25 +659,26 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
         // Process each unit and its sub-items
         let serialNumber = 1;
 
-        for (const unit of orderItem?.selectedUnits) {
+        // for (const unit of orderItem?.selectedUnits) {
+        // for (const unit of orderItem?.subItems) {
 
 
             //no room condition - only show unit if it has subitems
-            if (!unit?.subItems || unit?.subItems?.length === 0) {
-                continue; // Skip units without subitems
-            }
+            // if (!unit?.subItems || unit?.subItems?.length === 0) {
+            //     continue; // Skip units without subitems
+            // }
 
-            // Unit name heading
-            if (unit.unitName) {
-                page.drawText(`Unit: ${unit.unitName}`, {
-                    x: 50,
-                    y: yPosition,
-                    size: 14,
-                    font: boldFont,
-                    color: rgb(0.2, 0.2, 0.2),
-                });
-                yPosition -= 30;
-            }
+            // // Unit name heading
+            // if (unit.unitName) {
+            //     page.drawText(`Unit: ${unit.unitName}`, {
+            //         x: 50,
+            //         y: yPosition,
+            //         size: 14,
+            //         font: boldFont,
+            //         color: rgb(0.2, 0.2, 0.2),
+            //     });
+            //     yPosition -= 30;
+            // }
 
             // Check if we need a new page
             if (yPosition < 150) {
@@ -723,8 +724,8 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
             yPosition -= rowHeight + 5;
 
             // Table content - sub items
-            if (unit.subItems && unit.subItems.length > 0) {
-                unit.subItems.forEach((subItem, index) => {
+            if (orderItem?.subItems && orderItem?.subItems.length > 0) {
+                orderItem?.subItems.forEach((subItem, index) => {
                     // Alternate row coloring
                     if (index % 2 === 0) {
                         page.drawRectangle({
@@ -792,7 +793,8 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
             }
 
             yPosition -= 20; // Space between units
-        }
+        
+        // }
 
         // // Total cost section
         // if (orderHistory.totalCost) {

@@ -6,7 +6,11 @@ import PaymentConfirmationModel from '../../../models/Stage Models/Payment Confi
 import { notToUpdateIfStageCompleted } from '../../../middlewares/notToUpdateIfStageCompleted';
 import { checkIfStaffIsAssignedToStage } from '../../../middlewares/checkIfStaffIsAssignedToStage';
 import { OrderMaterialHistoryModel } from '../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
-import { addSubItemToUnit, deleteAllSubUnits, deleteOrderingMaterialImage, deleteOrderMaterialPdf, deleteSubItemFromUnit, generateOrderHistoryPDFController, getOrderHistoryMaterial, getPublicDetails, getSingleOrderedItem,  orderMaterialHistoryCompletionStatus, placeOrderToProcurement, setOrderMaterialHistoryStageDeadline, submitOrderMaterial, updateDeliveryLocationDetails, updatePdfStatus, updateShopDetails, updateSubItemInUnit, uploadOrderMaterialImages } from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
+import { 
+    // addSubItemToUnit, deleteAllSubUnits,deleteSubItemFromUnit, updateSubItemInUnit
+    addSubItemToUnitNew, deleteAllSubUnitsNew,deleteSubItemFromUnitNew, updateSubItemInUnitNew,
+    
+    deleteOrderingMaterialImage, deleteOrderMaterialPdf, generateOrderHistoryPDFController, getOrderHistoryMaterial, getPublicDetails, getSingleOrderedItem,  orderMaterialHistoryCompletionStatus, placeOrderToProcurement, setOrderMaterialHistoryStageDeadline, submitOrderMaterial, updateDeliveryLocationDetails, updatePdfStatus, updateShopDetails, uploadOrderMaterialImages } from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
 import { imageUploadToS3, processUploadFiles } from '../../../utils/s3Uploads/s3upload';
 // import { generateOrderHistoryPDFController } from '../../../controllers/stage controllers/ordering material controller/pdfOrderHistory.controller';
 
@@ -31,14 +35,19 @@ orderMaterialHistoryRoutes.post("/:projectId/upload", multiRoleAuthMiddleware("o
 orderMaterialHistoryRoutes.delete("/:projectId/deleteimage/:imageId", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel),  deleteOrderingMaterialImage);
 
 // Add a subItem to a specific unit of a project
-orderMaterialHistoryRoutes.post("/:projectId/unit/:unitId/addsubitem", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), addSubItemToUnit);
-
 // Delete a subItem by subItemId inside a unit
-orderMaterialHistoryRoutes.delete("/:projectId/unit/:unitId/deletesubitem/:subItemId", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), deleteSubItemFromUnit);
-orderMaterialHistoryRoutes.delete("/deleteallsubunits/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), deleteAllSubUnits);
+// orderMaterialHistoryRoutes.post("/:projectId/unit/:unitId/addsubitem", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), addSubItemToUnit);
+// orderMaterialHistoryRoutes.delete("/:projectId/unit/:unitId/deletesubitem/:subItemId", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), deleteSubItemFromUnit);
+// orderMaterialHistoryRoutes.delete("/deleteallsubunits/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), deleteAllSubUnits);
+// orderMaterialHistoryRoutes.put("/:projectId/unit/:unitId/updatesubitem/:subItemId", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), updateSubItemInUnit);
 
 // Update a subItem by subItemId inside a unit
-orderMaterialHistoryRoutes.put("/:projectId/unit/:unitId/updatesubitem/:subItemId", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), updateSubItemInUnit);
+
+
+orderMaterialHistoryRoutes.post("/:projectId/unit/addsubitem", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), addSubItemToUnitNew);
+orderMaterialHistoryRoutes.delete("/:projectId/unit/deletesubitem/:subItemId", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), deleteSubItemFromUnitNew);
+orderMaterialHistoryRoutes.delete("/deleteallsubunits/:projectId", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), deleteAllSubUnitsNew);
+orderMaterialHistoryRoutes.put("/:projectId/unit/updatesubitem/:subItemId", multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), updateSubItemInUnitNew);
 
 
 

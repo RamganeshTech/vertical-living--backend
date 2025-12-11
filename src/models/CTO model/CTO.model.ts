@@ -38,6 +38,7 @@ const CTOSchema: Schema<ICTO> = new Schema({
         enum: ["CTO", null],
         default: null
     },
+    
     organizationId: {
         type: [Schema.Types.ObjectId],
         ref: "OrganizationModel",

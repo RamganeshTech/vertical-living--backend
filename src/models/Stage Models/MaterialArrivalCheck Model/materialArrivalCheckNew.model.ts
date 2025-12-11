@@ -97,6 +97,7 @@ export const MaterialOrderSubItemSchema = new Schema<IMaterialOrder>({
 
 export interface IMaterialOrdered {
   orderMaterialDeptNumber: string | null;
+  materialArrivalDeptNumber: string | null;
   procurementDeptNumber: string | null;
   paymentDeptNumber: string | null;
   logisticsDeptNumber: string | null;
@@ -106,6 +107,7 @@ export interface IMaterialOrdered {
 
 const materialOrderedSchema = new Schema<IMaterialOrdered>({
   orderMaterialDeptNumber: { type: String, default: null },
+  materialArrivalDeptNumber: { type: String, default: null },
   procurementDeptNumber: { type: String, default: null },
   paymentDeptNumber: { type: String, default: null },
   logisticsDeptNumber: { type: String, default: null },

@@ -10,9 +10,9 @@ import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail"
 import { syncEmployee } from "../Department controllers/HRMain controller/HrMain.controllers";
 
 // Helper: Token generator
-const generateWorkerTokens = (workerId: string, role: string, workerName: string, projectId: string[]) => {
-  const workeraccesstoken = jwt.sign({ _id: workerId, role, workerName, projectId }, process.env.JWT_WORKER_ACCESS_SECRET!, { expiresIn: "1d" });
-  const workerrefreshtoken = jwt.sign({ _id: workerId, role, workerName, projectId }, process.env.JWT_WORKER_REFRESH_SECRET!, { expiresIn: "7d" });
+const generateWorkerTokens = (workerId: string, role: string, workerName: string, projectId: string[], specificRole:string[]) => {
+  const workeraccesstoken = jwt.sign({ _id: workerId, role, workerName, projectId, specificRole }, process.env.JWT_WORKER_ACCESS_SECRET!, { expiresIn: "1d" });
+  const workerrefreshtoken = jwt.sign({ _id: workerId, role, workerName, projectId, specificRole }, process.env.JWT_WORKER_REFRESH_SECRET!, { expiresIn: "7d" });
   return { workeraccesstoken, workerrefreshtoken };
 };
 
@@ -42,7 +42,7 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
     }
 
     const decoded = JSON.parse(Buffer.from(invite, "base64").toString("utf-8"));
-    const { projectId, role, expiresAt, invitedBy, invitedByModel, organizationId } = decoded;
+    const { projectId, role, expiresAt, invitedBy, invitedByModel, organizationId, specificRole = [] } = decoded;
 
     if (!projectId || !role || !expiresAt) {
       res.status(400).json({ message: "Invite token is missing required fields.", ok: false });
@@ -80,13 +80,14 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
       organizationId: [organizationId],
       invitedBy,
       invitedByModel,
+      specificRole,
       isRegistered: true,
     });
 
     const projectIdStrings = newWorker.projectId.map(id => id.toString());
 
 
-    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((newWorker as any)._id.toString(), newWorker.role, newWorker.workerName, projectIdStrings);
+    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((newWorker as any)._id.toString(), newWorker.role, newWorker.workerName, projectIdStrings, newWorker.specificRole);
 
     res.cookie("workeraccesstoken", workeraccesstoken, {
       httpOnly: true,
@@ -112,8 +113,6 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
       ok: true
     });
 
-
-
     syncEmployee({
       organizationId,
       empId: newWorker._id as Types.ObjectId,
@@ -122,7 +121,8 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
       name: newWorker.workerName,
       phoneNo: newWorker.phoneNo!,
       email: newWorker.email,
-      specificRole: ""
+      empSpecificRole: specificRole,
+      role: "worker"
     })
       .catch((err) => console.log("syncEmployee error in Hr Dept from Worker model", err))
 
@@ -164,7 +164,7 @@ const loginWorker = async (req: Request, res: Response): Promise<void> => {
     const projectIdStrings = worker.projectId.map(id => id.toString());
 
 
-    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((worker as any)._id.toString(), worker.role, worker.workerName, projectIdStrings);
+    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((worker as any)._id.toString(), worker.role, worker.workerName, projectIdStrings, worker.specificRole);
 
     res.cookie("workeraccesstoken", workeraccesstoken, {
       httpOnly: true,
@@ -333,9 +333,9 @@ const workerIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
 
 const workerforgotPassword = async (req: Request, res: Response): Promise<any> => {
   try {
-  const { email } = req.body;
+    const { email } = req.body;
 
-  // Check if the email exists in the database
+    // Check if the email exists in the database
     const worker = await WorkerModel.findOne({ email });
 
     if (!worker) {
@@ -369,7 +369,7 @@ const workerforgotPassword = async (req: Request, res: Response): Promise<any> =
 
     return res.status(200).json({
       message: 'Password reset email sent. Please check your registered email inbox.',
-            ok:true
+      ok: true
     });
   } catch (error) {
     console.error('Error handling forgot password request: ', error);
@@ -379,11 +379,11 @@ const workerforgotPassword = async (req: Request, res: Response): Promise<any> =
 
 const workerResetForgotPassword = async (req: Request, res: Response): Promise<any> => {
   try {
-  const { token, password } = req.body;
+    const { token, password } = req.body;
 
-  if (!token || !password) {
-    return res.status(400).json({ message: "Invalid request. Token and password are required.", error: true, ok: false });
-  }
+    if (!token || !password) {
+      return res.status(400).json({ message: "Invalid request. Token and password are required.", error: true, ok: false });
+    }
 
 
     // Hash the received token to match the stored one

@@ -5,8 +5,8 @@ import mongoose, { model, Schema, Types } from "mongoose";
 export interface IPersonalInfo {
   empName?: string;
   dateOfBirth?: Date;
-  email:string,
-  phoneNo:string,
+  email: string,
+  phoneNo: string,
   gender?: "male" | "female" | "other";
   maritalStatus?: "unmarried" | "married" | "divorced" | "widowed";
   address?: {
@@ -52,6 +52,8 @@ export interface IEmployee {
   empId?: Types.ObjectId;
   employeeModel?: "UserModel" | "StaffModel" | "CTOModel" | "WorkerModel";
   empRole: "organization_staff" | "nonorganization_staff",
+  role: string
+  empSpecificRole: string[]
   personalInfo?: IPersonalInfo;
   employment?: IEmployment;
   documents?: IDocument[];
@@ -60,7 +62,7 @@ export interface IEmployee {
 
 
 export interface HREmployee extends Document {
-  organizaitonId: Types.ObjectId,
+  organizationId: Types.ObjectId,
   employeeDetails: Types.ObjectId[]
 }
 
@@ -68,24 +70,24 @@ export interface HREmployee extends Document {
 export const PersonalInfoSchema = new Schema<IPersonalInfo>({
   empName: { type: String, default: null },
   dateOfBirth: { type: Date, default: null },
-  email: {type:String, default:null},
-  phoneNo: {type:String, default:null},
+  email: { type: String, default: null },
+  phoneNo: { type: String, default: null },
   gender: { type: String, enum: ["male", "female", "other", null], default: null },
   maritalStatus: { type: String, enum: ["unmarried", "married", "divorced", "widowed", null], default: null },
   address: {
     type: {
-      street:  { type: String, default: null },
-      city:  { type: String, default: null },
-      state:  { type: String, default: null },
-      pincode:  { type: String, default: null },
+      street: { type: String, default: null },
+      city: { type: String, default: null },
+      state: { type: String, default: null },
+      pincode: { type: String, default: null },
       country: { type: String, default: "India" },
     }, default: {}
   },
   emergencyContact: {
     type: {
-      name:  { type: String, default: null },
-      relationship:  { type: String, default: null },
-      phone:  { type: String, default: null },
+      name: { type: String, default: null },
+      relationship: { type: String, default: null },
+      phone: { type: String, default: null },
     }, default: {}
   }
 }, { _id: false });
@@ -98,7 +100,7 @@ export const EmploymentSchema = new Schema<IEmployment>({
   employmentType: { type: String, enum: ["full_time", "part_time", "contract", "intern", null], default: null },
   salary: {
     type: {
-      basic:  { type: Number, default: null },
+      basic: { type: Number, default: null },
       hra: { type: Number, default: null },
       allowances: { type: Number, default: null },
       total: { type: Number, default: null },
@@ -121,15 +123,15 @@ export const DocumentSchema = new Schema<IDocument>({
 }, { _id: true });
 
 const EmployeeSchema = new Schema<IEmployee>({
-  
-  organizationId:{
+
+  organizationId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "OrganizationModel",
   },
   empId: {               // going to take the empId from the client model, worker model, cto models _id propery value will be stored
     type: mongoose.Schema.Types.ObjectId,
     refPath: 'employeeModel',
-    default:null
+    default: null
   },
   employeeModel: {
     type: String,
@@ -137,6 +139,8 @@ const EmployeeSchema = new Schema<IEmployee>({
     default: null,
   },
   empRole: { type: String, default: null },
+  role: { type: String, default: null },
+  empSpecificRole: { type: [String], default: null },
   personalInfo: { type: PersonalInfoSchema, default: {} },
   employment: { type: EmploymentSchema, default: {} },
   documents: { type: [DocumentSchema], default: [] },
@@ -151,7 +155,7 @@ const EmployeeSchema = new Schema<IEmployee>({
 
 
 const HRMainSchema = new Schema<HREmployee>({
-  organizaitonId: {
+  organizationId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "OrganizationModel",
   },
@@ -162,4 +166,4 @@ const HRMainSchema = new Schema<HREmployee>({
 
 export const HREmployeeModel = mongoose.model("HRMainModel", HRMainSchema)
 
-export const EmployeeModel = model("HREmployeeModel",EmployeeSchema )
+export const EmployeeModel = model("HREmployeeModel", EmployeeSchema)

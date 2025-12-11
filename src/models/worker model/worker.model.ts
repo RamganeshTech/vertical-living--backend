@@ -7,7 +7,7 @@ export interface IWorker extends Document {
     phoneNo?: string;
     password: string;
     role: string;
-    specificRole: string;
+    specificRole: string[];
     projectId: Types.ObjectId[];
     organizationId: Types.ObjectId[];
     invitedBy: Types.ObjectId;
@@ -23,7 +23,7 @@ const workerSchema = new Schema<IWorker>({
     phoneNo: { type: String },
     password: { type: String, required: true },
     role: { type: String, required: true },
-    specificRole: { type: String,  },
+    specificRole: { type: [String],  default:[]},
     projectId: { type: [Schema.Types.ObjectId], ref: "ProjectModel", required: true, default: [] },
     organizationId: { type: [Schema.Types.ObjectId], ref: "OrganizationModel", required: true, default: [] },
     invitedBy: {

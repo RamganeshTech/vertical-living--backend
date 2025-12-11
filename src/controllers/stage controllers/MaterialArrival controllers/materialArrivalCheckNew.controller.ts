@@ -147,6 +147,36 @@ import { IOrderedItems, OrderMaterialHistoryModel, OrderSubItems } from "../../.
 
 // };
 
+// --- Helper Function to Generate Unique Number ---
+
+const generateMaterialArrivalNumber = (projectId: string, sequence: number) => {
+    // 1. Get last 3 digits of Project ID (handle short IDs safely)
+    const projectSuffix = projectId.length >= 3
+        ? projectId.slice(-3)
+        : projectId;
+
+    // 2. Get Year
+    const year = new Date().getFullYear();
+
+    // 3. Pad sequence with zeros (e.g., 5 -> "005")
+    const sequenceStr = String(sequence).padStart(3, '0');
+
+    return `MAT-ARV-${projectSuffix}-${year}-${sequenceStr}`;
+};
+
+
+const getSequenceFromId = (id: string | null): number => {
+    if (!id) return 0;
+    try {
+        // ID format: MAT-ARV-123-2024-005
+        const parts = id.split('-');
+        const lastPart = parts[parts.length - 1];
+        const number = parseInt(lastPart, 10);
+        return isNaN(number) ? 0 : number;
+    } catch (e) {
+        return 0;
+    }
+};
 
 
 
@@ -186,16 +216,20 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
         const incomingOrders = orderHistory.orderedItems.map((order: IOrderedItems) => {
 
             // Flatten: selectedUnits[] -> subItems[]
-            const flattenedSubItems = order.selectedUnits.flatMap((unit) =>
-                (unit.subItems || []).map((subItem) => ({
-                    subItemName: subItem.subItemName?.trim(),
+            // const flattenedSubItems = order.selectedUnits.flatMap((unit) =>
+            const flattenedSubItems = order.subItems.map((subItem) =>(
+                // (unit.subItems || []).map((subItem) => ({
+                    {subItemName: subItem.subItemName?.trim(),
                     refId: subItem.refId,
                     orderedQuantity: subItem.quantity, // Map quantity from Order to orderedQuantity
                     unit: subItem.unit,
                     arrivedQuantity: 0,
                     images: [],       // Empty initially, site staff uploads here
                     isVerified: false // Default false
-                }))
+                // }))
+        }
+            )
+
             );
 
             return {
@@ -210,13 +244,26 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
 
         // 3. Sync Logic
         if (!materialArrival) {
-            // CASE A: Create New Document
+            // --- CASE A: Create New Document ---
+
+            // Start counter at 0
+            let currentSequence = 0;
+
+            const ordersWithIds = incomingOrders.map((order) => {
+                currentSequence++; // Increment for every item
+                return {
+                    ...order,
+                    materialArrivalDeptNumber: generateMaterialArrivalNumber(projectId, currentSequence)
+                };
+            });
+
+
             await MaterialArrivalModel.create({
                 projectId,
                 status: "pending",
                 isEditable: true,
                 assignedTo: null,
-                materialArrivalList: incomingOrders, // Insert all transformed orders
+                materialArrivalList: ordersWithIds, // Insert all transformed orders
                 timer,
                 generatedLink: null,
             });
@@ -225,6 +272,15 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
         } else {
             // CASE B: Update Existing Document (Smart Merge)
             const existingArrivalList = materialArrival.materialArrivalList || [];
+
+            // 1. Find the highest Sequence Number currently in the DB
+            let maxSequence = 0;
+            existingArrivalList.forEach((item: IMaterialOrdered) => {
+                const seq = getSequenceFromId(item.materialArrivalDeptNumber);
+                if (seq > maxSequence) {
+                    maxSequence = seq;
+                }
+            });
 
             // We iterate through incoming orders to merge them into existing list
             for (const newOrder of incomingOrders) {
@@ -235,11 +291,27 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
                 );
 
                 if (existingOrderIndex === -1) {
+
+                    maxSequence++; // Increment global counter
+                    const newId = generateMaterialArrivalNumber(projectId, maxSequence);
+
+                    const orderToAdd = {
+                        ...newOrder,
+                        materialArrivalDeptNumber: newId // Assign new unique ID
+                    };
+
+
                     // Sub-Case B1: New Order found -> Push it entirey
-                    materialArrival.materialArrivalList.push(newOrder as any);
+                    materialArrival.materialArrivalList.push(orderToAdd as any);
                 } else {
                     // Sub-Case B2: Order exists -> Merge subItems carefully
                     const existingOrder = existingArrivalList[existingOrderIndex];
+
+                    // Fallback: If existing item somehow lacks an ID (legacy data), fix it now
+                    if (!existingOrder.materialArrivalDeptNumber) {
+                        maxSequence++;
+                        existingOrder.materialArrivalDeptNumber = generateMaterialArrivalNumber(projectId, maxSequence);
+                    }
 
                     // Create a Map of existing subItems for fast lookup (Key: refId or Name)
                     // We prefer refId for uniqueness, fallback to name
@@ -389,7 +461,7 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
 // };
 
 
-
+// public
 export const updateMaterialArrivalItem = async (req: Request, res: Response): Promise<any> => {
     try {
         // We need orderNumber to find the group, and subItemId to find the specific item
@@ -434,6 +506,164 @@ export const updateMaterialArrivalItem = async (req: Request, res: Response): Pr
             subItem.arrivedQuantity = Number(arrivedQuantity);
         }
 
+
+        console.log("req.files", files)
+
+        // 4. Append New Images (if uploaded)
+        if (files) {
+            // const mappedFiles: IUploadFile[] = files.map(file => {
+            //     const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
+            //     return {
+            //         type,
+            //         url: file.location,
+            //         originalName: file.originalname,
+            //         uploadedAt: new Date()
+            //     };
+            // });
+
+
+            const mappedFiles: IUploadFile = {
+                type: "image",
+                url: files.location,
+                originalName: files.originalname,
+                uploadedAt: new Date(),
+            };
+
+
+            console.log("mappedfiles", mappedFiles)
+            // Push new files into existing array
+            subItem.images = [mappedFiles];
+        }
+
+
+
+
+        // 5. Save Changes
+        await doc.save();
+
+        // 6. Cache Invalidation
+        const redisMainkey = `stage:MaterialArrivalModel:${projectId}`;
+        await redisClient.del(redisMainkey);
+
+        return res.status(200).json({
+            ok: true,
+            message: "Item updated successfully",
+            data: subItem,
+        });
+
+    } catch (err: any) {
+        console.error("Error updating material arrival item:", err);
+        return res.status(500).json({
+            ok: false,
+            message: err.message || "Server error",
+        });
+    }
+};
+
+
+
+export const updateStaffMaterialArrivalQuantity = async (req: Request, res: Response): Promise<any> => {
+    try {
+        // We need orderNumber to find the group, and subItemId to find the specific item
+        const { projectId, orderNumber, subItemId } = req.params;
+        const { arrivedQuantity } = req.body;
+
+    
+        if (!projectId || !orderNumber || !subItemId) {
+            return res.status(400).json({ ok: false, message: "projectId, orderNumber, and subItemId are required" });
+        }
+
+        const doc = await MaterialArrivalModel.findOne({ projectId });
+        if (!doc) {
+            return res.status(404).json({ ok: false, message: "Project not found in Material Arrival" });
+        }
+
+        // 1. Find the specific Order Group
+        const orderGroup = doc.materialArrivalList.find(
+            (order: any) => order.orderMaterialDeptNumber === orderNumber
+        );
+
+        if (!orderGroup) {
+            return res.status(404).json({ ok: false, message: "Order Number not found in this project" });
+        }
+
+        // 2. Find the specific Sub-Item within that Order
+        // Note: We cast to 'any' or check _id.toString()
+        const subItem = orderGroup.subItems.find(
+            (item: any) => String(item._id) === subItemId
+        );
+
+        if (!subItem) {
+            return res.status(404).json({ ok: false, message: "Sub-item not found" });
+        }
+
+        // --- UPDATE LOGIC ---
+
+        // 3. Update Arrived Quantity
+        if (arrivedQuantity !== undefined && arrivedQuantity !== null) {
+            subItem.arrivedQuantity = Number(arrivedQuantity);
+        }
+
+        // 5. Save Changes
+        await doc.save();
+
+        // 6. Cache Invalidation
+        const redisMainkey = `stage:MaterialArrivalModel:${projectId}`;
+        await redisClient.del(redisMainkey);
+
+        return res.status(200).json({
+            ok: true,
+            message: "Item updated successfully",
+            data: subItem,
+        });
+
+    } catch (err: any) {
+        console.error("Error updating material arrival item:", err);
+        return res.status(500).json({
+            ok: false,
+            message: err.message || "Server error",
+        });
+    }
+};
+
+
+
+
+export const updateMaterialArrivalImage = async (req: Request, res: Response): Promise<any> => {
+    try {
+        // We need orderNumber to find the group, and subItemId to find the specific item
+        const { projectId, orderNumber, subItemId } = req.params;
+
+        // Handle Files
+        const files = req.file as (Express.Multer.File & { location: string });
+
+        if (!projectId || !orderNumber || !subItemId) {
+            return res.status(400).json({ ok: false, message: "projectId, orderNumber, and subItemId are required" });
+        }
+
+        const doc = await MaterialArrivalModel.findOne({ projectId });
+        if (!doc) {
+            return res.status(404).json({ ok: false, message: "Project not found in Material Arrival" });
+        }
+
+        // 1. Find the specific Order Group
+        const orderGroup = doc.materialArrivalList.find(
+            (order: any) => order.orderMaterialDeptNumber === orderNumber
+        );
+
+        if (!orderGroup) {
+            return res.status(404).json({ ok: false, message: "Order Number not found in this project" });
+        }
+
+        // 2. Find the specific Sub-Item within that Order
+        // Note: We cast to 'any' or check _id.toString()
+        const subItem = orderGroup.subItems.find(
+            (item: any) => String(item._id) === subItemId
+        );
+
+        if (!subItem) {
+            return res.status(404).json({ ok: false, message: "Sub-item not found" });
+        }
 
         console.log("req.files", files)
 
@@ -590,11 +820,13 @@ export const getAllMaterialArrivalDetails = async (req: RoleBasedRequest, res: R
         }
 
         const doc = await MaterialArrivalModel.findOne({ projectId });
+        if (!doc) return res.status(404).json({ message: "No material arrival record found", ok: false });
+
 
         await populateWithAssignedToField({ stageModel: MaterialArrivalModel, projectId, dataToCache: doc })
 
 
-        if (!doc) return res.status(404).json({ message: "No material arrival record found", ok: false });
+        if (!doc) return res.status(404).json({ message: "No Material Arrival Found", ok: false });
 
         return res.status(200).json({ ok: true, data: doc });
     } catch (err) {

@@ -10,7 +10,7 @@ import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3
 import { notToUpdateIfStageCompleted } from "../../../middlewares/notToUpdateIfStageCompleted";
 import { checkIfStaffIsAssignedToStage } from "../../../middlewares/checkIfStaffIsAssignedToStage";
 import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
-import { bulkToggleAllVerification, generateMaterialArrivalLink, getAllMaterialArrivalDetails, getMaterialArrivalPublicDetails, materialArrivalCompletionStatus, setMaterialArrivalStageDeadline, toggleMaterialVerification, updateMaterialArrivalItem } from "../../../controllers/stage controllers/MaterialArrival controllers/materialArrivalCheckNew.controller";
+import { bulkToggleAllVerification, generateMaterialArrivalLink, getAllMaterialArrivalDetails, getMaterialArrivalPublicDetails, materialArrivalCompletionStatus, setMaterialArrivalStageDeadline, toggleMaterialVerification, updateMaterialArrivalImage, updateMaterialArrivalItem, updateStaffMaterialArrivalQuantity } from "../../../controllers/stage controllers/MaterialArrival controllers/materialArrivalCheckNew.controller";
 import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 
 const materialArrivalRoutes = express.Router();
@@ -32,6 +32,8 @@ const materialArrivalRoutes = express.Router();
 materialArrivalRoutes.put('/updateverification/:projectId/:orderNumber/:subItemId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(MaterialArrivalModel), toggleMaterialVerification)
 // materialArrivalRoutes.put('/updateImage/:projectId/:fieldId',   imageUploadToS3.single("upload"), processUploadFiles, updateMaterialArrivalItem)
 materialArrivalRoutes.put('/updateImage/:projectId/:orderNumber/:subItemId',   imageUploadToS3.single("upload"), processUploadFiles, updateMaterialArrivalItem)
+materialArrivalRoutes.put('/updatequantity/:projectId/:orderNumber/:subItemId', multiRoleAuthMiddleware("owner", "staff", "CTO",), updateStaffMaterialArrivalQuantity)
+materialArrivalRoutes.put('/uploadimage/staff/:projectId/:orderNumber/:subItemId', multiRoleAuthMiddleware("owner", "staff", "CTO",), imageUploadToS3.single("upload"), processUploadFiles, updateMaterialArrivalImage)
 
 // not used 
 materialArrivalRoutes.put('/verifyall/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(MaterialArrivalModel), bulkToggleAllVerification)

@@ -9,7 +9,8 @@ import { getWorkerUtils, removeWorkerUtils } from "../../utils/workerUtils";
 import { generateWorkerInviteLink } from "../../utils/generateInvitationworker";
 import { syncAllMixedRoutes } from "../Modular Units Controllers/modularUnit.controller";
 import redisClient from "../../config/redisClient";
-import { EmployeeModel, HREmployeeModel } from "../../models/Department Models/HR Model/HRMain.model";
+import { EmployeeModel } from "../../models/Department Models/HR Model/HRMain.model";
+import { WorkerModel } from "../../models/worker model/worker.model";
 
 
 const createOrganziation = async (req: RoleBasedRequest, res: Response) => {
@@ -265,7 +266,7 @@ const getStaffsByOrganization = async (req: RoleBasedRequest, res: Response) => 
 // POST /api/staff/invite
 const inviteStaff = async (req: RoleBasedRequest, res: Response) => {
     try {
-        const { organizationId, specificRole } = req.body;
+        const { organizationId, specificRole = [] } = req.body;
         const user = req.user
         if (!organizationId) {
             res.status(400).json({
@@ -278,6 +279,11 @@ const inviteStaff = async (req: RoleBasedRequest, res: Response) => {
         // Set expiry: 1 day from now
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day in milliseconds
 
+
+
+        console.log("specificRole", specificRole)
+
+        
         // Payload with expiry
         const invitationPayload = {
             organizationId,
@@ -286,6 +292,8 @@ const inviteStaff = async (req: RoleBasedRequest, res: Response) => {
             expiresAt,
             ownerId: user?.ownerId || user?._id
         };
+
+
 
 
 
@@ -464,7 +472,7 @@ const removeCTOFromOrganization = async (req: RoleBasedRequest, res: Response) =
 const inviteWorkerByStaff = async (req: RoleBasedRequest, res: Response): Promise<void> => {
 
     try {
-        const { projectId, organizationId } = req.body;
+        const { projectId, organizationId , specificRole = []} = req.body;
         const user = req.user
 
         if (!projectId) {
@@ -479,6 +487,7 @@ const inviteWorkerByStaff = async (req: RoleBasedRequest, res: Response): Promis
         const inviteLink = generateWorkerInviteLink({
             projectId,
             organizationId: organizationId,
+            specificRole,
             role: "worker",
             expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
             invitedBy: user?.ownerId! || user?._id!,
@@ -646,6 +655,110 @@ const getClientByProject = async (req: RoleBasedRequest, res: Response): Promise
 
 
 
+
+
+const toggleSpecificRole = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { role, userId, organizationId } = req.params;
+        const { specificRole } = req.body;
+
+
+
+        // 1. Validation
+        if (!role) {
+            return res.status(400).json({ message: "Role is required in body." });
+        }
+
+
+
+        if (!specificRole) {
+            return res.status(400).json({ message: "Specific Role is required in body." });
+        }
+
+
+
+
+        // 2. Select Model Dynamically
+        let Model: any;
+        if (role === 'staff') {
+            Model = StaffModel;
+        } else if (role === 'worker') {
+            Model = WorkerModel;
+        } else {
+            return res.status(400).json({ message: "Invalid user type. Must be 'staff' or 'worker'." });
+        }
+
+
+
+
+        // 3. Find User
+        const user = await Model.findOne({_id:userId, organizationId: { $in: [organizationId] }});
+        if (!user) {
+            return res.status(404).json({ message: `${role} not found.` });
+        }
+
+
+         // --- Handle Field Initialization (If field doesn't exist yet) ---
+        if (!user.specificRole) {
+            user.specificRole = [];
+        }
+
+
+      
+
+        // 4. Toggle Logic
+        // We check if the role exists in the array
+        const roleIndex = user.specificRole.indexOf(role);
+        let action = "";
+
+        if (roleIndex > -1) {
+            // CASE A: Role exists -> REMOVE IT
+            user.specificRole.splice(roleIndex, 1);
+            action = "removed";
+        } else {
+            // CASE B: Role does not exist -> ADD IT
+            user.specificRole.push(role);
+            action = "added";
+        }
+
+
+         // 5. Sync with Employee Model
+        // We find the employee where empId matches the Staff/Worker _id
+        const employee = await EmployeeModel.findOne({ empId: userId , organizationId});
+
+        if (employee) {
+            // Initialize field if missing in Employee model
+            if (!employee.empSpecificRole) {
+                employee.empSpecificRole = [];
+            }
+
+            // We mirror the User's array exactly to the Employee's array 
+            // This ensures they are always perfectly in sync
+            employee.empSpecificRole = [...user.specificRole];
+            
+            await employee.save();
+        }
+
+        // 5. Save Changes
+        await user.save();
+
+        return res.status(200).json({
+            ok: true,
+            message: `Role '${role}' has been ${action}.`,
+            action: action, // 'added' or 'removed' (useful for frontend toast)
+            updatedRoles: user.specificRole,
+            hrModelSynced: !!employee,
+            data:user
+        });
+
+    } catch (error: any) {
+        console.error("Error toggling role:", error);
+        return res.status(500).json({ message: "Internal Server Error", error: error.message });
+    }
+};
+
+
+
 export {
     createOrganziation,
     getMyOrganizations,
@@ -666,5 +779,6 @@ export {
     removeWorkerFromProject,
 
     inviteClient,
-    getClientByProject
+    getClientByProject,
+    toggleSpecificRole
 }

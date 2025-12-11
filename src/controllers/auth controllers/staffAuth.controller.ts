@@ -14,7 +14,7 @@ import { EmployeeModel } from "../../models/Department Models/HR Model/HRMain.mo
 const registerStaff = async (req: Request, res: Response) => {
     try {
 
-        const { invite, email, password, phoneNo, staffName } = req.body;
+        const { invite, email, password, phoneNo, staffName, } = req.body;
 
         // 1. Validate required fields
         if (!invite || !email || !password || !phoneNo || !staffName) {
@@ -22,14 +22,17 @@ const registerStaff = async (req: Request, res: Response) => {
         }
 
         // 2. Decode the invite token safely
-        let organizationId: string, role: string, expiresAt: string, ownerId: string, specificRole: string;
+        let organizationId: string, role: string, expiresAt: string, ownerId: string, specificRole: string[];
 
         try {
             const decoded = Buffer.from(invite, "base64").toString("utf-8");
-            ({ organizationId, role, expiresAt, ownerId, specificRole } = JSON.parse(decoded));
+            ({ organizationId, role, expiresAt, ownerId, specificRole = [] } = JSON.parse(decoded));
         } catch (error) {
             return res.status(400).json({ message: "Invalid invitation link", ok: false });
         }
+
+
+        console.log("specificRole", specificRole)
 
         // 3. Validate expiry
         if (!expiresAt || new Date(expiresAt) < new Date()) {
@@ -64,8 +67,8 @@ const registerStaff = async (req: Request, res: Response) => {
             ownerId
         });
 
-        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role, specificRole:staff.specificRole }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role, specificRole:staff.specificRole }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("staffaccesstoken", token, {
             httpOnly: true,
@@ -90,19 +93,20 @@ const registerStaff = async (req: Request, res: Response) => {
         res.status(201).json({ message: "Staff registered successfully", data: staff, ok: true });
 
 
-       
-            syncEmployee({
-                organizationId,
-                empId: staff._id,
-                employeeModel: "StaffModel",
-                empRole: "organization_staff", 
-                name: staff.staffName,
-                phoneNo: staff.phoneNo,
-                email: staff.email,
-                specificRole: null
-            })
-                .catch(err => console.log("syncEmployee error in Hr Dept from Staff model", err))
-        
+
+        syncEmployee({
+            organizationId,
+            empId: staff._id,
+            employeeModel: "StaffModel",
+            empRole: "organization_staff",
+            name: staff.staffName,
+            phoneNo: staff.phoneNo,
+            role: "staff",
+            email: staff.email,
+            empSpecificRole: specificRole,
+        })
+            .catch(err => console.log("syncEmployee error in Hr Dept from Staff model", err))
+
 
     } catch (error) {
         if (error instanceof Error) {
@@ -325,9 +329,9 @@ const staffIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
 
 const staffforgotPassword = async (req: Request, res: Response): Promise<any> => {
     try {
-    const { email } = req.body;
+        const { email } = req.body;
 
-    // Check if the email exists in the database
+        // Check if the email exists in the database
         const staff = await StaffModel.findOne({ email });
 
         if (!staff) {
@@ -361,7 +365,7 @@ const staffforgotPassword = async (req: Request, res: Response): Promise<any> =>
 
         return res.status(200).json({
             message: 'Password reset email sent. Please check your registered email inbox.',
-            ok:true
+            ok: true
         });
     } catch (error) {
         console.error('Error handling forgot password request: ', error);
@@ -371,11 +375,11 @@ const staffforgotPassword = async (req: Request, res: Response): Promise<any> =>
 
 const staffResetForgotPassword = async (req: Request, res: Response): Promise<any> => {
     try {
-    const { token, password } = req.body;
+        const { token, password } = req.body;
 
-    if (!token || !password) {
-        return res.status(400).json({ message: "Invalid request. Token and password are required.", error: true, ok: false });
-    }
+        if (!token || !password) {
+            return res.status(400).json({ message: "Invalid request. Token and password are required.", error: true, ok: false });
+        }
 
 
         // Hash the received token to match the stored one

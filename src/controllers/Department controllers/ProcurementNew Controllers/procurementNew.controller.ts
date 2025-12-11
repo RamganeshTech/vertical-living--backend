@@ -334,9 +334,9 @@ export const getOrderMaterialRefPdfDetails = async (req: Request, res: Response)
             });
         }
 
-        const orderNumbers = doc?.generatedLink?.map(ele => {
+        const orderNumbers = doc?.orderedItems?.map(ele => {
             return {
-                refUniquePdf: ele.refUniquePdf, //fromDeptNumber
+                refUniquePdf: ele.orderMaterialNumber, //fromDeptNumber
                 fromDeptRefId: doc._id!,
             }
         })

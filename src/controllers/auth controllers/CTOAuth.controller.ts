@@ -99,7 +99,8 @@ const registerCTO = async (req: Request, res: Response) => {
                         name: CTO.CTOName,
                         phoneNo: CTO.phoneNo,
                         email: CTO.email,
-                        specificRole: ""
+                        empSpecificRole: [],
+                        role:"CTO"
                     })
                         .catch((err) => console.log("syncEmployee error in Hr Dept from CTO model", err))
                 
