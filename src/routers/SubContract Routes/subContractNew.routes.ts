@@ -24,8 +24,8 @@ const SubContractRoutesNew = express.Router()
 // ✅ Create a new SubContract
 SubContractRoutesNew.post(
     "/create",
-    multiRoleAuthMiddleware("owner", "staff", "CTO"),
-     imageUploadToS3.array("files"),
+    multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
+    imageUploadToS3.array("files"),
     processUploadFiles,
     createSubContract
 );
@@ -33,7 +33,7 @@ SubContractRoutesNew.post(
 
 SubContractRoutesNew.put(
     "/update/:subContractId",
-    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
     updateSubContract
 );
 
@@ -42,41 +42,41 @@ SubContractRoutesNew.put(
 // ✅ Generate shareable link  ( NOT USED) 
 SubContractRoutesNew.put(
     "/generate-shareable-link/:subContractId",
-    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
     generateShareableLink
 );
 
 // ✅ Get all SubContracts by organization
 SubContractRoutesNew.get(
     "/getall/:organizationId",
-    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
     getSubContractsByOrganization
 );
 
 // ✅ Get single SubContract by ID
 SubContractRoutesNew.get(
     "/getsingle/:subContractId",
-    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
     getSubContractById
 );
 
 // ✅ Update worker status (accept/reject)
 SubContractRoutesNew.put(
     "/update-status/:subContractId",
-    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
     updateWorkerStatus
 );
 
 // ✅ Delete a SubContract
 SubContractRoutesNew.delete(
     "/delete/:subContractId",
-    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
     deleteSubContract
 );
 
 // SubContractRoutesNew.delete(
 //     "/deletework/:subContractId",
-//     multiRoleAuthMiddleware("owner", "staff", "CTO"),
+//     multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
 //     deleteWorkerInfo
 // );
 

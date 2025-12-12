@@ -12,6 +12,7 @@ export interface IWorker extends Document {
     permission: {
         [department: string]: DepartmentPermission;
     };
+    ownerId: Types.ObjectId;
     projectId: Types.ObjectId[];
     organizationId: Types.ObjectId[];
     invitedBy: Types.ObjectId;
@@ -34,15 +35,18 @@ const workerSchema = new Schema<IWorker>({
     },
     projectId: { type: [Schema.Types.ObjectId], ref: "ProjectModel", default: [] },
     organizationId: { type: [Schema.Types.ObjectId], ref: "OrganizationModel", required: true, default: [] },
+    ownerId: { type: Schema.Types.ObjectId, ref: "UserModel", default: null },
     invitedBy: {
         type: Schema.Types.ObjectId,
-        required: true,
-        refPath: "invitedByModel"
+        // required: true,
+        refPath: "invitedByModel",
+        default: null
     },
     invitedByModel: {
         type: String,
-        required: true,
-        enum: ["UserModel", "StaffModel", "CTOModel"]
+        // required: true,
+        enum: ["UserModel", "StaffModel", "CTOModel", null],
+        default: null
     },
     isRegistered: { type: Boolean, default: false },
     resetPasswordToken: { type: String },  // Token for password reset

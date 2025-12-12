@@ -12,7 +12,7 @@ import redisClient from "../../config/redisClient";
 import { EmployeeModel } from "../../models/Department Models/HR Model/HRMain.model";
 import { WorkerModel } from "../../models/worker model/worker.model";
 import bcrypt from "bcrypt"
-import { Model } from "mongoose";
+import mongoose, { Model } from "mongoose";
 
 const createOrganziation = async (req: RoleBasedRequest, res: Response) => {
     try {
@@ -90,14 +90,17 @@ const createOrganziation = async (req: RoleBasedRequest, res: Response) => {
 const getMyOrganizations = async (req: RoleBasedRequest, res: Response) => {
     try {
         const user = req.user;
-
+        console.log("user", user)
         let idToSearch;
 
         if (user?.role === "owner") {
+            console.log("INSIDE OWNER BLOCK");
             // console.log("im i getting inside", user?.role)
             idToSearch = user._id
         }
         else {
+            console.log("INSIDE NON-OWNER BLOCK");
+
             // console.log("im i getting else part", user?.role)
             idToSearch = user?.ownerId
         }
@@ -106,7 +109,12 @@ const getMyOrganizations = async (req: RoleBasedRequest, res: Response) => {
             res.status(404).json({ message: "No organization linked", data: {}, ok: false });
             return
         }
-        const organization = await OrganizationModel.findOne({ userId: idToSearch });
+
+
+        console.log("get organizations", idToSearch)
+        const organization = await OrganizationModel.findOne({ userId: new mongoose.Types.ObjectId(idToSearch) });
+
+
         // console.log("getting inside the getmyiorganizitons", organization)
 
         if (!organization) {
@@ -488,6 +496,7 @@ const inviteWorkerByStaff = async (req: RoleBasedRequest, res: Response): Promis
             organizationId: organizationId,
             role: "worker",
             expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
+            ownerId: user?.ownerId! || user!._id!,
             invitedBy: user?.ownerId! || user?._id!,
             invitedByModel: user!.role === "staff" ? "StaffModel" : (user!.role === "CTO" ? "CTOModel" : "UserModel")
         });
@@ -704,22 +713,37 @@ const sanitizePermissions = (permissions: any) => {
 
 
 
-export const registerUserWithoutLink = async (req: Request, res: Response): Promise<any> => {
+export const registerUserWithoutLink = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
+
+
+        const ownerId = req.user?._id
 
         let { role, organizationId } = req.params;
         const {
             // cto, worker, client, staff
+            name,
             email,
             password,
-            name,
             phoneNo,
-            ownerId,
             permissions,
         } = req.body;
 
         if (!role || !["cto", "worker", "client", "staff"].includes(role.toLowerCase())) {
             return res.status(400).json({ message: "Invalid role" });
+        }
+
+
+
+        if (!email) {
+            res.status(400).json({ ok: false, message: "Email is mandatory." });
+            return;
+        }
+
+
+        if (!email.includes("@") || !email.includes(".")) {
+            res.status(400).json({ ok: false, message: "Invalid email format." });
+            return;
         }
 
         // Select model based on role
@@ -749,6 +773,10 @@ export const registerUserWithoutLink = async (req: Request, res: Response): Prom
             return res.status(400).json({ ok: false, message: "Model is not avaialble , check the role you have provided" });
         }
 
+
+        if (!password || password?.length < 6) {
+            return res.status(400).json({ ok: false, message: "Password length should be atleast 6 or more characters" });
+        }
 
 
         // Check if user exists
@@ -780,13 +808,14 @@ export const registerUserWithoutLink = async (req: Request, res: Response): Prom
             [nameField]: name,
             phoneNo,
             organizationId: organizationId ? [organizationId] : [],
-            ownerId,
+            ownerId: ownerId,
             projectId: role === "client" ? null : [],
             role: storedRole, // you can adjust CTO/worker/client roles separately if needed
             permissions: cleanPermissions,
         });
 
 
+        console.log("newUser", newUser)
         if (role.toLowerCase() === "cto") {
             role = "CTO"
         }

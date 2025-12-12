@@ -59,7 +59,7 @@ export const multiRoleAuthMiddleware =
         req.user = {
           _id: decoded._id,
           role: decoded.role,
-          ownerId: decoded.ownerId || decoded._id
+          ownerId: decoded?.ownerId || decoded._id
         };
 
         // console.log("owner", decoded)

@@ -38,7 +38,7 @@ materialArrivalRoutes.put('/uploadimage/staff/:projectId/:orderNumber/:subItemId
 // not used 
 materialArrivalRoutes.put('/verifyall/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), checkIfStaffIsAssignedToStage(MaterialArrivalModel), bulkToggleAllVerification)
 
-materialArrivalRoutes.get('/getalldetails/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), getAllMaterialArrivalDetails)
+materialArrivalRoutes.get('/getalldetails/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"), getAllMaterialArrivalDetails)
 
 materialArrivalRoutes.post("/:projectId/generate-link", multiRoleAuthMiddleware("owner", "staff", "CTO"), checkIfStaffIsAssignedToStage(MaterialArrivalModel), generateMaterialArrivalLink);
 materialArrivalRoutes.get("/public/:projectId/:token", getMaterialArrivalPublicDetails);

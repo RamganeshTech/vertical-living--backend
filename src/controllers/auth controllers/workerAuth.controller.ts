@@ -10,9 +10,9 @@ import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail"
 import { syncEmployee } from "../Department controllers/HRMain controller/HrMain.controllers";
 
 // Helper: Token generator
-const generateWorkerTokens = (workerId: string, role: string, workerName: string, projectId: string[]) => {
-  const workeraccesstoken = jwt.sign({ _id: workerId, role, workerName, projectId }, process.env.JWT_WORKER_ACCESS_SECRET!, { expiresIn: "1d" });
-  const workerrefreshtoken = jwt.sign({ _id: workerId, role, workerName, projectId }, process.env.JWT_WORKER_REFRESH_SECRET!, { expiresIn: "7d" });
+const generateWorkerTokens = (workerId: string, ownerId: string, role: string, workerName: string, projectId: string[]) => {
+  const workeraccesstoken = jwt.sign({ _id: workerId, role, workerName, projectId, ownerId }, process.env.JWT_WORKER_ACCESS_SECRET!, { expiresIn: "1d" });
+  const workerrefreshtoken = jwt.sign({ _id: workerId, role, workerName, projectId, ownerId }, process.env.JWT_WORKER_REFRESH_SECRET!, { expiresIn: "7d" });
   return { workeraccesstoken, workerrefreshtoken };
 };
 
@@ -42,7 +42,7 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
     }
 
     const decoded = JSON.parse(Buffer.from(invite, "base64").toString("utf-8"));
-    const { projectId, role, expiresAt, invitedBy, invitedByModel, organizationId, specificRole = [] } = decoded;
+    const { projectId, role, expiresAt, invitedBy, invitedByModel, organizationId, ownerId, specificRole = [] } = decoded;
 
     if (!projectId || !role || !expiresAt) {
       res.status(400).json({ message: "Invite token is missing required fields.", ok: false });
@@ -63,7 +63,7 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
 
 
     if (exists) {
-      res.status(409).json({ message: "Worker already registered for this project.", ok: false });
+      res.status(409).json({ message: "Worker already registered with the email or phone number", ok: false });
       return;
     }
 
@@ -78,6 +78,7 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
       role,
       projectId: [projectId],
       organizationId: [organizationId],
+      ownerId: ownerId || null,
       invitedBy,
       invitedByModel,
       specificRole,
@@ -87,7 +88,7 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
     const projectIdStrings = newWorker.projectId.map(id => id.toString());
 
 
-    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((newWorker as any)._id.toString(), newWorker.role, newWorker.workerName, projectIdStrings);
+    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((newWorker as any)._id.toString(), (newWorker as any).ownerId, newWorker.role, newWorker.workerName, projectIdStrings);
 
     res.cookie("workeraccesstoken", workeraccesstoken, {
       httpOnly: true,
@@ -160,7 +161,7 @@ const loginWorker = async (req: Request, res: Response): Promise<void> => {
 
     const worker = await WorkerModel.findOne({ email });
 
-    if (!worker || !worker.isRegistered) {
+    if (!worker) {
       res.status(404).json({ message: "Worker not found or not registered.", ok: false });
       return;
     }
@@ -179,7 +180,7 @@ const loginWorker = async (req: Request, res: Response): Promise<void> => {
     const projectIdStrings = worker.projectId.map(id => id.toString());
 
 
-    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((worker as any)._id.toString(), worker.role, worker.workerName, projectIdStrings);
+    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((worker as any)._id.toString(), (worker as any).ownerId, worker.role, worker.workerName, projectIdStrings);
 
     res.cookie("workeraccesstoken", workeraccesstoken, {
       httpOnly: true,

@@ -20,7 +20,7 @@ const qualityCheckRoutes = Router();
 
 qualityCheckRoutes.post(
   "/:projectId/:roomName/item/create",
-  multiRoleAuthMiddleware("owner", "CTO", "staff"),
+  multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
   // checkPreviousStageCompleted(InstallationModel),
   // notToUpdateIfStageCompleted(QualityCheckupModel),
   checkIfStaffIsAssignedToStage(QualityCheckupModel),
@@ -32,7 +32,7 @@ qualityCheckRoutes.post(
 
 qualityCheckRoutes.put(
   "/:projectId/:roomName/:itemId/item/edit",
-  multiRoleAuthMiddleware("owner", "CTO", "staff"),
+  multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"),
   // checkPreviousStageCompleted(InstallationModel),
   // notToUpdateIfStageCompleted(QualityCheckupModel),
   checkIfStaffIsAssignedToStage(QualityCheckupModel),

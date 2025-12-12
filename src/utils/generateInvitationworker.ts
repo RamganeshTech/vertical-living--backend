@@ -3,12 +3,14 @@ export const generateWorkerInviteLink = ({
   organizationId,
   role,
   expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day,
+  ownerId,
   invitedBy,
   invitedByModel
 }: {
   projectId: string;
   organizationId: string;
   role: string;
+  ownerId?: string;
   expiresAt:Date;
   invitedBy: string;
   invitedByModel: "UserModel" | "StaffModel" | "CTOModel";
@@ -20,6 +22,7 @@ export const generateWorkerInviteLink = ({
     organizationId,
     role,
     invitedBy,
+    ownerId,
     invitedByModel,
     expiresAt
   };

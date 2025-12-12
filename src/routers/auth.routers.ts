@@ -58,7 +58,7 @@ authRoutes.post('/CTO/forgotpassword', CTOforgotPassword as RequestHandler)
 authRoutes.post('/CTO/resetpassword', CTOResetForgotPassword as RequestHandler)
 
 
-authRoutes.post("/:role/create", registerUserWithoutLink)
+// authRoutes.post("/:role/create", registerUserWithoutLink)
 
 
 export default authRoutes
