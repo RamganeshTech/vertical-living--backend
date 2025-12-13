@@ -11,8 +11,6 @@ const ModuleTipsSchema = new Schema(
         stageName: {
             type: String,  //"modularunit", "cleaning", // lets use the same permission name of the each module we have used to provide the permission
         },
-        firstShown: { type: Boolean, default: false },
-
         guidelines: {
             type: [guideLines], default: []
         }

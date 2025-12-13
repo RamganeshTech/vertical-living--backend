@@ -250,7 +250,7 @@ const isAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             userName: isExist.username,
             isauthenticated: true,
             permission: isExist?.permission || {},
-            isGuideRequired:isExist.isGuideRequired
+            isGuideRequired:isExist?.isGuideRequired
         }
 
         await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })

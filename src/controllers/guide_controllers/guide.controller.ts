@@ -24,6 +24,7 @@ export const getTipsForStage = async (req: Request, res: Response): Promise<any>
         // 1. Check Redis Cache
         const cacheKey = getCacheKey(organizationId, stageName);
         const cachedData = await redisClient.get(cacheKey);
+        await redisClient.del(cacheKey);
 
         if (cachedData) {
             return res.status(200).json({
@@ -36,26 +37,39 @@ export const getTipsForStage = async (req: Request, res: Response): Promise<any>
         // 2. Fetch from DB
         // We use projection (select) to return only the specific stage to save bandwidth
         const guideDoc = await GuideLineModel.findOne(
-            { 
-                organizationId, 
-                "stages.stageName": stageName 
+            {
+                organizationId,
+                "stages.stageName": stageName
             },
             { "stages.$": 1 } // Return only the matched stage from the array
         );
 
-        let tips = [];
+
+        // ✅ FIX: Construct the correct object structure
+        let responseData: any = {
+            guidelines: []
+        };
+
         if (guideDoc && guideDoc.stages.length > 0) {
-            tips = guideDoc.stages[0].guidelines;
+            responseData = {
+                guidelines: guideDoc.stages[0].guidelines // This is the array
+            };
         }
+
+
+        // let tips = [];
+        // if (guideDoc && guideDoc.stages.length > 0) {
+        //     tips = guideDoc.stages[0].guidelines;
+        // }
 
         // 3. Set Redis Cache (Expire in 1 hour or your preference)
         // Storing just the array of tips for this specific stage
-        await redisClient.set(cacheKey, JSON.stringify(tips), {EX: 60 * 10});
+        await redisClient.set(cacheKey, JSON.stringify(responseData), { EX: 60 * 10 });
 
         return res.status(200).json({
             ok: true,
             source: "database",
-            data: tips,
+            data: responseData,
         });
 
     } catch (error) {
@@ -101,11 +115,11 @@ export const upsertStageTip = async (req: Request, res: Response): Promise<any> 
         if (tipId) {
             // --- UPDATE EXISTING TIP ---
             const tipToUpdate = guideDoc.stages[stageIndex].guidelines.id(tipId);
-            
+
             if (!tipToUpdate) {
                 return res.status(404).json({ ok: false, message: "Tip ID not found in this stage" });
             }
-            
+
             // Update the text
             tipToUpdate.tips = tipText;
 
@@ -147,9 +161,9 @@ export const deleteStageTip = async (req: Request, res: Response): Promise<any> 
 
         // 1. Perform Delete using MongoDB $pull (Atomic operation is safer/faster for deletes)
         const result = await GuideLineModel.updateOne(
-            { 
-                organizationId, 
-                "stages.stageName": stageName 
+            {
+                organizationId,
+                "stages.stageName": stageName
             },
             {
                 $pull: {
@@ -179,53 +193,14 @@ export const deleteStageTip = async (req: Request, res: Response): Promise<any> 
 };
 
 
-
-
-
-
-// ✅ MARK STAGE AS VIEWED
-export const markStageAsViewed = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { organizationId, stageName } = req.body;
-
-        if (!organizationId || !stageName) {
-            return res.status(400).json({ ok: false, message: "Organization ID and Stage Name are required" });
-        }
-
-        // Update the specific stage's firstShown to true using array positional operator $
-        await GuideLineModel.updateOne(
-            { 
-                organizationId, 
-                "stages.stageName": stageName 
-            },
-            {
-                $set: { "stages.$.firstShown": true }
-            }
-        );
-
-        // Clear Cache so the next fetch reflects the change
-        const cacheKey = `tips:${organizationId}:${stageName}`;
-        const exists = await redisClient.exists(cacheKey);
-        if (exists) {
-            await redisClient.del(cacheKey);
-        }
-
-        return res.status(200).json({ ok: true, message: "Stage marked as viewed" });
-
-    } catch (error) {
-        console.error("Error marking stage viewed:", error);
-        return res.status(500).json({ ok: false, message: "Internal Server Error" });
-    }
-};
-
 // ✅ TOGGLE USER GUIDE PREFERENCE (Multi-Model Support)
-export const toggleUserGuidePreference = async (req: RoleBasedRequest , res: Response): Promise<any> => {
+export const toggleUserGuidePreference = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         // We get userId and role from the authenticated request (middleware)
         // OR you can pass them in body if you prefer, but req.user is safer.
-        const userId = req.user?._id; 
-        const role = req.user?.role; 
-        const {organizationId} = req.params
+        const userId = req.user?._id;
+        const role = req.user?.role;
+        const { organizationId } = req.params
         const { isGuideRequired } = req.body;
 
         if (!userId || !role) {
@@ -243,7 +218,7 @@ export const toggleUserGuidePreference = async (req: RoleBasedRequest , res: Res
             case "owner":
                 Model = UserModel;
                 break;
-            case "CTO":
+            case "cto":
                 Model = CTOModel;
                 break;
             case "worker":
@@ -259,6 +234,9 @@ export const toggleUserGuidePreference = async (req: RoleBasedRequest , res: Res
                 return res.status(400).json({ ok: false, message: "Invalid role specified" });
         }
 
+
+        console.log('isGuideReqired', isGuideRequired)
+
         // Update the user document
         const updatedUser = await Model.findByIdAndUpdate(
             userId,
@@ -271,6 +249,10 @@ export const toggleUserGuidePreference = async (req: RoleBasedRequest , res: Res
         }
 
         await redisClient.del(`getusers:${role}:${organizationId}`)
+        const authCacheKey = `userAuth:${userId}`;
+
+        await redisClient.del(authCacheKey);
+
 
 
         return res.status(200).json({
