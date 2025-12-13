@@ -114,6 +114,7 @@ import BillNewAccountRoutes from './routers/Department Routes/Accounting Routes/
 import paymentAccRoutes from './routers/Department Routes/Accounting Routes/paymentMainAccount.routes';
 import desingRoutes from './routers/Design_Lab_routes/designLab.routes';
 import designRoutes from './routers/Design_Lab_routes/designLab.routes';
+import GuideRoutes from './routers/guide_routes/guide.routes';
 
 
 // Extend Socket interface for custom properties
@@ -304,10 +305,14 @@ app.use('/api/designlab', designRoutes)
 app.use('/api/workreports', workReportRoutes)
 
 
+
+
 app.use('/api/installation', installationRoutes)
 app.use('/api/qualitycheck', qualityCheckRoutes)
 app.use('/api/cleaning', cleaningRoutes)
 app.use('/api/projectdelivery', projectDeliveryRoutes)
+
+app.use('/api/guideline', GuideRoutes)
 
 
 

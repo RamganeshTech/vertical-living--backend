@@ -11,6 +11,7 @@ export interface IClient extends Document {
     permission: {
         [department: string]: DepartmentPermission;
     };
+    isGuideRequired: boolean,
     // company?: (string | null);
     password: string; // optional if you want login
     resetPasswordToken?: string,
@@ -30,6 +31,8 @@ const ClientSchema: Schema<IClient> = new Schema({
         type: Object,
         default: {}
     },
+        isGuideRequired: { type: Boolean, default: true },
+
     // company: { type: String, default: null, maxlength: [50, "comapny name should not be more than 50 digits"] },
     password: { type: String, required: true },
     projectId: { type: Schema.Types.ObjectId,  ref: "ProjectModel", },

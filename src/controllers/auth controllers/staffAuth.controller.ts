@@ -76,11 +76,12 @@ const registerStaff = async (req: Request, res: Response) => {
             permission: {},
             role,
             organizationId: [organizationId],
-            ownerId
+            ownerId,
+            isGuideRequired: true,
         });
 
-        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role, permission: staff.permission }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role, permission: staff.permission }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role, permission: staff.permission ,isGuideRequired:staff.isGuideRequired}, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role, permission: staff.permission ,isGuideRequired:staff.isGuideRequired }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("staffaccesstoken", token, {
             httpOnly: true,
@@ -111,7 +112,8 @@ const registerStaff = async (req: Request, res: Response) => {
                 phoneNo: staff.phoneNo,
                 organizationId: staff.organizationId,
                 role: staff.role,
-                permission: staff?.permission || {}
+                permission: staff?.permission || {},
+                isGuideRequired:staff.isGuideRequired
 
             }, ok: true
         });
@@ -176,8 +178,9 @@ const loginStaff = async (req: Request, res: Response) => {
         }
 
         // Generate JWT Token
-        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, role: staff.role, ownerId: staff.ownerId, organizationId: staff.organizationId }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role: staff.role, ownerId: staff.ownerId, organizationId: staff.organizationId }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
+                isGuideRequired:staff.isGuideRequired
+        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, role: staff.role, ownerId: staff.ownerId, organizationId: staff.organizationId ,isGuideRequired:staff.isGuideRequired }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role: staff.role, ownerId: staff.ownerId, organizationId: staff.organizationId ,isGuideRequired:staff.isGuideRequired }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("staffaccesstoken", token, {
             httpOnly: true,
@@ -206,7 +209,8 @@ const loginStaff = async (req: Request, res: Response) => {
                 phoneNo: staff.phoneNo,
                 organizationId: staff.organizationId,
                 role: staff.role,
-                permission: staff?.permission || {}
+                permission: staff?.permission || {},
+                isGuideRequired:staff.isGuideRequired
 
             },
             ok: true
@@ -272,7 +276,7 @@ const refreshTokenStaff = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        let staffaccesstoken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role: staff.role, organizationId: staff.organizationId }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let staffaccesstoken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role: staff.role, organizationId: staff.organizationId, isGuideRequired:staff.isGuideRequired }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
 
 
         res.cookie("staffaccesstoken", staffaccesstoken, {
@@ -334,7 +338,8 @@ const staffIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             phoneNo: isExist.phoneNo,
             staffName: isExist.staffName,
             isauthenticated: true,
-            permission: isExist?.permission || {}
+            permission: isExist?.permission || {},
+            isGuideRequired:isExist.isGuideRequired
         }
 
         await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })

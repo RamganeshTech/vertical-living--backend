@@ -40,6 +40,7 @@ designRoutes.get(
     getDesignLabById
 );
 
+// .not used
 designRoutes.put(
     "/updatedesign/:id",
     multiRoleAuthMiddleware("owner", "staff", "CTO"),

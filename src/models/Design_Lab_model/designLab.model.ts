@@ -64,7 +64,7 @@ export interface IDesignLab {
     organizationId: Types.ObjectId
     designerName: string;
     designerId?: Types.ObjectId; // Reference to User/Designer from CRM
-    deignerModel: string,
+    designerModel: string,
     designDate: Date;
     designCode: string; // Auto-generated like "DL-AUTO-2023"
     productName: string;
@@ -189,9 +189,9 @@ const DesignLabSchema = new Schema<IDesignLab>(
         },        // ========== SECTION 1: BASIC DETAILS ==========
         designerName: { type: String },
         designerId: {
-            type: Schema.Types.ObjectId, refPath: "deignerModel",
+            type: Schema.Types.ObjectId, refPath: "designerModel", 
         },
-        deignerModel: { type: String },
+        designerModel: { type: String },
         designDate: { type: Date, default: new Date() },
         designCode: { type: String },
         productName: { type: String, },

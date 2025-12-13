@@ -10,9 +10,9 @@ import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail"
 import { syncEmployee } from "../Department controllers/HRMain controller/HrMain.controllers";
 
 // Helper: Token generator
-const generateWorkerTokens = (workerId: string, ownerId: string, role: string, workerName: string, projectId: string[]) => {
-  const workeraccesstoken = jwt.sign({ _id: workerId, role, workerName, projectId, ownerId }, process.env.JWT_WORKER_ACCESS_SECRET!, { expiresIn: "1d" });
-  const workerrefreshtoken = jwt.sign({ _id: workerId, role, workerName, projectId, ownerId }, process.env.JWT_WORKER_REFRESH_SECRET!, { expiresIn: "7d" });
+const generateWorkerTokens = (workerId: string, ownerId: string, role: string, workerName: string, projectId: string[], isGuideRequired:boolean) => {
+  const workeraccesstoken = jwt.sign({ _id: workerId, role, workerName, projectId, ownerId, isGuideRequired }, process.env.JWT_WORKER_ACCESS_SECRET!, { expiresIn: "1d" });
+  const workerrefreshtoken = jwt.sign({ _id: workerId, role, workerName, projectId, ownerId, isGuideRequired }, process.env.JWT_WORKER_REFRESH_SECRET!, { expiresIn: "7d" });
   return { workeraccesstoken, workerrefreshtoken };
 };
 
@@ -83,12 +83,16 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
       invitedByModel,
       specificRole,
       isRegistered: true,
+      permission: {},
+      isGuideRequired: true
     });
 
     const projectIdStrings = newWorker.projectId.map(id => id.toString());
 
 
-    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((newWorker as any)._id.toString(), (newWorker as any).ownerId, newWorker.role, newWorker.workerName, projectIdStrings);
+    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((newWorker as any)._id.toString(),
+      (newWorker as any).ownerId, newWorker.role,
+      newWorker.workerName, projectIdStrings, newWorker.isGuideRequired);
 
     res.cookie("workeraccesstoken", workeraccesstoken, {
       httpOnly: true,
@@ -117,7 +121,8 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
         phoneNo: newWorker.phoneNo,
         workerName: newWorker.workerName,
         isauthenticated: true,
-        permission: newWorker?.permission || {}
+        permission: newWorker?.permission || {},
+        isGuideRequired: newWorker.isGuideRequired
       },
       ok: true
     });
@@ -180,7 +185,9 @@ const loginWorker = async (req: Request, res: Response): Promise<void> => {
     const projectIdStrings = worker.projectId.map(id => id.toString());
 
 
-    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((worker as any)._id.toString(), (worker as any).ownerId, worker.role, worker.workerName, projectIdStrings);
+
+    const { workeraccesstoken, workerrefreshtoken } = generateWorkerTokens((worker as any)._id.toString(), (worker as any).ownerId,
+      worker.role, worker.workerName, projectIdStrings, worker.isGuideRequired);
 
     res.cookie("workeraccesstoken", workeraccesstoken, {
       httpOnly: true,
@@ -209,7 +216,8 @@ const loginWorker = async (req: Request, res: Response): Promise<void> => {
         phoneNo: worker.phoneNo,
         workerName: worker.workerName,
         isauthenticated: true,
-        permission: worker?.permission || {}
+        permission: worker?.permission || {},
+        isGuideRequired: worker.isGuideRequired
 
       },
       ok: true
@@ -337,7 +345,8 @@ const workerIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
       phoneNo: isExist.phoneNo,
       workerName: isExist.workerName,
       isauthenticated: true,
-      permission: isExist?.permission || {}
+      permission: isExist?.permission || {},
+      isGuideRequired: isExist.isGuideRequired
 
     }
 

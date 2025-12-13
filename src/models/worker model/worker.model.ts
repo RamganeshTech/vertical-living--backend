@@ -12,6 +12,7 @@ export interface IWorker extends Document {
     permission: {
         [department: string]: DepartmentPermission;
     };
+    isGuideRequired:boolean,
     ownerId: Types.ObjectId;
     projectId: Types.ObjectId[];
     organizationId: Types.ObjectId[];
@@ -33,6 +34,8 @@ const workerSchema = new Schema<IWorker>({
         type: Object,
         default: {}
     },
+    isGuideRequired: { type: Boolean, default: true },
+
     projectId: { type: [Schema.Types.ObjectId], ref: "ProjectModel", default: [] },
     organizationId: { type: [Schema.Types.ObjectId], ref: "OrganizationModel", required: true, default: [] },
     ownerId: { type: Schema.Types.ObjectId, ref: "UserModel", default: null },

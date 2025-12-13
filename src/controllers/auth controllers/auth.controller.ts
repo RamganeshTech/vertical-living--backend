@@ -36,8 +36,8 @@ const userlogin = async (req: Request, res: Response) => {
         }
 
         // console.log("matching", isMatching)
-        let token = jwt.sign({ _id: user._id, username: user.username, organization: user.organizationId, role: user.role }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: user._id, username: user.username, organization: user.organizationId, role: user.role }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: user._id, username: user.username, organization: user.organizationId, role: user.role, isGuideRequired:user.isGuideRequired }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: user._id, username: user.username, organization: user.organizationId, role: user.role , isGuideRequired:user.isGuideRequired}, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("useraccesstoken", token, {
             httpOnly: true,
@@ -61,7 +61,8 @@ const userlogin = async (req: Request, res: Response) => {
             data: {
                 userId: user._id, role: "owner", userName: user.username, email: user.email, phoneNo: user.phoneNo,
 
-                permission: user?.permission || {}
+                permission: user?.permission || {},
+                isGuideRequired:user.isGuideRequired
 
             },
             ok: true,
@@ -138,10 +139,12 @@ const registerUser = async (req: Request, res: Response) => {
             username,
             phoneNo: phoneNo ?? null,
             role: "owner",
+            permission:{},
+            isGuideRequired: true,
         })
 
-        let token = jwt.sign({ _id: user._id, username: user.username, role: user.role, organization: user.organizationId }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: user._id, username: user.username, role: user.role, organization: user.organizationId }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: user._id, username: user.username, role: user.role, organization: user.organizationId, isGuideRequired:user.isGuideRequired }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: user._id, username: user.username, role: user.role, organization: user.organizationId , isGuideRequired:user.isGuideRequired}, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("useraccesstoken", token, {
             httpOnly: true,
@@ -165,7 +168,7 @@ const registerUser = async (req: Request, res: Response) => {
             ok: true,
             error: false,
                
-            data: { userId: user._id, role: "owner", userName: user.username, email: user.email, phoneNo: user.phoneNo ,  permission: user?.permission || {} },
+            data: { userId: user._id, role: "owner", userName: user.username, email: user.email, phoneNo: user.phoneNo , isGuideRequired:user.isGuideRequired,   permission: user?.permission || {} },
         })
 
     }
@@ -246,7 +249,8 @@ const isAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             phoneNo: isExist.phoneNo,
             userName: isExist.username,
             isauthenticated: true,
-            permission: isExist?.permission || {}
+            permission: isExist?.permission || {},
+            isGuideRequired:isExist.isGuideRequired
         }
 
         await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })

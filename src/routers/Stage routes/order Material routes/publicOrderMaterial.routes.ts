@@ -14,8 +14,9 @@ publicOrderMaterialRoutes.get("/:projectId/getpublicsubitems",  publicgetSubItem
 
 //  new one
 publicOrderMaterialRoutes.put("/:projectId/submitpublicorder", submitPublicOrders);
-
+//  new one
 publicOrderMaterialRoutes.patch('/generatelink/:projectId/:organizationId/:orderItemId',   generatePublicOrderMaterialPDFController)
+
 publicOrderMaterialRoutes.get('/getprojects/:organizationId',   getProjectforPublicUsage)
 publicOrderMaterialRoutes.put('/:projectId/shop', updatePublicShopDetails)
 

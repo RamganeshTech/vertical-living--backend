@@ -36,8 +36,8 @@ const clientLogin = async (req: Request, res: Response) => {
         }
 
 
-        let token = jwt.sign({ _id: client._id, role: client.role, clientName: client.clientName, ownerId: client.ownerId }, process.env.JWT_CLIENT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: client._id, role: client.role, clientName: client.clientName, ownerId: client.ownerId }, process.env.JWT_CLIENT_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: client._id, role: client.role, clientName: client.clientName, ownerId: client.ownerId, isGuideRequired: client.isGuideRequired }, process.env.JWT_CLIENT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: client._id, role: client.role, clientName: client.clientName, ownerId: client.ownerId, isGuideRequired: client.isGuideRequired }, process.env.JWT_CLIENT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("clientaccesstoken", token, {
             httpOnly: true,
@@ -63,7 +63,8 @@ const clientLogin = async (req: Request, res: Response) => {
                 email: client.email,
                 phoneNo: client.phoneNo,
                 role: "client",
-                permission: client?.permission || {}
+                permission: client?.permission || {},
+                isGuideRequired: client.isGuideRequired
 
             },
             ok: true, error: false
@@ -259,10 +260,14 @@ const registerClient = async (req: Request, res: Response) => {
             organizationId: [organizationId],
             ownerId,
             projectId,
+            permission: {},
+            isGuideRequired: true,
+
         })
 
-        let token = jwt.sign({ _id: client._id, clientName: client.clientName, role: client.role, ownerId: client.ownerId }, process.env.JWT_CLIENT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: client._id, clientName: client.clientName, role: client.role, ownerId: client.ownerId }, process.env.JWT_CLIENT_REFRESH_SECRET as string, { expiresIn: "7d" })
+                
+        let token = jwt.sign({ _id: client._id, clientName: client.clientName, role: client.role, ownerId: client.ownerId ,isGuideRequired: client.isGuideRequired }, process.env.JWT_CLIENT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: client._id, clientName: client.clientName, role: client.role, ownerId: client.ownerId , isGuideRequired: client.isGuideRequired}, process.env.JWT_CLIENT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("clientaccesstoken", token, {
             httpOnly: true,
@@ -290,7 +295,8 @@ const registerClient = async (req: Request, res: Response) => {
                 email: client.email,
                 phoneNo: client.phoneNo,
                 role: "client",
-                permission: client?.permission || {}
+                permission: client?.permission || {},
+                isGuideRequired: client.isGuideRequired
 
             }
         })
@@ -325,7 +331,7 @@ const clientRefreshToken = async (req: Request, res: Response) => {
             return res.status(404).json({ message: "user not found", ok: false })
         }
 
-        let clientaccesstoken = jwt.sign({ _id: isExists._id, clientName: isExists.clientName, role: isExists.role, ownerId: isExists.ownerId }, process.env.JWT_CLIENT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let clientaccesstoken = jwt.sign({ _id: isExists._id, clientName: isExists.clientName, role: isExists.role, ownerId: isExists.ownerId, isGuideRequired: isExists.isGuideRequired }, process.env.JWT_CLIENT_ACCESS_SECRET as string, { expiresIn: "1d" })
 
         res.cookie("clientaccesstoken", clientaccesstoken, {
             httpOnly: true,
@@ -379,7 +385,8 @@ const isClientAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             phoneNo: isExist.phoneNo,
             clientName: isExist.clientName,
             isauthenticated: true,
-            permission: isExist?.permission || {}
+            permission: isExist?.permission || {},
+            isGuideRequired: isExist.isGuideRequired
 
         }
 

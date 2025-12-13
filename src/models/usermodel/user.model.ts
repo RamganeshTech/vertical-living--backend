@@ -10,6 +10,8 @@ interface IUser extends Document {
     permission: {
         [department: string]: DepartmentPermission;
     };
+    isGuideRequired: boolean,
+
     organizationId?: [Types.ObjectId];
     projectId?: [Types.ObjectId];
     resetPasswordToken?: string;
@@ -45,6 +47,8 @@ const UserSchema: Schema<IUser> = new Schema({
         type: Object,
         default: {}
     },
+    isGuideRequired: { type: Boolean, default: true },
+
     organizationId: {
         type: [Schema.Types.ObjectId],
         ref: "OrganizationModel",

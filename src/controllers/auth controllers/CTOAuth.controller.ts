@@ -67,11 +67,15 @@ const registerCTO = async (req: Request, res: Response) => {
             CTOName,
             role,
             organizationId: [organizationId],
-            ownerId
+            ownerId,
+            permission:{},
+            isGuideRequired: true
         });
 
-        let token = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, organizationId: CTO.organizationId, ownerId: CTO.ownerId, role: CTO.role }, process.env.JWT_CTO_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, organizationId: CTO.organizationId, ownerId: CTO.ownerId, role: CTO.role }, process.env.JWT_CTO_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, organizationId: CTO.organizationId,
+             ownerId: CTO.ownerId, role: CTO.role , isGuideRequired: CTO.isGuideRequired}, process.env.JWT_CTO_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, 
+            organizationId: CTO.organizationId, ownerId: CTO.ownerId, role: CTO.role, isGuideRequired: CTO.isGuideRequired }, process.env.JWT_CTO_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("ctoaccesstoken", token, {
             httpOnly: true,
@@ -99,7 +103,8 @@ const registerCTO = async (req: Request, res: Response) => {
                 phoneNo: CTO.phoneNo,
                 organizationId: CTO.organizationId,
                 role: CTO.role,
-                permission: CTO?.permission || {}
+                permission: CTO?.permission || {},
+                isGuideRequired: CTO.isGuideRequired
 
             }, ok: true
         });
@@ -156,8 +161,10 @@ const loginCTO = async (req: Request, res: Response) => {
         }
 
         // Generate JWT Token
-        let token = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, role: CTO.role, ownerId: CTO.ownerId, organizationId: CTO.organizationId }, process.env.JWT_CTO_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, role: CTO.role, ownerId: CTO.ownerId, organizationId: CTO.organizationId }, process.env.JWT_CTO_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, role: CTO.role, 
+            ownerId: CTO.ownerId, organizationId: CTO.organizationId , isGuideRequired: CTO.isGuideRequired}, process.env.JWT_CTO_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, role: CTO.role, 
+            ownerId: CTO.ownerId, organizationId: CTO.organizationId, isGuideRequired: CTO.isGuideRequired }, process.env.JWT_CTO_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("ctoaccesstoken", token, {
             httpOnly: true,
@@ -186,7 +193,8 @@ const loginCTO = async (req: Request, res: Response) => {
                 phoneNo: CTO.phoneNo,
                 organizationId: CTO.organizationId,
                 role: CTO.role,
-                permission: CTO?.permission || {}
+                permission: CTO?.permission || {},
+                isGuideRequired: CTO.isGuideRequired
 
             },
             ok: true
@@ -252,7 +260,7 @@ const refreshTokenCTO = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        let CTOaccesstoken = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, role: CTO.role, ownerId: CTO.ownerId, organizationId: CTO.organizationId }, process.env.JWT_CTO_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let CTOaccesstoken = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, role: CTO.role, ownerId: CTO.ownerId, organizationId: CTO.organizationId, isGuideRequired: CTO.isGuideRequired }, process.env.JWT_CTO_ACCESS_SECRET as string, { expiresIn: "1d" })
 
 
         res.cookie("ctoaccesstoken", CTOaccesstoken, {
@@ -313,7 +321,8 @@ const CTOIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             phoneNo: isExist.phoneNo,
             CTOName: isExist.CTOName,
             isauthenticated: true,
-            permission: isExist?.permission || {}
+            permission: isExist?.permission || {},
+            isGuideRequired: isExist.isGuideRequired
 
         }
 

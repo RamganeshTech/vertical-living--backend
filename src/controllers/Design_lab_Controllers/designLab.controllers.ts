@@ -1,7 +1,7 @@
 // src/controllers/designLab.controller.ts
 
 import { Request, Response } from "express";
-import mongoose, {Types} from "mongoose";
+import mongoose, { Types } from "mongoose";
 // import DesignLab from "../models/designLab.model";
 // import { IUpload, IDesignLab } from "../interfaces/designLab.interface";
 import { IComponent, IDesignLab, IMaterial, IUpload } from "../../models/Design_Lab_model/designLab.model";
@@ -15,7 +15,7 @@ import { RoleBasedRequest } from "../../types/types";
 
 
 interface PaginationQuery {
-    organizationId?:string
+    organizationId?: string
     page?: string;
     limit?: string;
     search?: string;
@@ -55,81 +55,6 @@ const mapFileToUpload = (file: Express.Multer.File & { location: string }): IUpl
     };
 };
 
-/**
- * Helper function to process files and apply them to the design lab data
- */
-const processFilesWithMapping = (
-    files: (Express.Multer.File & { location: string })[],
-    fileMapping: FileMapping[],
-    designLabData: Partial<IDesignLab>
-): { success: boolean; errors: string[] } => {
-    const errors: string[] = [];
-
-    // Initialize referenceImages if not exists
-    if (!designLabData.referenceImages) {
-        designLabData.referenceImages = [];
-    }
-
-    // Initialize components if not exists
-    if (!designLabData.components) {
-        designLabData.components = [];
-    }
-
-    // Process each file according to its mapping
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const mapping = fileMapping[i];
-
-        if (!mapping) {
-            errors.push(`No mapping found for file at index ${i} (${file.originalname})`);
-            continue;
-        }
-
-        const uploadData = mapFileToUpload(file);
-
-        if (mapping.target === "reference") {
-            // Add to reference images
-            designLabData.referenceImages.push(uploadData);
-        } else if (mapping.target === "material") {
-            const { componentIndex, materialIndex } = mapping;
-
-            // Validate indices
-            if (componentIndex === undefined || materialIndex === undefined) {
-                errors.push(
-                    `File at index ${i}: componentIndex and materialIndex are required for material target`
-                );
-                continue;
-            }
-
-            // Check if component exists
-            if (!designLabData.components[componentIndex]) {
-                errors.push(
-                    `File at index ${i}: Component at index ${componentIndex} does not exist`
-                );
-                continue;
-            }
-
-            // Check if material exists
-            if (!designLabData.components[componentIndex].materials) {
-                designLabData.components[componentIndex].materials = [];
-            }
-
-            if (!designLabData.components[componentIndex].materials[materialIndex]) {
-                errors.push(
-                    `File at index ${i}: Material at index ${materialIndex} in component ${componentIndex} does not exist`
-                );
-                continue;
-            }
-
-            // Assign image to material
-            designLabData.components[componentIndex].materials[materialIndex].image = uploadData;
-        } else {
-            errors.push(`File at index ${i}: Unknown target "${mapping.target}"`);
-        }
-    }
-
-    return { success: errors.length === 0, errors };
-};
 
 
 
@@ -167,7 +92,10 @@ export const createDesignLab = async (
     res: Response
 ): Promise<any> => {
     try {
-        const {organizationId} = req.params
+        const { organizationId } = req.params
+        const role = req.user?.role!
+
+        
 
         if (!organizationId) {
             return res.status(400).json({
@@ -224,7 +152,7 @@ export const createDesignLab = async (
             });
         }
 
-        
+
 
         // Initialize referenceImages array
         if (!designLabData.referenceImages) {
@@ -272,19 +200,40 @@ export const createDesignLab = async (
         // Add organization ID
         designLabData.organizationId = new mongoose.Types.ObjectId(organizationId);
 
+
+        let ModelName = "StaffModel";
+        switch (role.toLowerCase()) {
+            case "cto":
+                ModelName = "CTOModel";
+                break;
+            case "worker":
+                ModelName = "WorkerModel";
+                break;
+            case "client":
+                ModelName = "ClientModel";
+                break;
+            case "staff":
+                ModelName = "StaffModel";
+                break;
+            case "owner":
+                ModelName = "UserModel"
+        }
+
+
         if (designLabData.designerId) {
             designLabData.designerId = new mongoose.Types.ObjectId(
                 designLabData.designerId as unknown as string
             );
+            designLabData.designerModel = ModelName
         }
 
 
-          const dlCode = await generateDesignCode(organizationId)
+        const dlCode = await generateDesignCode(organizationId)
 
-        
-          if(dlCode){
+
+        if (dlCode) {
             designLabData.designCode = dlCode
-          }
+        }
 
         // Create and save
         const designLab = new DesignLabModel(designLabData);
@@ -308,7 +257,7 @@ export const createDesignLab = async (
 
 
 // ==========================================
-// 2. UPDATE DESIGN LAB (Text Data Only - No Image Handling)
+// 2. UPDATE DESIGN LAB (Text Data Only - No Image Handling) (not used)
 // ==========================================
 export const updateDesignLab = async (
     req: RoleBasedRequest,
@@ -363,6 +312,7 @@ export const updateDesignLab = async (
                 };
             });
         }
+
 
         // Update the document
         const updatedDesignLab = await DesignLabModel.findByIdAndUpdate(
@@ -428,9 +378,9 @@ export const updateDesignLabNew = async (
 
         // --- CRITICAL FIX: Stop if data is missing ---
         if (!updateData || typeof updateData !== 'object') {
-            return res.status(400).json({ 
-                ok: false, 
-                message: "Missing 'data' field in form-data. Ensure JSON is sent with key 'data'." 
+            return res.status(400).json({
+                ok: false,
+                message: "Missing 'data' field in form-data. Ensure JSON is sent with key 'data'."
             });
         }
 
@@ -465,10 +415,10 @@ export const updateDesignLabNew = async (
                 if (mapping.target === "reference") {
                     if (!updateData.referenceImages) updateData.referenceImages = [];
                     updateData.referenceImages.push(uploadData);
-                } 
+                }
                 else if (mapping.target === "material") {
                     const { componentIndex, materialIndex } = mapping;
-                    
+
                     // Defensive check for array existence
                     if (
                         componentIndex !== undefined &&
@@ -581,7 +531,8 @@ export const getAllDesignLabs = async (
 ): Promise<any> => {
     try {
 
-       
+        const userId = req.user?._id!
+        const role = req.user?.role!
 
         const {
             organizationId,
@@ -595,7 +546,7 @@ export const getAllDesignLabs = async (
             sortOrder = "desc",
         } = req.query as PaginationQuery;
 
-         if (!organizationId) {
+        if (!organizationId) {
             return res.status(400).json({
                 ok: false,
                 message: "Organization ID is required",
@@ -609,7 +560,15 @@ export const getAllDesignLabs = async (
         // Build filter query
         const filter: any = {
             organizationId: new mongoose.Types.ObjectId(organizationId as string),
+            // designerId: new mongoose.Types.ObjectId(userId as string)
         };
+
+
+        // Designers → only their own designs
+        if (role !== "owner") {
+            filter.designerId = new mongoose.Types.ObjectId(userId as string);
+        }
+
 
         if (search) {
             filter.$or = [
@@ -694,7 +653,7 @@ export const getDesignLabById = async (
         }
 
         const designLab = await DesignLabModel.findById(id)
-            .populate("designerId", "name email")
+            .populate("designerId", "-password")
             .lean();
 
         if (!designLab) {

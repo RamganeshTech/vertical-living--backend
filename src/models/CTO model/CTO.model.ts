@@ -10,6 +10,8 @@ interface ICTO extends Document {
     permission: {
         [department: string]: DepartmentPermission;
     };
+    isGuideRequired: boolean,
+
     organizationId?: [Types.ObjectId];
     projectId?: [Types.ObjectId];
     ownerId: Types.ObjectId | null
@@ -57,6 +59,7 @@ const CTOSchema: Schema<ICTO> = new Schema({
         ref: "ProjectModel",
         default: []
     },
+    isGuideRequired: { type: Boolean, default: true },
     ownerId: {
         type: Schema.Types.ObjectId,
         ref: "UserModel",

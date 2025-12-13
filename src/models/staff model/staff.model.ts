@@ -16,6 +16,7 @@ export interface IStaff extends Document {
     staffName: string,
     phoneNo: string,
     role: string;
+    isGuideRequired: boolean
     // perMission: string[];
     permission: {
         [department: string]: DepartmentPermission;
@@ -55,6 +56,7 @@ const StaffSchema: Schema<IStaff> = new Schema({
     type:Object,
     default:{}
    },
+    isGuideRequired: { type: Boolean, default: true },
     
     organizationId: {
         type: [Schema.Types.ObjectId],
