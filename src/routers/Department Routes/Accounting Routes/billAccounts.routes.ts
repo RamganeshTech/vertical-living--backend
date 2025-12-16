@@ -24,7 +24,7 @@ BillAccountRoutes
         uploadBillImagesOnly)
     .delete ("/deletebill/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), deleteBill)
     .get("/getsinglebill/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), getBillById)
-    .delete("/deleteimage/:id/z:imageId", multiRoleAuthMiddleware("owner", "staff", "CTO"), deleteBillImages)
+    .delete("/deleteimage/:id/:imageId", multiRoleAuthMiddleware("owner", "staff", "CTO"), deleteBillImages)
     // .post("/synctoaccounts/:billId", multiRoleAuthMiddleware("owner", "staff", "CTO"), sendBillToAccounting)
     // .post("/synctoaccounts/:billId", multiRoleAuthMiddleware("owner", "staff", "CTO"), sendBillToAccounting)
     .post("/synctopayments/:billId", multiRoleAuthMiddleware("owner", "staff", "CTO"), sendBillToPayment);

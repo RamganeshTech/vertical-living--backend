@@ -16,6 +16,7 @@ vendorAccountingRoutes
         ]),
         processUploadFiles,
         createVendor)
+        // not use update-main-image
     .put(
         "/update-main-image/:vendorId",
         multiRoleAuthMiddleware("owner", "staff", "CTO"),
@@ -24,7 +25,7 @@ vendorAccountingRoutes
         updateVendorMainImage
     )
     .put("/updatevendor/:id/document", multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("files"), processUploadFiles, updateVendorDoc)
-    .put("/updatevendor/:id/shopimages", multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("shopImages"), processUploadFiles, updateVendorShopImages)
+   .put("/updatevendor/:id/shopimages", multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("shopImages"), processUploadFiles, updateVendorShopImages)
     .put("/updatevendor/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), updateVendor)
     .delete("/deletevendor/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), deleteVendor)
     .get("/singlevendor/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), getvendor)
