@@ -82,7 +82,7 @@ export const submitRequirementForm = async (req: Request, res: Response,): Promi
         }
 
         if (form.shareTokenExpiredAt && new Date() > form.shareTokenExpiredAt) {
-            res.status(410).json({ message: "This form link has expired.", ok: false });
+            res.status(410).json({ message: "Form has already been submitted.", ok: false });
             return
         }
 
