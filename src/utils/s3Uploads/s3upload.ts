@@ -41,14 +41,16 @@ import { NextFunction, Request, Response } from "express";
 export const imageUploadToS3 = multer({
   storage: multer.memoryStorage(),
   fileFilter: (_req, file, cb) => {
-    const allowed = ["image/jpeg", "image/png", "application/pdf",
+    const allowed = [
+      "image/jpeg", "image/png",
+       "application/pdf",
        "video/mp4",       // Add video types
       "video/quicktime", // .mov
       "video/x-msvideo", // .avi
       "video/x-ms-wmv",  // .wmv
       "video/webm"       // .webm
       ];
-    if (allowed.includes(file.mimetype)) {
+    if ( file.mimetype.startsWith("image/") || allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error("Invalid file type."));

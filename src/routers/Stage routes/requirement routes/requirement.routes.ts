@@ -21,7 +21,7 @@ requirementRoutes.put('/updateroomitem/:projectId/:roomId/:itemId', multiRoleAut
 requirementRoutes.delete('/deleteitem/:projectId/:roomId/:itemId', multiRoleAuthMiddleware("owner", "staff", "CTO",  "worker", "client"), checkIfStaffIsAssignedToStage(RequirementFormModel), deleteRoomItemController)
 
 // for clinet info
-requirementRoutes.post('/createrequirement/:projectId', checkIfStaffIsAssignedToStage(RequirementFormModel), submitRequirementForm)
+requirementRoutes.post('/createrequirement/:projectId', submitRequirementForm)
 // need to change
 
 requirementRoutes.get('/getrequirementform/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client", "worker"), getAllInfo)
