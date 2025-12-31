@@ -5,7 +5,8 @@ import { CategoryModel, ItemModel } from "../../models/Quote Model/RateConfigAdm
 import { jsonrepair } from 'jsonrepair';
 // import fs from "fs";
 // import { CategoryModel, ItemModel } from "../models/MaterialModel"; // Adjust paths as needed
-
+import dotenv  from 'dotenv';
+dotenv.config()
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // export const extractLayoutDetails = async (req: Request, res: Response): Promise<any> => {
