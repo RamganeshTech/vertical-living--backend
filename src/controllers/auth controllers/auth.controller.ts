@@ -258,12 +258,12 @@ const isAuthenticated = async (req: RoleBasedRequest, res: Response) => {
         res.status(200).json({
             message: "user is authenticated", ok: true,
             data
-        })
+        })    
     }
     catch (error) {
         if (error instanceof Error) {
             console.log("erorr from isAutneticated user", error)
-            res.status(500).json({ message: "internal error ocuured", errorMssage: error, ok: false })
+            res.status(500).json({ message: "internal error ocuured", errorMessage: error, ok: false })
         }
     }
 }

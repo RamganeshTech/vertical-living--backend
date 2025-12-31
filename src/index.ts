@@ -115,6 +115,7 @@ import paymentAccRoutes from './routers/Department Routes/Accounting Routes/paym
 import desingRoutes from './routers/Design_Lab_routes/designLab.routes';
 import designRoutes from './routers/Design_Lab_routes/designLab.routes';
 import GuideRoutes from './routers/guide_routes/guide.routes';
+import cadRoutes from './routers/cad_routes/cad.routes';
 
 
 // Extend Socket interface for custom properties
@@ -379,6 +380,9 @@ app.use("/api/materialinventory/cart", materialInventoryCartRoutes)
 
 // NOTIFICAITON API
 app.use("/api/notification", notificaitonRoutes)
+
+// CAD ROUTES
+app.use("/api/cad", cadRoutes)
 
 
 

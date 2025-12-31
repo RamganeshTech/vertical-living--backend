@@ -1954,7 +1954,8 @@ export const generateOrderHistoryPDFController = async (req: Request, res: Respo
 
 
 
-// DELETE PDF API
+//  NOT IN USE
+// DELETE PDF API 
 export const deleteOrderMaterialPdf = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId, pdfId } = req.params;
@@ -2004,7 +2005,7 @@ export const deleteOrderMaterialPdf = async (req: Request, res: Response): Promi
 };
 
 
-
+//  NOT IN USE
 export const updatePdfStatus = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { projectId, pdfId } = req.params; // order history and pdf doc inside generatedLink
@@ -2054,6 +2055,8 @@ export const updatePdfStatus = async (req: RoleBasedRequest, res: Response): Pro
     }
 };
 
+
+//  NOT IN USE
 export const getPublicDetails = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;

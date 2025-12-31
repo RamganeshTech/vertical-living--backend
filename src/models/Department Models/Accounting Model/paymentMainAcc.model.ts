@@ -67,24 +67,6 @@ export interface IPaymentItem {
     tax: number | null
 }
 
-const PaymentAccItemSchema = new Schema<IPaymentItem>(
-    {
-        itemName: { type: String, },
-        quantity: { type: Number, default: 0 },
-        rate: { type: Number, },
-        unit: { type: String, default: "" },
-        totalCost: { type: Number, }, // quantity * rate
-        status: { type: String, default: null },
-        orderId: { type: String, default: null }, // Razorpay order/fund_account_id
-        paymentId: { type: String, default: null }, // Razorpay payout_id
-        transactionId: { type: String, default: null }, // UTR number
-        paidAt: { type: Date, default: null },
-        failureReason: { type: String, default: null },
-        fees: { type: Number, default: null },
-        tax: { type: Number, default: null }
-    },
-    { _id: true }
-);
 
 
 export interface IGrandTotal {
@@ -114,6 +96,25 @@ const grandTotalSchema = new Schema<IGrandTotal>({
 // export interface IBillUploads extends IUploadPdf { }
 
 
+
+const PaymentAccItemSchema = new Schema<IPaymentItem>(
+{
+itemName: { type: String, },
+quantity: { type: Number, default: 0 },
+rate: { type: Number, },
+unit: { type: String, default: "" },
+totalCost: { type: Number, }, // quantity * rate
+status: { type: String, default: null },
+orderId: { type: String, default: null }, // Razorpay order/fund_account_id
+paymentId: { type: String, default: null }, // Razorpay payout_id
+transactionId: { type: String, default: null }, // UTR number
+paidAt: { type: Date, default: null },
+failureReason: { type: String, default: null },
+fees: { type: Number, default: null },
+tax: { type: Number, default: null }
+},
+{ _id: true }
+);
 
 
 
