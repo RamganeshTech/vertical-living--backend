@@ -23,7 +23,8 @@ export interface CreateNotificationDTO {
     url: string;
     label?: string;
   };
-  projectId?: string;
+  fromModule?: string;
+  projectId?: string | null;
 }
 
 export interface NotificationResponse {

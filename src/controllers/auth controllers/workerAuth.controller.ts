@@ -338,6 +338,9 @@ const workerIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
       return res.status(404).json({ message: "worker not found", ok: false })
     }
 
+
+    // console.log("isExit", isExist)
+
     const data = {
       workerId: isExist._id,
       role: isExist.role,

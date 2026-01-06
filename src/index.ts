@@ -116,6 +116,10 @@ import desingRoutes from './routers/Design_Lab_routes/designLab.routes';
 import designRoutes from './routers/Design_Lab_routes/designLab.routes';
 import GuideRoutes from './routers/guide_routes/guide.routes';
 import cadRoutes from './routers/cad_routes/cad.routes';
+import toolMasterRoutes from './routers/tool_routes/toolMaster.route';
+import toolRoomModel from './routers/tool_routes/toolsRoom.route';
+import toolRoomRoutes from './routers/tool_routes/toolsRoom.route';
+import toolIssueRoutes from './routers/tool_routes/toolIssue.route';
 
 
 // Extend Socket interface for custom properties
@@ -383,6 +387,13 @@ app.use("/api/notification", notificaitonRoutes)
 
 // CAD ROUTES
 app.use("/api/cad", cadRoutes)
+
+
+
+// TOOL ROUTES
+app.use("/api/toolmaster", toolMasterRoutes)
+app.use("/api/toolroom", toolRoomRoutes)
+app.use("/api/tool", toolIssueRoutes)
 
 
 

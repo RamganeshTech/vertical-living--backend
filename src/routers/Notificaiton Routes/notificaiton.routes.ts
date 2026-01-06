@@ -20,7 +20,7 @@ import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddlewa
 const notificaitonRoutes = express.Router();
 
 // All routes require authentication
-notificaitonRoutes.use(multiRoleAuthMiddleware("owner", "CTO", "staff"));
+notificaitonRoutes.use(multiRoleAuthMiddleware("owner", "CTO", "staff", "worker"));
 
 // Get all notifications for user
 notificaitonRoutes.get('/getAllNotification', getUserNotifications);

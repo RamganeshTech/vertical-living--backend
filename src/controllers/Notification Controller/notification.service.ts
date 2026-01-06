@@ -24,6 +24,7 @@ export const createNotification = async (data: CreateNotificationDTO): Promise<I
         url: data.navigation.url,
         label: data.navigation.label || 'Click here',
       },
+      fromModule: data.fromModule || null,
       projectId: data.projectId || null,
       isRead: false,
     });

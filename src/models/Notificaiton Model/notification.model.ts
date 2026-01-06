@@ -10,11 +10,12 @@ export interface INotification extends Document {
     message: string;
     type: 'info' | 'warning' | 'assignment';
     isRead: boolean;
+    fromModule: string;
     navigation: {
         url: string; // frontend route like "/projects/123/staff"
         label?: string; // optional button text like "Go to staff page"
     };
-    projectId?: mongoose.Types.ObjectId;
+    projectId?: mongoose.Types.ObjectId | null;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -50,6 +51,9 @@ const NotificationSchema = new Schema<INotification>(
         navigation: {
             url: { type: String, }, // example: "/vertical-living/staff-tasks"
             label: { type: String, default: "Click here" },
+        },
+        fromModule:{
+            type:String
         },
         projectId: {
             type: Schema.Types.ObjectId,
