@@ -15,8 +15,10 @@ const LabourRateConfigRoutes = Router();
 
 
 LabourRateConfigRoutes.get("/categories/:organizationId",  multiRoleAuthMiddleware("owner","CTO", "staff"), getLabourCategories);
-LabourRateConfigRoutes.get("/categories/:organizationId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),  getLabourItemsByCategory);
-LabourRateConfigRoutes.get("/categories/:organizationId/singlesalary", multiRoleAuthMiddleware("owner","CTO", "staff"),  getSingleLabourRateConfigCost);
+LabourRateConfigRoutes.get("/categories/:organizationId/:categoryId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),  getLabourItemsByCategory);
+
+//  used in the quotes
+LabourRateConfigRoutes.get("/categories/:organizationId/singlesalary/:categoryId", multiRoleAuthMiddleware("owner","CTO", "staff"),  getSingleLabourRateConfigCost);
 
 /**
  * CATEGORY ROUTES
@@ -28,7 +30,7 @@ LabourRateConfigRoutes.delete("/categories/:categoryId",multiRoleAuthMiddleware(
 /**
  * ITEM ROUTES
  */
-LabourRateConfigRoutes.post("/categories/:organizationId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),createLabourItems);
+LabourRateConfigRoutes.post("/categories/:organizationId/:categoryId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),createLabourItems);
 
 LabourRateConfigRoutes.put("/items/:itemId", multiRoleAuthMiddleware("owner","CTO", "staff"),updateLabourItem);
 

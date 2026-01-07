@@ -80,7 +80,7 @@ commonOrderRoutes.put("/:id/:orderItemId/:organizationId/senttoprocurement", mul
 commonOrderRoutes.get("/:id/:orderItemId/getsingleorderedItem", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), getSingleCommonOrderedItem);
 commonOrderRoutes.patch('/generatelink/:id/:organizationId/:orderItemId', multiRoleAuthMiddleware("owner", "staff", "CTO",),  generateCommonOrderHistoryPDFController)
 
-
+//  End of NEW VERSION
 ///////////////////////////
 // Delivery & Shop Details
 ///////////////////////////
@@ -115,7 +115,7 @@ commonOrderRoutes.get(
     getSingleproject
 );
 
-
+//  (NOT IN USE)
 commonOrderRoutes.put('/completionstatus/:id', multiRoleAuthMiddleware("owner", "staff", "CTO",), commonOrderMaterialHistoryCompletionStatus)
 
 // (NOT IN USE)

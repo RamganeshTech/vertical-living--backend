@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Types } from "mongoose";
-import MaterialQuoteGenerateModel from "../../../models/Quote Model/QuoteGenerate Model/QuoteGenerate.model";
+import InternalQuoteEntryModel from "../../../models/Quote Model/QuoteGenerate Model/InternalQuote.model";
 import { CategoryModel, ItemModel } from "../../../models/Quote Model/RateConfigAdmin Model/rateConfigAdmin.model";
 
 // Define File type with S3 `location`
@@ -9,7 +9,7 @@ interface UploadedFile extends Express.Multer.File {
 }
 
 const getNextQuoteNumber = async (organizationId:string): Promise<string> => {
-  const allQuotes = await MaterialQuoteGenerateModel.find({organizationId}).select('quoteNo -_id');
+  const allQuotes = await InternalQuoteEntryModel.find({organizationId}).select('quoteNo -_id');
 
   const maxQuoteNumber = allQuotes.reduce((max, quote) => {
     const number = Number(quote.quoteNo?.replace('Q-', ''));
@@ -107,7 +107,7 @@ export const createMaterialQuote = async (req: Request, res: Response): Promise<
       };
     });
 
-    const newQuote = await MaterialQuoteGenerateModel.create({
+    const newQuote = await InternalQuoteEntryModel.create({
       organizationId,
       projectId,
       quoteNo: quoteNo || null,
@@ -209,7 +209,7 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
       };
     });
 
-    const updatedQuote = await MaterialQuoteGenerateModel.findByIdAndUpdate(
+    const updatedQuote = await InternalQuoteEntryModel.findByIdAndUpdate(
       id,
       {
         quoteNo,
@@ -282,7 +282,7 @@ export const getMaterialQuoteEntries = async (req: Request, res: Response):Promi
     }
 
 
-    const quotes = await MaterialQuoteGenerateModel.find(filters).populate("projectId");
+    const quotes = await InternalQuoteEntryModel.find(filters).populate("projectId");
 
     return res.status(200).json({
       ok: true,
@@ -315,7 +315,7 @@ export const deleteMaterialQuoteById = async (req: Request, res: Response): Prom
     });
   }
 
-    const deletedQuote = await MaterialQuoteGenerateModel.findByIdAndDelete(id);
+    const deletedQuote = await InternalQuoteEntryModel.findByIdAndDelete(id);
 
     if (!deletedQuote) {
       return res.status(404).json({

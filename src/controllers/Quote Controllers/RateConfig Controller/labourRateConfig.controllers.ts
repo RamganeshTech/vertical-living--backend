@@ -33,78 +33,6 @@ export const getLabourCategories = async (req: Request, res: Response): Promise<
   }
 };
 
-/**
- * Get all material items under a specific category
- */
-export const getLabourItemsByCategory = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { organizationId } = req.params;
-
-    if (!organizationId) {
-      return res.status(400).json({
-        ok: false,
-        message: "organizationId is required",
-      });
-    }
-
-    const items = await LabourRateModel.find({ organizationId }).lean();
-
-    return res.status(200).json({
-      ok: true,
-      message: "labours fetched successfully",
-      data: items,
-    });
-  } catch (error: any) {
-    console.error("Error fetching labrou items:", error);
-    return res.status(500).json({
-      ok: false,
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
-
-
-
-
-
-// GET CONTORLELR TO GET ALL THE FIELDS AND  CLACUALTE AS SNIGLE LABOR COST
-
-export const getSingleLabourRateConfigCost = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { organizationId } = req.params;
-
-    if (!organizationId) {
-      return res.status(400).json({
-        ok: false,
-        message: "organizationId is required",
-      });
-    }
-
-    const items = await LabourRateModel.find({ organizationId}).lean();
-
-    // const salary = Object.entries(item?.data || {}).reduce((acc, [key, value]) => acc + value, 0);
-    const salary = items.reduce((acc, item) => acc + Number(item?.data?.Rs || 0), 0);
-
-    return res.status(200).json({
-      ok: true,
-      message: "labours salary successfully",
-      data: salary || 0,
-    });
-  } catch (error: any) {
-    console.error("Error fetching labrou items:", error);
-    return res.status(500).json({
-      ok: false,
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
-
-
-
-
-
 
 
 // Controller to create a new material category
@@ -159,10 +87,118 @@ export const createLabourCategory = async (req: Request, res: Response): Promise
 };
 
 
+
+
+export const deleteLabourCategory = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { categoryId } = req.params;
+
+    const category = await LabourRateCategoryModel.findByIdAndDelete(categoryId);
+
+    if (!category) {
+      return res.status(404).json({
+        ok: false,
+        message: "Category not found",
+      });
+    }
+
+    // Delete all items belonging to this category
+    await LabourRateModel.deleteMany({ categoryId });
+
+    return res.status(200).json({
+      ok: true,
+      message: "Category and its items deleted successfully",
+      data: category,
+    });
+  } catch (error: any) {
+    console.error("Error deleting Labour category:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+
+/**
+ * Get all material items under a specific category
+ */
+export const getLabourItemsByCategory = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { organizationId , categoryId} = req.params;
+
+    if (!organizationId) {
+      return res.status(400).json({
+        ok: false,
+        message: "organizationId is required",
+      });
+    }
+
+    const items = await LabourRateModel.find({ organizationId, categoryId }).lean();
+
+    return res.status(200).json({
+      ok: true,
+      message: "labours fetched successfully",
+      data: items,
+    });
+  } catch (error: any) {
+    console.error("Error fetching labrou items:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+
+// GET CONTORLELR TO GET ALL THE FIELDS AND  CLACUALTE AS SNIGLE LABOR COST
+
+export const getSingleLabourRateConfigCost = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { organizationId, categoryId } = req.params;
+
+    if (!organizationId) {
+      return res.status(400).json({
+        ok: false,
+        message: "organizationId is required",
+      });
+    }
+
+
+
+    const items = await LabourRateModel.find({ organizationId, categoryId}).lean();
+
+    // const salary = Object.entries(item?.data || {}).reduce((acc, [key, value]) => acc + value, 0);
+    const salary = items.reduce((acc, item) => acc + Number(item?.data?.Rs || 0), 0);
+
+    return res.status(200).json({
+      ok: true,
+      message: "labours salary successfully",
+      data: salary || 0,
+    });
+  } catch (error: any) {
+    console.error("Error fetching labrou items:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+
 // Controller to create material items
 export const createLabourItems = async (req: Request, res: Response): Promise<any> => {
   try {
-    const {  organizationId} = req.params;
+    const {  organizationId, categoryId} = req.params;
     const items: Record<string, any>[] = req.body.items; // expecting array of objects
 
     // console.log("items", items)
@@ -175,7 +211,7 @@ export const createLabourItems = async (req: Request, res: Response): Promise<an
     }
 
     // Get category definition
-    const category = await LabourRateCategoryModel.findOne({organizationId}).lean();
+    const category = await LabourRateCategoryModel.findOne({organizationId, _id: categoryId}).lean();
     if (!category) {
       return res.status(404).json({
         ok: false,
@@ -221,6 +257,7 @@ export const createLabourItems = async (req: Request, res: Response): Promise<an
     const itemDocs = items.map((data) => ({
       organizationId,
       // organizationId,
+      categoryId,
       categoryName:category.name,
       data,
     }));
@@ -345,36 +382,4 @@ export const deleteLabourItem = async (req: Request, res: Response): Promise<any
   }
 };
 
-
-
-export const deleteLabourCategory = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { categoryId } = req.params;
-
-    const category = await LabourRateCategoryModel.findByIdAndDelete(categoryId);
-
-    if (!category) {
-      return res.status(404).json({
-        ok: false,
-        message: "Category not found",
-      });
-    }
-
-    // Delete all items belonging to this category
-    await LabourRateModel.deleteMany({ categoryId });
-
-    return res.status(200).json({
-      ok: true,
-      message: "Category and its items deleted successfully",
-      data: category,
-    });
-  } catch (error: any) {
-    console.error("Error deleting Labour category:", error);
-    return res.status(500).json({
-      ok: false,
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
 

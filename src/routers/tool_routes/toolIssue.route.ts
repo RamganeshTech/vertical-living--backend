@@ -27,11 +27,6 @@ toolIssueRoutes.post(
 );
 
 
-
-
-
-
-
 toolIssueRoutes.get(
     '/getalltool/:organizationId',
     multiRoleAuthMiddleware("owner", "staff", "CTO"),
@@ -81,9 +76,5 @@ toolIssueRoutes.get(
     multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"),
     getToolTimelineHistory
 );
-
-
-
-
 
 export default toolIssueRoutes;

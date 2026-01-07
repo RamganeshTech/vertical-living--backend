@@ -1,6 +1,6 @@
 import express from "express";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
-import { createMaterialQuote,  deleteMaterialQuoteById,  editQuoteMaterial,  getMaterialQuoteEntries } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/quoteGenerate.controller";
+import { createMaterialQuote,  deleteMaterialQuoteById,  editQuoteMaterial,  getMaterialQuoteEntries } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/internalQuote.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { getMaterialCategories } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
 import {  createVariantQuotePdfGenerator, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
@@ -8,6 +8,8 @@ import { getAllClientQuotes, getSingleClientQuote, storeQuoteToPaymentStage, tog
 
 const QuoteRouter = express.Router();
 
+
+//  start of intenal quote routes
 QuoteRouter.post(
   "/createquote/:organizationId/:projectId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
@@ -30,6 +32,13 @@ QuoteRouter.get(
   getMaterialQuoteEntries
 );
 
+QuoteRouter.delete(
+  '/deletequote/:id',
+  multiRoleAuthMiddleware('owner', 'staff', 'CTO'), // if required
+  deleteMaterialQuoteById
+);
+
+//  end of intenal quote routes
 
 
 
@@ -41,12 +50,6 @@ QuoteRouter.get(
 
 
 // QUOTE VARIANT ROUTES
-
-QuoteRouter.delete(
-  '/deletequote/:id',
-  multiRoleAuthMiddleware('owner', 'staff', 'CTO'), // if required
-  deleteMaterialQuoteById
-);
 
 
 QuoteRouter.get(

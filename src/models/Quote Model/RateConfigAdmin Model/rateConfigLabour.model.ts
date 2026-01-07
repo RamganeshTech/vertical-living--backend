@@ -9,8 +9,8 @@ const LabourCategorySchema = new Schema<LabourCategoryDoc>({
   name: { type: String, },
   fields: [
     {
-      key: { type: String,  },
-      type: { type: String,  default: "string" },
+      key: { type: String, },
+      type: { type: String, default: "string" },
       required: { type: Boolean, default: false },
     },
   ],
@@ -24,10 +24,10 @@ interface LabourItemDoc extends MaterialItemDoc {
 
 
 const LabourItemSchema = new Schema<LabourItemDoc>({
-  organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel",  },
-//   categoryId: { type: Schema.Types.ObjectId, ref: "LabourRateCategoryModel",  },
-  categoryName:{type: String, default:null},
-  data: { type: Schema.Types.Mixed,  }, // { brand: "Sharon GOLD-BWP", thickness: "19mm", rate: 159.75, notes: "Waterproof" }
+  organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel", },
+  categoryId: { type: Schema.Types.ObjectId, ref: "LabourRateCategoryModel", default:null},
+  categoryName: { type: String, default: null },
+  data: { type: Schema.Types.Mixed, }, // { brand: "Sharon GOLD-BWP", thickness: "19mm", rate: 159.75, notes: "Waterproof" }
 }, { timestamps: true });
 
 export const LabourRateModel = mongoose.model<LabourItemDoc>("LabourItemModel", LabourItemSchema);

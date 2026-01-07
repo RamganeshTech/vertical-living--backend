@@ -183,7 +183,7 @@ export const resendIssueOtp = async (req: RoleBasedRequest, res: Response): Prom
         );
 
 
-        
+
         const pendingTx = await ToolIssueTransactionModel.create({
             organizationId,
             toolId: transaction.toolId,
@@ -216,10 +216,10 @@ export const resendIssueOtp = async (req: RoleBasedRequest, res: Response): Prom
             expiresAt: new Date(Date.now() + 5 * 60000) // 5 Minutes
         });
 
-        
 
 
-         await ToolIssueTransactionModel.findByIdAndDelete(transaction._id)
+
+        await ToolIssueTransactionModel.findByIdAndDelete(transaction._id)
 
         // 5. Notify the Worker again
         const message = `New OTP Received for tool issue: ${newOtp}`;
@@ -407,7 +407,7 @@ export const initiateToolReturn = async (req: RoleBasedRequest, res: Response): 
                     originalName: file.originalname,
                     uploadedAt: new Date()
                 },
-                photoType: returnCondition === "damaged" ? "damaged" : "master",
+                photoType: "damaged",
                 uploadedBy: (req as any).user._id!,
                 uploaderModel: modelName
             }));
@@ -539,7 +539,7 @@ export const resendReturnOtp = async (req: RoleBasedRequest, res: Response): Pro
 
         // 6. Send Notification to Worker
         const message = `New OTP Received to Return tool: ${newOtp}`;
-        
+
         await createNotification({
             organizationId: organizationId.toString(),
             userId: toolWorkerId.toString(),
@@ -708,7 +708,22 @@ export const getToolTimelineHistory = async (req: RoleBasedRequest, res: Respons
             { $lookup: { from: "usermodels", localField: "returnData.receivedByUserId", foreignField: "_id", as: "retUser" } },
             { $lookup: { from: "staffmodels", localField: "returnData.receivedByUserId", foreignField: "_id", as: "retStaff" } },
             { $lookup: { from: "ctomodels", localField: "returnData.receivedByUserId", foreignField: "_id", as: "retCTO" } },
-
+            // 4. Photos Lookup (Matching the transaction ID)
+            {
+                $lookup: {
+                    from: "toolphotomodels",
+                    let: { issueId: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ["$transactionId", "$$issueId"] },
+                                photoType: "damaged"
+                            }
+                        }
+                    ],
+                    as: "damagePhotos"
+                }
+            },
             // {
             //     $project: {
             //         events: [
@@ -772,7 +787,8 @@ export const getToolTimelineHistory = async (req: RoleBasedRequest, res: Respons
                             },
                             projectId: { $ifNull: [{ $arrayElemAt: ["$project.projectName", 0] }, "N/A"] },
                             roomData: { $ifNull: [{ $arrayElemAt: ["$issueRoom.toolRoomName", 0] }, "N/A"] },
-                            status: "$transactionStatus"
+                            status: "$transactionStatus",
+                            photos: []
                         },
                         {
                             $cond: [
@@ -794,9 +810,10 @@ export const getToolTimelineHistory = async (req: RoleBasedRequest, res: Respons
                                     },
                                     projectId: { $ifNull: [{ $arrayElemAt: ["$project.projectName", 0] }, "N/A"] },
                                     roomData: { $ifNull: [{ $arrayElemAt: ["$returnRoom.toolRoomName", 0] }, "N/A"] },
-                                    status: "$returnData.returnCondition"
+                                    status: "$returnData.returnCondition",
+                                    photos: "$damagePhotos", // Passing the full array of photo objects [Line 90]                                },
                                 },
-                                "$$REMOVE"
+                                    "$$REMOVE"
                             ]
                         }
                     ]

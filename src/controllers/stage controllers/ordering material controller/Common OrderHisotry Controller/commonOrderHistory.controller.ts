@@ -575,7 +575,7 @@ export const getSingleproject = async (req: RoleBasedRequest, res: Response): Pr
 // };
 
 
-
+//  NOT IN USE 
 export const commonOrderMaterialHistoryCompletionStatus = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
@@ -1079,17 +1079,6 @@ export const deleteCommonOrderAllSubUnitsNew = async (req: Request, res: Respons
         return res.status(500).json({ ok: false, message: error.message });
     }
 };
-
-
-
-//  END OF NEWER VERSION
-
-
-
-
-
-
-
 
 
 export const submitCommonOrderMaterial = async (req: Request, res: Response): Promise<any> => {

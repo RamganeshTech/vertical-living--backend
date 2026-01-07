@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import MaterialQuoteGenerateModel from "../../../models/Quote Model/QuoteGenerate Model/QuoteGenerate.model";
+import InternalQuoteEntryModel from "../../../models/Quote Model/QuoteGenerate Model/InternalQuote.model";
 import { CategoryModel, ItemModel } from "../../../models/Quote Model/RateConfigAdmin Model/rateConfigAdmin.model";
 import QuoteVarientGenerateModel from "../../../models/Quote Model/QuoteVariant Model/quoteVarient.model";
 import ProjectModel from "../../../models/project model/project.model";
@@ -16,7 +16,7 @@ export const getMaterialQuoteSingle = async (req: Request, res: Response): Promi
       return res.status(400).json({ ok: false, message: "Invalid Ids" });
     }
 
-    const quote = await MaterialQuoteGenerateModel.findOne({
+    const quote = await InternalQuoteEntryModel.findOne({
       organizationId, _id: id
     }).populate('projectId')
 

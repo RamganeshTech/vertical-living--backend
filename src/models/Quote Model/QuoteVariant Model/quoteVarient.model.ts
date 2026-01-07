@@ -1,6 +1,6 @@
 // models/MaterialQuote.js or .ts
 import mongoose, { Types, Schema } from 'mongoose';
-import { IFurniture, IMaterial, IMaterialQuote, ISimpleItem } from '../QuoteGenerate Model/QuoteGenerate.model';
+import { IFurniture, IMaterial, IMaterialQuote, ISimpleItem } from '../QuoteGenerate Model/InternalQuote.model';
 
 export interface IQuoteVarientCoreItem extends IMaterial { }
 

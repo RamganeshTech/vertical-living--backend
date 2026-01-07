@@ -25,7 +25,7 @@ const ToolPhotoSchema = new mongoose.Schema(
         photo: { type: toolUploadSchema },
         photoType: {
             type: String,
-            enum: ["master", "damage", "repair"],
+            // enum: ["master", "damage", "repair"],
             default: "master"
         },
         uploadedBy: { type: mongoose.Schema.Types.ObjectId, refPath: "uploaderModel" },
