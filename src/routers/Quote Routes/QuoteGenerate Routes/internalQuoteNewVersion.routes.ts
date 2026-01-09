@@ -1,6 +1,6 @@
 import express from "express";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
-import { addOrUpdateWorkItem, createMainInternalQuote, getSingleInternalQuote, updateMainInternalQuote, updateTemplateFields, upsertTemplateData } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/internalQuoteNewVersion.controller";
+import { addOrUpdateWorkItem, createMainInternalQuote, deleteTemplateFromWork, deleteWorkItem, getSingleInternalQuote, renameWorkItem, updateMainInternalQuote, updateSubletFields, updateTemplateFields, upsertTemplateData } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/internalQuoteNewVersion.controller";
 
 
 const InternalQuoteRoutes = express.Router();
@@ -50,11 +50,30 @@ InternalQuoteRoutes.put(
 );
 
 
+InternalQuoteRoutes.put(
+    "/v1/updatesubletdata/:quoteId/:workId/:subletId",
+    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    updateSubletFields
+);
 
 
+InternalQuoteRoutes.put(
+    "/v1/updateworkname/:quoteId/:workId",
+    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    renameWorkItem
+);
 
 
+InternalQuoteRoutes.delete(
+    "/v1/deletework/:quoteId/:workId",
+    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    deleteWorkItem
+);
 
-
+InternalQuoteRoutes.delete(
+    "/v1/deletetemplatework/:quoteId/:workId/:type/:templateId",
+    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    deleteTemplateFromWork
+);
 
 export default InternalQuoteRoutes

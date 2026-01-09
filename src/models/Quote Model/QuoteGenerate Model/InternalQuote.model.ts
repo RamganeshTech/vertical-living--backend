@@ -57,9 +57,35 @@ export interface IWorkTemplate {
   singleTotal: number
 }
 
+
+export interface ISubLettingData {
+  sections: [
+    {
+      sectionName: string,
+      height: number
+      width: number
+      totalArea: number
+    }
+  ],
+  allSectionTotalArea: number,
+  vendorDetails: {
+    worktimeline: number
+    vendorName: string
+    sqftRate: number,
+    totalSqftRate: number
+    finalQuoteRate: number
+  }
+}
+
+
+
+
+
 // Define the structure for each Work item
 export interface IWorkItem {
   workName: string;      // e.g., "Glass Partition"
+  workType: string;      // e.g., "Glass Partition"
+  subLettingData: ISubLettingData[];      // e.g., "Glass Partition"
   workTemplates: IWorkTemplate[]
   workTotal: number;     // Calculation for this specific work
 }
@@ -150,6 +176,28 @@ const FurnitureSchema = new mongoose.Schema<IFurniture>({
 
 
 
+
+const subLettingSchema = new Schema<ISubLettingData>({
+  sections: {
+    type: [
+      {
+        sectionName: { type: String },
+        height: { type: Number },
+        width: { type: Number },
+        totalArea: { type: Number }
+      }
+    ]
+  },
+  allSectionTotalArea: { type: Number },
+  vendorDetails: {
+    vendorName: { type: String },
+    worktimeline: { type: Number },
+    sqftRate: { type: Number },
+    totalSqftRate: { type: Number },
+    finalQuoteRate: { type: Number }
+  }
+}, { _id: true })
+
 const workTemplates = new Schema<IWorkTemplate>({
   templateName: { type: String },
   templateData: { type: Schema.Types.Mixed, default: {} },
@@ -158,6 +206,8 @@ const workTemplates = new Schema<IWorkTemplate>({
 
 const WorkItemSchema = new Schema<IWorkItem>({
   workName: { type: String },
+  workType: { type: String },
+  subLettingData: { type: [subLettingSchema], default: [] },
   workTemplates: { type: [workTemplates], default: [] },
   workTotal: { type: Number, default: 0 }
 }, { _id: true });

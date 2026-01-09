@@ -5,7 +5,8 @@ import { createLabourCategory,   createLabourItems,
   deleteLabourCategory,
   getLabourCategories,
   getLabourItemsByCategory,
-  getSingleLabourRateConfigCost, } from "../../../controllers/Quote Controllers/RateConfig Controller/labourRateConfig.controllers";
+  getSingleLabourRateConfigCost,
+  getLabourSalaryByCategoryName, } from "../../../controllers/Quote Controllers/RateConfig Controller/labourRateConfig.controllers";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 
 
@@ -13,13 +14,15 @@ import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddl
 const LabourRateConfigRoutes = Router();
 
 
-
 LabourRateConfigRoutes.get("/categories/:organizationId",  multiRoleAuthMiddleware("owner","CTO", "staff"), getLabourCategories);
 LabourRateConfigRoutes.get("/categories/:organizationId/:categoryId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),  getLabourItemsByCategory);
 
+//  old version of getting salary of single person by category Id
 //  used in the quotes
 LabourRateConfigRoutes.get("/categories/:organizationId/singlesalary/:categoryId", multiRoleAuthMiddleware("owner","CTO", "staff"),  getSingleLabourRateConfigCost);
 
+//  new version of getting salary of single person by category name 
+LabourRateConfigRoutes.get("/categories/:organizationId/singlesalary",  multiRoleAuthMiddleware("owner","CTO", "staff"), getLabourSalaryByCategoryName);
 /**
  * CATEGORY ROUTES
  */

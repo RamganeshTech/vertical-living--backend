@@ -160,7 +160,7 @@ export const getLabourItemsByCategory = async (req: Request, res: Response): Pro
 
 
 // GET CONTORLELR TO GET ALL THE FIELDS AND  CLACUALTE AS SNIGLE LABOR COST
-
+//  IT IS USED INT HE OLD VERION  (NOT TEMPLATES VERSION)
 export const getSingleLabourRateConfigCost = async (req: Request, res: Response): Promise<any> => {
   try {
     const { organizationId, categoryId } = req.params;
@@ -194,6 +194,48 @@ export const getSingleLabourRateConfigCost = async (req: Request, res: Response)
   }
 };
 
+
+// THIS IS THE NEW VERSION OF CALCULATING THE SINGLE WORK SALARY (NEW VERSION) (TEMPLATE)
+export const getLabourSalaryByCategoryName = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { organizationId } = req.params;
+    const { categoryName } = req.query; // e.g., "Glass"
+
+    if (!organizationId || !categoryName) {
+      return res.status(400).json({
+        ok: false,
+        message: "organizationId and categoryName are required",
+      });
+    }
+
+    // Create a case-insensitive regex that matches the string as a substring
+    // This handles "Glass", "glass", and "Glass and fancy work"
+    const regex = new RegExp(categoryName as string, "i");
+
+    // 1. Find the LabourRate documents where the category matches our regex
+    const items = await LabourRateModel.find({ 
+      organizationId, 
+      categoryName: { $regex: regex } 
+    }).lean();
+
+    // 2. Sum the 'Rs' value from the data object of each matched item
+    const totalSalary = items.reduce((acc, item) => {
+        return acc + (Number(item?.data?.Rs) || 0);
+    }, 0);
+
+    return res.status(200).json({
+      ok: true,
+      data: totalSalary,
+      itemCount: items.length
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
 
 // Controller to create material items
 export const createLabourItems = async (req: Request, res: Response): Promise<any> => {
