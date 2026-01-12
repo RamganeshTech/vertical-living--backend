@@ -43,6 +43,11 @@ export const selectedFields = "_id staffName email"
 
 
 
+export const JOB_NAMES = {
+    SYNC_TO_PAYMENT: "auto-sync-to-payment",
+    // You can add future jobs here, like CLEANUP_OLD_LOGS: "cleanup-logs"
+} as const;
+
 
 // STAGE MODELS (BASIC)
 export const stageModels: Model<any>[] = [

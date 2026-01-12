@@ -21,6 +21,8 @@ import { RequirementFormModel } from "../../../models/Stage Models/requirment mo
 import { IFileItem } from "../../../models/Stage Models/sampleDesing model/sampleDesign.model";
 import ProcurementModelNew from "../../../models/Department Models/ProcurementNew Model/procurementNew.model";
 import { syncAccountingRecord } from "../../Department controllers/Accounting Controller/accounting.controller";
+import agenda from "../../../config/agenda";
+import { JOB_NAMES } from "../../../constants/BEconstants";
 
 
 export const restoreInventoryQuantities = async ({
@@ -1307,7 +1309,7 @@ export const updateSubItemInUnitNew = async (req: Request, res: Response): Promi
         const { subItemName, quantity, unit } = req.body;
         // console.log("subitem name", subItemName)
         if (!projectId ||
-           
+
             !subItemId) {
             return res.status(400).json({ ok: false, message: "Invalid IDs" });
         }
@@ -1466,15 +1468,15 @@ export const deleteAllSubUnitsNew = async (req: Request, res: Response): Promise
         const allSubItemsToRestore: { subItemName: string; quantity: number }[] = [];
 
         orderDoc.currentOrder.subItems.forEach(sub => {
-                if (sub.subItemName && sub.quantity > 0) {
-                    allSubItemsToRestore.push({
-                        subItemName: sub.subItemName,
-                        quantity: sub.quantity,
-                    });
-                }
+            if (sub.subItemName && sub.quantity > 0) {
+                allSubItemsToRestore.push({
+                    subItemName: sub.subItemName,
+                    quantity: sub.quantity,
+                });
+            }
             // Then clear subItems
         });
-        
+
         orderDoc.currentOrder.subItems = [];
         // 🛠️ Restore subItem quantities before saving
 
@@ -1815,26 +1817,26 @@ export const placeOrderToProcurement = async (req: Request, res: Response): Prom
         //     });
         // });
 
- orderItem.subItems.forEach((subItem:any) => {
-                const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
+        orderItem.subItems.forEach((subItem: any) => {
+            const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
 
-                const name = rest.subItemName?.trim().toLowerCase() || "";
-                const unitKey = rest.unit?.trim().toLowerCase() || "";
-                const key = `${name}__${unitKey}`; // combine name + unit
+            const name = rest.subItemName?.trim().toLowerCase() || "";
+            const unitKey = rest.unit?.trim().toLowerCase() || "";
+            const key = `${name}__${unitKey}`; // combine name + unit
 
-                if (key) {
-                    if (subItemMap[key]) {
-                        // Already exists with same name+unit → add quantity
-                        subItemMap[key].quantity += rest.quantity || 0;
-                    } else {
-                        // Create fresh entry
-                        subItemMap[key] = {
-                            ...rest,
-                            quantity: rest.quantity || 0,
-                            _id: new mongoose.Types.ObjectId() // always refresh ID
-                        };
-                    }
+            if (key) {
+                if (subItemMap[key]) {
+                    // Already exists with same name+unit → add quantity
+                    subItemMap[key].quantity += rest.quantity || 0;
+                } else {
+                    // Create fresh entry
+                    subItemMap[key] = {
+                        ...rest,
+                        quantity: rest.quantity || 0,
+                        _id: new mongoose.Types.ObjectId() // always refresh ID
+                    };
                 }
+            }
         });
 
 
@@ -1843,7 +1845,7 @@ export const placeOrderToProcurement = async (req: Request, res: Response): Prom
         Object.values(subItemMap).forEach((item: any) => ProcurementNewItems.push(item));
 
         // console.log("procurement", ProcurementNewItems)
-        await ProcurementModelNew.create({
+        const newProcurement = await ProcurementModelNew.create({
             organizationId,
             projectId: projectId,
             shopDetails: orderItem.shopDetails,
@@ -1903,7 +1905,19 @@ export const placeOrderToProcurement = async (req: Request, res: Response): Prom
         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
 
 
-        return res.status(200).json({ data: orderDoc, message: "updated in the orderedItems", ok: true });
+
+        // 1 Minute(Test)  await agenda.schedule("in 1 minute", ...)
+        // 2 Hoursawait agenda.schedule("in 2 hours", ...)
+        // 2 Daysawait agenda.schedule("in 2 days", ...)
+        // 1 Monthawait agenda.schedule("in 1 month", ...)
+        // Specific Timeawait agenda.schedule("tomorrow at 5pm", ...)
+        await agenda.schedule("in 15 minutes", JOB_NAMES.SYNC_TO_PAYMENT, {
+            procurementId: newProcurement._id.toString(),
+            organizationId: organizationId
+        });
+
+
+        return res.status(200).json({ data: orderDoc, message: "Order placed", ok: true });
 
 
     } catch (error: any) {

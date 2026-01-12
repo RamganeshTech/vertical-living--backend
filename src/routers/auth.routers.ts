@@ -1,11 +1,7 @@
 import express, { RequestHandler } from 'express';
 import { refreshToken, registerUser, userlogin, userLogout, isAuthenticated, forgotPassword, resetForgotPassword, deleteuser } from '../controllers/auth controllers/auth.controller';
-import userAuthenticatedMiddleware from '../middlewares/userAuthMiddleware';
 import { loginStaff, refreshTokenStaff, registerStaff, staffforgotPassword, staffIsAuthenticated, staffLogout, staffResetForgotPassword } from '../controllers/auth controllers/staffAuth.controller';
 import { loginWorker, refreshTokenWorker, registerWorker, workerforgotPassword, workerIsAuthenticated, workerLogout, workerResetForgotPassword } from '../controllers/auth controllers/workerAuth.controller';
-import staffAuthenticatedMiddleware from '../middlewares/staffAuthMiddleware';
-import workerAuthenticatedMiddleware from '../middlewares/workerAuthMiddleware';
-import CTOAuthenticatedMiddleware from '../middlewares/CTOAuthMiddleware';
 import { CTOforgotPassword, CTOIsAuthenticated, CTOLogout, CTOResetForgotPassword, loginCTO, refreshTokenCTO, registerCTO, } from '../controllers/auth controllers/CTOAuth.controller';
 import { multiRoleAuthMiddleware } from '../middlewares/multiRoleAuthMiddleware';
 import { registerUserWithoutLink } from '../controllers/organization controllers/organiziation.controllers';

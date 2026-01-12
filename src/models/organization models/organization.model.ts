@@ -12,6 +12,9 @@ export interface IOrganization extends Document {
     planType: "basic" | "enterprise" | "advanced"
     planStatus: "active" | "inactive"
     planValidTill: Date | null
+    mode: string
+    gstin: string | null
+
 }
 
 // 2. Create the schema
@@ -56,6 +59,8 @@ const OrganizationSchema = new Schema<IOrganization>({
         type: Date,
         default: null,
     },
+    mode: { type: String, default: "manual" },
+    gstin: { type: String, default: null },
 }, {
     timestamps: true
 });

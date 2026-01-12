@@ -5,6 +5,8 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 
 import connectDB from './config/connectDB';
+import agenda from './config/agenda'; // Import your agenda config
+import './jobs/procurementJob';    // IMPORTANT: Import your job definitions so Agenda knows they exist
 
 import clientRoutes from './routers/client routes/clientAuth.routes';
 import clientApprovalRoutes from './routers/client routes/clientApproval.routes';
@@ -17,7 +19,6 @@ import phaseRoutes from './routers/phase routers/phase.router'
 import materailRoutes from './routers/material routers/material.router'
 import labourRoutes from './routers/labour routes/labour.routes'
 import orgsRouter from './routers/organization routes/organization.routes';
-import orgOwnerRoutes from './routers/OrgOwner routes/orgOwner.routes';
 import workerRoutes from './routers/worker routes/worker.router';
 import staffRoutes from './routers/staff routes/staff.routes';
 import CTORoutes from './routers/CTO routes/CTO.routes';
@@ -251,7 +252,6 @@ app.use('/api/labour', labourRoutes)
 app.use('/api/orgs/', orgsRouter)
 app.use('/api/razorpay', razorpayRoutes)
 
-app.use('/api/owner', orgOwnerRoutes)
 app.use('/api/staff', staffRoutes)
 app.use('/api/worker', workerRoutes)
 app.use('/api/CTO', CTORoutes)
@@ -754,7 +754,17 @@ const PORT = process.env.PORT || 4000
 
 
 connectDB()
-  .then(() => {
+  .then(async () => {
+
+    try {
+      await agenda.start();
+      console.log("✔ Agenda Automation Engine Started");
+    } catch (agendaError) {
+      console.error("❌ Agenda failed to start:", agendaError);
+    }
+
+
+
     server.listen(PORT, () => {   // <- start the HTTP server, not app
       console.log("DB connected");
       console.log(`Server listening on http://localhost:${PORT}`);

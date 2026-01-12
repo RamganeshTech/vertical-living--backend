@@ -9,20 +9,7 @@ export const createTool = async (req: any, res: Response): Promise<any> => {
             modelNumber, purchaseDate, purchaseValue, toolRoomId, remarks
         } = req.body;
 
-        // 1. Validation: Check if serialNumber exists in this organization
-        // (First DB Call)
-        // const existingTool = await ToolMasterModel.findOne({
-        //     organizationId,
-        //     serialNumber
-        // });
-
-        // if (existingTool) {
-        //     return res.status(400).json({
-        //         ok: false,
-        //         message: "A tool with this Serial Number already exists in your organization."
-        //     });
-        // }
-
+       
         // 2. Map the uploaded files from req.files (populated by your middleware)
         const files = req.files as (Express.Multer.File & { location: string })[];
         const mappedImages = files ? files.map(file => {

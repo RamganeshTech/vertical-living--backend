@@ -2,7 +2,7 @@
 import express from "express";
 import { createShipment, deleteShipment, getAllShipments, getSingleLogisticsShipment, updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
-import { createProcurementOrder, deleteprocurement, deleteProcurementPdf, generateProcurementPDFController, generateSecureProcurementLink, getOrderMaterialRefPdfDetails, getProcurementItemsPublic, getProcurementNewDetails, getProcurementNewSingleItem, sendProcurementToPayment, syncLogisticsDept, updateProcurementDeliveryLocationDetails, updateProcurementItemRate, updateProcurementShopDetails, updateProcurementSingleItemRate, updateProcurementTotalCost } from "../../../controllers/Department controllers/ProcurementNew Controllers/procurementNew.controller";
+import {  cancelAutomatedProcurementJob, createProcurementOrder, deleteprocurement, deleteProcurementPdf, generateProcurementPDFController, generateSecureProcurementLink, getOrderMaterialRefPdfDetails, getProcurementItemsPublic, getProcurementNewDetails, getProcurementNewSingleItem, sendProcurementToPayment, syncLogisticsDept, updateProcurementDeliveryLocationDetails, updateProcurementItemRate, updateProcurementShopDetails, updateProcurementSingleItemRate, updateProcurementTotalCost } from "../../../controllers/Department controllers/ProcurementNew Controllers/procurementNew.controller";
 
 const procurementNewRoutes = express.Router();
 
@@ -18,6 +18,7 @@ procurementNewRoutes.patch("/generatepdf/:id", multiRoleAuthMiddleware("owner", 
 
 procurementNewRoutes.delete('/deletepdf/:id/:pdfId', multiRoleAuthMiddleware("owner", "staff", "CTO",), deleteProcurementPdf)
 procurementNewRoutes.post('/generatetoken/:orderId', multiRoleAuthMiddleware("owner", "staff", "CTO",), generateSecureProcurementLink)
+
 // not used below one
 procurementNewRoutes.put('/public/updaterate', updateProcurementItemRate)
 
@@ -27,6 +28,8 @@ procurementNewRoutes.put("/public/item/update", updateProcurementSingleItemRate)
 
 
 procurementNewRoutes.post('/synctopayments/:procurementId', multiRoleAuthMiddleware("owner", "staff", "CTO",), sendProcurementToPayment)
+procurementNewRoutes.post('/cancelautomation/:procurementId', multiRoleAuthMiddleware("owner", "staff", "CTO",), cancelAutomatedProcurementJob)
+
 procurementNewRoutes.post('/create', multiRoleAuthMiddleware("owner", "staff", "CTO",), createProcurementOrder)
 procurementNewRoutes.get('/getordermaterial/fromdeptnumbers/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), getOrderMaterialRefPdfDetails)
 // procurementNewRoutes.post('/synclogistics/:id', multiRoleAuthMiddleware("owner", "staff", "CTO",), syncLogisticsDept)

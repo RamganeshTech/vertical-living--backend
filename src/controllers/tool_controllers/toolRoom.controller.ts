@@ -13,11 +13,6 @@ export const createToolRoom = async (req: RoleBasedRequest, res: Response): Prom
             return 
         }
 
-        // if (!req.user || !req.user.role || !req.user._id) {
-        //     return
-        // }
-
-
         // Automatically determine model based on the logged-in user's role
         const modelName = getModelNameByRole(inchargeRole);
 

@@ -182,6 +182,20 @@ const updateOrganizationDetails = async (req: RoleBasedRequest, res: Response) =
             return res.status(400).json({ message: "Exactly one field must be updated at a time", ok: false });
         }
 
+        const fieldName = fields[0];
+
+        // --- SPECIFIC VALIDATION FOR MODE ---
+        if (fieldName === "mode") {
+            const allowedModes = ["manual", "automation"];
+            if (!allowedModes.includes(updatedData.mode)) {
+                return res.status(400).json({
+                    message: "Invalid mode. Must be 'manual' or 'automation'",
+                    ok: false
+                });
+            }
+        }
+
+
         const updatedOrg = await OrganizationModel.findByIdAndUpdate(
             orgId,
             { $set: updatedData }, // directly apply updatedData

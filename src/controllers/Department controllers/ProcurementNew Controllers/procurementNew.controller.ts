@@ -8,6 +8,8 @@ import mongoose, { Types } from "mongoose";
 import { createPaymentMainAccUtil } from "../Accounting Controller/PaymentMainAcc_controllers/paymentMainAcc.controller";
 import { AccountingModel } from "../../../models/Department Models/Accounting Model/accountingMain.model";
 import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
+import agenda from "../../../config/agenda";
+import { JOB_NAMES } from "../../../constants/BEconstants";
 
 // export const getProcurementNewDetails = async (req: Request, res: Response): Promise<any> => {
 //     try {
@@ -1116,3 +1118,33 @@ export const sendProcurementToPayment = async (req: Request, res: Response): Pro
         });
     }
 }
+
+
+
+
+
+
+// Inside your MANUAL controller (sendProcurementToPayment)
+export const cancelAutomatedProcurementJob =  async (req: Request, res: Response): Promise<any> => {
+    try {
+
+        const { procurementId } = req.params;
+
+        // We look for the job with the specific name and the specific procurementId in its data
+        const numRemoved = await agenda.cancel({
+            name: JOB_NAMES.SYNC_TO_PAYMENT,
+            "data.procurementId": procurementId
+        });
+
+
+        console.log("callign the cancellation automation")
+
+        if (numRemoved && numRemoved > 0) {
+            console.log(`✔ Automation Cancelled: Removed ${numRemoved} pending job(s) for Procurement ${procurementId}`);
+        }
+
+        return res.status(200).json({message:"automation cancelled", ok:true, })
+    } catch (error) {
+        console.error("❌ Error cancelling Agenda job:", error);
+    }
+};
