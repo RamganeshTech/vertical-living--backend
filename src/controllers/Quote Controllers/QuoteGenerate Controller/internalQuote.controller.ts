@@ -8,8 +8,8 @@ interface UploadedFile extends Express.Multer.File {
   location: string;
 }
 
-const getNextQuoteNumber = async (organizationId:string): Promise<string> => {
-  const allQuotes = await InternalQuoteEntryModel.find({organizationId}).select('quoteNo -_id');
+const getNextQuoteNumber = async (organizationId: string): Promise<string> => {
+  const allQuotes = await InternalQuoteEntryModel.find({ organizationId }).select('quoteNo -_id');
 
   const maxQuoteNumber = allQuotes.reduce((max, quote) => {
     const number = Number(quote.quoteNo?.replace('Q-', ''));
@@ -38,8 +38,12 @@ export const createMaterialQuote = async (req: Request, res: Response): Promise<
     const notes = req.body.notes || null;
     const quoteNo = await getNextQuoteNumber(organizationId); // ✅ Unique quote number
 
+
+
     // Optional uploaded files from S3
     const files = req.files as UploadedFile[] | undefined;
+
+    console.log("files from core material", files)
 
     // Map: { 'images[0][1]': fileObj }
     const fileMap: Record<string, UploadedFile> = {};
@@ -59,6 +63,9 @@ export const createMaterialQuote = async (req: Request, res: Response): Promise<
         rowTotal: Number(item.rowTotal || 0),
       }));
 
+
+    console.log("desingnes", JSON.stringify(furnitures))
+
     const processedFurniture = furnitures.map((furniture: any, furnitureIndex: number) => {
       const coreMaterials = (furniture.coreMaterials || []).map((material: any, materialIndex: number) => {
         const fieldKey = `images[${furnitureIndex}][${materialIndex}]`;
@@ -70,16 +77,16 @@ export const createMaterialQuote = async (req: Request, res: Response): Promise<
 
           plywoodNos: material.plywoodNos
             ? {
-                quantity: Number(material.plywoodNos.quantity || 0),
-                thickness: Number(material.plywoodNos.thickness || 0),
-              }
+              quantity: Number(material.plywoodNos.quantity || 0),
+              thickness: Number(material.plywoodNos.thickness || 0),
+            }
             : null,
 
           laminateNos: material.laminateNos
             ? {
-                quantity: Number(material.laminateNos.quantity || 0),
-                thickness: Number(material.laminateNos.thickness || 0),
-              }
+              quantity: Number(material.laminateNos.quantity || 0),
+              thickness: Number(material.laminateNos.thickness || 0),
+            }
             : null,
 
           carpenters: Number(material.carpenters || 0),
@@ -148,8 +155,21 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
       return res.status(400).json({ ok: false, message: 'Missing or invalid quote id' });
     }
 
+
+
+    const files = req.files as UploadedFile[] | undefined;
+
+    const fileMap: Record<string, UploadedFile> = {};
+    files?.forEach(file => {
+      if (file.fieldname) fileMap[file.fieldname] = file;
+    });
+
+
+
     // Parse data
-    const furnitures = req?.body?.furnitures;
+        const furnitures = JSON.parse(req.body.furnitures || '[]');
+
+    // const furnitures = req?.body?.furnitures;
     const grandTotal = Number(req?.body?.grandTotal || 0);
     const notes = req?.body?.notes || null;
     const quoteNo = req?.body?.quoteNo || null;
@@ -164,24 +184,34 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
         rowTotal: Number(item.rowTotal || 0),
       }));
 
-    const processedFurniture = (furnitures || []).map((furniture: any) => {
-      const coreMaterials = (furniture.coreMaterials || []).map((material: any) => {
+    const processedFurniture = (furnitures || []).map((furniture: any, furnitureIndex: number) => {
+      const coreMaterials = (furniture.coreMaterials || []).map((material: any,  materialIndex: number) => {
+
+        const fieldKey = `images[${furnitureIndex}][${materialIndex}]`;
+        const matchedFile = fileMap[fieldKey];
+
+
+
         return {
           itemName: material.itemName || null,
-          imageUrl: material.imageUrl || null, // 💡 not changing, only preserving
+          // imageU/rl: material.imageUrl || null, // 💡 not changing, only preserving
+          imageUrl: matchedFile?.location
+            ? matchedFile.location
+            : (typeof material.imageUrl === 'string' ? material.imageUrl : null),
+
 
           plywoodNos: material.plywoodNos
             ? {
-                quantity: Number(material.plywoodNos.quantity || 0),
-                thickness: Number(material.plywoodNos.thickness || 0),
-              }
+              quantity: Number(material.plywoodNos.quantity || 0),
+              thickness: Number(material.plywoodNos.thickness || 0),
+            }
             : null,
 
           laminateNos: material.laminateNos
             ? {
-                quantity: Number(material.laminateNos.quantity || 0),
-                thickness: Number(material.laminateNos.thickness || 0),
-              }
+              quantity: Number(material.laminateNos.quantity || 0),
+              thickness: Number(material.laminateNos.thickness || 0),
+            }
             : null,
 
           carpenters: Number(material.carpenters || 0),
@@ -243,18 +273,18 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
 
 
 
-      
-export const getMaterialQuoteEntries = async (req: Request, res: Response):Promise<any> => {
+
+export const getMaterialQuoteEntries = async (req: Request, res: Response): Promise<any> => {
   try {
     const { organizationId } = req.params;
- const { projectId, createdAt, quoteNo } = req.query;
+    const { projectId, createdAt, quoteNo } = req.query;
     // Optional: Validate inputs
     if (!organizationId) {
       return res.status(400).json({ ok: false, message: "Invalid organizationId" });
     }
 
-    
-     const filters: any = { organizationId };
+
+    const filters: any = { organizationId };
 
     // ✅ Add project filter (optional)
     if (projectId) {
@@ -268,7 +298,7 @@ export const getMaterialQuoteEntries = async (req: Request, res: Response):Promi
     }
 
     // ✅ Add createdAt filter (match same day)
-     if (createdAt) {
+    if (createdAt) {
       const selectedDate = new Date(createdAt as string); // "yyyy-mm-dd"
       selectedDate.setHours(0, 0, 0, 0);
 
@@ -305,15 +335,15 @@ export const getMaterialQuoteEntries = async (req: Request, res: Response):Promi
 
 export const deleteMaterialQuoteById = async (req: Request, res: Response): Promise<any> => {
   try {
-  const { id } = req.params;
+    const { id } = req.params;
 
-  // Validate ID format
-  if (!id) {
-    return res.status(400).json({
-      ok: false,
-      message: 'Invalid quote ID format.',
-    });
-  }
+    // Validate ID format
+    if (!id) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Invalid quote ID format.',
+      });
+    }
 
     const deletedQuote = await InternalQuoteEntryModel.findByIdAndDelete(id);
 

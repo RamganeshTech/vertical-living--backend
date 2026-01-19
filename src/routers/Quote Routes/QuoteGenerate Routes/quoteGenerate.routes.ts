@@ -22,6 +22,8 @@ QuoteRouter.post(
 QuoteRouter.put(
   "/editquote/:organizationId/:projectId/:id",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
+   imageUploadToS3.any(),           // ✅ Handles multiple field names like images[0], images[1]
+  processUploadFiles,  
   editQuoteMaterial  
 );
 

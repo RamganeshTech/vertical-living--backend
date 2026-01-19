@@ -155,10 +155,6 @@ export interface ICurrentOrder {
 }
 
 
-
-
-
-
 export const pdfGeneratorSchema = new Schema<IPdfGenerator>({
     url: { type: String, default: null },
     refUniquePdf: { type: String, default: null },
