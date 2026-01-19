@@ -227,7 +227,6 @@ const mainQuote = new Schema<IMainInternalQuote>({
 })
 
 const InternalQuoteSchema = new mongoose.Schema<IMaterialQuote>({
-
   quoteNo: { type: String, default: null },
 
   organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },

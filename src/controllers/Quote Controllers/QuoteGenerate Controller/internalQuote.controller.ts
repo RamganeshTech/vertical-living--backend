@@ -64,7 +64,7 @@ export const createMaterialQuote = async (req: Request, res: Response): Promise<
       }));
 
 
-    console.log("desingnes", JSON.stringify(furnitures))
+    // console.log("desingnes", JSON.stringify(furnitures))
 
     const processedFurniture = furnitures.map((furniture: any, furnitureIndex: number) => {
       const coreMaterials = (furniture.coreMaterials || []).map((material: any, materialIndex: number) => {
@@ -272,7 +272,7 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
 };
 
 
-
+//  used to shwo that in the both internal quote and inthe quote variant as get all contorller
 
 export const getMaterialQuoteEntries = async (req: Request, res: Response): Promise<any> => {
   try {

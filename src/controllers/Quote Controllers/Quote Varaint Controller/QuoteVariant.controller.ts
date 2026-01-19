@@ -151,17 +151,53 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
       pdfLink: null,
     });
     // console.log("new varient", newVariant)
-    const pdfResponse = await generateQuoteVariantPdf({ quoteId, projectId, newVariant});
+    const pdfResponse = await generateQuoteVariantPdf({ quoteId, projectId, newVariant });
     // const pdfResponse = await generateQuoteVariantPdfWithTemplate({ quoteId, projectId, newVariant , templateType});
+
+    // newVariant.pdfLink
+    // await newVariant.save()
 
     return res.status(201).json({
       ok: true,
       message: "Variant quote created and PDF generated successfully",
       data: {
+        quote: newVariant,
         fileName: pdfResponse.fileName,
         url: pdfResponse.fileUrl, // ✅ PDF S3 URL
         data: pdfResponse.updatedDoc, // ✅ Updated DB doc with PDF link
       },
+    });
+
+  } catch (error: any) {
+    console.error("Error creating variant quote:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Failed to create variant quote",
+      error: error.message,
+    });
+  }
+};
+
+
+
+export const deleteClientQuote = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { quoteId } = req.params
+
+
+
+    // ✅ Basic validation
+    if (!quoteId) {
+      return res.status(400).json({ ok: false, message: "Invalid or missing quoteId" });
+    }
+
+    // 🟢 Create DB entry (pdfLink: null for now, will update after PDF gen)
+    const newVariant = await QuoteVarientGenerateModel.findByIdAndDelete(quoteId);
+
+    return res.status(201).json({
+      ok: true,
+      message: "Clinet Quote deleted successfully",
+      data: newVariant,
     });
 
   } catch (error: any) {

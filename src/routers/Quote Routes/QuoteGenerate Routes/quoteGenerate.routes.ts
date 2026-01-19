@@ -3,8 +3,8 @@ import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3
 import { createMaterialQuote,  deleteMaterialQuoteById,  editQuoteMaterial,  getMaterialQuoteEntries } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/internalQuote.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { getMaterialCategories } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
-import {  createVariantQuotePdfGenerator, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
-import { getAllClientQuotes, getSingleClientQuote, storeQuoteToPaymentStage, toggleBlurring } from "../../../controllers/Quote Controllers/Client Quote Controllers/clientQuote.controller";
+import {  createVariantQuotePdfGenerator, deleteClientQuote, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
+import { generateClientPdfWithTypes, getAllClientQuotes, getSingleClientQuote, storeQuoteToPaymentStage, toggleBlurring } from "../../../controllers/Quote Controllers/Client Quote Controllers/clientQuote.controller";
 
 const QuoteRouter = express.Router();
 
@@ -101,6 +101,15 @@ QuoteRouter.get("/getsingleclientquote/:organizationId/:id",
 
 
   
+QuoteRouter.delete("/delete/:quoteId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  deleteClientQuote)
+
+
+  
+
+
+  
 QuoteRouter.put("/storetopaymentstage/:organizationId/:id",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   storeQuoteToPaymentStage)
@@ -108,6 +117,16 @@ QuoteRouter.put("/storetopaymentstage/:organizationId/:id",
 QuoteRouter.patch("/toggleblur/:organizationId/:id",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   toggleBlurring)
+
+
+  
+QuoteRouter.put("/clientquote/generatepdf/:projectId/:quoteId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  generateClientPdfWithTypes)
+
+
+
+  
 
   
 

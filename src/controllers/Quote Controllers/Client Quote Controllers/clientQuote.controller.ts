@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import QuoteVarientGenerateModel from "../../../models/Quote Model/QuoteVariant Model/quoteVarient.model";
 import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
+import { generateClientQuoteVariantPdfwithTemplates } from "../Quote Varaint Controller/pdfQuoteVarientGenerate";
 
 
 export const getAllClientQuotes = async (req: Request, res: Response): Promise<any> => {
@@ -41,7 +42,7 @@ export const getAllClientQuotes = async (req: Request, res: Response): Promise<a
         }
 
 
-        const quotes = await QuoteVarientGenerateModel.find(filters).populate("projectId");
+        const quotes = await QuoteVarientGenerateModel.find(filters).sort({ createdAt: -1 }).populate("projectId");
 
         return res.status(200).json({
             ok: true,
@@ -92,58 +93,58 @@ export const getSingleClientQuote = async (req: Request, res: Response): Promise
 
 
 
-    export const storeQuoteToPaymentStage = async (req: Request, res: Response): Promise<any> => {
-        try {
-            const { organizationId, id } = req.params;
+export const storeQuoteToPaymentStage = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { organizationId, id } = req.params;
 
-            // Optional: Validate inputs
-            if (!organizationId || !id) {
-                return res.status(400).json({ ok: false, message: "Invalid Ids" });
-            }
-
-            const quote = await QuoteVarientGenerateModel.findOne({
-                organizationId, _id: id
-            }).populate('projectId')
-
-
-            if (!quote) {
-                return res.status(404).json({ messaage: "quote not found", ok: false })
-            }
-
-
-            const payment = await PaymentConfirmationModel.findOneAndUpdate({ projectId: quote?.projectId }, {
-                $push: {
-                    quoteSelected: {
-                        quoteId: quote._id,
-                        quoteModel: "QuoteVarientGenerateModel",
-                        quoteNo: quote.quoteNo,
-                        status: "selected"
-                    }
-                },
-                $set: {
-                    totalAmount: quote.grandTotal,
-                },
-            }, { returnDocument: "after" })
-
-            if (!payment) {
-                return res.status(404).json({ messaage: "failed to send to payment stage", ok: false })
-            }
-
-            return res.status(200).json({
-                ok: true,
-                message: "payment sent to payment stage",
-                data: payment,
-            });
-
-        } catch (error: any) {
-            console.error("Error fetching quotes", error);
-            return res.status(500).json({
-                ok: false,
-                message: "Failed to fetch quotes entries",
-                error: error.message,
-            });
+        // Optional: Validate inputs
+        if (!organizationId || !id) {
+            return res.status(400).json({ ok: false, message: "Invalid Ids" });
         }
-    };
+
+        const quote = await QuoteVarientGenerateModel.findOne({
+            organizationId, _id: id
+        }).populate('projectId')
+
+
+        if (!quote) {
+            return res.status(404).json({ messaage: "quote not found", ok: false })
+        }
+
+
+        const payment = await PaymentConfirmationModel.findOneAndUpdate({ projectId: quote?.projectId }, {
+            $push: {
+                quoteSelected: {
+                    quoteId: quote._id,
+                    quoteModel: "QuoteVarientGenerateModel",
+                    quoteNo: quote.quoteNo,
+                    status: "selected"
+                }
+            },
+            $set: {
+                totalAmount: quote.grandTotal,
+            },
+        }, { returnDocument: "after" })
+
+        if (!payment) {
+            return res.status(404).json({ messaage: "failed to send to payment stage", ok: false })
+        }
+
+        return res.status(200).json({
+            ok: true,
+            message: "payment sent to payment stage",
+            data: payment,
+        });
+
+    } catch (error: any) {
+        console.error("Error fetching quotes", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Failed to fetch quotes entries",
+            error: error.message,
+        });
+    }
+};
 
 
 
@@ -182,3 +183,55 @@ export const toggleBlurring = async (req: Request, res: Response): Promise<any> 
         });
     }
 };
+
+
+
+
+//  generate differnt types of pdf based on the ytp w give as input
+
+
+
+export const generateClientPdfWithTypes = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { quoteId, projectId } = req.params
+        const { type } = req.body //type 1, 2, 3
+
+
+        const newVariant = await QuoteVarientGenerateModel.findById(quoteId).populate('projectId')
+
+        if (!newVariant) {
+            return res.status(404).json({ messaage: "quote not found", ok: false })
+        }
+
+
+        
+        // console.log("new varient", newVariant)
+        const pdfResponse = await generateClientQuoteVariantPdfwithTemplates({ quoteId, projectId, newVariant, templateType: type });
+        // const pdfResponse = await generateQuoteVariantPdfWithTemplate({ quoteId, projectId, newVariant , templateType});
+
+        // newVariant.pdfLink
+        // await newVariant.save()
+
+
+
+
+        return res.status(201).json({
+            ok: true,
+            message: "Variant quote created and PDF generated successfully",
+            data: {
+                fileName: pdfResponse.fileName,
+                url: pdfResponse.fileUrl, // ✅ PDF S3 URL
+                data: pdfResponse.updatedDoc, // ✅ Updated DB doc with PDF link
+            },
+        });
+
+    } catch (error: any) {
+        console.error("Error creating variant quote:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Failed to create variant quote",
+            error: error.message,
+        });
+    }
+};
+

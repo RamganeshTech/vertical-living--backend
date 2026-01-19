@@ -1024,7 +1024,7 @@ export const generateQuoteVariantPdf = async ({
 };
 
 
-export const generateQuoteVariantPdfWithTemplate = async ({
+export const generateClientQuoteVariantPdfwithTemplates = async ({
     quoteId,
     projectId,
     newVariant,
