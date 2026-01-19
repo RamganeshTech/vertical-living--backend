@@ -23,6 +23,8 @@ import ProcurementModelNew from "../../../models/Department Models/ProcurementNe
 import { syncAccountingRecord } from "../../Department controllers/Accounting Controller/accounting.controller";
 import agenda from "../../../config/agenda";
 import { JOB_NAMES } from "../../../constants/BEconstants";
+import crypto from "crypto";
+import { OrderShopDetailsLibModel } from "../../../models/Stage Models/Ordering Material Model/OrderShopLibrary.model";
 
 
 export const restoreInventoryQuantities = async ({
@@ -1630,6 +1632,7 @@ export const submitOrderMaterial = async (req: Request, res: Response): Promise<
             pdfLink: null,
             orderMaterialNumber: orderNumber,
             createdAt: new Date(),
+            priority: null,
             isSyncWithProcurement: false,
             isPublicOrder: false
         };
@@ -1738,10 +1741,11 @@ export const getSingleOrderedItem = async (req: Request, res: Response): Promise
 
 }
 
-
+// // old version
 export const placeOrderToProcurement = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId, orderItemId, organizationId } = req.params;
+        const { priority } = req.body
 
         if (!projectId) {
             return res.status(400).json({
@@ -1770,21 +1774,21 @@ export const placeOrderToProcurement = async (req: Request, res: Response): Prom
         const orderDoc = await OrderMaterialHistoryModel.findOne(
             { projectId }
         );
-
         if (!orderDoc) {
             return res.status(404).json({ message: "Order Material not found", ok: false });
         }
 
         let orderItem = orderDoc.orderedItems.find((order: any) => order._id.toString() === orderItemId.toString())
-
         if (!orderItem) {
             return res.status(404).json({ message: "Order Item not available", ok: false });
         }
 
-
         if (orderItem?.isSyncWithProcurement) {
             return res.status(404).json({ message: "Order Item is already sent to procurement", ok: false });
         }
+
+        orderItem.priority = priority
+        await orderDoc.save()
 
 
 
@@ -1854,6 +1858,7 @@ export const placeOrderToProcurement = async (req: Request, res: Response): Prom
             refPdfId: orderItemId,
             isSyncWithPaymentsSection: false,
             isConfirmedRate: false,
+            priority: priority,
 
             fromDeptNumber: orderItem?.orderMaterialNumber,
             fromDeptName: "Order Material",
@@ -1928,6 +1933,189 @@ export const placeOrderToProcurement = async (req: Request, res: Response): Prom
         });
     }
 }
+
+
+
+export const placeOrderToProcurementv1 = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, orderItemId, organizationId } = req.params;
+        const { priority } = req.body;
+
+        // ... [Existing Validation Logic for IDs] ...
+
+        if (!projectId) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Project ID is required'
+            });
+        }
+
+        if (!orderItemId) {
+            return res.status(400).json({
+                ok: false,
+                message: 'OrderItemId is required'
+            });
+        }
+
+        if (!organizationId) {
+            return res.status(400).json({
+                ok: false,
+                message: 'organizationId is required'
+            });
+        }
+
+        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+        if (!orderDoc) return res.status(404).json({ message: "Order Material not found", ok: false });
+
+        let orderItem = orderDoc.orderedItems.find((order: any) => order._id.toString() === orderItemId.toString());
+        if (!orderItem) return res.status(404).json({ message: "Order Item not available", ok: false });
+
+        if (orderItem?.isSyncWithProcurement) {
+            return res.status(404).json({ message: "Order Item is already sent to procurement", ok: false });
+        }
+
+        // 1. Map Sub-Items (Consolidation logic)
+        const subItemMap: Record<string, any> = {};
+        orderItem.subItems.forEach((subItem: any) => {
+            const { _id, refId, ...rest } = subItem.toObject ? subItem.toObject() : subItem;
+            const key = `${rest.subItemName?.trim().toLowerCase()}__${rest.unit?.trim().toLowerCase()}`;
+            if (key) {
+                if (subItemMap[key]) {
+                    subItemMap[key].quantity += rest.quantity || 0;
+                } else {
+                    subItemMap[key] = { ...rest, refId: refId, quantity: rest.quantity || 0, rate: 0, totalCost: 0 };
+                }
+            }
+        });
+        const procurementId = new mongoose.Types.ObjectId();
+        // console.log("procurementId", procurementId)
+        const ProcurementNewItems = Object.values(subItemMap);
+
+        // 2. Find Matching Shops based on Priority
+        const matchingShops = await OrderShopDetailsLibModel.find({
+            organizationId,
+            priority: { $in: [priority?.toLowerCase()] }
+        });
+
+
+        // 3. Prepare Shop Quotes with unique tokens/IDs
+        const shopQuotesData = matchingShops.map(shop => {
+            const quoteId = new mongoose.Types.ObjectId();
+            // Generate a secure short token for the URL
+            const secureToken = crypto.randomBytes(16).toString('hex');
+
+            // Format: FRONTEND_URL/procurement/shopquote/:quoteId?token=:secureToken
+            const generatedLink = `${process.env.FRONTEND_URL}/${organizationId}/procurement/public/?token=${secureToken}&quoteId=${quoteId}&orderId=${procurementId}`;
+
+            return {
+                _id: quoteId,
+                shopId: shop._id, // Add shopId to the schema if needed to track who is who
+                // secureToken: secureToken, // Store token to verify the link later
+                generatedLink: generatedLink,
+                selectedUnits: ProcurementNewItems.map(item => ({ ...item, _id: new mongoose.Types.ObjectId() }))
+            };
+        });
+
+
+        const selectedUnits = ProcurementNewItems.map(item => ({ ...item, _id: new mongoose.Types.ObjectId() }))
+
+
+        // 4. Create Procurement Document
+        const newProcurement = await ProcurementModelNew.create({
+            _id: procurementId,
+            organizationId,
+            projectId,
+            shopDetails: orderItem.shopDetails,
+            deliveryLocationDetails: orderItem.deliveryLocationDetails,
+            selectedUnits: selectedUnits, // Initially empty until rate is confirmed
+            selectedShopId: null,
+            shopQuotes: shopQuotesData,
+            refPdfId: orderItemId,
+            isSyncWithPaymentsSection: false,
+            isConfirmedRate: false,
+            priority: priority,
+            fromDeptNumber: orderItem?.orderMaterialNumber,
+            fromDeptName: "Order Material",
+            fromDeptModel: "OrderMaterialHistoryModel",
+            fromDeptRefId: orderDoc._id,
+            totalCost: 0
+        });
+
+        // console.log("newProcurement", newProcurement)
+
+
+        // ... [Existing Accounting and Population Logic] ...
+
+        await syncAccountingRecord({
+            organizationId: organizationId! || null,
+            projectId: orderDoc?.projectId || null,
+
+            // Reference Links
+            referenceId: null,
+            referenceModel: null, // Must match Schema
+            deptRecordFrom: null,
+
+            deptGeneratedDate: null,
+            deptNumber: null,
+            deptDueDate: null,
+
+            // Categorization
+
+            orderMaterialDeptNumber: orderItem?.orderMaterialNumber,
+            orderMaterialRefId: (orderDoc as any)._id,
+
+            // Person Details
+            assoicatedPersonName: "",
+            assoicatedPersonId: null,
+            assoicatedPersonModel: null, // Assuming this is your Vendor Model
+
+            // Financials
+            amount: 0, // Utility takes care of grandTotal logic if passed
+            notes: "",
+
+            // Defaults for Creation
+            status: "pending",
+            paymentId: null
+        });
+
+        // Clear subItems from each selectedUnit
+
+        if (orderItem) {
+            orderItem.isSyncWithProcurement = true;
+        }
+
+        await orderDoc.save()
+
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc })
+
+
+
+        //         // 1 Minute(Test)  await agenda.schedule("in 1 minute", ...)
+        //         // 2 Hoursawait agenda.schedule("in 2 hours", ...)
+        //         // 2 Daysawait agenda.schedule("in 2 days", ...)
+        //         // 1 Monthawait agenda.schedule("in 1 month", ...)
+        //         // Specific Timeawait agenda.schedule("tomorrow at 5pm", ...)
+
+
+
+        // 5. Schedule Job (Job will handle the actual WhatsApp sending)
+        await agenda.schedule("in 15 minutes", JOB_NAMES.SYNC_TO_PAYMENT, {
+            procurementId: newProcurement._id.toString(),
+            organizationId: organizationId
+        });
+
+        return res.status(200).json({
+            data: newProcurement,
+            message: `Procurement created with ${shopQuotesData.length} shop quotes.`,
+            ok: true
+        });
+
+    } catch (error: any) {
+        console.error('Procurement generation error:', error);
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+}
+
 
 
 

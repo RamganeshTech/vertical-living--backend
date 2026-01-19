@@ -15,7 +15,7 @@ agenda.define(JOB_NAMES.SYNC_TO_PAYMENT, async (job: any) => {
 
     try {
         // 1. Re-check Organization Mode (Hybrid Safety)
-        const org = await OrganizationModel.findById(organizationId);
+        // const org = await OrganizationModel.findById(organizationId);
         // if (org?.mode !== "automation") return;
 
         console.log("schedule is gettnig called")
@@ -109,7 +109,7 @@ agenda.define(JOB_NAMES.SYNC_TO_PAYMENT, async (job: any) => {
         await procurement.save();
 
 
-        console.log("new payment", newPayemnt)
+        // console.log("new payment", newPayemnt)
 
          await AccountingModel.findOneAndUpdate(
                     {

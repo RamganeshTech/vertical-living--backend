@@ -143,6 +143,7 @@ export interface IOrderedItems {
     deliveryLocationDetails: OrderMaterialSiteDetail;
     images: IPdfGenerator[]
     pdfLink: IPdfGenerator | null;
+    priority: string | null
     isSyncWithProcurement: boolean,
     createdAt: Date
 }
@@ -188,6 +189,7 @@ const orderedItems = new Schema<IOrderedItems>({
     images: { type: [pdfGeneratorSchema], default: [] },
     pdfLink: { type: pdfGeneratorSchema, default: null },
     isSyncWithProcurement: { type: Boolean, default: false },
+    priority: { type: String, default: null },
     isPublicOrder: { type: Boolean, default: false },
     createdAt: { type: Date, default: new Date() }
 }, { _id: true })

@@ -1,13 +1,10 @@
 import { PDFDocument, PDFName, rgb, StandardFonts } from 'pdf-lib';
 // import fetch from 'node-fetch';
 import { s3, S3_BUCKET } from "../../../utils/s3Uploads/s3Client";
-import { IPdfGenerator, OrderMaterialHistoryModel } from '../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
-import { Request, Response } from 'express';
-import { ok } from 'assert';
+import { OrderMaterialHistoryModel } from '../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
+
 import mongoose, { Types } from 'mongoose';
 import { CommonOrderHistoryModel } from '../../../models/Stage Models/Ordering Material Model/CommonOrderMaterialHistory Model/commonOrderMaterialHistory.model';
-import ProcurementModelNew from '../../../models/Department Models/ProcurementNew Model/procurementNew.model';
-import { syncAccountingRecord } from '../../Department controllers/Accounting Controller/accounting.controller';
 
 export const COMPANY_LOGO = "https://th.bing.com/th/id/OIP.Uparc9uI63RDb82OupdPvwAAAA?w=80&h=80&c=1&bgcl=c77779&r=0&o=6&dpr=1.3&pid=ImgRC";
 export const COMPANY_NAME = "Vertical Living";

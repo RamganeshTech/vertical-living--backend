@@ -5,7 +5,7 @@ import { OrderShopDetailsLibModel } from "../../../models/Stage Models/Ordering 
 export const createShopLib = async (req: Request, res: Response): Promise<any> => {
     try {
         const { organizationId } = req.params;
-        const { shopName, address, contactPerson, phoneNumber } = req.body;
+        const { shopName, address, contactPerson, phoneNumber, priority } = req.body;
 
         if (!organizationId) {
             return res.status(400).json({ ok: false, message: "organizationId is required." });
@@ -29,6 +29,7 @@ export const createShopLib = async (req: Request, res: Response): Promise<any> =
                 address: address?.trim() || null,
                 contactPerson: contactPerson?.trim() || null,
                 phoneNumber: phoneNumber?.trim() || null,
+                priority: priority || []
             }
         );
 
@@ -46,7 +47,7 @@ export const createShopLib = async (req: Request, res: Response): Promise<any> =
 export const updateShopLib = async (req: Request, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
-        const { shopName, address, contactPerson, phoneNumber } = req.body;
+        const { shopName, address, contactPerson, phoneNumber, priority } = req.body;
 
         if (!id) {
             return res.status(400).json({ ok: false, message: "shop id is required." });
@@ -66,7 +67,8 @@ export const updateShopLib = async (req: Request, res: Response): Promise<any> =
                 shopName,
                 address,
                 contactPerson,
-                phoneNumber
+                phoneNumber,
+                priority,
             }, { returnDocument: "after" }
         );
 

@@ -10,6 +10,7 @@ import { AccountingModel } from "../../../models/Department Models/Accounting Mo
 import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 import agenda from "../../../config/agenda";
 import { JOB_NAMES } from "../../../constants/BEconstants";
+import { OrderShopDetailsLibModel } from "../../../models/Stage Models/Ordering Material Model/OrderShopLibrary.model";
 
 // export const getProcurementNewDetails = async (req: Request, res: Response): Promise<any> => {
 //     try {
@@ -163,7 +164,10 @@ export const getProcurementNewSingleItem = async (req: Request, res: Response): 
         //     return res.status(200).json({ message: "data fetched from the cache", data: JSON.parse(cachedData), ok: true })
         // }
 
-        const doc = await ProcurementModelNew.findById(id);
+        const doc = await ProcurementModelNew.findById(id)
+            .populate("shopQuotes.shopId")                // ✅ populate each shop in quotes
+            .populate("selectedShopId");   // ✅ populate final selected shop
+
         if (!doc) return res.status(404).json({ ok: true, message: "Data not found", data: null });
 
         // await redisClient.set(redisMainKey, JSON.stringify(doc.toObject()), { EX: 60 * 10 })
@@ -659,7 +663,7 @@ export const generateSecureProcurementLink = async (req: Request, res: Response)
 
 export const getProcurementItemsPublic = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { token, orderId } = req.query;
+        const { token, orderId, quoteId } = req.query;
         // const decodedToken = decodeURIComponent(token as string);
 
         if (!token) {
@@ -683,10 +687,14 @@ export const getProcurementItemsPublic = async (req: Request, res: Response): Pr
         // if (order.isConfirmedRate)
         //     return res.status(403).json({ ok: false, message: "Rates already submitted" });
 
+
+        const shopQuote = (order.shopQuotes as any).id(quoteId)
+
         return res.json({
             ok: true,
             data: {
-                selectedUnits: order?.selectedUnits,
+                // selectedUnits: order?.selectedUnits,
+                selectedUnits: shopQuote?.selectedUnits,
                 shopDetails: order.shopDetails,
                 deliveryLocationDetails: order.deliveryLocationDetails,
                 isConfirmedRate: order.isConfirmedRate
@@ -882,10 +890,159 @@ export const updateProcurementSingleItemRate = async (req: Request, res: Respons
 
 
 
+export const updateProcurementSingleItemRatev1 = async (req: Request, res: Response): Promise<any> => {
+    try {
+        // 1. Extract Data
+        // token (secureToken), orderId (procurementId), quoteId (from shopQuotes array), itemId (specific material)
+        const { token, orderId, quoteId, itemId } = req.query;
+        const { rate } = req.body;
 
+        // 2. Validations
+        if (!token || !orderId || !quoteId || !itemId) {
+            return res.status(400).json({ ok: false, message: "Missing required parameters" });
+        }
 
+        if (rate === undefined || rate === null || rate < 0) {
+            return res.status(400).json({ ok: false, message: "Invalid rate provided" });
+        }
 
+        // 3. Find the Procurement Order
+        const order = await ProcurementModelNew.findById(orderId);
+
+        if (!order) {
+            return res.status(404).json({ ok: false, message: "Order not found" });
+        }
+
+        // 4. Check if the overall order is locked
+        if (order.isConfirmedRate) {
+            return res.status(403).json({ ok: false, message: "Rates are already confirmed and locked by the department." });
+        }
+
+        // 5. Find the specific Shop Quote in the array
+        const quoteIndex = order.shopQuotes.findIndex((q: any) => q._id.toString() === quoteId);
+
+        if (quoteIndex === -1) {
+            return res.status(404).json({ ok: false, message: "Quote session not found" });
+        }
+
+        const targetQuote = order.shopQuotes[quoteIndex];
+
+        // 6. Security Check: Validate Secure Token
+        // if (targetQuote.secureToken !== token) {
+        //     return res.status(401).json({ ok: false, message: "Unauthorized: Invalid security token for this quote." });
+        // }
+
+        // 7. Find the Specific Item in the target shop's selectedUnits
+        const itemIndex = targetQuote.selectedUnits.findIndex((u: any) => u._id.toString() === itemId);
+
+        if (itemIndex === -1) {
+            return res.status(404).json({ ok: false, message: "Material item not found in this quote" });
+        }
+
+        const targetItem = targetQuote.selectedUnits[itemIndex];
+
+        // 8. Update Item Logic
+        targetItem.rate = Number(rate);
+        const qty = targetItem.quantity || 0;
+        targetItem.totalCost = qty * Number(rate);
+
+        // 9. Save Changes back to the array
+        // In Mongoose, you need to mark the path as modified if it's a deeply nested array
+        order.markModified('shopQuotes');
+        await order.save();
+
+        return res.json({
+            ok: true,
+            message: "Rate updated for shop quote",
+            data: {
+                itemId: targetItem._id,
+                updatedRate: targetItem.rate,
+                itemTotal: targetItem.totalCost
+            }
+        });
+
+    } catch (error: any) {
+        console.error("Update shop quote item error:", error);
+        return res.status(500).json({
+            ok: false,
+            message: error.message || "Internal Server Error"
+        });
+    }
+};
 // end of public controlers
+
+
+
+
+export const confirmFinalShopQuote = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { id, quoteId } = req.params;
+
+        // 1. Find the procurement document
+        const procurement = await ProcurementModelNew.findById(id);
+
+        if (!procurement) {
+            return res.status(404).json({ ok: false, message: "Procurement order not found" });
+        }
+
+        if (procurement?.isSyncWithPaymentsSection) {
+            return res.status(400).json({ message: "Procurement Already sent to the payment section", ok: false })
+        }
+
+
+        // 2. Find the specific quote in the shopQuotes array
+        const selectedQuote = (procurement.shopQuotes as any).id(quoteId);
+
+        if (!selectedQuote) {
+            return res.status(404).json({ ok: false, message: "The specified shop quote was not found" });
+        }
+
+        // 3. Extract the shop details for the winner
+        const winnerShop = await OrderShopDetailsLibModel.findById(selectedQuote.shopId);
+
+        // 4. Update the main procurement document with the selected data
+        // We move the quote's units to the final selectedUnits field
+        procurement.selectedUnits = selectedQuote.selectedUnits
+        procurement.selectedShopId = selectedQuote.shopId
+
+
+        // 5. Update Shop Details with the winning vendor's info
+        if (winnerShop) {
+            procurement.shopDetails = {
+                shopName: winnerShop.shopName,
+                address: winnerShop.address,
+                contactPerson: winnerShop.contactPerson,
+                phoneNumber: winnerShop.phoneNumber
+            };
+        }
+
+        // 6. Recalculate Final Total Cost
+        const finalTotal = selectedQuote.selectedUnits.reduce(
+            (acc: number, curr: any) => acc + (curr.totalCost || 0), 0
+        );
+
+        procurement.totalCost = finalTotal;
+        procurement.isConfirmedRate = true; // Lock the order
+
+        // 7. Save the document
+        await procurement.save();
+
+        return res.status(200).json({
+            ok: true,
+            message: "Shop quote selected and finalized successfully",
+            data: procurement
+        });
+
+    } catch (error: any) {
+        console.error("Error selecting shop quote:", error);
+        return res.status(500).json({
+            ok: false,
+            message: error.message || "Internal Server Error"
+        });
+    }
+};
+
+
 
 export const deleteprocurement = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -1125,7 +1282,7 @@ export const sendProcurementToPayment = async (req: Request, res: Response): Pro
 
 
 // Inside your MANUAL controller (sendProcurementToPayment)
-export const cancelAutomatedProcurementJob =  async (req: Request, res: Response): Promise<any> => {
+export const cancelAutomatedProcurementJob = async (req: Request, res: Response): Promise<any> => {
     try {
 
         const { procurementId } = req.params;
@@ -1143,7 +1300,7 @@ export const cancelAutomatedProcurementJob =  async (req: Request, res: Response
             console.log(`✔ Automation Cancelled: Removed ${numRemoved} pending job(s) for Procurement ${procurementId}`);
         }
 
-        return res.status(200).json({message:"automation cancelled", ok:true, })
+        return res.status(200).json({ message: "automation cancelled", ok: true, })
     } catch (error) {
         console.error("❌ Error cancelling Agenda job:", error);
     }

@@ -10,7 +10,8 @@ import {
     // addSubItemToUnit, deleteAllSubUnits,deleteSubItemFromUnit, updateSubItemInUnit
     addSubItemToUnitNew, deleteAllSubUnitsNew,deleteSubItemFromUnitNew, updateSubItemInUnitNew,
     
-    deleteOrderingMaterialImage, deleteOrderMaterialPdf, generateOrderHistoryPDFController, getOrderHistoryMaterial, getPublicDetails, getSingleOrderedItem,  orderMaterialHistoryCompletionStatus, placeOrderToProcurement, setOrderMaterialHistoryStageDeadline, submitOrderMaterial, updateDeliveryLocationDetails, updatePdfStatus, updateShopDetails, uploadOrderMaterialImages } from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
+    deleteOrderingMaterialImage, deleteOrderMaterialPdf, generateOrderHistoryPDFController, getOrderHistoryMaterial, getPublicDetails, getSingleOrderedItem,  orderMaterialHistoryCompletionStatus, placeOrderToProcurement, setOrderMaterialHistoryStageDeadline, submitOrderMaterial, updateDeliveryLocationDetails, updatePdfStatus, updateShopDetails, uploadOrderMaterialImages, 
+    placeOrderToProcurementv1} from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
 import { imageUploadToS3, processUploadFiles } from '../../../utils/s3Uploads/s3upload';
 // import { generateOrderHistoryPDFController } from '../../../controllers/stage controllers/ordering material controller/pdfOrderHistory.controller';
 
@@ -54,6 +55,8 @@ orderMaterialHistoryRoutes.put("/:projectId/unit/updatesubitem/:subItemId", mult
 //  used to submit the order
 orderMaterialHistoryRoutes.put("/:projectId/submitorder", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), submitOrderMaterial);
 orderMaterialHistoryRoutes.put("/:projectId/:orderItemId/:organizationId/senttoprocurement", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), placeOrderToProcurement);
+
+orderMaterialHistoryRoutes.put("/v1/:projectId/:orderItemId/:organizationId/senttoprocurement", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), placeOrderToProcurementv1);
 
 orderMaterialHistoryRoutes.get("/:projectId/:orderItemId/getsingleorderedItem", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), getSingleOrderedItem);
 

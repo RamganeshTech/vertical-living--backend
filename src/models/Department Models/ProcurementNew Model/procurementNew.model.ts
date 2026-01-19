@@ -20,9 +20,15 @@ export interface IProcurementNew {
 
   isConfirmedRate: boolean,
   procurementNumber: string;
+  shopQuotes: IShopQuotes[]
+
   selectedUnits: IProcurementItemsNew[],
+  selectedShopId: Types.ObjectId | null
   totalCost: number
   refPdfId: string | null,
+  priority: string | null
+
+
   procurementPdfs: IPdfGenerator[]
   generatedLink?: string
   isSyncWithPaymentsSection: boolean,
@@ -40,6 +46,19 @@ export interface IProcurementItemsNew extends OrderSubItems {
   totalCost: number
 }
 
+
+export interface IShopQuotes {
+  generatedLink: string | null,
+  shopId: Types.ObjectId | null,
+  selectedUnits: IProcurementItemsNew[]
+}
+
+
+// export interface IFinalProcurementItem {
+//   selectedShopId: Types.ObjectId | null,
+//   selectedUnits: IProcurementItemsNew[]
+// }
+
 const procurementItemSchema = new Schema<IProcurementItemsNew>({
   subItemName: { type: String, default: null },
   refId: { type: String, default: null },
@@ -49,29 +68,52 @@ const procurementItemSchema = new Schema<IProcurementItemsNew>({
   totalCost: { type: Number, default: 0 },
 }, { _id: true });
 
+
+
+const shopQuoteSchema = new Schema<IShopQuotes>({
+  generatedLink: { type: String, default: null },
+  shopId: { type: mongoose.Types.ObjectId, ref: "OrderShopDetailsModel", default: null },
+  selectedUnits: { type: [procurementItemSchema], default: [] },
+}, { _id: true });
+
+
+
+
+// const finalProcurementItem = new Schema<IFinalProcurementItem>({
+//   selectedShopId: { type: mongoose.Types.ObjectId, ref: "OrderShopDetailsModel", default: null },
+//   selectedUnits: { type: [procurementItemSchema], default: [] },
+// })
+
+
 const procurementPurchaseOrderSchema = new Schema<IProcurementNew>({
   organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
   projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", default: null },
 
   quoteNumber: { type: Number, default: null },  //store the shop quote number if provided.
   fromDeptNumber: { type: String, default: null },  //order mateiral history models pdfs unique number
-  fromDeptRefId: { type: Schema.Types.ObjectId, refPath:"fromDeptModel", default: null },  //order mateiral history models pdfs unique number
+  fromDeptRefId: { type: Schema.Types.ObjectId, refPath: "fromDeptModel", default: null },  //order mateiral history models pdfs unique number
   fromDeptName: { type: String, default: "Order Material" },
   fromDeptModel: { type: String, default: "OrderMaterialHistoryModel" },
-  
+
   shopDetails: ShopSchemaProcurement,
-  isConfirmedRate: {type:Boolean, default:false},
+  isConfirmedRate: { type: Boolean, default: false },
   deliveryLocationDetails: DeliveryLocationDetailsSchema,
+
+
+  shopQuotes: { type: [shopQuoteSchema], default: [] },
+
   selectedUnits: { type: [procurementItemSchema], default: [] },
+  selectedShopId: { type: mongoose.Types.ObjectId, ref: "OrderShopDetailsModel", default: null },
   totalCost: { type: Number, },
   procurementNumber: { type: String, default: null },
   refPdfId: { type: String, default: null },
   procurementPdfs: { type: [pdfGeneratorSchema], default: [] },
   generatedLink: { type: String, default: null },
+  priority: { type: String, default: null },
   isSyncWithPaymentsSection: {
-            type: Boolean,
-            // default: false
-        }
+    type: Boolean,
+    // default: false
+  }
 }, {
   timestamps: true
 });

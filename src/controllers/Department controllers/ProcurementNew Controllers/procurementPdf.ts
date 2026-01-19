@@ -321,151 +321,161 @@ export const generateProcurementPdf = async (id: String) => {
         let serialNumber = 1;
 
         if (!procurement?.selectedUnits || procurement?.selectedUnits?.length === 0) {
-                page.drawText(`Material Items`, {
-                    x: 50,
-                    y: yPosition,
-                    size: 14,
-                    font: boldFont,
-                    color: rgb(0.2, 0.2, 0.2),
-                });
-                yPosition -= 30;
-            }
-
-            // Check if we need a new page
-            if (yPosition < 150) {
-                page = pdfDoc.addPage([595, 842]);
-                yPosition = height - 50;
-            }
-
-            // for (const unit of procurement?.selectedUnits) {
-
-
-
-                // Unit name heading
-
-
-                // Table headers
-                const tableStartY = yPosition;
-                const rowHeight = 25;
-                // const columnWidths = [60, , 300, 80, 80]; // S.No, Material Item, Quantity, Unit
-                // const columnPositions = [50, 110, 410, 490];
-
-                const columnWidths = [50, 200, 80, 50];
-                const columnPositions = [
-                    50,  // S.No
-                    // 100, // Ref ID
-                    120, // Material Item
-                    420, // Quantity
-                    500  // Unit
-                ];
-                // Draw table header background
-                page.drawRectangle({
-                    x: 45,
-                    y: yPosition - 5,
-                    width: 500,
-                    height: rowHeight,
-                    color: rgb(0.9, 0.9, 0.9),
-                });
-
-                // Table headers
-                const headers = ['S.No', 'Material Item', 'Quantity', 'Unit', "Rate", "Total"];
-                headers.forEach((header, index) => {
-                    page.drawText(header, {
-                        x: columnPositions[index],
-                        y: yPosition,
-                        size: 12,
-                        font: boldFont,
-                        color: rgb(0.2, 0.2, 0.2),
-                    });
-                });
-
-                yPosition -= rowHeight + 5;
-
-                // Table content - sub items
-                if (procurement?.selectedUnits && procurement?.selectedUnits.length > 0) {
-                    procurement?.selectedUnits.forEach((subItem, index) => {
-                        // Alternate row coloring
-                        if (index % 2 === 0) {
-                            page.drawRectangle({
-                                x: 45,
-                                y: yPosition - 5,
-                                width: 500,
-                                height: rowHeight,
-                                color: rgb(0.98, 0.98, 0.98),
-                            });
-                        }
-
-                        // Table borders
-                        page.drawRectangle({
-                            x: 45,
-                            y: yPosition - 5,
-                            width: 500,
-                            height: rowHeight,
-                            borderColor: rgb(0.8, 0.8, 0.8),
-                            borderWidth: 0.5,
-                        });
-
-                        const rowData = [
-                            serialNumber.toString(),
-                            // subItem.refId || "N/A",
-                            subItem.subItemName || 'N/A',
-                            (subItem.quantity || 0).toString(),
-                            subItem.unit || 'N/A',
-                            (subItem.rate || 0).toString(),
-                            (subItem.totalCost || 0).toString()
-                        ];
-
-                        rowData.forEach((data, colIndex) => {
-                            let displayText = data;
-                            // Truncate long text to fit in column
-                            if (colIndex === 1 && data.length > 35) {
-                                displayText = data.substring(0, 32) + '...';
-                            }
-
-                            page.drawText(displayText, {
-                                x: columnPositions[colIndex],
-                                y: yPosition,
-                                size: 10,
-                                font: regularFont,
-                                color: rgb(0.3, 0.3, 0.3),
-                            });
-                        });
-
-                        yPosition -= rowHeight;
-                        serialNumber++;
-
-                        // Check if we need a new page
-                        if (yPosition < 100) {
-                            page = pdfDoc.addPage([595, 842]);
-                            yPosition = height - 50;
-                        }
-                    });
-                } else {
-                    // No sub items message
-                    page.drawText('No sub-items available', {
-                        x: columnPositions[1],
-                        y: yPosition,
-                        size: 10,
-                        font: regularFont,
-                        color: rgb(0.6, 0.6, 0.6),
-                    });
-                    yPosition -= rowHeight;
-                }
-
-                yPosition -= 20; // Space between units
-            // }
-        // }
-
-        // Total cost section
-        // if (procurement.totalCost) {
-            yPosition -= 20;
-            page.drawText(`Total Cost: Rs ${procurement.totalCost.toLocaleString()}`, {
-                x: width - 200,
+            page.drawText(`Material Items`, {
+                x: 50,
                 y: yPosition,
                 size: 14,
                 font: boldFont,
                 color: rgb(0.2, 0.2, 0.2),
             });
+            yPosition -= 30;
+        }
+
+        // Check if we need a new page
+        if (yPosition < 150) {
+            page = pdfDoc.addPage([595, 842]);
+            yPosition = height - 50;
+        }
+
+        // for (const unit of procurement?.selectedUnits) {
+
+
+
+        // Unit name heading
+
+
+        // Table headers
+        const tableStartY = yPosition;
+        const rowHeight = 25;
+        // const columnWidths = [60, , 300, 80, 80]; // S.No, Material Item, Quantity, Unit
+        // const columnPositions = [50, 110, 410, 490];
+
+        // const columnWidths = [50, 200, 80, 50];
+        const columnPositions = [
+            // 50,  // S.No
+            // // 100, // Ref ID
+            // 120, // Material Item
+            // 420, // Quantity
+            // 500,  // Unit
+
+            // 450, // Rate (NEW)
+            // 510  // Total (NEW)
+
+            50,  // S.No
+            110, // Material Item (increased space)
+            340, // Quantity (moved right)
+            400, // Unit
+            450, // Rate (NEW)
+            510  // Total (NEW)
+        ];
+        // Draw table header background
+        page.drawRectangle({
+            x: 45,
+            y: yPosition - 5,
+            width: 500,
+            height: rowHeight,
+            color: rgb(0.9, 0.9, 0.9),
+        });
+
+        // Table headers
+        const headers = ['S.No', 'Material Item', 'Quantity', 'Unit', "Rate", "Total"];
+        headers.forEach((header, index) => {
+            page.drawText(header, {
+                x: columnPositions[index],
+                y: yPosition,
+                size: 12,
+                font: boldFont,
+                color: rgb(0.2, 0.2, 0.2),
+            });
+        });
+
+        yPosition -= rowHeight + 5;
+
+        // Table content - sub items
+        if (procurement?.selectedUnits && procurement?.selectedUnits.length > 0) {
+            procurement?.selectedUnits.forEach((subItem, index) => {
+                // Alternate row coloring
+                if (index % 2 === 0) {
+                    page.drawRectangle({
+                        x: 45,
+                        y: yPosition - 5,
+                        width: 500,
+                        height: rowHeight,
+                        color: rgb(0.98, 0.98, 0.98),
+                    });
+                }
+
+                // Table borders
+                page.drawRectangle({
+                    x: 45,
+                    y: yPosition - 5,
+                    width: 500,
+                    height: rowHeight,
+                    borderColor: rgb(0.8, 0.8, 0.8),
+                    borderWidth: 0.5,
+                });
+
+                const rowData = [
+                    serialNumber.toString(),
+                    // subItem.refId || "N/A",
+                    subItem.subItemName || 'N/A',
+                    (subItem.quantity || 0).toString(),
+                    subItem.unit || 'N/A',
+                    (subItem.rate || 0).toString(),
+                    (subItem.totalCost || 0).toString()
+                ];
+
+                rowData.forEach((data, colIndex) => {
+                    let displayText = data;
+                    // Truncate long text to fit in column
+                    if (colIndex === 1 && data.length > 35) {
+                        displayText = data.substring(0, 32) + '...';
+                    }
+
+                    page.drawText(displayText, {
+                        x: columnPositions[colIndex],
+                        y: yPosition,
+                        size: 10,
+                        font: regularFont,
+                        color: rgb(0.3, 0.3, 0.3),
+                    });
+                });
+
+                yPosition -= rowHeight;
+                serialNumber++;
+
+                // Check if we need a new page
+                if (yPosition < 100) {
+                    page = pdfDoc.addPage([595, 842]);
+                    yPosition = height - 50;
+                }
+            });
+        } else {
+            // No sub items message
+            page.drawText('No sub-items available', {
+                x: columnPositions[1],
+                y: yPosition,
+                size: 10,
+                font: regularFont,
+                color: rgb(0.6, 0.6, 0.6),
+            });
+            yPosition -= rowHeight;
+        }
+
+        yPosition -= 20; // Space between units
+        // }
+        // }
+
+        // Total cost section
+        // if (procurement.totalCost) {
+        yPosition -= 20;
+        page.drawText(`Total Cost: Rs ${procurement.totalCost.toLocaleString()}`, {
+            x: width - 200,
+            y: yPosition,
+            size: 14,
+            font: boldFont,
+            color: rgb(0.2, 0.2, 0.2),
+        });
         // }
 
         // // Footer

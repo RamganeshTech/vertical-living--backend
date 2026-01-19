@@ -2,7 +2,7 @@
 import express from "express";
 import { createShipment, deleteShipment, getAllShipments, getSingleLogisticsShipment, updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
-import {  cancelAutomatedProcurementJob, createProcurementOrder, deleteprocurement, deleteProcurementPdf, generateProcurementPDFController, generateSecureProcurementLink, getOrderMaterialRefPdfDetails, getProcurementItemsPublic, getProcurementNewDetails, getProcurementNewSingleItem, sendProcurementToPayment, syncLogisticsDept, updateProcurementDeliveryLocationDetails, updateProcurementItemRate, updateProcurementShopDetails, updateProcurementSingleItemRate, updateProcurementTotalCost } from "../../../controllers/Department controllers/ProcurementNew Controllers/procurementNew.controller";
+import {  cancelAutomatedProcurementJob, confirmFinalShopQuote, createProcurementOrder, deleteprocurement, deleteProcurementPdf, generateProcurementPDFController, generateSecureProcurementLink, getOrderMaterialRefPdfDetails, getProcurementItemsPublic, getProcurementNewDetails, getProcurementNewSingleItem, sendProcurementToPayment, syncLogisticsDept, updateProcurementDeliveryLocationDetails, updateProcurementItemRate, updateProcurementShopDetails, updateProcurementSingleItemRate, updateProcurementSingleItemRatev1, updateProcurementTotalCost } from "../../../controllers/Department controllers/ProcurementNew Controllers/procurementNew.controller";
 
 const procurementNewRoutes = express.Router();
 
@@ -24,6 +24,10 @@ procurementNewRoutes.put('/public/updaterate', updateProcurementItemRate)
 
 procurementNewRoutes.get('/public/get', getProcurementItemsPublic)
 procurementNewRoutes.put("/public/item/update", updateProcurementSingleItemRate);
+
+//  new version
+procurementNewRoutes.put("/v1/public/item/update", updateProcurementSingleItemRatev1);
+procurementNewRoutes.put("/confirmquote/:id/:quoteId", multiRoleAuthMiddleware("owner", "staff", "CTO",), confirmFinalShopQuote);
 
 
 

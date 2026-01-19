@@ -18,7 +18,7 @@ const MaterialListSchema = new Schema<MaterialList>({
         type: [Schema.Types.ObjectId],
         ref: "MaterialEstimateModel",
         default: [], //this will be array of strings not in array of objects ["34fvg78", "34fvg78"]
-    },
+    }, 
 }, {
     timestamps:true
 })
