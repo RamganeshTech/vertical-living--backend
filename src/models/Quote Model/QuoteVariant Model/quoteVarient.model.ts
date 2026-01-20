@@ -14,6 +14,7 @@ export interface IQuoteVarientMain extends IMaterialQuote {
     brandName: string | null;
     pdfLink: IQuoteVarientUpload | null
     isBlured: boolean
+    pdfType: templateTypePdf[]
 }
 
 
@@ -97,6 +98,20 @@ const QuoteFurnitureSchema = new mongoose.Schema<IQuoteFurniture>({
 
 }, { _id: true });
 
+
+
+export interface templateTypePdf {
+    templateType: string, 
+    pdf: IQuoteVarientUpload
+}
+const pdfType = new mongoose.Schema<templateTypePdf>({
+    templateType: { type: String, default: null },
+    pdf: {
+        type: uploadSchema, default: null,
+    }
+}, { _id: true });
+
+
 const QuoteVarientGenerateSchema = new mongoose.Schema<IQuoteVarientMain>({
 
     quoteNo: { type: String, default: null },
@@ -111,7 +126,8 @@ const QuoteVarientGenerateSchema = new mongoose.Schema<IQuoteVarientMain>({
     furnitures: [QuoteFurnitureSchema],
     grandTotal: { type: Number, default: 0 },
     notes: { type: String, default: null },
-    pdfLink: { type: uploadSchema, default: null }
+    pdfLink: { type: uploadSchema, default: null },
+    pdfType: {type: [pdfType], default: null,}
 }, { timestamps: true });
 
 const QuoteVarientGenerateModel = mongoose.model('QuoteVarientGenerateModel', QuoteVarientGenerateSchema);
