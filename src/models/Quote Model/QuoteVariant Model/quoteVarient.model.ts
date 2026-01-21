@@ -127,7 +127,7 @@ const QuoteVarientGenerateSchema = new mongoose.Schema<IQuoteVarientMain>({
     grandTotal: { type: Number, default: 0 },
     notes: { type: String, default: null },
     pdfLink: { type: uploadSchema, default: null },
-    pdfType: {type: [pdfType], default: null,}
+    pdfType: {type: [pdfType], default: [],}
 }, { timestamps: true });
 
 const QuoteVarientGenerateModel = mongoose.model('QuoteVarientGenerateModel', QuoteVarientGenerateSchema);

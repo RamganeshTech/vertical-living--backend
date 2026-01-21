@@ -21,7 +21,8 @@ modularUnitRoutesNew.post(
     imageUploadToS3.fields([
         { name: "productImages" },
         { name: "2dImages" },
-        { name: "3dImages" }
+        { name: "3dImages" },
+        { name: "cutlistDoc" }
     ]), processUploadFiles,
     createModularUnitNew
 );
@@ -34,7 +35,8 @@ modularUnitRoutesNew.put(
     imageUploadToS3.fields([
         { name: "productImages" },
         { name: "2dImages" },
-        { name: "3dImages" }
+        { name: "3dImages" },
+        { name: "cutlistDoc" }
     ]),
     processUploadFiles,
     updateModularUnitNew

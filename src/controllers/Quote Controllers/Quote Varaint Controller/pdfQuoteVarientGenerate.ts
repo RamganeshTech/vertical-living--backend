@@ -2940,7 +2940,7 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
         throw new Error("Failed to generate variant quote PDF.");
     }
 };
-
+    
 
 
 

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import mongoose, { Types } from "mongoose";
 import { IModularUnitUpload, ModularUnitModelNew } from "../../models/Modular Units Models/Modular Unit New/modularUnitNew.model";
 import redisClient from "../../config/redisClient";
+import { json } from "stream/consumers";
 
 
 // helper futninos
@@ -56,6 +57,7 @@ export const createModularUnitNew = async (req: Request, res: Response): Promise
         let productImages: IModularUnitUpload[] = [];
         let images2d: IModularUnitUpload[] = [];
         let images3d: IModularUnitUpload[] = [];
+        let cutlistDoc: IModularUnitUpload[] = [];
 
         if (req.files && typeof req.files === 'object' && !Array.isArray(req.files)) {
             // Handle multiple file fields
@@ -90,8 +92,27 @@ export const createModularUnitNew = async (req: Request, res: Response): Promise
                     uploadedAt: new Date(),
                 }));
             }
+
+            if (filesObj['cutlistDoc']) {
+                cutlistDoc = filesObj['cutlistDoc'].map((file: any) => ({
+                    type: "pdf",
+                    url: file.location,
+                    originalName: file.originalname,
+                    uploadedAt: new Date(),
+                }));
+            }
         }
 
+
+        // --- 1. Handle Parts Parsing ---
+        let parts = [];
+        if (req.body.parts) {
+            try {
+                parts = typeof req.body.parts === 'string' ? JSON.parse(req.body.parts) : req.body.parts;
+            } catch (e) {
+                return res.status(400).json({ ok: false, message: "Invalid format for parts array" });
+            }
+        }
 
         const serialNo = await generateSerialNumber(organizationId)
 
@@ -104,8 +125,9 @@ export const createModularUnitNew = async (req: Request, res: Response): Promise
             dimention: {
                 height: req.body.dimention.height || null,
                 width: req.body.dimention.width || null,
-                depth: req.body.dimention.depth || null,
+                // depth: req.body.dimention.depth || null,
             },
+            parts,
             description: req.body.description,
             totalAreaSqFt: req.body.totalAreaSqFt,
             materialsNeeded: req.body.materialsNeeded,
@@ -115,6 +137,7 @@ export const createModularUnitNew = async (req: Request, res: Response): Promise
             productImages,
             "2dImages": images2d,
             "3dImages": images3d,
+            "cutlistDoc": cutlistDoc,
             category: req.body.category,
         });
 
@@ -152,6 +175,10 @@ export const getAllModularUnitsNew = async (req: Request, res: Response): Promis
             category,
             minPrice,
             maxPrice,
+            // New Dimension Filters
+            minHeight, maxHeight,
+            minWidth, maxWidth,
+            // minDepth, maxDepth,
             search,
             sortBy = "createdAt",
             sortOrder = "desc",
@@ -163,7 +190,10 @@ export const getAllModularUnitsNew = async (req: Request, res: Response): Promis
         }
 
         // Build Redis cache key based on query params
-        const cacheKey = `modular_units:org:${organizationId}:page:${page}:limit:${limit}:cat:${category || 'all'}:search:${search || 'none'}:sort:${sortBy}:${sortOrder}:fabricationCost:${minPrice || 0}-${maxPrice || 'max'}`;
+        const cacheKey = `modular_units:org:${organizationId}:page:${page}:limit:${limit}:cat:${category || 'all'}:search:${search || 'none'}
+        :sort:${sortBy}:${sortOrder}:fabricationCost:${minPrice || 0}-${maxPrice || 'max'}
+        :h:${minHeight || 0}-${maxHeight || 'max'}:w:${minWidth || 0}-${maxWidth || 'max'}
+        `;
 
         // Check Redis cache
         //  await redisClient.del(cacheKey);
@@ -189,6 +219,28 @@ export const getAllModularUnitsNew = async (req: Request, res: Response): Promis
             if (maxPrice) filter.fabricationCost.$lte = Number(maxPrice);
         }
 
+
+        // Height Filter
+        if (minHeight || maxHeight) {
+            filter["dimention.height"] = {};
+            if (minHeight) filter["dimention.height"].$gte = Number(minHeight);
+            if (maxHeight) filter["dimention.height"].$lte = Number(maxHeight);
+        }
+
+        // Width Filter
+        if (minWidth || maxWidth) {
+            filter["dimention.width"] = {};
+            if (minWidth) filter["dimention.width"].$gte = Number(minWidth);
+            if (maxWidth) filter["dimention.width"].$lte = Number(maxWidth);
+        }
+
+        // Depth (Breadth) Filter
+        // if (minDepth || maxDepth) {
+        //     filter["dimention.depth"] = {};
+        //     if (minDepth) filter["dimention.depth"].$gte = Number(minDepth);
+        //     if (maxDepth) filter["dimention.depth"].$lte = Number(maxDepth);
+        // }
+
         if (search) {
             filter.$or = [
                 { productName: { $regex: search, $options: "i" } },
@@ -212,13 +264,13 @@ export const getAllModularUnitsNew = async (req: Request, res: Response): Promis
         const skip = (pageNum - 1) * limitNum;
 
         // Sorting
-        const sort: any = {};
-        sort[sortBy as string] = sortOrder === "asc" ? 1 : -1;
+        // const sort: any = {};
+        // sort[sortBy as string] = sortOrder === "asc" ? 1 : -1;
 
         // Fetch data
         const [units, total] = await Promise.all([
             ModularUnitModelNew.find(filter)
-                .sort(sort)
+                .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limitNum)
                 .lean(),
@@ -329,6 +381,7 @@ export const updateModularUnitNew = async (req: Request, res: Response): Promise
         let productImages: IModularUnitUpload[] = [...existingUnit.productImages];
         let images2d: IModularUnitUpload[] = [...existingUnit["2dImages"]];
         let images3d: IModularUnitUpload[] = [...existingUnit["3dImages"]];
+        let cutlistDoc: IModularUnitUpload[] = [...existingUnit["cutlistDoc"]];
 
         if (req.files && typeof req.files === 'object' && !Array.isArray(req.files)) {
             const filesObj = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -371,19 +424,46 @@ export const updateModularUnitNew = async (req: Request, res: Response): Promise
                     ? new3dImages
                     : [...images3d, ...new3dImages];
             }
+
+            if (filesObj['cutlistDoc']) {
+                const newCutlistDoc = filesObj['cutlistDoc'].map((file: any) => ({
+                    type: "pdf" as const,
+                    url: file.location,
+                    originalName: file.originalname,
+                    uploadedAt: new Date(),
+                }));
+                cutlistDoc = req.body.replaceCutlistDoc === 'true'
+                    ? newCutlistDoc
+                    : [...cutlistDoc, ...newCutlistDoc];
+            }
+
+
+
         }
+
+
 
         // Build update object
         const updateData: any = {
             productImages,
             "2dImages": images2d,
             "3dImages": images3d,
+            "cutlistDoc": cutlistDoc,
         };
+
+        // --- Handle Parts Update ---
+        if (req.body.parts) {
+            try {
+                updateData.parts = typeof req.body.parts === 'string' ? JSON.parse(req.body.parts) : req.body.parts;
+            } catch (e) {
+                return res.status(400).json({ ok: false, message: "Invalid parts data" });
+            }
+        }
 
         // Update other fields if provided
         if (req.body.productName) updateData.productName = req.body.productName;
         // if (req.body.attributes) updateData.attributes = JSON.parse(req.body.attributes);
-         if (req.body.attributes) {
+        if (req.body.attributes) {
             try {
                 updateData.attributes = JSON.parse(req.body.attributes);
             } catch {
@@ -400,13 +480,13 @@ export const updateModularUnitNew = async (req: Request, res: Response): Promise
         if (req.body.category) updateData.category = req.body.category;
 
         // Update dimensions if provided
-         let dimentionData: any = null;
-        
+        let dimentionData: any = null;
+
         if (req.body.dimention) {
             try {
                 // If dimention is sent as JSON string
-                dimentionData = typeof req.body.dimention === 'string' 
-                    ? JSON.parse(req.body.dimention) 
+                dimentionData = typeof req.body.dimention === 'string'
+                    ? JSON.parse(req.body.dimention)
                     : req.body.dimention;
             } catch (error) {
                 console.error("Error parsing dimention:", error);
@@ -416,14 +496,14 @@ export const updateModularUnitNew = async (req: Request, res: Response): Promise
         // ✅ FIX: Also check for individual dimension fields (alternative approach)
         const height = req.body['dimention.height'] || req.body.height || dimentionData?.height;
         const width = req.body['dimention.width'] || req.body.width || dimentionData?.width;
-        const depth = req.body['dimention.depth'] || req.body.depth || dimentionData?.depth;
+        // const depth = req.body['dimention.depth'] || req.body.depth || dimentionData?.depth;
 
         // Update dimensions if any dimension field is provided
-        if (height !== undefined || width !== undefined || depth !== undefined) {
+        if (height !== undefined || width !== undefined ) {
             updateData.dimention = {
                 height: height ? Number(height) : existingUnit.dimention.height,
                 width: width ? Number(width) : existingUnit.dimention.width,
-                depth: depth ? Number(depth) : existingUnit.dimention.depth,
+                // depth: depth ? Number(depth) : existingUnit.dimention.depth,
             };
         }
 
