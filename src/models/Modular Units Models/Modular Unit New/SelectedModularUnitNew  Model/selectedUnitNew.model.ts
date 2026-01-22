@@ -34,7 +34,7 @@ const pdfModularSchema = new Schema<IModularUnitUpload>({
 
 const selectedUnits = new Schema<ISelectedUnit>({
   productId: { type: Schema.Types.ObjectId, ref: "ModularUnitModelNew" },
-  productName: { type: String, default: null },
+  // productName: { type: String, default: null },
   attributes: { type: [String], default: [] },
   serialNo: { type: String, default: null },
   dimention: { type: dimentionModularSchema, default: {} },

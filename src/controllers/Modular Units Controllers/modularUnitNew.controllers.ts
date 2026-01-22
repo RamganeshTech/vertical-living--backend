@@ -3,6 +3,9 @@ import mongoose, { Types } from "mongoose";
 import { IModularUnitUpload, ModularUnitModelNew } from "../../models/Modular Units Models/Modular Unit New/modularUnitNew.model";
 import redisClient from "../../config/redisClient";
 import { json } from "stream/consumers";
+import OrganizationModel from "../../models/organization models/organization.model";
+import { COMPANY_NAME } from "../stage controllers/ordering material controller/pdfOrderHistory.controller";
+import { generateModularUnitCutlistPdfHelper } from "./pdfModularUnit";
 
 
 // helper futninos
@@ -119,13 +122,13 @@ export const createModularUnitNew = async (req: Request, res: Response): Promise
         // Create new modular unit
         const newUnit = new ModularUnitModelNew({
             organizationId: new Types.ObjectId(organizationId),
-            productName: req.body.productName,
+            // productName: null,
             attributes: req.body.attributes ? JSON.parse(req.body.attributes) : [],
             serialNo: serialNo || null,
             dimention: {
                 height: req.body.dimention.height || null,
                 width: req.body.dimention.width || null,
-                // depth: req.body.dimention.depth || null,
+                depth: req.body.dimention.depth || null,
             },
             parts,
             description: req.body.description,
@@ -178,7 +181,7 @@ export const getAllModularUnitsNew = async (req: Request, res: Response): Promis
             // New Dimension Filters
             minHeight, maxHeight,
             minWidth, maxWidth,
-            // minDepth, maxDepth,
+            minDepth, maxDepth,
             search,
             sortBy = "createdAt",
             sortOrder = "desc",
@@ -235,15 +238,15 @@ export const getAllModularUnitsNew = async (req: Request, res: Response): Promis
         }
 
         // Depth (Breadth) Filter
-        // if (minDepth || maxDepth) {
-        //     filter["dimention.depth"] = {};
-        //     if (minDepth) filter["dimention.depth"].$gte = Number(minDepth);
-        //     if (maxDepth) filter["dimention.depth"].$lte = Number(maxDepth);
-        // }
+        if (minDepth || maxDepth) {
+            filter["dimention.depth"] = {};
+            if (minDepth) filter["dimention.depth"].$gte = Number(minDepth);
+            if (maxDepth) filter["dimention.depth"].$lte = Number(maxDepth);
+        }
 
         if (search) {
             filter.$or = [
-                { productName: { $regex: search, $options: "i" } },
+                // { productName: { $regex: search, $options: "i" } },
                 { serialNo: { $regex: search, $options: "i" } },
                 { category: { $regex: search, $options: "i" } },
                 // { attributes: { $in: search, $options: "i" } },
@@ -461,7 +464,7 @@ export const updateModularUnitNew = async (req: Request, res: Response): Promise
         }
 
         // Update other fields if provided
-        if (req.body.productName) updateData.productName = req.body.productName;
+        // if (req.body.productName) updateData.productName = req.body.productName;
         // if (req.body.attributes) updateData.attributes = JSON.parse(req.body.attributes);
         if (req.body.attributes) {
             try {
@@ -496,14 +499,14 @@ export const updateModularUnitNew = async (req: Request, res: Response): Promise
         // ✅ FIX: Also check for individual dimension fields (alternative approach)
         const height = req.body['dimention.height'] || req.body.height || dimentionData?.height;
         const width = req.body['dimention.width'] || req.body.width || dimentionData?.width;
-        // const depth = req.body['dimention.depth'] || req.body.depth || dimentionData?.depth;
+        const depth = req.body['dimention.depth'] || req.body.depth || dimentionData?.depth;
 
         // Update dimensions if any dimension field is provided
         if (height !== undefined || width !== undefined ) {
             updateData.dimention = {
                 height: height ? Number(height) : existingUnit.dimention.height,
                 width: width ? Number(width) : existingUnit.dimention.width,
-                // depth: depth ? Number(depth) : existingUnit.dimention.depth,
+                depth: depth ? Number(depth) : existingUnit.dimention.depth,
             };
         }
 
@@ -582,6 +585,46 @@ export const deleteModularUnitNew = async (req: Request, res: Response): Promise
 };
 
 
+//  PDF
 
 
+export const generateModularUnitCutlistPdf = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { unitId } = req.params;
 
+        // 1. Fetch Modular Unit Data
+        const unitData = await ModularUnitModelNew.findById(unitId);
+        if (!unitData) {
+            return res.status(404).json({ ok: false, message: "Modular Unit not found" });
+        }
+
+        // 2. Fetch Organization Data for the Header
+        const orgData = await OrganizationModel.findById(unitData.organizationId);
+        const orgName = orgData ? orgData.organizationName : COMPANY_NAME;
+
+        // 3. Call Helper Function
+        const pdfResponse = await generateModularUnitCutlistPdfHelper({ 
+            unitData, 
+            orgName 
+        });
+
+        return res.status(200).json({
+            ok: true,
+            message: "Cutlist PDF generated successfully",
+            data: {
+                fileName: pdfResponse.fileName,
+                url: pdfResponse.fileUrl,
+                // Assuming you want to save the PDF back to the model's cutlistDoc array
+                updatedDoc: pdfResponse.updatedDoc
+            },
+        });
+
+    } catch (error: any) {
+        console.error("PDF Generation Error:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Failed to generate Cutlist PDF",
+            error: error.message,
+        });
+    }
+};

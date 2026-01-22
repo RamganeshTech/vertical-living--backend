@@ -28,6 +28,7 @@ export const createMainInternalQuote = async (req: Request, res: Response): Prom
             organizationId,
             projectId,
             quoteNo: quoteNumber || null,
+            quoteCategory,
             mainQuote: {
                 projectId,
                 mainQuoteName,

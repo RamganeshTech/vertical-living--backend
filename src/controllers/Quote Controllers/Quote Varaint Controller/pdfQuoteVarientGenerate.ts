@@ -1097,68 +1097,68 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
         let yPosition = height - 50;
 
 
-        // // Draw Company Logo and Name horizontally centered
-        // // --- HEADER SECTION ---
-        try {
-            // Use the specific company logo if available, or fall back to a default
-            // const logoUrl = orgInfo.companyLogo || COMPANY_LOGO; 
-            const logoUrl = COMPANY_LOGO;
+            // // Draw Company Logo and Name horizontally centered
+            // // --- HEADER SECTION ---
+            try {
+                // Use the specific company logo if available, or fall back to a default
+                // const logoUrl = orgInfo.companyLogo || COMPANY_LOGO; 
+                const logoUrl = COMPANY_LOGO;
 
-            const logoRes = await fetch(logoUrl);
-            const logoBuffer = await logoRes.arrayBuffer();
-            const logoImage = await pdfDoc.embedJpg(logoBuffer);
+                const logoRes = await fetch(logoUrl);
+                const logoBuffer = await logoRes.arrayBuffer();
+                const logoImage = await pdfDoc.embedJpg(logoBuffer);
 
-            const logoScale = 0.4;
-            const logoDims = logoImage.scale(logoScale);
+                const logoScale = 0.4;
+                const logoDims = logoImage.scale(logoScale);
 
-            const brandText = orgName; // 👈 Uses dynamic Org Name
-            const brandFontSize = 22;
-            const brandTextWidth = boldFont.widthOfTextAtSize(brandText, brandFontSize);
+                const brandText = orgName; // 👈 Uses dynamic Org Name
+                const brandFontSize = 22;
+                const brandTextWidth = boldFont.widthOfTextAtSize(brandText, brandFontSize);
 
-            const spacing = 15;
-            const totalWidth = logoDims.width + spacing + brandTextWidth;
-            const combinedX = (width - totalWidth) / 2;
+                const spacing = 15;
+                const totalWidth = logoDims.width + spacing + brandTextWidth;
+                const combinedX = (width - totalWidth) / 2;
 
-            // Draw Logo
-            detailsPage.drawImage(logoImage, {
-                x: combinedX,
-                y: yPosition - logoDims.height,
-                width: logoDims.width,
-                height: logoDims.height,
+                // Draw Logo
+                detailsPage.drawImage(logoImage, {
+                    x: combinedX,
+                    y: yPosition - logoDims.height,
+                    width: logoDims.width,
+                    height: logoDims.height,
+                });
+
+                // Draw Organization Name
+                detailsPage.drawText(brandText, {
+                    x: combinedX + logoDims.width + spacing,
+                    y: yPosition - (logoDims.height / 2) - (brandFontSize / 4),
+                    size: brandFontSize,
+                    font: boldFont,
+                    color: PRIMARY_COLOR,
+                });
+
+                yPosition -= (logoDims.height + 10);
+
+            } catch (err) {
+                // Fallback if logo fetch fails
+                const brandFontSize = 22;
+                const textWidth = boldFont.widthOfTextAtSize(orgName, brandFontSize);
+                detailsPage.drawText(orgName, {
+                    x: (width - textWidth) / 2,
+                    y: yPosition,
+                    size: brandFontSize,
+                    font: boldFont,
+                    color: PRIMARY_COLOR,
+                });
+                yPosition -= 30;
+            }
+
+            // Draw Line
+            detailsPage.drawLine({
+                start: { x: 50, y: yPosition },
+                end: { x: width - 50, y: yPosition },
+                thickness: 1,
+                color: LINE_COLOR,
             });
-
-            // Draw Organization Name
-            detailsPage.drawText(brandText, {
-                x: combinedX + logoDims.width + spacing,
-                y: yPosition - (logoDims.height / 2) - (brandFontSize / 4),
-                size: brandFontSize,
-                font: boldFont,
-                color: PRIMARY_COLOR,
-            });
-
-            yPosition -= (logoDims.height + 10);
-
-        } catch (err) {
-            // Fallback if logo fetch fails
-            const brandFontSize = 22;
-            const textWidth = boldFont.widthOfTextAtSize(orgName, brandFontSize);
-            detailsPage.drawText(orgName, {
-                x: (width - textWidth) / 2,
-                y: yPosition,
-                size: brandFontSize,
-                font: boldFont,
-                color: PRIMARY_COLOR,
-            });
-            yPosition -= 30;
-        }
-
-        // Draw Line
-        detailsPage.drawLine({
-            start: { x: 50, y: yPosition },
-            end: { x: width - 50, y: yPosition },
-            thickness: 1,
-            color: LINE_COLOR,
-        });
 
         // const sectionTopY = yPosition;
         // const detailFontSize = 9;

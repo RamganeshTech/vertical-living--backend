@@ -1,7 +1,7 @@
 
 /** Final TypeScript interface */
 
-import { model, Schema, Types } from "mongoose";
+import mongoose, { model, Schema, Types } from "mongoose";
 
 
 
@@ -19,13 +19,13 @@ export interface IParts {
 }
 export interface IModularUnit {
   organizationId: Types.ObjectId
-  productName: string;
+  // productName: string;
   attributes: string[];
   serialNo: string;
   dimention: {
     height: number,
     width: number,
-    // depth: number,
+    depth: number,
   }
   description?: string;
   totalAreaSqFt: number,
@@ -59,14 +59,14 @@ const partsSchema = new Schema({}, {
 export const dimentionModularSchema = new Schema({
   height: { type: Number, default: null },
   width: { type: Number, default: null },
-  // depth: { type: Number, default: null },
+  depth: { type: Number, default: null },
 }, { _id: false })
 
 /** CommonUnitsSchema aligned with ICommonUnit */
 export const ModularUnitSchemaNew = new Schema<IModularUnit>(
   {
     organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
-    productName: { type: String, default: null },
+    // productName: { type: String, default: null },
     attributes: { type: [String], default: [] },
     serialNo: { type: String, default: null },
     dimention: { type: dimentionModularSchema, default: {} },
@@ -85,6 +85,7 @@ export const ModularUnitSchemaNew = new Schema<IModularUnit>(
   },
   { timestamps: true }
 );
+
 
 /** Model export */
 export const ModularUnitModelNew = model<IModularUnit>("ModularUnitModelNew", ModularUnitSchemaNew);

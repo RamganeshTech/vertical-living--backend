@@ -103,6 +103,7 @@ export interface IMaterialQuote extends Document {
   organizationId: Types.ObjectId;
   projectId: Types.ObjectId;
   furnitures: IFurniture[];
+  quoteCategory: string | null,
   grandTotal: number;
   notes?: string | null;
 
@@ -233,6 +234,10 @@ const InternalQuoteSchema = new mongoose.Schema<IMaterialQuote>({
   projectId: {
     type: Schema.Types.ObjectId,
     ref: 'ProjectModel',
+  },
+  quoteCategory: {
+    type: String,
+    default: null,
   },
   furnitures: [FurnitureSchema],
 

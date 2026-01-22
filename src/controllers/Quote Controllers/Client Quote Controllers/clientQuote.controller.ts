@@ -191,47 +191,79 @@ export const toggleBlurring = async (req: Request, res: Response): Promise<any> 
 
 
 
-export const generateClientPdfWithTypes = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { quoteId, projectId } = req.params
-        const { type } = req.body //type 1, 2, 3
+    export const generateClientPdfWithTypes = async (req: Request, res: Response): Promise<any> => {
+        try {
+            const { quoteId, projectId } = req.params
+            const { type } = req.body //type 1, 2, 3
 
 
-        const newVariant = await QuoteVarientGenerateModel.findById(quoteId).populate('projectId')
+            const newVariant = await QuoteVarientGenerateModel.findById(quoteId).populate('projectId')
 
-        if (!newVariant) {
-            return res.status(404).json({ messaage: "quote not found", ok: false })
+            if (!newVariant) {
+                return res.status(404).json({ messaage: "quote not found", ok: false })
+            }
+
+
+
+            
+            // console.log("new varient", newVariant)
+            const pdfResponse = await generateClientQuoteVariantPdfwithTemplates({ quoteId, projectId, newVariant, templateType: type });
+            // const pdfResponse = await generateQuoteVariantPdfWithTemplate({ quoteId, projectId, newVariant , templateType});
+
+            // newVariant.pdfLink
+            // await newVariant.save()
+
+
+
+
+            return res.status(201).json({
+                ok: true,
+                message: "Variant quote created and PDF generated successfully",
+                data: {
+                    fileName: pdfResponse.fileName,
+                    url: pdfResponse.fileUrl, // ✅ PDF S3 URL
+                    data: pdfResponse.updatedDoc, // ✅ Updated DB doc with PDF link
+                },
+            });
+
+        } catch (error: any) {
+            console.error("Error creating variant quote:", error);
+            return res.status(500).json({
+                ok: false,
+                message: "Failed to create variant quote",
+                error: error.message,
+            });
         }
-
-
-        
-        // console.log("new varient", newVariant)
-        const pdfResponse = await generateClientQuoteVariantPdfwithTemplates({ quoteId, projectId, newVariant, templateType: type });
-        // const pdfResponse = await generateQuoteVariantPdfWithTemplate({ quoteId, projectId, newVariant , templateType});
-
-        // newVariant.pdfLink
-        // await newVariant.save()
+    };
 
 
 
 
-        return res.status(201).json({
-            ok: true,
-            message: "Variant quote created and PDF generated successfully",
-            data: {
-                fileName: pdfResponse.fileName,
-                url: pdfResponse.fileUrl, // ✅ PDF S3 URL
-                data: pdfResponse.updatedDoc, // ✅ Updated DB doc with PDF link
-            },
-        });
+// export const migratePdfTypeField = async () => {
+//     try {
+//         console.log("Starting migration: Setting pdfType to [] where null or missing...");
 
-    } catch (error: any) {
-        console.error("Error creating variant quote:", error);
-        return res.status(500).json({
-            ok: false,
-            message: "Failed to create variant quote",
-            error: error.message,
-        });
-    }
-};
+//         const result = await QuoteVarientGenerateModel.updateMany(
+//             {
+//                 $or: [
+//                     { pdfType: { $exists: false } }, // Field doesn't exist
+//                     { pdfType: null }                // Field is explicitly null
+//                 ]
+//             },
+//             {
+//                 $set: { pdfType: [] }                // Initialize as empty array
+//             }
+//         );
+
+//         console.log(`Migration successful!`);
+//         console.log(`Matched documents: ${result.matchedCount}`);
+//         console.log(`Modified documents: ${result.modifiedCount}`);
+
+//     } catch (error) {
+//         console.error("Migration failed:", error);
+//     }
+// };
+
+// // Call the function once
+// // migratePdfTypeField();
 

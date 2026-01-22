@@ -4,6 +4,7 @@ import {
     getModularUnitByIdNew,
     updateModularUnitNew
     , deleteModularUnitNew,
+    generateModularUnitCutlistPdf,
 } from "../../controllers/Modular Units Controllers/modularUnitNew.controllers"
 import { multiRoleAuthMiddleware } from "../../middlewares/multiRoleAuthMiddleware";
 import { imageUploadToS3, processUploadFiles } from "../../utils/s3Uploads/s3upload";
@@ -61,6 +62,16 @@ modularUnitRoutesNew.get(
     multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),
     getAllModularUnitsNew
 );
+
+modularUnitRoutesNew.post(
+    "/generatepdf/:unitId",
+    multiRoleAuthMiddleware("owner", "staff", "CTO", "client"),
+    generateModularUnitCutlistPdf
+);
+
+
+
+
 
 
 export default modularUnitRoutesNew;
