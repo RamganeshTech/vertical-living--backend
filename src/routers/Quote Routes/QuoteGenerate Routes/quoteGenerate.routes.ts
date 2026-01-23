@@ -1,6 +1,6 @@
 import express from "express";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
-import { createMaterialQuote,  deleteMaterialQuoteById,  editQuoteMaterial,  getMaterialQuoteEntries } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/internalQuote.controller";
+import { createMainInternalQuoteResidentialVersion, createMaterialQuote,  deleteMaterialQuoteById,  editQuoteMaterial,  getMaterialQuoteEntries, getSingleInternalQuoteResidentialVersion } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/internalQuote.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { getMaterialCategories } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
 import {  createVariantQuotePdfGenerator, deleteClientQuote, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
@@ -10,6 +10,7 @@ const QuoteRouter = express.Router();
 
 
 //  start of intenal quote routes
+//  THE BELOW ONE IS NOT USED, ONLY  EDIT IS USED BUT IT IS GETTING USED IN THE MOBILE APP
 QuoteRouter.post(
   "/createquote/:organizationId/:projectId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
@@ -19,6 +20,14 @@ QuoteRouter.post(
 );
 
 
+QuoteRouter.post(
+    "/createmainquote",
+    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    createMainInternalQuoteResidentialVersion              // ✅ Your TS controller
+);
+
+
+//  CURRENTLY W USE ONLY THE EDIT AND THE ABOVE ONE ONLY 
 QuoteRouter.put(
   "/editquote/:organizationId/:projectId/:id",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
@@ -33,6 +42,14 @@ QuoteRouter.get(
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   getMaterialQuoteEntries
 );
+
+
+QuoteRouter.get(
+  "/getsinglequote/:id",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  getSingleInternalQuoteResidentialVersion
+);
+
 
 QuoteRouter.delete(
   '/deletequote/:id',

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Types } from "mongoose";
 import InternalQuoteEntryModel from "../../../models/Quote Model/QuoteGenerate Model/InternalQuote.model";
 import { CategoryModel, ItemModel } from "../../../models/Quote Model/RateConfigAdmin Model/rateConfigAdmin.model";
+import { generateNextQuoteNumber } from "../Quote Varaint Controller/QuoteVariant.controller";
 
 // Define File type with S3 `location`
 interface UploadedFile extends Express.Multer.File {
@@ -21,6 +22,46 @@ const getNextQuoteNumber = async (organizationId: string): Promise<string> => {
 };
 
 
+
+
+export const createMainInternalQuoteResidentialVersion = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { organizationId, projectId, mainQuoteName, quoteCategory } = req.body;
+
+    // 1. Mandatory Field Validation
+    if (!organizationId || !projectId || !mainQuoteName || !quoteCategory) {
+      return res.status(400).json({
+        ok: false,
+        message: "Missing mandatory fields: organizationId, projectId, mainQuoteName, and quoteCategory are required."
+      });
+    }
+
+
+    const quoteNumber = await getNextQuoteNumber(organizationId)
+
+    // 2. Document Creation
+    const newQuote = new InternalQuoteEntryModel({
+      organizationId,
+      projectId,
+      quoteNo: quoteNumber || null,
+      quoteCategory,
+      mainQuoteName,
+      grandTotal: 0
+    });
+
+    await newQuote.save();
+    res.status(201).json({ ok: true, data: newQuote });
+
+  } catch (error: any) {
+    res.status(500).json({ ok: false, message: error.message });
+  }
+};
+
+
+
+
+
+//  THE BELOW ONE IS NOT USED, ONLY  EDIT IS USED BUT IT IS GETTING USED IN THE MOBILE APP
 export const createMaterialQuote = async (req: Request, res: Response): Promise<any> => {
   try {
     const { organizationId, projectId } = req.params;
@@ -86,6 +127,22 @@ export const createMaterialQuote = async (req: Request, res: Response): Promise<
             ? {
               quantity: Number(material.laminateNos.quantity || 0),
               thickness: Number(material.laminateNos.thickness || 0),
+            }
+            : null,
+
+
+          // ✅ ADD THESE TWO SECTIONS BELOW:
+          innerLaminate: material?.innerLaminate
+            ? {
+              quantity: Number(material?.innerLaminate.quantity || 0),
+              thickness: Number(material?.innerLaminate.thickness || 0),
+            }
+            : null,
+
+          outerLaminate: material?.outerLaminate
+            ? {
+              quantity: Number(material?.outerLaminate.quantity || 0),
+              thickness: Number(material?.outerLaminate.thickness || 0),
             }
             : null,
 
@@ -167,10 +224,12 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
 
 
     // Parse data
-        const furnitures = JSON.parse(req.body.furnitures || '[]');
+    const furnitures = JSON.parse(req.body.furnitures || '[]');
 
     // const furnitures = req?.body?.furnitures;
     const grandTotal = Number(req?.body?.grandTotal || 0);
+    const globalTransportation = Number(req?.body?.globalTransportation || 0);
+    const globalProfitPercent = Number(req?.body?.globalProfitPercent || 0);
     const notes = req?.body?.notes || null;
     const quoteNo = req?.body?.quoteNo || null;
 
@@ -185,7 +244,7 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
       }));
 
     const processedFurniture = (furnitures || []).map((furniture: any, furnitureIndex: number) => {
-      const coreMaterials = (furniture.coreMaterials || []).map((material: any,  materialIndex: number) => {
+      const coreMaterials = (furniture.coreMaterials || []).map((material: any, materialIndex: number) => {
 
         const fieldKey = `images[${furnitureIndex}][${materialIndex}]`;
         const matchedFile = fileMap[fieldKey];
@@ -214,6 +273,22 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
             }
             : null,
 
+
+          // ✅ ADD THESE TWO SECTIONS BELOW:
+          innerLaminate: material?.innerLaminate
+            ? {
+              quantity: Number(material?.innerLaminate.quantity || 0),
+              thickness: Number(material?.innerLaminate.thickness || 0),
+            }
+            : null,
+
+          outerLaminate: material?.outerLaminate
+            ? {
+              quantity: Number(material?.outerLaminate.quantity || 0),
+              thickness: Number(material?.outerLaminate.thickness || 0),
+            }
+            : null,
+
           carpenters: Number(material.carpenters || 0),
           days: Number(material.days || 0),
           profitOnMaterial: Number(material.profitOnMaterial || 0),
@@ -225,7 +300,7 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
 
       return {
         furnitureName: furniture.furnitureName,
-
+        furnitureProfit: Number(furniture.furnitureProfit || 0),
         coreMaterials,
         fittingsAndAccessories: cleanSimpleItems(furniture.fittingsAndAccessories),
         glues: cleanSimpleItems(furniture.glues),
@@ -245,6 +320,8 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
         quoteNo,
         furnitures: processedFurniture,
         grandTotal,
+        globalTransportation,
+        globalProfitPercent,
         notes,
         organizationId,
         projectId
@@ -329,6 +406,40 @@ export const getMaterialQuoteEntries = async (req: Request, res: Response): Prom
     });
   }
 };
+
+
+export const getSingleInternalQuoteResidentialVersion = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id } = req.params;
+
+    // 1. Validation check for mandatory fields
+    if (!id) {
+      return res.status(400).json({
+        ok: false,
+        message: "id is required."
+      });
+    }
+
+    // 2. Find and Update specifically the mainQuote sub-fields
+    const quote = await InternalQuoteEntryModel.findByIdAndUpdate(
+      id
+    );
+
+    if (!quote) {
+      return res.status(404).json({ ok: false, message: "Quote record not found." });
+    }
+
+    res.status(200).json({
+      ok: true,
+      message: "Main quote updated successfully",
+      data: quote
+    });
+
+  } catch (error: any) {
+    res.status(500).json({ ok: false, message: error.message });
+  }
+};
+
 
 
 

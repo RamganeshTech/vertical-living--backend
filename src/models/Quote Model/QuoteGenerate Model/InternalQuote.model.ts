@@ -12,6 +12,16 @@ export interface IMaterial {
     quantity?: number | null;
     thickness?: number | null;
   } | null;
+  innerLaminate?: {
+    quantity?: number | null;
+    thickness?: number | null;
+  } | null;
+
+  outerLaminate?: {
+    quantity?: number | null;
+    thickness?: number | null;
+  } | null;
+
   carpenters?: number;
   days?: number;
   profitOnMaterial?: number;
@@ -33,7 +43,7 @@ export interface ISimpleItem {
 
 export interface IFurniture {
   furnitureName: string;
-
+  furnitureProfit?: number
   coreMaterials: IMaterial[];
   fittingsAndAccessories: ISimpleItem[];
   glues: ISimpleItem[];
@@ -101,14 +111,14 @@ export interface IMainInternalQuote {
 export interface IMaterialQuote extends Document {
   quoteNo: string | null;
   organizationId: Types.ObjectId;
+  mainQuoteName: string | null,
   projectId: Types.ObjectId;
   furnitures: IFurniture[];
   quoteCategory: string | null,
   grandTotal: number;
   notes?: string | null;
-
-
-
+  globalTransportation: number
+  globalProfitPercent: number
   mainQuote: IMainInternalQuote
 }
 
@@ -132,6 +142,26 @@ const MaterialSchema = new mongoose.Schema<IMaterial>({
     },
     default: null
   },
+
+
+  innerLaminate: {
+    type: {
+      quantity: { type: Number, default: null },
+      thickness: { type: Number, default: null }
+    },
+    default: null
+  },
+
+
+  outerLaminate: {
+    type: {
+      quantity: { type: Number, default: null },
+      thickness: { type: Number, default: null }
+    },
+    default: null
+  },
+
+
 
   carpenters: { type: Number, default: 0 },
   days: { type: Number, default: 0 },
@@ -160,7 +190,7 @@ const SimpleItemSchema = new Schema<ISimpleItem>(
 // Each furniture entry
 const FurnitureSchema = new mongoose.Schema<IFurniture>({
   furnitureName: { type: String, default: null },
-
+  furnitureProfit: { type: String, default: null },
   coreMaterials: [MaterialSchema],
   fittingsAndAccessories: [SimpleItemSchema],
   glues: [SimpleItemSchema],
@@ -235,11 +265,15 @@ const InternalQuoteSchema = new mongoose.Schema<IMaterialQuote>({
     type: Schema.Types.ObjectId,
     ref: 'ProjectModel',
   },
+  mainQuoteName: { type: String, default: null },
   quoteCategory: {
     type: String,
     default: null,
   },
   furnitures: [FurnitureSchema],
+
+  globalTransportation: { type: Number, default: 0 },
+  globalProfitPercent: { type: Number, default: 0 },
 
   mainQuote: { type: mainQuote, default: null },
 
