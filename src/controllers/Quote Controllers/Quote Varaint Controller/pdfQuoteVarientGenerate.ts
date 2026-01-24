@@ -1097,68 +1097,68 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
         let yPosition = height - 50;
 
 
-            // // Draw Company Logo and Name horizontally centered
-            // // --- HEADER SECTION ---
-            try {
-                // Use the specific company logo if available, or fall back to a default
-                // const logoUrl = orgInfo.companyLogo || COMPANY_LOGO; 
-                const logoUrl = COMPANY_LOGO;
+        // // Draw Company Logo and Name horizontally centered
+        // // --- HEADER SECTION ---
+        try {
+            // Use the specific company logo if available, or fall back to a default
+            // const logoUrl = orgInfo.companyLogo || COMPANY_LOGO; 
+            const logoUrl = COMPANY_LOGO;
 
-                const logoRes = await fetch(logoUrl);
-                const logoBuffer = await logoRes.arrayBuffer();
-                const logoImage = await pdfDoc.embedJpg(logoBuffer);
+            const logoRes = await fetch(logoUrl);
+            const logoBuffer = await logoRes.arrayBuffer();
+            const logoImage = await pdfDoc.embedJpg(logoBuffer);
 
-                const logoScale = 0.4;
-                const logoDims = logoImage.scale(logoScale);
+            const logoScale = 0.4;
+            const logoDims = logoImage.scale(logoScale);
 
-                const brandText = orgName; // 👈 Uses dynamic Org Name
-                const brandFontSize = 22;
-                const brandTextWidth = boldFont.widthOfTextAtSize(brandText, brandFontSize);
+            const brandText = orgName; // 👈 Uses dynamic Org Name
+            const brandFontSize = 22;
+            const brandTextWidth = boldFont.widthOfTextAtSize(brandText, brandFontSize);
 
-                const spacing = 15;
-                const totalWidth = logoDims.width + spacing + brandTextWidth;
-                const combinedX = (width - totalWidth) / 2;
+            const spacing = 15;
+            const totalWidth = logoDims.width + spacing + brandTextWidth;
+            const combinedX = (width - totalWidth) / 2;
 
-                // Draw Logo
-                detailsPage.drawImage(logoImage, {
-                    x: combinedX,
-                    y: yPosition - logoDims.height,
-                    width: logoDims.width,
-                    height: logoDims.height,
-                });
-
-                // Draw Organization Name
-                detailsPage.drawText(brandText, {
-                    x: combinedX + logoDims.width + spacing,
-                    y: yPosition - (logoDims.height / 2) - (brandFontSize / 4),
-                    size: brandFontSize,
-                    font: boldFont,
-                    color: PRIMARY_COLOR,
-                });
-
-                yPosition -= (logoDims.height + 10);
-
-            } catch (err) {
-                // Fallback if logo fetch fails
-                const brandFontSize = 22;
-                const textWidth = boldFont.widthOfTextAtSize(orgName, brandFontSize);
-                detailsPage.drawText(orgName, {
-                    x: (width - textWidth) / 2,
-                    y: yPosition,
-                    size: brandFontSize,
-                    font: boldFont,
-                    color: PRIMARY_COLOR,
-                });
-                yPosition -= 30;
-            }
-
-            // Draw Line
-            detailsPage.drawLine({
-                start: { x: 50, y: yPosition },
-                end: { x: width - 50, y: yPosition },
-                thickness: 1,
-                color: LINE_COLOR,
+            // Draw Logo
+            detailsPage.drawImage(logoImage, {
+                x: combinedX,
+                y: yPosition - logoDims.height,
+                width: logoDims.width,
+                height: logoDims.height,
             });
+
+            // Draw Organization Name
+            detailsPage.drawText(brandText, {
+                x: combinedX + logoDims.width + spacing,
+                y: yPosition - (logoDims.height / 2) - (brandFontSize / 4),
+                size: brandFontSize,
+                font: boldFont,
+                color: PRIMARY_COLOR,
+            });
+
+            yPosition -= (logoDims.height + 10);
+
+        } catch (err) {
+            // Fallback if logo fetch fails
+            const brandFontSize = 22;
+            const textWidth = boldFont.widthOfTextAtSize(orgName, brandFontSize);
+            detailsPage.drawText(orgName, {
+                x: (width - textWidth) / 2,
+                y: yPosition,
+                size: brandFontSize,
+                font: boldFont,
+                color: PRIMARY_COLOR,
+            });
+            yPosition -= 30;
+        }
+
+        // Draw Line
+        detailsPage.drawLine({
+            start: { x: 50, y: yPosition },
+            end: { x: width - 50, y: yPosition },
+            thickness: 1,
+            color: LINE_COLOR,
+        });
 
         // const sectionTopY = yPosition;
         // const detailFontSize = 9;
@@ -1941,219 +1941,6 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
             yPosition -= 20;
         };
 
-        // const drawCoreMaterialsTable = async (headers: string[], columnWidths: number[], rows: any[]) => {
-        //     const headerHeight = 25;
-        //     const baseRowHeight = 25;
-        //     const lineHeight = FONT_SIZE * 1.2;
-        //     const startX = 50;
-        //     const tableWidth = width - 100;
-
-        //     let totalRowsHeight = 0;
-        //     let rowHeights: number[] = [];
-
-        //     for (const row of rows) {
-        //         let rowHeight = baseRowHeight;
-        //         let maxLines = 1;
-
-        //         const itemName = row.itemName || "-";
-        //         const itemNameLines = calculateTextLines(itemName, columnWidths[1] - 10, normalFont, FONT_SIZE);
-        //         maxLines = Math.max(maxLines, itemNameLines);
-
-        //         rowHeight = Math.max(rowHeight, baseRowHeight + (maxLines - 1) * lineHeight);
-        //         rowHeights.push(rowHeight);
-        //         totalRowsHeight += rowHeight;
-        //     }
-
-        //     const totalTableHeight = headerHeight + 5 + totalRowsHeight;
-        //     const sectionStartY = yPosition;
-
-        //     // Draw FULL header background
-        //     currentPage.drawRectangle({
-        //         x: startX,
-        //         y: yPosition - headerHeight + 5,
-        //         width: tableWidth,
-        //         height: headerHeight,
-        //         color: TABLE_HEADER_BG_COLOR,
-        //     });
-
-        //     // Draw header text
-        //     let xPos = startX;
-        //     for (let i = 0; i < headers.length; i++) {
-        //         const textWidth = boldFont.widthOfTextAtSize(headers[i], FONT_SIZE);
-        //         currentPage.drawText(headers[i], {
-        //             x: xPos + (columnWidths[i] - textWidth) / 2,
-        //             y: yPosition - 15,
-        //             font: boldFont,
-        //             size: FONT_SIZE,
-        //             color: TABLE_HEADER_TEXT_COLOR,
-        //         });
-
-        //         if (i < headers.length - 1) {
-        //             currentPage.drawLine({
-        //                 start: { x: xPos + columnWidths[i], y: yPosition - headerHeight + 5 },
-        //                 end: { x: xPos + columnWidths[i], y: yPosition + 5 },
-        //                 thickness: 1,
-        //                 color: rgb(1, 1, 1),
-        //             });
-        //         }
-
-        //         xPos += columnWidths[i];
-        //     }
-
-        //     currentPage.drawLine({
-        //         start: { x: startX, y: yPosition - headerHeight + 5 },
-        //         end: { x: startX + tableWidth, y: yPosition - headerHeight + 5 },
-        //         thickness: 1,
-        //         color: TABLE_HEADER_BG_COLOR,
-        //     });
-
-        //     yPosition -= headerHeight;
-
-        //     // Load and position the single image for the entire section
-        //     let sectionImage = null;
-        //     let sectionImageDims = { width: 0, height: 0 };
-        //     const hasImage = rows.length > 0 && rows[0].imageUrl;
-
-        //     if (hasImage) {
-        //         try {
-        //             const imageRes = await fetch(rows[0].imageUrl);
-        //             if (imageRes.ok) {
-        //                 const imageBuffer = await imageRes.arrayBuffer();
-        //                 try {
-        //                     sectionImage = await pdfDoc.embedPng(imageBuffer);
-        //                 } catch (e) {
-        //                     try {
-        //                         sectionImage = await pdfDoc.embedJpg(imageBuffer);
-        //                     } catch (e) {
-        //                         console.log("Invalid image format");
-        //                     }
-        //                 }
-
-        //                 if (sectionImage) {
-        //                     const maxImageSize = 35;
-        //                     const scale = Math.min(maxImageSize / sectionImage.width, maxImageSize / sectionImage.height);
-        //                     sectionImageDims = {
-        //                         width: sectionImage.width * scale,
-        //                         height: sectionImage.height * scale
-        //                     };
-
-        //                     const rowsStartY = sectionStartY - headerHeight - 5;
-        //                     const imageCenterY = rowsStartY - (totalRowsHeight / 2);
-
-        //                     const imageX = startX + (columnWidths[0] - sectionImageDims.width) / 2;
-        //                     const imageY = imageCenterY - (sectionImageDims.height / 2);
-
-        //                     currentPage.drawImage(sectionImage, {
-        //                         x: imageX,
-        //                         y: imageY,
-        //                         width: sectionImageDims.width,
-        //                         height: sectionImageDims.height,
-        //                     });
-        //                 }
-        //             }
-        //         } catch (error) {
-        //             console.log("Error loading image:", error);
-        //         }
-        //     }
-
-        //     if (!hasImage || !sectionImage) {
-        //         const rowsStartY = sectionStartY - headerHeight - 5;
-        //         const textCenterY = rowsStartY - (totalRowsHeight / 2);
-
-        //         drawCenteredText(
-        //             "No Image",
-        //             startX,
-        //             columnWidths[0],
-        //             textCenterY,
-        //             normalFont,
-        //             FONT_SIZE - 2
-        //         );
-        //     }
-
-        //     // Draw rows with proper borders
-        //     for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
-        //         const row = rows[rowIndex];
-        //         const rowHeight = rowHeights[rowIndex];
-
-        //         ensureSpace(rowHeight + 20);
-
-        //         xPos = startX + columnWidths[0];
-        //         let columnIndex = 1;
-        //         let rowYPosition = yPosition;
-
-        //         // Item Name column
-        //         const itemName = row.itemName || "-";
-        //         const itemNameMaxWidth = columnWidths[1] - 10;
-        //         const itemNameLinesCount = calculateTextLines(itemName, itemNameMaxWidth, normalFont, FONT_SIZE);
-        //         const itemNameHeight = itemNameLinesCount * lineHeight;
-        //         const textTopY = rowYPosition - (rowHeight - itemNameHeight) / 2;
-
-        //         drawLeftAlignedText(itemName, xPos, columnWidths[1], textTopY, normalFont, FONT_SIZE);
-        //         xPos += columnWidths[columnIndex++];
-
-        //         // Quantity column
-        //         const quantityText = String(row.plywoodNos?.quantity || 0);
-        //         const centerY = rowYPosition - rowHeight / 2;
-        //         drawCenteredText(quantityText, xPos, columnWidths[columnIndex], centerY, normalFont, FONT_SIZE);
-        //         xPos += columnWidths[columnIndex++];
-
-        //         // Cost column
-        //         const costText = `${row.rowTotal}`;
-        //         drawCenteredText(costText, xPos, columnWidths[columnIndex], centerY, boldFont, FONT_SIZE, rgb(0, 0.4, 0));
-
-        //         // Draw horizontal border below this row
-        //         currentPage.drawLine({
-        //             start: { x: startX + columnWidths[0], y: yPosition - rowHeight },
-        //             end: { x: startX + tableWidth, y: yPosition - rowHeight },
-        //             thickness: 1,
-        //             color: TABLE_HEADER_BG_COLOR,
-        //         });
-
-        //         // Draw vertical borders between data columns
-        //         xPos = startX + columnWidths[0];
-        //         for (let i = 1; i < headers.length; i++) {
-        //             currentPage.drawLine({
-        //                 start: { x: xPos, y: yPosition },
-        //                 end: { x: xPos, y: yPosition - rowHeight },
-        //                 thickness: 1,
-        //                 color: TABLE_HEADER_BG_COLOR,
-        //             });
-        //             xPos += columnWidths[i];
-        //         }
-
-        //         // Draw left border of image column
-        //         currentPage.drawLine({
-        //             start: { x: startX, y: yPosition },
-        //             end: { x: startX, y: yPosition - rowHeight },
-        //             thickness: 1,
-        //             color: TABLE_HEADER_BG_COLOR,
-        //         });
-
-        //         // Draw right border of table
-        //         currentPage.drawLine({
-        //             start: { x: startX + tableWidth, y: yPosition },
-        //             end: { x: startX + tableWidth, y: yPosition - rowHeight },
-        //             thickness: 1,
-        //             color: TABLE_HEADER_BG_COLOR,
-        //         });
-
-        //         yPosition -= rowHeight;
-        //     }
-
-        //     // Draw bottom border of table
-        //     currentPage.drawLine({
-        //         start: { x: startX, y: yPosition },
-        //         end: { x: startX + tableWidth, y: yPosition },
-        //         thickness: 1,
-        //         color: TABLE_HEADER_BG_COLOR,
-        //     });
-
-        //     yPosition -= 15;
-        // };
-
-        // Function to render simple sections with template type support
-
-
         const drawCoreMaterialsTable = async (headers: string[], columnWidths: number[], rows: any[], templateType: string = "type 1") => {
             const headerHeight = 25;
             const baseRowHeight = 25;
@@ -2507,10 +2294,12 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
             yPosition -= 20;
         };
 
-        const renderSimpleSection = async (title: string, rows: any[], total: number) => {
+        const renderSimpleSection = async (title: string, rows: any[], total: number, hideSubTotal:boolean=false) => {
             const validRows = filterSimpleRows(rows);
             if (validRows.length === 0) return;
 
+
+            const showSubtotalText = hideSubTotal ? "Total" : "Subtotal" 
             // Template Type 2: Don't show anything (no table, no subtotal)
             if (templateType === "type 2") {
                 return;
@@ -2519,7 +2308,7 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
             // Template Type 3: Show only subtotal without table
             if (templateType === "type 3") {
                 ensureSpace(30);
-                currentPage.drawText(`${title} Subtotal Rs: ${total}`, {
+                currentPage.drawText(`${title} ${showSubtotalText} Rs: ${total}`, {
                     x: width - 250,
                     y: yPosition,
                     font: boldFont,
@@ -2552,7 +2341,7 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
 
             // Subtotal
             ensureSpace(30);
-            currentPage.drawText(`Subtotal Rs: ${total}`, {
+            currentPage.drawText(`${showSubtotalText} Rs: ${total}`, {
                 x: width - 200,
                 y: yPosition,
                 font: boldFont,
@@ -2642,9 +2431,9 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
             }
 
             // Render simple sections (fittings, glues, nbms) - only for type 1
-            await renderSimpleSection("Fittings", furniture.fittingsAndAccessories, furniture.fittingsAndAccessoriesTotal);
-            await renderSimpleSection("Glues", furniture.glues, furniture.gluesTotal);
-            await renderSimpleSection("Non-Branded Materials", furniture.nonBrandMaterials, furniture.nonBrandMaterialsTotal);
+            await renderSimpleSection("Fittings", furniture.fittingsAndAccessories, furniture.fittingsAndAccessoriesTotal, false);
+            await renderSimpleSection("Glues", furniture.glues, furniture.gluesTotal, false);
+            await renderSimpleSection("Non-Branded Materials", furniture.nonBrandMaterials, furniture.nonBrandMaterialsTotal, false);
 
             // Furniture Total
             ensureSpace(40);
@@ -2664,6 +2453,17 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
             });
             yPosition -= SECTION_SPACE * 1.5;
         }
+
+
+
+        if (newVariant?.commonMaterials) {
+
+            const commonMattotal = newVariant?.commonMaterials.reduce(
+                (sum: number, row: any) => sum + row.rowTotal,
+                0)
+            await renderSimpleSection("Common Materials", newVariant?.commonMaterials, commonMattotal, true);
+        }
+
 
         // === GRAND TOTAL ===
         // This ensures 2 decimal places and adds Indian style commas (e.g., 93,559.96)
@@ -2717,6 +2517,10 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
 
 
         // === TERMS AND CONDITIONS PAGE ===
+
+
+
+
         const termsPage = pdfDoc.addPage();
         const { width: pageWidth, height: pageHeight } = termsPage.getSize();
         let termsY = pageHeight - 50;
@@ -2940,7 +2744,7 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
         throw new Error("Failed to generate variant quote PDF.");
     }
 };
-    
+
 
 
 

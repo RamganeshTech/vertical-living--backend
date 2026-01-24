@@ -6,15 +6,20 @@ export interface IQuoteVarientCoreItem extends IMaterial { }
 
 export interface IQuoteFurniture extends IFurniture {
     plywoodBrand: string | null;
-    laminateBrand: string | null;
+    // laminateBrand: string | null;
+    innerLaminateBrand: string | null;
+    outerLaminateBrand: string | null;
 }
 
 export interface IQuoteVarientMain extends IMaterialQuote {
     quoteId: Types.ObjectId | string
     brandName: string | null;
+    innerLaminateBrand: string | null;
+    outerLaminateBrand: string | null;
     pdfLink: IQuoteVarientUpload | null
     isBlured: boolean
     pdfType: templateTypePdf[]
+
 }
 
 
@@ -53,6 +58,25 @@ const QuoteMaterialSchema = new mongoose.Schema<IQuoteVarientCoreItem>({
         default: null
     },
 
+
+
+    innerLaminate: {
+        type: {
+            quantity: { type: Number, default: null },
+            thickness: { type: Number, default: null }
+        },
+        default: null
+    },
+
+
+    outerLaminate: {
+        type: {
+            quantity: { type: Number, default: null },
+            thickness: { type: Number, default: null }
+        },
+        default: null
+    },
+
     carpenters: { type: Number, default: 0 },
     days: { type: Number, default: 0 },
 
@@ -81,6 +105,9 @@ const QuoteSimpleItemSchema = new Schema<ISimpleItem>(
 const QuoteFurnitureSchema = new mongoose.Schema<IQuoteFurniture>({
     furnitureName: { type: String, default: null },
 
+    furnitureProfit: { type: Number, default: null },
+    fabricationCost: { type: Number, default: null },
+
     coreMaterials: [QuoteMaterialSchema],
     fittingsAndAccessories: [QuoteSimpleItemSchema],
     glues: [QuoteSimpleItemSchema],
@@ -94,14 +121,15 @@ const QuoteFurnitureSchema = new mongoose.Schema<IQuoteFurniture>({
 
     furnitureTotal: { type: Number, default: 0 }, // Sum of all the above
     plywoodBrand: { type: String, default: null },
-    laminateBrand: { type: String, default: null },
-
+    // laminateBrand: { type: String, default: null },
+    innerLaminateBrand: { type: String, default: null },
+    outerLaminateBrand: { type: String, default: null },
 }, { _id: true });
 
 
 
 export interface templateTypePdf {
-    templateType: string, 
+    templateType: string,
     pdf: IQuoteVarientUpload
 }
 const pdfType = new mongoose.Schema<templateTypePdf>({
@@ -117,6 +145,9 @@ const QuoteVarientGenerateSchema = new mongoose.Schema<IQuoteVarientMain>({
     quoteNo: { type: String, default: null },
     quoteId: { type: Schema.Types.ObjectId, default: null, ref: "MaterialQuoteModel" },
     brandName: { type: String, default: null },
+    innerLaminateBrand: { type: String, default: null },
+    outerLaminateBrand: { type: String, default: null },
+
     organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
     projectId: {
         type: Schema.Types.ObjectId,
@@ -124,12 +155,20 @@ const QuoteVarientGenerateSchema = new mongoose.Schema<IQuoteVarientMain>({
     },
     isBlured: { type: Boolean, default: false },
     furnitures: [QuoteFurnitureSchema],
+    commonMaterials: { type: [QuoteSimpleItemSchema], default: [] },
+
+
+    globalTransportation: { type: Number, default: 0 },
+    globalProfitPercent: { type: Number, default: 0 },
+
+
     grandTotal: { type: Number, default: 0 },
     notes: { type: String, default: null },
     pdfLink: { type: uploadSchema, default: null },
-    pdfType: {type: [pdfType], default: [],}
+    pdfType: { type: [pdfType], default: [], }
 }, { timestamps: true });
 
 const QuoteVarientGenerateModel = mongoose.model('QuoteVarientGenerateModel', QuoteVarientGenerateSchema);
 
 export default QuoteVarientGenerateModel;
+

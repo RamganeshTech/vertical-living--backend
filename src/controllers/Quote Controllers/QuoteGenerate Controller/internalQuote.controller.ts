@@ -26,13 +26,13 @@ const getNextQuoteNumber = async (organizationId: string): Promise<string> => {
 
 export const createMainInternalQuoteResidentialVersion = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { organizationId, projectId, mainQuoteName, quoteCategory } = req.body;
+    const { organizationId, projectId, mainQuoteName, quoteCategory , quoteType} = req.body;
 
     // 1. Mandatory Field Validation
-    if (!organizationId || !projectId || !mainQuoteName || !quoteCategory) {
+    if (!organizationId || !projectId || !mainQuoteName || !quoteType) {
       return res.status(400).json({
         ok: false,
-        message: "Missing mandatory fields: organizationId, projectId, mainQuoteName, and quoteCategory are required."
+        message: "Missing mandatory fields: organizationId, projectId, mainQuoteName, and quoteType are required."
       });
     }
 
@@ -43,6 +43,7 @@ export const createMainInternalQuoteResidentialVersion = async (req: Request, re
     const newQuote = new InternalQuoteEntryModel({
       organizationId,
       projectId,
+      quoteType, 
       quoteNo: quoteNumber || null,
       quoteCategory,
       mainQuoteName,
@@ -225,6 +226,8 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
 
     // Parse data
     const furnitures = JSON.parse(req.body.furnitures || '[]');
+    const commonMaterials = JSON.parse(req.body.commonMaterials || '[]')
+
 
     // const furnitures = req?.body?.furnitures;
     const grandTotal = Number(req?.body?.grandTotal || 0);
@@ -301,6 +304,7 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
       return {
         furnitureName: furniture.furnitureName,
         furnitureProfit: Number(furniture.furnitureProfit || 0),
+        fabricationCost: Number(furniture.fabricationCost || 0),
         coreMaterials,
         fittingsAndAccessories: cleanSimpleItems(furniture.fittingsAndAccessories),
         glues: cleanSimpleItems(furniture.glues),
@@ -313,12 +317,18 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
         furnitureTotal: Number(furniture.furnitureTotal || 0),
       };
     });
+    
+
+
+    const processedCommonMaterials = cleanSimpleItems(commonMaterials)
+
 
     const updatedQuote = await InternalQuoteEntryModel.findByIdAndUpdate(
       id,
       {
         quoteNo,
         furnitures: processedFurniture,
+        commonMaterials: processedCommonMaterials,
         grandTotal,
         globalTransportation,
         globalProfitPercent,

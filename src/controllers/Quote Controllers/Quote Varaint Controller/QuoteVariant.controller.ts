@@ -104,10 +104,15 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
     const { quoteId } = req.params
     const {
       brandName,
+      innerLaminateBrand,
+      outerLaminateBrand,
       organizationId,
       projectId,
       furnitures,
       grandTotal,
+      commonMaterials,
+      globalTransportation,
+      globalProfitPercent,
       notes = null,
       templateType = "type 1"
     } = req.body;
@@ -143,28 +148,44 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
       quoteNo,
       quoteId,
       brandName,
+       innerLaminateBrand, 
+      outerLaminateBrand, 
+
       organizationId,
       projectId,
       furnitures,
+      commonMaterials,
+     
+      globalTransportation,
+      globalProfitPercent,
+
       grandTotal,
       notes,
       pdfLink: null,
+      pdfType: []
     });
     // console.log("new varient", newVariant)
-    const pdfResponse = await generateQuoteVariantPdf({ quoteId, projectId, newVariant });
-    // const pdfResponse = await generateQuoteVariantPdfWithTemplate({ quoteId, projectId, newVariant , templateType});
+    // const pdfResponse = await generateQuoteVariantPdf({ quoteId, projectId, newVariant });
+    const pdfResponse = {
+      fileName: null,
+      fileUrl: null,
+      // updatedDoc: newVariant
+    }
 
-    // newVariant.pdfLink
-    // await newVariant.save()
+
+
+    newVariant.pdfLink
+    await newVariant.save()
 
     return res.status(201).json({
       ok: true,
-      message: "Variant quote created and PDF generated successfully",
+      message: "Variant quote created successfully",
       data: {
         quote: newVariant,
-        fileName: pdfResponse.fileName,
-        url: pdfResponse.fileUrl, // ✅ PDF S3 URL
-        data: pdfResponse.updatedDoc, // ✅ Updated DB doc with PDF link
+        // fileName: pdfResponse.fileName,
+        // url: pdfResponse.fileUrl, // ✅ PDF S3 URL
+        // data: pdfResponse.updatedDoc, // ✅ Updated DB doc with PDF link
+        ...pdfResponse
       },
     });
 

@@ -44,6 +44,7 @@ export interface ISimpleItem {
 export interface IFurniture {
   furnitureName: string;
   furnitureProfit?: number
+  fabricationCost?: number
   coreMaterials: IMaterial[];
   fittingsAndAccessories: ISimpleItem[];
   glues: ISimpleItem[];
@@ -110,15 +111,18 @@ export interface IMainInternalQuote {
 
 export interface IMaterialQuote extends Document {
   quoteNo: string | null;
+  quoteType: string | null
   organizationId: Types.ObjectId;
   mainQuoteName: string | null,
   projectId: Types.ObjectId;
   furnitures: IFurniture[];
+  commonMaterials: ISimpleItem[]
+  globalTransportation: number
+  globalProfitPercent: number
   quoteCategory: string | null,
   grandTotal: number;
   notes?: string | null;
-  globalTransportation: number
-  globalProfitPercent: number
+
   mainQuote: IMainInternalQuote
 }
 
@@ -190,7 +194,8 @@ const SimpleItemSchema = new Schema<ISimpleItem>(
 // Each furniture entry
 const FurnitureSchema = new mongoose.Schema<IFurniture>({
   furnitureName: { type: String, default: null },
-  furnitureProfit: { type: String, default: null },
+  furnitureProfit: { type: Number, default: null },
+  fabricationCost: { type: Number, default: null },
   coreMaterials: [MaterialSchema],
   fittingsAndAccessories: [SimpleItemSchema],
   glues: [SimpleItemSchema],
@@ -266,11 +271,15 @@ const InternalQuoteSchema = new mongoose.Schema<IMaterialQuote>({
     ref: 'ProjectModel',
   },
   mainQuoteName: { type: String, default: null },
+  
+  quoteType: { type: String, default: null },
+
   quoteCategory: {
     type: String,
     default: null,
   },
   furnitures: [FurnitureSchema],
+  commonMaterials: { type: [SimpleItemSchema], default: [] },
 
   globalTransportation: { type: Number, default: 0 },
   globalProfitPercent: { type: Number, default: 0 },
