@@ -213,8 +213,6 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
       return res.status(400).json({ ok: false, message: 'Missing or invalid quote id' });
     }
 
-
-
     const files = req.files as UploadedFile[] | undefined;
 
     const fileMap: Record<string, UploadedFile> = {};
@@ -231,6 +229,7 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
 
     // const furnitures = req?.body?.furnitures;
     const grandTotal = Number(req?.body?.grandTotal || 0);
+    const commonProfitOverride = Number(req?.body?.commonProfitOverride || 0);
     const globalTransportation = Number(req?.body?.globalTransportation || 0);
     const globalProfitPercent = Number(req?.body?.globalProfitPercent || 0);
     const notes = req?.body?.notes || null;
@@ -329,6 +328,7 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
         quoteNo,
         furnitures: processedFurniture,
         commonMaterials: processedCommonMaterials,
+        commonProfitOverride: commonProfitOverride,
         grandTotal,
         globalTransportation,
         globalProfitPercent,

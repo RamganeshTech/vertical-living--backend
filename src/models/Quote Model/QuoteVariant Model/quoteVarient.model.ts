@@ -158,6 +158,7 @@ const QuoteVarientGenerateSchema = new mongoose.Schema<IQuoteVarientMain>({
     commonMaterials: { type: [QuoteSimpleItemSchema], default: [] },
 
 
+    commonProfitOverride: { type: Number, default: 0 },
     globalTransportation: { type: Number, default: 0 },
     globalProfitPercent: { type: Number, default: 0 },
 

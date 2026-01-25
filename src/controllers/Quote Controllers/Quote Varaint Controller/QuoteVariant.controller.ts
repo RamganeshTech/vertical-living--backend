@@ -111,6 +111,7 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
       furnitures,
       grandTotal,
       commonMaterials,
+      commonProfitOverride,
       globalTransportation,
       globalProfitPercent,
       notes = null,
@@ -156,6 +157,7 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
       furnitures,
       commonMaterials,
      
+      commonProfitOverride,
       globalTransportation,
       globalProfitPercent,
 

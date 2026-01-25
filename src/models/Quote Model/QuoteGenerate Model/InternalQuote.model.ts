@@ -117,6 +117,7 @@ export interface IMaterialQuote extends Document {
   projectId: Types.ObjectId;
   furnitures: IFurniture[];
   commonMaterials: ISimpleItem[]
+  commonProfitOverride: number,
   globalTransportation: number
   globalProfitPercent: number
   quoteCategory: string | null,
@@ -280,6 +281,7 @@ const InternalQuoteSchema = new mongoose.Schema<IMaterialQuote>({
   },
   furnitures: [FurnitureSchema],
   commonMaterials: { type: [SimpleItemSchema], default: [] },
+  commonProfitOverride: { type: Number, default: 0 },
 
   globalTransportation: { type: Number, default: 0 },
   globalProfitPercent: { type: Number, default: 0 },
