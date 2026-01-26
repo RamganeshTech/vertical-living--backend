@@ -123,6 +123,7 @@ import toolRoomRoutes from './routers/tool_routes/toolsRoom.route';
 import toolIssueRoutes from './routers/tool_routes/toolIssue.route';
 import InternalQuoteRoutes from './routers/Quote Routes/QuoteGenerate Routes/internalQuoteNewVersion.routes';
 import MateroialWithLabourRateConfigRoutes from './routers/Quote Routes/RateConfig Routes/materialWithLabourRateConfig.routes';
+import CutlistRoutes from './routers/cutlist_routes/cutlist.routes';
 
 
 // Extend Socket interface for custom properties
@@ -374,6 +375,10 @@ app.use('/api/quote/labour/rateconfig', LabourRateConfigRoutes)
 app.use('/api/quote/materialwithlabour/rateconfig', MateroialWithLabourRateConfigRoutes)
 app.use('/api/quote/quotegenerate', QuoteRouter)
 app.use('/api/quote/quotegenerate', InternalQuoteRoutes)
+
+app.use('/api/cutlist', CutlistRoutes)
+
+
 
 // app.use('/api/subcontract', SubContractRoutes)
 app.use('/api/subcontract', SubContractRoutesNew)

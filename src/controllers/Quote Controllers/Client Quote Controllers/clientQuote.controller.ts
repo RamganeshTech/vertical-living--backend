@@ -62,6 +62,36 @@ export const getAllClientQuotes = async (req: Request, res: Response): Promise<a
 
 
 
+export const getAllClientQuotesFromDropDown = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { organizationId , projectId} = req.params;
+        // Optional: Validate inputs
+        if (!organizationId) {
+            return res.status(400).json({ ok: false, message: "Invalid organizationId" });
+        }
+
+        const quotes = await QuoteVarientGenerateModel.find({organizationId, projectId}).sort({ createdAt: -1 }).populate("projectId", "_id projectName");
+
+        return res.status(200).json({
+            ok: true,
+            message: "quotes fetched successfully for drop down",
+            data: quotes,
+        });
+
+    } catch (error: any) {
+        console.error("Error fetching quotes", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Failed to fetch quotes entries",
+            error: error.message,
+        });
+    }
+};
+
+
+
+
+
 export const getSingleClientQuote = async (req: Request, res: Response): Promise<any> => {
     try {
         const { organizationId, id } = req.params;

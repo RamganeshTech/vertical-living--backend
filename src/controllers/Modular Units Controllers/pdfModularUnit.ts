@@ -11,16 +11,6 @@ export const generateModularUnitCutlistPdfHelper = async ({ unitData, orgName }:
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-    // Helper to add a new A3 Landscape page with consistent setup
-    const createNewPage = () => {
-        const newPage = pdfDoc.addPage([1190.55, 841.89]);
-        return {
-            page: newPage,
-            width: newPage.getSize().width,
-            height: newPage.getSize().height
-        };
-    };
-
     // A3 Landscape provides 1190 points of width
     let page = pdfDoc.addPage([1190.55, 841.89]);
     const { width, height } = page.getSize();

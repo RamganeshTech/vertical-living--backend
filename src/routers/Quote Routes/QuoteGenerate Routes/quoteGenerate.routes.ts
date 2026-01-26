@@ -4,7 +4,7 @@ import { createMainInternalQuoteResidentialVersion, createMaterialQuote,  delete
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { getMaterialCategories } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
 import {  createVariantQuotePdfGenerator, deleteClientQuote, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
-import { generateClientPdfWithTypes, getAllClientQuotes, getSingleClientQuote, storeQuoteToPaymentStage, toggleBlurring } from "../../../controllers/Quote Controllers/Client Quote Controllers/clientQuote.controller";
+import { generateClientPdfWithTypes, getAllClientQuotes, getAllClientQuotesFromDropDown, getSingleClientQuote, storeQuoteToPaymentStage, toggleBlurring } from "../../../controllers/Quote Controllers/Client Quote Controllers/clientQuote.controller";
 
 const QuoteRouter = express.Router();
 
@@ -110,6 +110,17 @@ QuoteRouter.get(
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   getAllClientQuotes
 );
+
+
+QuoteRouter.get(
+  "/getallclientquote/dropdown/:organizationId/:projectId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  getAllClientQuotesFromDropDown
+);
+
+
+
+
 
 
 QuoteRouter.get("/getsingleclientquote/:organizationId/:id",

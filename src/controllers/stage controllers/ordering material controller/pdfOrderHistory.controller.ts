@@ -10,7 +10,7 @@ export const COMPANY_LOGO = "https://th.bing.com/th/id/OIP.Uparc9uI63RDb82OupdPv
 export const COMPANY_NAME = "Vertical Living";
 
 // Upload PDF to S3
-const uploadToS3 = async (pdfBytes: any, fileName: any) => {
+const uploadToS3:any = async (pdfBytes: any, fileName: any) => {
     const params = {
         Bucket: S3_BUCKET,
         Key: fileName,
