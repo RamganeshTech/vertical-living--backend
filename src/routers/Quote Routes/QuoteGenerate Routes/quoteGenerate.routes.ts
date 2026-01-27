@@ -1,6 +1,6 @@
 import express from "express";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
-import { createMainInternalQuoteResidentialVersion, createMaterialQuote,  deleteMaterialQuoteById,  editQuoteMaterial,  getMaterialQuoteEntries, getSingleInternalQuoteResidentialVersion } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/internalQuote.controller";
+import { createMainInternalQuoteResidentialVersion, createMaterialQuote,  deleteMaterialQuoteById,  duplicateInternalQuote,  editQuoteMaterial,  getMaterialQuoteEntries, getSingleInternalQuoteResidentialVersion, updateMainInternalQuoteResidentialVersion, updateSqftRateQuoteContent } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/internalQuote.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { getMaterialCategories } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
 import {  createVariantQuotePdfGenerator, deleteClientQuote, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
@@ -25,6 +25,16 @@ QuoteRouter.post(
     multiRoleAuthMiddleware("owner", "staff", "CTO"),
     createMainInternalQuoteResidentialVersion              // ✅ Your TS controller
 );
+
+
+QuoteRouter.put(
+    "/updatemainquote/:id",
+    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    updateMainInternalQuoteResidentialVersion              // ✅ Your TS controller
+);
+
+
+
 
 
 //  CURRENTLY W USE ONLY THE EDIT AND THE ABOVE ONE ONLY 
@@ -56,6 +66,26 @@ QuoteRouter.delete(
   multiRoleAuthMiddleware('owner', 'staff', 'CTO'), // if required
   deleteMaterialQuoteById
 );
+
+
+QuoteRouter.put(
+  '/copyquote/:id',
+  multiRoleAuthMiddleware('owner', 'staff', 'CTO'), // if required
+  duplicateInternalQuote
+);
+
+
+QuoteRouter.put(
+  '/sqftrate/update/:id',
+  multiRoleAuthMiddleware('owner', 'staff', 'CTO'), // if required
+  updateSqftRateQuoteContent
+);
+
+
+
+
+
+
 
 //  end of intenal quote routes
 

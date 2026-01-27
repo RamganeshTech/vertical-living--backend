@@ -26,7 +26,7 @@ const getNextQuoteNumber = async (organizationId: string): Promise<string> => {
 
 export const createMainInternalQuoteResidentialVersion = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { organizationId, projectId, mainQuoteName, quoteCategory , quoteType} = req.body;
+    const { organizationId, projectId, mainQuoteName, quoteCategory, quoteType } = req.body;
 
     // 1. Mandatory Field Validation
     if (!organizationId || !projectId || !mainQuoteName || !quoteType) {
@@ -43,7 +43,7 @@ export const createMainInternalQuoteResidentialVersion = async (req: Request, re
     const newQuote = new InternalQuoteEntryModel({
       organizationId,
       projectId,
-      quoteType, 
+      quoteType,
       quoteNo: quoteNumber || null,
       quoteCategory,
       mainQuoteName,
@@ -57,9 +57,54 @@ export const createMainInternalQuoteResidentialVersion = async (req: Request, re
     res.status(500).json({ ok: false, message: error.message });
   }
 };
+export const updateMainInternalQuoteResidentialVersion = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id } = req.params; // Get the ID from the URL params
+    const { projectId, mainQuoteName, quoteCategory } = req.body;
+
+    // 1. Mandatory Field Validation
+    if (!id) {
+      return res.status(400).json({ ok: false, message: "Quote ID is required for updating." });
+    }
+
+    if (!projectId || !mainQuoteName || !quoteCategory) {
+      return res.status(400).json({
+        ok: false,
+        message: "Missing mandatory fields: projectId, mainQuoteName, and quoteCategory are required."
+      });
+    }
+
+    // 2. Find and Update the Document
+    // { new: true } returns the document AFTER the update is applied
+    // { runValidators: true } ensures the new data matches your Schema rules
+    const updatedQuote = await InternalQuoteEntryModel.findByIdAndUpdate(
+      id,
+      {
+        projectId,
+        mainQuoteName,
+        quoteCategory
+      },
+      { new: true }
+    );
+
+    if (!updatedQuote) {
+      return res.status(404).json({ ok: false, message: "Quote record not found." });
+    }
+
+
+    // 3. Response
+    res.status(200).json({
+      ok: true,
+      message: "Quote header updated successfully",
+      data: updatedQuote
+    });
 
 
 
+  } catch (error: any) {
+    res.status(500).json({ ok: false, message: error.message });
+  }
+};
 
 
 //  THE BELOW ONE IS NOT USED, ONLY  EDIT IS USED BUT IT IS GETTING USED IN THE MOBILE APP
@@ -316,7 +361,7 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
         furnitureTotal: Number(furniture.furnitureTotal || 0),
       };
     });
-    
+
 
 
     const processedCommonMaterials = cleanSimpleItems(commonMaterials)
@@ -359,8 +404,7 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
 };
 
 
-//  used to shwo that in the both internal quote and inthe quote variant as get all contorller
-
+//  used to show that in the both internal quote and inthe quote variant as get all contorller
 export const getMaterialQuoteEntries = async (req: Request, res: Response): Promise<any> => {
   try {
     const { organizationId } = req.params;
@@ -399,7 +443,9 @@ export const getMaterialQuoteEntries = async (req: Request, res: Response): Prom
     }
 
 
-    const quotes = await InternalQuoteEntryModel.find(filters).populate("projectId");
+    const quotes = await InternalQuoteEntryModel.find(filters)
+      .sort({ createdAt: -1 })
+      .populate("projectId");
 
     return res.status(200).json({
       ok: true,
@@ -492,4 +538,155 @@ export const deleteMaterialQuoteById = async (req: Request, res: Response): Prom
 
 
 
+export const duplicateInternalQuote = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id } = req.params;
 
+    if (!id) {
+      return res.status(400).json({ ok: false, message: "Quote ID is required to copy." });
+    }
+
+    // 1. Find the source quote
+    const sourceQuote = await InternalQuoteEntryModel.findById(id).lean();
+
+    if (!sourceQuote) {
+      return res.status(404).json({ ok: false, message: "Source quote not found." });
+    }
+
+    // 2. Logic for "Copy of" naming
+    const currentName = sourceQuote.mainQuoteName || "Quote";
+    let rootName = currentName;
+    // We search for existing copies to determine the next number (e.g., "Copy of Kitchen (1)")
+    // const regex = new RegExp(`^Copy of ${baseName}(?: \\((\\d+)\\))?$`);
+    // const regex = new RegExp(`^Copy of ${baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?: \\((\\d+)\\))?$`);
+
+    // Check if the name starts with "Copy of "
+    if (currentName.startsWith("Copy of ")) {
+      // Strip "Copy of " and any trailing " (n)" to find the original root
+      rootName = currentName.replace(/^Copy of /, "").replace(/ \(\d+\)$/, "");
+    }
+
+    // --- 2. SEARCH FOR ALL VERSIONS OF THIS COPY ---
+    // Escaping the root name for regex safety
+    const escapedRoot = rootName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`^Copy of ${escapedRoot}(?: \\((\\d+)\\))?$`);
+
+    const existingCopies = await InternalQuoteEntryModel.find({
+      organizationId: sourceQuote.organizationId,
+      mainQuoteName: { $regex: regex }
+    }).select("mainQuoteName");
+
+    // --- 3. CALCULATE THE NEXT NUMBER ---
+    let nextNumber = 0;
+
+    if (existingCopies.length > 0) {
+      const numbers = existingCopies.map(c => {
+        const match = c?.mainQuoteName?.match(/\((\d+)\)$/);
+        // "Copy of Kitchen" counts as index 0, "Copy of Kitchen (1)" as index 1
+        return match ? parseInt(match[1]) : 0;
+      });
+
+      // We find the max and add 1
+      nextNumber = Math.max(...numbers) + 1;
+    }
+
+
+    // --- 4. FORMAT THE NEW NAME ---
+    // If it's the very first copy of an original, use "Copy of Root"
+    // Otherwise use "Copy of Root (n)"
+    let newQuoteName = "";
+    if (existingCopies.length === 0) {
+      newQuoteName = `Copy of ${rootName}`;
+    } else {
+      newQuoteName = `Copy of ${rootName} (${nextNumber})`;
+    }
+
+    // --- 5. SAVE THE DUPLICATE ---
+    const { _id, createdAt, updatedAt, ...quoteData } = sourceQuote;
+    const quoteNo = await getNextQuoteNumber((sourceQuote as any).organizationId);
+
+
+
+    // const newQuoteName = nextNumber === 0
+    //   ? `Copy of ${baseName}`
+    //   : `Copy of ${baseName} (${nextNumber})`;
+
+    // // 3. Prepare the new Object
+    // // Remove _id and createdAt so Mongoose creates a fresh record
+    // const { _id, createdAt, updatedAt, ...quoteData } = sourceQuote;
+
+    // const quoteNo = await getNextQuoteNumber((sourceQuote as any).organizationId)
+
+    const duplicatedQuote = new InternalQuoteEntryModel({
+      ...quoteData,
+      mainQuoteName: newQuoteName, // Update the name
+      quoteNo: quoteNo || null, // Generate a new unique quote number/reference
+    });
+
+    // 4. Save to Database
+    await duplicatedQuote.save();
+
+    res.status(201).json({
+      ok: true,
+      message: "Quote duplicated successfully",
+      data: duplicatedQuote
+    });
+
+  } catch (error: any) {
+    res.status(500).json({ ok: false, message: error.message });
+  }
+};
+
+
+
+
+
+
+export const updateSqftRateQuoteContent = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id } = req.params;
+    const { 
+      sqftRateWork, 
+      grandTotal, 
+      globalProfitPercent, 
+      notes,
+    } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ ok: false, message: "id is required." });
+    }
+
+    // Prepare the update object
+    // We only update fields relevant to the Sqft Rate workflow
+    const updateData = {
+      sqftRateWork, // The full array of rooms, works, and sections
+      grandTotal,
+      globalProfitPercent,
+      notes: notes || "Updated Sqft Rate Quote",
+      // Optional: Force quoteType to be sqft_rate if it's not already
+      // quoteType: "sqft_rate" 
+    };
+
+    const updatedQuote = await InternalQuoteEntryModel.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    )
+    .populate("projectId", "projectName")
+    .populate("sqftRateWork.works.workId"); // Populates the library item details
+
+    if (!updatedQuote) {
+      return res.status(404).json({ ok: false, message: "Quote not found." });
+    }
+
+    res.status(200).json({
+      ok: true,
+      message: "Sqft Rate Quote updated successfully",
+      data: updatedQuote
+    });
+
+  } catch (error: any) {
+    console.error("Error updating Sqft Rate Quote:", error);
+    res.status(500).json({ ok: false, message: error.message });
+  }
+};

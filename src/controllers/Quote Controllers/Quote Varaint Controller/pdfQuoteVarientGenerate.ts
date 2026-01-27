@@ -214,9 +214,9 @@ export const generateQuoteVariantPdf = async ({
         drawRow("Project Name", projectData?.projectName || "-", true);
         drawRow("Quote No", newVariant.quoteNo, true);
         drawRow("Date", new Date().toLocaleDateString(), true);
-        if (newVariant?.brandName) {
-            drawRow("Brand", newVariant?.brandName, true);
-        }
+        // if (newVariant?.brandName) {
+        //     drawRow("Brand", newVariant?.brandName, true);
+        // }
 
         // Add a decorative line at the bottom if there's space
         // if (yPosition > 100) {
@@ -1533,9 +1533,9 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
         projectY = drawElegantDetail(detailsPage, "Project Name", projectData?.projectName || "-", rightColX, projectY);
         projectY = drawElegantDetail(detailsPage, "Quotation Number", newVariant.quoteNo, rightColX, projectY);
         projectY = drawElegantDetail(detailsPage, "Date of Issue", new Date().toLocaleDateString('en-IN'), rightColX, projectY);
-        if (newVariant?.brandName) {
-            projectY = drawElegantDetail(detailsPage, "Material Brand", newVariant.brandName, rightColX, projectY);
-        }
+        // if (newVariant?.brandName) {
+        //     projectY = drawElegantDetail(detailsPage, "Material Brand", newVariant.brandName, rightColX, projectY);
+        // }
 
         // --- 4. DECORATIVE DIVIDER ---
         // Draw a vertical line to separate Client and Project sections elegantly

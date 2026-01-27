@@ -109,6 +109,28 @@ export interface IMainInternalQuote {
   works: IWorkItem[]; // Array of multiple work specifications
 }
 
+
+export interface ISqftRate {
+  roomName: string
+  works: {
+    workType: string,
+    sqftRate: number,
+    totalAreaSqft: {
+      sections: [
+        {
+          height: number
+          width: number
+          multiplier: number,
+          totalArea: number
+        }
+      ],
+      totalArea: number
+    },
+    profit: number,
+    totalCost: number
+  }
+}
+
 export interface IMaterialQuote extends Document {
   quoteNo: string | null;
   quoteType: string | null
@@ -125,6 +147,10 @@ export interface IMaterialQuote extends Document {
   notes?: string | null;
 
   mainQuote: IMainInternalQuote
+  sqftRateWork: ISqftRate[]
+
+  createdAt?: Date
+  updatedAt?: Date
 }
 
 
@@ -213,6 +239,35 @@ const FurnitureSchema = new mongoose.Schema<IFurniture>({
 
 
 
+//  START OF THE SQFT RATE WORK
+
+// 1. The individual measurement sections (Length/Height x Width)
+const SqftSectionSchema = new mongoose.Schema({
+  height: { type: Number, default: 0 },
+  width: { type: Number, default: 0 },
+  multiplier: { type: Number, default: 0 },
+  totalArea: { type: Number, default: 0 } // Result of height * width
+}, { _id: true });
+
+// 2. The specific work type (e.g., Tiling, Painting, False Ceiling)
+const SqftWorkSchema = new mongoose.Schema({
+  workType: { type: String, default: "" }, 
+  workId: { type: Types.ObjectId, ref: "MaterialWithLabourRateItemModel", default: null },// From your Material/Labour library
+  sqftRate: { type: Number, default: 0 },
+  sections: [SqftSectionSchema],           // Array of dimensions
+  totalArea: { type: Number, default: 0 }, // Sum of all sections' totalArea
+  profit: { type: Number, default: 0 },    // Room-level/Work-level profit override
+  totalCost: { type: Number, default: 0 }  // (totalArea * sqftRate) + Profit
+}, { _id: true });
+
+// 3. The Room Grouping
+const SqftRateWorkSchema = new mongoose.Schema({
+  roomName: { type: String, default: "Default Room" },
+  works: [SqftWorkSchema] // Array of different works in this room
+}, { _id: true });
+
+//  END  OF THE SQFT RATE WORK
+
 
 const subLettingSchema = new Schema<ISubLettingData>({
   sections: {
@@ -272,14 +327,17 @@ const InternalQuoteSchema = new mongoose.Schema<IMaterialQuote>({
     ref: 'ProjectModel',
   },
   mainQuoteName: { type: String, default: null },
-  
-  quoteType: { type: String, default: null },
 
+  quoteType: { type: String, default: null },
+  
   quoteCategory: {
     type: String,
     default: null,
   },
+
+  sqftRateWork: { type: [SqftRateWorkSchema], default: [] },
   furnitures: [FurnitureSchema],
+
   commonMaterials: { type: [SimpleItemSchema], default: [] },
   commonProfitOverride: { type: Number, default: 0 },
 

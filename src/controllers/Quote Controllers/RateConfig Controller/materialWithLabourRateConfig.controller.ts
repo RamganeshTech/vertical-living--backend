@@ -87,8 +87,6 @@ export const createMaterailWithLabourCategory = async (req: Request, res: Respon
 };
 
 
-
-
 export const deleteMaterailWithLabourCategory = async (req: Request, res: Response): Promise<any> => {
   try {
     const { categoryId } = req.params;
@@ -121,9 +119,6 @@ export const deleteMaterailWithLabourCategory = async (req: Request, res: Respon
 };
 
 
-
-
-
 /**
  * Get all material items under a specific category
  */
@@ -154,9 +149,6 @@ export const getMaterailWithLabourItemsByCategory = async (req: Request, res: Re
     });
   }
 };
-
-
-
 
 
 // GET CONTORLELR TO GET ALL THE FIELDS AND  CLACUALTE AS SNIGLE LABOR COST
@@ -236,6 +228,9 @@ export const getMaterailWithLabourSalaryByCategoryName = async (req: Request, re
     });
   }
 };
+
+
+
 
 // Controller to create material items
 export const createMaterailWithLabourItems = async (req: Request, res: Response): Promise<any> => {

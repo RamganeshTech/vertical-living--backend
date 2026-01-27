@@ -145,14 +145,11 @@ const CutlistSchema = new Schema<ICutlist>({
 
         // NEW: Material Requirement Summary Section
         materialSummary: [{
-            materialType: {
+            thickness: {
                 type: String,
                 default: null
             },
-            thickness: String, // e.g., "16mm" or "0.8mm"
-            brand: String,     // Auto-filled from the project or item data
-            colorCode: String, // Specifically for laminates
-            sheetsRequired: { type: Number, default: 0 }
+            sheetsNeeded: { type: Number, default: 0 }
         }]
 
 

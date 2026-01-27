@@ -476,21 +476,62 @@ export const generateCutlistPDF = async (cutlistData: any, orgName: string, COMP
     // DRAW CLIENT INFO ROW
     page.drawLine({ start: { x: 50, y: yPosition }, end: { x: PAGE_WIDTH - 50, y: yPosition }, thickness: 1, color: LINE_COLOR });
     yPosition -= 20;
-    page.drawText(`CLIENT: ${cutlistData.clientName || 'N/A'}`, { x: 50, y: yPosition, size: 11, font: boldFont });
-    page.drawText(`LOCATION: ${cutlistData.location || 'N/A'}`, { x: 400, y: yPosition, size: 11, font: boldFont });
-    page.drawText(`CUTLIST NO: ${cutlistData.cutlistNo || 'N/A'}`, { x: PAGE_WIDTH - 250, y: yPosition, size: 11, font: boldFont });
-    yPosition -= 35;
+
+    const labelSize = 10;
+    const valueSize = 11;
+    const rightAlignX = PAGE_WIDTH - 250; // X position for the right-side info
+    const todayDate = new Date().toLocaleDateString('en-GB'); // Formats as dd/mm/yyyy
+
+    // Left Side: Client and Location (One below the other)
+    page.drawText(`CLIENT: ${clean(cutlistData.clientName) || 'N/A'}`, { 
+        x: 50, y: yPosition, size: valueSize, font: boldFont, color: TEXT_COLOR 
+    });
+    
+    // Right Side: Cutlist Number
+    page.drawText(`CUTLIST NO: ${clean(cutlistData.cutlistNo) || 'N/A'}`, { 
+        x: rightAlignX, y: yPosition, size: valueSize, font: boldFont, color: TEXT_COLOR 
+    });
+
+    yPosition -= 18; // Move down for the second row
+
+    // Left Side: Location
+    page.drawText(`LOCATION: ${clean(cutlistData.location) || 'N/A'}`, { 
+        x: 50, y: yPosition, size: valueSize, font: boldFont, color: TEXT_COLOR 
+    });
+
+    // Right Side: Date
+    page.drawText(`DATE: ${todayDate}`, { 
+        x: rightAlignX, y: yPosition, size: valueSize, font: boldFont, color: TEXT_COLOR 
+    });
+
+    yPosition -= 30; // Final gap before starting rooms
+
+
+    // page.drawText(`CLIENT: ${cutlistData.clientName || 'N/A'}`, { x: 50, y: yPosition, size: 11, font: boldFont });
+    // page.drawText(`LOCATION: ${cutlistData.location || 'N/A'}`, { x: 400, y: yPosition, size: 11, font: boldFont });
+    // page.drawText(`CUTLIST NO: ${cutlistData.cutlistNo || 'N/A'}`, { x: PAGE_WIDTH - 250, y: yPosition, size: 11, font: boldFont });
+    // yPosition -= 35;
 
     // --- 3. DYNAMIC ROOM DATA ---
     for (const room of cutlistData.rooms) {
-        if (yPosition < 200) { page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]); yPosition = PAGE_HEIGHT - 60; }
+
+        // Space check for Room Title + Headers + at least one row
+        const rowHeight = 35;
+        const totalRowsHeight = room.items.length * rowHeight;
+        const requiredSpace = totalRowsHeight + 100;
+
+        if (yPosition < 200) {
+             page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]); 
+             yPosition = PAGE_HEIGHT - 60;
+             }
 
         page.drawText(`ROOM: ${room.roomName} | PRODUCT: ${room.productName}`, { x: 50, y: yPosition, size: 12, font: boldFont, color: PRIMARY_COLOR });
         yPosition -= 15;
         drawTableHeaders();
 
-        const rowHeight = 35;
-        const totalItemsHeight = room.items.length * rowHeight;
+        // const totalItemsHeight = room.items.length * rowHeight + 100;
+
+        const roomContentStartY = yPosition;
 
         // let backImg: any, frontImg: any;
         // try {
@@ -507,42 +548,132 @@ export const generateCutlistPDF = async (cutlistData: any, orgName: string, COMP
         // PRE-FETCH IMAGES before entering the items loop
         let backImg: any = null;
         let frontImg: any = null;
-        try {
-            if (room.backSideLaminateImage?.url) {
-                const res = await fetch(room.backSideLaminateImage.url);
-                const buf = await res.arrayBuffer();
-                backImg = room.backSideLaminateImage.url.toLowerCase().endsWith('.png')
-                    ? await pdfDoc.embedPng(buf) : await pdfDoc.embedJpg(buf);
+        // try {
+        //     if (room.backSideLaminateImage?.url) {
+        //         const res = await fetch(room.backSideLaminateImage.url);
+        //         if (!res.ok) throw new Error(`Failed to fetch backside image: ${res.statusText}`);
+        //         const buf = await res.arrayBuffer();
+        //         backImg = room.backSideLaminateImage.url.toLowerCase().endsWith('.png')
+        //             ? await pdfDoc.embedPng(buf) : await pdfDoc.embedJpg(buf);
+        //     }
+        //     if (room.frontSideLaminateImage?.url) {
+        //         const res = await fetch(room.frontSideLaminateImage.url);
+        //         if (!res.ok) throw new Error(`Failed to fetch frontside image: ${res.statusText}`);
+
+        //         const buf = await res.arrayBuffer();
+        //         frontImg = room.frontSideLaminateImage.url.toLowerCase().endsWith('.png')
+        //             ? await pdfDoc.embedPng(buf) : await pdfDoc.embedJpg(buf);
+        //     }
+        // } catch (e) { console.error("Image Pre-fetch failed", e); }
+
+
+        const fetchAndEmbed = async (imageUrl: string) => {
+            if (!imageUrl) return null;
+            try {
+                const response = await fetch(imageUrl);
+                if (!response.ok) return null;
+                const buf = await response.arrayBuffer();
+                // Try PNG first, then JPG as fallback (per your reference code style)
+                try { return await pdfDoc.embedPng(buf); } 
+                catch (e) { return await pdfDoc.embedJpg(buf); }
+            } catch (err) {
+                console.error("Image load error:", err);
+                return null;
             }
-            if (room.frontSideLaminateImage?.url) {
-                const res = await fetch(room.frontSideLaminateImage.url);
-                const buf = await res.arrayBuffer();
-                frontImg = room.frontSideLaminateImage.url.toLowerCase().endsWith('.png')
-                    ? await pdfDoc.embedPng(buf) : await pdfDoc.embedJpg(buf);
-            }
-        } catch (e) { console.error("Image Pre-fetch failed", e); }
+        };
+
+        backImg = await fetchAndEmbed(room.backSideLaminateImage?.url);
+        frontImg = await fetchAndEmbed(room.frontSideLaminateImage?.url);
+
+
+
+        // room.items.forEach((item: any, idx: number) => {
+        //     if (yPosition < 100) {
+        //         page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+        //         yPosition = PAGE_HEIGHT - 60;
+        //         drawTableHeaders();
+        //     }
+
+        //     let curX = 50;
+        //     const itemRowY = yPosition - 20;
+
+
+        //     // 1. Draw first 7 columns (S No to Back Code)
+        //     const rowData = [
+        //         String(idx + 1),
+        //         clean(item.measurement),
+        //         `${item.plyThickness}mm`,
+        //         `${item.innerFace.laminateThickness}mm`,
+        //         `${item.outerFace.laminateThickness}mm`,
+        //         clean(item.innerFace.laminateBrand),
+        //         clean(item.innerFace.laminateNameCode)
+        //     ];
+
+        //     rowData.forEach((text, i) => {
+        //         page.drawText(text, { x: curX, y: itemRowY, size: 8, font: regularFont });
+        //         curX += colWidths[i];
+        //     });
+
+
+
+        //     // 2. IMPORTANT: Skip the Image column width to get to the Front Side columns
+        //     let imageColumnX = curX;
+        //     curX += colWidths[7]; // Move past Back Image column
+
+        //     // 3. Draw Front Side Brand and Name/Code
+        //     page.drawText(clean(item.outerFace.laminateBrand), { x: curX, y: itemRowY, size: 8, font: regularFont });
+        //     curX += colWidths[8];
+        //     page.drawText(clean(item.outerFace.laminateNameCode), { x: curX, y: itemRowY, size: 8, font: regularFont });
+        //     curX += colWidths[9];
+
+        //     // 4. Draw spanned images on the first row of each room
+        //     if (idx === 0) {
+        //         const imgY = yPosition - totalItemsHeight + 5;
+
+        //         if (backImg) {
+        //             page.drawImage(backImg, {
+        //                 x: imageColumnX + 5,
+        //                 y: imgY,
+        //                 width: colWidths[7] - 10,
+        //                 height: totalItemsHeight - 10
+        //             });
+        //         }
+        //         if (frontImg) {
+        //             page.drawImage(frontImg, {
+        //                 x: curX + 5, // curX is now at the "Front Image" column index
+        //                 y: imgY,
+        //                 width: colWidths[10] - 10,
+        //                 height: totalItemsHeight - 10
+        //             });
+        //         }
+        //     }
+
+        //     // Draw a thin separator line for each row
+        //     page.drawLine({
+        //         start: { x: 40, y: yPosition - rowHeight + 10 },
+        //         end: { x: PAGE_WIDTH - 40, y: yPosition - rowHeight + 10 },
+        //         thickness: 0.5,
+        //         color: LINE_COLOR,
+        //     });
+
+        //     yPosition -= rowHeight;
+           
+        // });
+
 
 
         room.items.forEach((item: any, idx: number) => {
-            if (yPosition < 100) {
-                page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-                yPosition = PAGE_HEIGHT - 60;
-                drawTableHeaders();
-            }
+            // Internal page break check handled by requiredSpace check above
+            // to ensure the image spanning doesn't break across pages.
 
             let curX = 50;
             const itemRowY = yPosition - 20;
 
-
-            // 1. Draw first 7 columns (S No to Back Code)
+            // 1. Draw first 7 columns
             const rowData = [
-                String(idx + 1), 
-                clean(item.measurement), 
-                `${item.plyThickness}mm`, 
-                `${item.innerFace.laminateThickness}mm`, 
-                `${item.outerFace.laminateThickness}mm`,
-                clean(item.innerFace.laminateBrand),
-                clean(item.innerFace.laminateNameCode)
+                String(idx + 1), `${clean(item.measurement)}mm`, `${item.plyThickness}mm`,
+                `${item.innerFace.laminateThickness}mm`, `${item.outerFace.laminateThickness}mm`,
+                clean(item.innerFace.laminateBrand), clean(item.innerFace.laminateNameCode)
             ];
 
             rowData.forEach((text, i) => {
@@ -550,111 +681,78 @@ export const generateCutlistPDF = async (cutlistData: any, orgName: string, COMP
                 curX += colWidths[i];
             });
 
+            // 2. Identify Image Column X and move past it
+            const backImageX = curX;
+            curX += colWidths[7];
 
-
-            // 2. IMPORTANT: Skip the Image column width to get to the Front Side columns
-            let imageColumnX = curX; 
-            curX += colWidths[7]; // Move past Back Image column
-
-            // 3. Draw Front Side Brand and Name/Code
+            // 3. Draw Front Side Brand/Code
             page.drawText(clean(item.outerFace.laminateBrand), { x: curX, y: itemRowY, size: 8, font: regularFont });
             curX += colWidths[8];
             page.drawText(clean(item.outerFace.laminateNameCode), { x: curX, y: itemRowY, size: 8, font: regularFont });
             curX += colWidths[9];
 
-            // 4. Draw spanned images on the first row of each room
-            if (idx === 0) {
-                const imgY = yPosition - totalItemsHeight + 5;
+            const frontImageX = curX;
+            curX += colWidths[10];
+
+            // 4. DRAW BORDERS (Skipping internal borders for image columns)
+            let borderX = 50;
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].forEach((i) => {
+                const isInsideImageCol = (i === 8 || i === 11); // These are the right-hand borders of image cols
                 
+                // Only draw vertical lines for text columns
+                // or the very last border of the table
+                if (!isInsideImageCol || idx === room.items.length - 1) {
+                    // Logic to handle vertical lines for text-only columns
+                }
+                
+                // SIMPLIFIED: Draw horizontal lines but only for text columns
+                // This removes the "ladder" effect inside the image area
+                page.drawLine({
+                    start: { x: 40, y: yPosition - rowHeight + 10 },
+                    end: { x: backImageX, y: yPosition - rowHeight + 10 }, // Stop at image col
+                    thickness: 0.5, color: LINE_COLOR,
+                });
+                page.drawLine({
+                    start: { x: backImageX + colWidths[7], y: yPosition - rowHeight + 10 },
+                    end: { x: frontImageX, y: yPosition - rowHeight + 10 }, // Mid section
+                    thickness: 0.5, color: LINE_COLOR,
+                });
+            });
+
+            // 5. Draw Spanned Images at the very end of the items loop or on first index
+            if (idx === 0) {
+                // Vertical Center Calculation
+                const roomBottomY = roomContentStartY - totalRowsHeight + 10;
+                const imgHeight = totalRowsHeight - 10;
+
                 if (backImg) {
                     page.drawImage(backImg, {
-                        x: imageColumnX + 5, 
-                        y: imgY, 
-                        width: colWidths[7] - 10, 
-                        height: totalItemsHeight - 10
+                        x: backImageX + 5,
+                        y: roomBottomY,
+                        width: colWidths[7] - 10,
+                        height: imgHeight
                     });
                 }
                 if (frontImg) {
                     page.drawImage(frontImg, {
-                        x: curX + 5, // curX is now at the "Front Image" column index
-                        y: imgY, 
-                        width: colWidths[10] - 10, 
-                        height: totalItemsHeight - 10
+                        x: frontImageX + 5,
+                        y: roomBottomY,
+                        width: colWidths[10] - 10,
+                        height: imgHeight
                     });
                 }
             }
 
-            // Draw a thin separator line for each row
-            page.drawLine({
-                start: { x: 40, y: yPosition - rowHeight + 10 },
-                end: { x: PAGE_WIDTH - 40, y: yPosition - rowHeight + 10 },
-                thickness: 0.5,
-                color: LINE_COLOR,
-            });
-
             yPosition -= rowHeight;
-        // });
-
-
-            // Basic item columns
-            // page.drawText(String(idx + 1), { x: curX, y: itemRowY, size: 8, font: regularFont }); curX += colWidths[0];
-            // page.drawText(clean(item.measurement), { x: curX, y: itemRowY, size: 8, font: regularFont }); curX += colWidths[1];
-            // page.drawText(`${item.plyThickness}mm`, { x: curX, y: itemRowY, size: 8, font: regularFont }); curX += colWidths[2];
-            // page.drawText(`${item.innerFace.laminateThickness}mm`, { x: curX, y: itemRowY, size: 8, font: regularFont }); curX += colWidths[3];
-            // page.drawText(`${item.outerFace.laminateThickness}mm`, { x: curX, y: itemRowY, size: 8, font: regularFont }); curX += colWidths[4];
-
-            // // Back Brand and Code
-            // page.drawText(clean(item.innerFace.laminateBrand), { x: curX, y: itemRowY, size: 8, font: regularFont }); curX += colWidths[5];
-            // page.drawText(clean(item.innerFace.laminateNameCode), { x: curX, y: itemRowY, size: 8, font: regularFont });
-
-            // Drawing Images on the first row relative to current yPosition
-            // if (idx === 0) {
-            //     const imgYOffset = yPosition - totalItemsHeight;
-            //     if (backImg) {
-            //         page.drawImage(backImg, {
-            //             x: 50 + colWidths.slice(0, 7).reduce((a, b) => a + b, 0),
-            //             y: imgYOffset + 5,
-            //             width: colWidths[7] - 10, height: totalItemsHeight - 10
-            //         });
-            //     }
-
-            //     // Front Side Data
-            //     let frontX = 50 + colWidths.slice(0, 8).reduce((a, b) => a + b, 0);
-            //     page.drawText(clean(item.outerFace.laminateBrand), { x: frontX, y: itemRowY, size: 8, font: regularFont });
-            //     page.drawText(clean(item.outerFace.laminateNameCode), { x: frontX + colWidths[9], y: itemRowY, size: 8, font: regularFont });
-
-            //     if (frontImg) {
-            //         page.drawImage(frontImg, {
-            //             x: frontX + colWidths[8] + colWidths[9],
-            //             y: imgYOffset + 5,
-            //             width: colWidths[10] - 10, height: totalItemsHeight - 10
-            //         });
-            //     }
-            // }
-
-
-            // Draw Images ONLY on the first item row, using the pre-fetched objects
-            // if (idx === 0 && (backImg || frontImg)) {
-            //     // Coordinate Fix: The image bottom-left must be at yPosition - totalItemsHeight
-            //     const imgY = yPosition - totalItemsHeight + 5;
-
-            //     if (backImg) {
-            //         const backX = 50 + colWidths.slice(0, 7).reduce((a, b) => a + b, 0);
-            //         page.drawImage(backImg, {
-            //             x: backX + 5, y: imgY, width: colWidths[7] - 10, height: totalItemsHeight - 10
-            //         });
-            //     }
-            //     if (frontImg) {
-            //         const frontX = 50 + colWidths.slice(0, 10).reduce((a, b) => a + b, 0);
-            //         page.drawImage(frontImg, {
-            //             x: frontX + 5, y: imgY, width: colWidths[10] - 10, height: totalItemsHeight - 10
-            //         });
-            //     }
-            // }
-
-            // page.drawLine({ start: { x: 40, y: yPosition - rowHeight }, end: { x: PAGE_WIDTH - 40, y: yPosition - rowHeight }, thickness: 0.5, color: LINE_COLOR });
-            // yPosition -= rowHeight;
         });
+
+        // Draw one final bottom line for the whole room to close the image boxes
+        page.drawLine({
+            start: { x: 40, y: yPosition + 10 },
+            end: { x: PAGE_WIDTH - 40, y: yPosition + 10 },
+            thickness: 0.5, color: LINE_COLOR
+        });
+
         yPosition -= 30;
     }
 
