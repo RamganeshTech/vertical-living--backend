@@ -57,6 +57,10 @@ export interface IFurniture {
 
   furnitureTotal: number;
 
+  plywoodBrandId: Types.ObjectId
+  innerLaminateBrandId: Types.ObjectId
+  outerLaminateBrandId: Types.ObjectId
+
 
 }
 
@@ -111,8 +115,8 @@ export interface IMainInternalQuote {
 
 
 export interface ISqftRate {
-  roomName: string
-  works: {
+  // roomName: string
+  works: [{
     workType: string,
     sqftRate: number,
     totalAreaSqft: {
@@ -125,10 +129,10 @@ export interface ISqftRate {
         }
       ],
       totalArea: number
-    },
+    }
     profit: number,
     totalCost: number
-  }
+  }]
 }
 
 export interface IMaterialQuote extends Document {
@@ -145,6 +149,10 @@ export interface IMaterialQuote extends Document {
   quoteCategory: string | null,
   grandTotal: number;
   notes?: string | null;
+
+  plywoodBrandId: Types.ObjectId
+  innerLaminateId: Types.ObjectId
+  outerLaminateId: Types.ObjectId
 
   mainQuote: IMainInternalQuote
   sqftRateWork: ISqftRate[]
@@ -235,6 +243,12 @@ const FurnitureSchema = new mongoose.Schema<IFurniture>({
   nonBrandMaterialsTotal: { type: Number, default: 0 },
 
   furnitureTotal: { type: Number, default: 0 },// Sum of all the above
+
+  plywoodBrandId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
+  innerLaminateBrandId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
+  outerLaminateBrandId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
+
+
 }, { _id: true });
 
 
@@ -250,8 +264,8 @@ const SqftSectionSchema = new mongoose.Schema({
 }, { _id: true });
 
 // 2. The specific work type (e.g., Tiling, Painting, False Ceiling)
-const SqftWorkSchema = new mongoose.Schema({
-  workType: { type: String, default: "" }, 
+export const SqftWorkSchema = new mongoose.Schema({
+  workType: { type: String, default: "" },
   workId: { type: Types.ObjectId, ref: "MaterialWithLabourRateItemModel", default: null },// From your Material/Labour library
   sqftRate: { type: Number, default: 0 },
   sections: [SqftSectionSchema],           // Array of dimensions
@@ -261,10 +275,10 @@ const SqftWorkSchema = new mongoose.Schema({
 }, { _id: true });
 
 // 3. The Room Grouping
-const SqftRateWorkSchema = new mongoose.Schema({
-  roomName: { type: String, default: "Default Room" },
-  works: [SqftWorkSchema] // Array of different works in this room
-}, { _id: true });
+// const SqftRateWorkSchema = new mongoose.Schema({
+//   // roomName: { type: String, default: "Default Room" },
+//   works: [SqftWorkSchema] // Array of different works in this room
+// }, { _id: true });
 
 //  END  OF THE SQFT RATE WORK
 
@@ -329,13 +343,16 @@ const InternalQuoteSchema = new mongoose.Schema<IMaterialQuote>({
   mainQuoteName: { type: String, default: null },
 
   quoteType: { type: String, default: null },
-  
+
   quoteCategory: {
     type: String,
     default: null,
   },
 
-  sqftRateWork: { type: [SqftRateWorkSchema], default: [] },
+  plywoodBrandId: { type: Schema.Types.ObjectId, default: null },
+  innerLaminateId: { type: Schema.Types.ObjectId, default: null },
+  outerLaminateId: { type: Schema.Types.ObjectId, default: null },
+  sqftRateWork: { type: [SqftWorkSchema], default: [] },
   furnitures: [FurnitureSchema],
 
   commonMaterials: { type: [SimpleItemSchema], default: [] },

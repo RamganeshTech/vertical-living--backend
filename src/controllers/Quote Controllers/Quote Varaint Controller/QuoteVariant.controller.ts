@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import InternalQuoteEntryModel from "../../../models/Quote Model/QuoteGenerate Model/InternalQuote.model";
+import InternalQuoteEntryModel, { IFurniture } from "../../../models/Quote Model/QuoteGenerate Model/InternalQuote.model";
 import { CategoryModel, ItemModel } from "../../../models/Quote Model/RateConfigAdmin Model/rateConfigAdmin.model";
 import QuoteVarientGenerateModel from "../../../models/Quote Model/QuoteVariant Model/quoteVarient.model";
 import ProjectModel from "../../../models/project model/project.model";
@@ -103,12 +103,17 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
   try {
     const { quoteId } = req.params
     const {
+      plywoodBrandId,  // 🆕 ID from frontend
+      innerLaminateId, // 🆕 ID from frontend
+      outerLaminateId, // 🆕 ID from frontend
       brandName,
       innerLaminateBrand,
       outerLaminateBrand,
       organizationId,
       projectId,
       furnitures,
+      mainQuoteName,
+      quoteType,
       grandTotal,
       commonMaterials,
       commonProfitOverride,
@@ -141,7 +146,45 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
     }
 
 
+
+
+
+    // 1. Fetch the existing Internal Quote to preserve its numeric data
+    const existingQuote = await InternalQuoteEntryModel.findById(quoteId);
+
+    if (existingQuote) {
+      // ✅ Update Global IDs
+      existingQuote.plywoodBrandId = plywoodBrandId || null;
+      existingQuote.innerLaminateId = innerLaminateId || null;
+      existingQuote.outerLaminateId = outerLaminateId || null;
+
+      // ✅ Update IDs inside each Furniture without touching other fields
+      // We map through existing furniture and find the match from the incoming request
+      if (existingQuote.furnitures && furnitures) {
+        existingQuote.furnitures = existingQuote.furnitures.map((existingFurn: IFurniture, index: number) => {
+          const incomingFurn = furnitures[index];
+          
+          if (incomingFurn) {
+            // ONLY update the Brand IDs
+            existingFurn.plywoodBrandId = incomingFurn.plywoodBrandId || null;
+            existingFurn.innerLaminateBrandId = incomingFurn.innerLaminateBrandId || null;
+            existingFurn.outerLaminateBrandId = incomingFurn.outerLaminateBrandId || null;
+          }
+          return existingFurn;
+        });
+      }
+
+      // Save the original quote with ONLY the brand changes
+      await existingQuote.save();
+
+      // console.log("exiting internalquote",existingQuote)
+    }
+
+
+
     const quoteNo = await generateNextQuoteNumber(organizationId);
+
+
 
 
     // 🟢 Create DB entry (pdfLink: null for now, will update after PDF gen)
@@ -149,14 +192,16 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
       quoteNo,
       quoteId,
       brandName,
-       innerLaminateBrand, 
-      outerLaminateBrand, 
+      innerLaminateBrand,
+      outerLaminateBrand,
+      mainQuoteName: mainQuoteName,
+      quoteType: quoteType,
 
       organizationId,
       projectId,
       furnitures,
       commonMaterials,
-     
+
       commonProfitOverride,
       globalTransportation,
       globalProfitPercent,

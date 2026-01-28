@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 import InternalQuoteEntryModel from "../../../models/Quote Model/QuoteGenerate Model/InternalQuote.model";
 import { CategoryModel, ItemModel } from "../../../models/Quote Model/RateConfigAdmin Model/rateConfigAdmin.model";
 import { generateNextQuoteNumber } from "../Quote Varaint Controller/QuoteVariant.controller";
+import QuoteVarientGenerateModel from "../../../models/Quote Model/QuoteVariant Model/quoteVarient.model";
 
 // Define File type with S3 `location`
 interface UploadedFile extends Express.Multer.File {
@@ -51,16 +52,42 @@ export const createMainInternalQuoteResidentialVersion = async (req: Request, re
     });
 
     await newQuote.save();
+
+
+    // 2. If it's a Sqft Rate quote, create the Client Variant mirror immediately
+    if (quoteType === "sqft_rate") {
+      const quoteNo = await generateNextQuoteNumber(organizationId);
+
+      const newVariant = new QuoteVarientGenerateModel({
+        quoteId: newQuote._id, // Link to the internal quote
+        quoteNo: quoteNo,
+        organizationId,
+        projectId,
+        mainQuoteName,
+        quoteType,
+        quoteCategory,
+        sqftRateWork: [],
+        grandTotal: 0,
+      });
+
+      console.log("newVariant", newVariant)
+      await newVariant.save();
+    }
+
+
     res.status(201).json({ ok: true, data: newQuote });
 
   } catch (error: any) {
     res.status(500).json({ ok: false, message: error.message });
   }
 };
+
+
+
 export const updateMainInternalQuoteResidentialVersion = async (req: Request, res: Response): Promise<any> => {
   try {
     const { id } = req.params; // Get the ID from the URL params
-    const { projectId, mainQuoteName, quoteCategory } = req.body;
+    const { projectId, mainQuoteName, quoteCategory, quoteType } = req.body;
 
     // 1. Mandatory Field Validation
     if (!id) {
@@ -89,6 +116,23 @@ export const updateMainInternalQuoteResidentialVersion = async (req: Request, re
 
     if (!updatedQuote) {
       return res.status(404).json({ ok: false, message: "Quote record not found." });
+    }
+
+
+    if (quoteType === "sqft_rate") {
+      // 2. Sync with the QuoteVariant Model
+      // We find the variant where quoteId matches our current Internal ID
+      await QuoteVarientGenerateModel.findOneAndUpdate(
+        { quoteId: id },
+        {
+          $set: {
+            projectId,
+            mainQuoteName,
+            quoteCategory
+          }
+        },
+        { runValidators: true }
+      );
     }
 
 
@@ -250,9 +294,9 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
       return res.status(400).json({ ok: false, message: 'Missing or invalid organizationId' });
     }
 
-    if (!projectId || !Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ ok: false, message: 'Missing or invalid projectId' });
-    }
+    // if (!projectId || !Types.ObjectId.isValid(projectId)) {
+    //   return res.status(400).json({ ok: false, message: 'Missing or invalid projectId' });
+    // }
 
     if (!id || !Types.ObjectId.isValid(id)) {
       return res.status(400).json({ ok: false, message: 'Missing or invalid quote id' });
@@ -379,7 +423,7 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
         globalProfitPercent,
         notes,
         organizationId,
-        projectId
+        // projectId
       },
       { new: true }
     );
@@ -479,7 +523,7 @@ export const getSingleInternalQuoteResidentialVersion = async (req: Request, res
     // 2. Find and Update specifically the mainQuote sub-fields
     const quote = await InternalQuoteEntryModel.findByIdAndUpdate(
       id
-    );
+    ).populate("projectId", "_id projectName")
 
     if (!quote) {
       return res.status(404).json({ ok: false, message: "Quote record not found." });
@@ -639,16 +683,13 @@ export const duplicateInternalQuote = async (req: Request, res: Response): Promi
 
 
 
-
-
-
 export const updateSqftRateQuoteContent = async (req: Request, res: Response): Promise<any> => {
   try {
     const { id } = req.params;
-    const { 
-      sqftRateWork, 
-      grandTotal, 
-      globalProfitPercent, 
+    const {
+      sqftRateWork,
+      grandTotal,
+      globalProfitPercent,
       notes,
     } = req.body;
 
@@ -672,12 +713,32 @@ export const updateSqftRateQuoteContent = async (req: Request, res: Response): P
       { $set: updateData },
       { new: true, runValidators: true }
     )
-    .populate("projectId", "projectName")
-    .populate("sqftRateWork.works.workId"); // Populates the library item details
+      .populate("projectId", "projectName")
+      .populate("sqftRateWork.workId"); // Populates the library item details
 
     if (!updatedQuote) {
       return res.status(404).json({ ok: false, message: "Quote not found." });
     }
+
+
+    // await migrateQuoteVariantsToBasic()
+
+    // 2. Sync with the QuoteVariant Model
+    // We find the variant where quoteId matches our current Internal ID
+    await QuoteVarientGenerateModel.findOneAndUpdate(
+      { quoteId: id },
+      {
+        $set: {
+          sqftRateWork,
+          grandTotal,
+          globalProfitPercent,
+          mainQuoteName: updatedQuote.mainQuoteName,
+
+          notes: notes
+        }
+      },
+      { runValidators: true }
+    );
 
     res.status(200).json({
       ok: true,
@@ -688,5 +749,36 @@ export const updateSqftRateQuoteContent = async (req: Request, res: Response): P
   } catch (error: any) {
     console.error("Error updating Sqft Rate Quote:", error);
     res.status(500).json({ ok: false, message: error.message });
+  }
+};
+
+
+
+/**
+ * Utility to migrate old client quote variants.
+ * Sets quoteType to 'basic' for all documents where it's missing or null.
+ */
+export const migrateQuoteVariantsToBasic = async () => {
+  try {
+    console.log("--- Starting Quote Variant Migration ---");
+
+    // 1. Find all documents where quoteType is not set or is null
+    const result = await QuoteVarientGenerateModel.updateMany(
+      {
+        $or: [
+          { quoteType: { $exists: false } },
+          { quoteType: null }
+        ]
+      },
+      {
+        $set: { quoteType: "basic" }
+      }
+    );
+
+    console.log(`--- Migration Complete: Updated ${result.modifiedCount} documents ---`);
+
+  } catch (error: any) {
+    console.error("Migration Error:", error);
+
   }
 };

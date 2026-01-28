@@ -1,6 +1,6 @@
 // models/MaterialQuote.js or .ts
 import mongoose, { Types, Schema } from 'mongoose';
-import { IFurniture, IMaterial, IMaterialQuote, ISimpleItem } from '../QuoteGenerate Model/InternalQuote.model';
+import { IFurniture, IMaterial, IMaterialQuote, ISimpleItem, SqftWorkSchema } from '../QuoteGenerate Model/InternalQuote.model';
 
 export interface IQuoteVarientCoreItem extends IMaterial { }
 
@@ -142,21 +142,28 @@ const pdfType = new mongoose.Schema<templateTypePdf>({
 
 const QuoteVarientGenerateSchema = new mongoose.Schema<IQuoteVarientMain>({
 
+    organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
     quoteNo: { type: String, default: null },
     quoteId: { type: Schema.Types.ObjectId, default: null, ref: "MaterialQuoteModel" },
     brandName: { type: String, default: null },
     innerLaminateBrand: { type: String, default: null },
     outerLaminateBrand: { type: String, default: null },
 
-    organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
     projectId: {
         type: Schema.Types.ObjectId,
         ref: 'ProjectModel',
     },
     isBlured: { type: Boolean, default: false },
+
+    mainQuoteName: { type: String, default: null },
+    quoteType: { type: String, default: null },
+
+
+    quoteCategory: { type: String, default: null },
+
     furnitures: [QuoteFurnitureSchema],
     commonMaterials: { type: [QuoteSimpleItemSchema], default: [] },
-
+    sqftRateWork: { type: [SqftWorkSchema], default: [] },
 
     commonProfitOverride: { type: Number, default: 0 },
     globalTransportation: { type: Number, default: 0 },

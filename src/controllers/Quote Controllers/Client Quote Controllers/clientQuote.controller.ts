@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import QuoteVarientGenerateModel from "../../../models/Quote Model/QuoteVariant Model/quoteVarient.model";
 import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
-import { generateClientQuoteVariantPdfwithTemplates } from "../Quote Varaint Controller/pdfQuoteVarientGenerate";
+import { generateClientQuoteVariantPdfwithTemplates, generateClientQuoteVariantSqftRatePdfwithTemplates } from "../Quote Varaint Controller/pdfQuoteVarientGenerate";
 
 
 export const getAllClientQuotes = async (req: Request, res: Response): Promise<any> => {
@@ -64,13 +64,13 @@ export const getAllClientQuotes = async (req: Request, res: Response): Promise<a
 
 export const getAllClientQuotesFromDropDown = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { organizationId , projectId} = req.params;
+        const { organizationId, projectId } = req.params;
         // Optional: Validate inputs
         if (!organizationId) {
             return res.status(400).json({ ok: false, message: "Invalid organizationId" });
         }
 
-        const quotes = await QuoteVarientGenerateModel.find({organizationId, projectId}).sort({ createdAt: -1 }).populate("projectId", "_id projectName");
+        const quotes = await QuoteVarientGenerateModel.find({ organizationId, projectId }).sort({ createdAt: -1 }).populate("projectId", "_id projectName");
 
         return res.status(200).json({
             ok: true,
@@ -221,50 +221,55 @@ export const toggleBlurring = async (req: Request, res: Response): Promise<any> 
 
 
 
-    export const generateClientPdfWithTypes = async (req: Request, res: Response): Promise<any> => {
-        try {
-            const { quoteId, projectId } = req.params
-            const { type } = req.body //type 1, 2, 3
+export const generateClientPdfWithTypes = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { quoteId, projectId } = req.params
+        const {isBlurred=false, quoteType = "basic", type} = req.body //type 1, 2, 3
 
 
-            const newVariant = await QuoteVarientGenerateModel.findById(quoteId).populate('projectId')
+        const newVariant = await QuoteVarientGenerateModel.findById(quoteId).populate('projectId')
 
-            if (!newVariant) {
-                return res.status(404).json({ messaage: "quote not found", ok: false })
-            }
-
-
-
-            
-            // console.log("new varient", newVariant)
-            const pdfResponse = await generateClientQuoteVariantPdfwithTemplates({ quoteId, projectId, newVariant, templateType: type });
-            // const pdfResponse = await generateQuoteVariantPdfWithTemplate({ quoteId, projectId, newVariant , templateType});
-
-            // newVariant.pdfLink
-            // await newVariant.save()
-
-
-
-
-            return res.status(201).json({
-                ok: true,
-                message: "Variant quote created and PDF generated successfully",
-                data: {
-                    fileName: pdfResponse.fileName,
-                    url: pdfResponse.fileUrl, // ✅ PDF S3 URL
-                    data: pdfResponse.updatedDoc, // ✅ Updated DB doc with PDF link
-                },
-            });
-
-        } catch (error: any) {
-            console.error("Error creating variant quote:", error);
-            return res.status(500).json({
-                ok: false,
-                message: "Failed to create variant quote",
-                error: error.message,
-            });
+        if (!newVariant) {
+            return res.status(404).json({ messaage: "quote not found", ok: false })
         }
-    };
+
+
+
+        let pdfResponse = null
+
+        // console.log("new varient", newVariant)
+        if(quoteType === "basic"){
+            pdfResponse = await generateClientQuoteVariantPdfwithTemplates({ quoteId, projectId, newVariant, templateType: type, isBlurred });
+        }
+        // const pdfResponse = await generateQuoteVariantPdfWithTemplate({ quoteId, projectId, newVariant , templateType});
+
+        // newVariant.pdfLink
+        // await newVariant.save()
+
+        if (quoteType === "sqft_rate") {
+            pdfResponse = await generateClientQuoteVariantSqftRatePdfwithTemplates({quoteId, projectId, newVariant, templateType: "type 1", isBlurred})
+        }
+
+
+        return res.status(201).json({
+            ok: true,
+            message: "Variant quote created and PDF generated successfully",
+            data: {
+                fileName: pdfResponse?.fileName || null,
+                url: pdfResponse?.fileUrl, // ✅ PDF S3 URL
+                data: pdfResponse?.updatedDoc, // ✅ Updated DB doc with PDF link
+            },
+        });
+
+    } catch (error: any) {
+        console.error("Error creating variant quote:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Failed to create variant quote",
+            error: error.message,
+        });
+    }
+};
 
 
 
