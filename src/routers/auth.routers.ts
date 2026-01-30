@@ -24,6 +24,7 @@ authRoutes.delete('/deleteuser/:userId', deleteuser as RequestHandler)
 // STAFFS ROUTES
 authRoutes.post('/staff/login', loginStaff as RequestHandler)
 authRoutes.post('/staff/registerstaff', registerStaff as RequestHandler)
+
 authRoutes.post('/staff/logout', staffLogout as RequestHandler)
 authRoutes.get('/staff/refreshtoken', refreshTokenStaff as RequestHandler)
 authRoutes.get('/staff/isauthenticated', multiRoleAuthMiddleware("staff"), staffIsAuthenticated as RequestHandler)
@@ -52,6 +53,9 @@ authRoutes.get('/CTO/refreshtoken', refreshTokenCTO as RequestHandler)
 authRoutes.get('/CTO/isauthenticated', multiRoleAuthMiddleware("CTO"), CTOIsAuthenticated as RequestHandler)
 authRoutes.post('/CTO/forgotpassword', CTOforgotPassword as RequestHandler)
 authRoutes.post('/CTO/resetpassword', CTOResetForgotPassword as RequestHandler)
+
+
+
 
 
 // authRoutes.post("/:role/create", registerUserWithoutLink)

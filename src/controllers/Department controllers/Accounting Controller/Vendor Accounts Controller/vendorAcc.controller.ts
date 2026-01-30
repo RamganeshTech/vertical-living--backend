@@ -16,7 +16,7 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
             req.body.phone = JSON.parse(req.body.phone);
         }
 
-         if (req.body.location && typeof req.body.location === 'string') {
+        if (req.body.location && typeof req.body.location === 'string') {
             req.body.location = JSON.parse(req.body.location);
         }
 
@@ -58,7 +58,7 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
 
         const uploadedFiles = req.files as { [fieldname: string]: (Express.Multer.File & { location: string })[] };
 
- // Handle uploaded files (if any)
+        // Handle uploaded files (if any)
         const documents: any[] = [];
         const shopImages: any[] = [];
         // let mainImage: any | null = null;
@@ -89,7 +89,7 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
             });
         }
 
-         if (uploadedFiles && uploadedFiles['shopImages'] && uploadedFiles['shopImages'].length > 0) {
+        if (uploadedFiles && uploadedFiles['shopImages'] && uploadedFiles['shopImages'].length > 0) {
             uploadedFiles['shopImages'].forEach((file) => {
                 const type: "image" | "pdf" = file.mimetype.startsWith("image") ? "image" : "pdf";
                 shopImages.push({
@@ -109,30 +109,30 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
         //     req.body.location.longitude = lng;
         // }
 
-         // 5. Handle Location / Map URL logic
+        // 5. Handle Location / Map URL logic
         // Even though mapUrl is not in schema, we use it to calculate lat/lng
-          const mapUrlToProcess = req.body?.mapUrl ? req.body.mapUrl : null;
+        const mapUrlToProcess = req.body?.mapUrl ? req.body.mapUrl : null;
 
         if (mapUrlToProcess) {
             // Extract coordinates
             const { lat, lng } = await getCoordinatesFromGoogleMapUrl(mapUrlToProcess);
-            
+
             // Ensure location object exists
-            if (!req.body.location) { 
-                req.body.location = {}; 
+            if (!req.body.location) {
+                req.body.location = {};
             }
-            
+
             // Assign values to match the Schema
             req.body.location.latitude = lat;
             req.body.location.longitude = lng;
             req.body.mapUrl = mapUrlToProcess; // <--- Now we SAVE this
-            
+
             // Clean up root level mapUrl if it existed (to keep req.body clean)
             // if (req.body.mapUrl) delete req.body.mapUrl; 
         }
 
         // Create customer
-        const vendor = new VendorAccountModel({ ...req.body, documents, shopImages  });
+        const vendor = new VendorAccountModel({ ...req.body, documents, shopImages });
         await vendor.save();
 
         // Invalidate cache for the organiziaotns's customer list
@@ -179,7 +179,7 @@ export const updateVendor = async (req: RoleBasedRequest, res: Response): Promis
             });
         }
 
-         if (req.body?.shopImages) {
+        if (req.body?.shopImages) {
             return res.status(400).json({
                 ok: false,
                 message: 'ShopImages is not allowed'
@@ -223,10 +223,10 @@ export const updateVendor = async (req: RoleBasedRequest, res: Response): Promis
         }
 
 
-           // Handle Map URL Update
+        // Handle Map URL Update
         if (req.body.mapUrl) {
             const { lat, lng } = await getCoordinatesFromGoogleMapUrl(req.body.mapUrl);
-            
+
             // Update location with new coords, preserving existing address/fields
             req.body.location = {
                 ...(req.body.location || existingVendor.location || {}),
@@ -828,6 +828,7 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
         const cacheKey = `vendors:dropdown:organizationId:${organizationId || 'all'}`;
 
         // Check cache
+        await redisClient.del(cacheKey);
         const cachedData = await redisClient.get(cacheKey);
 
         if (cachedData) {
@@ -840,14 +841,17 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
 
 
         // Fetch vendors with pagination
-        const vendors = await VendorAccountModel.find(filter).select('_id firstName lastName email') // Only select needed fields
+        const vendors = await VendorAccountModel.find(filter).select('_id firstName lastName email shopDisplayName shopFullAddress phone') // Only select needed fields
             .lean();
 
         let modifiedvendor = vendors.map(vendor => {
             return {
                 _id: vendor._id,
                 vendorName: `${vendor.firstName}`,
-                email: vendor.email
+                email: vendor.email || "",
+                shopName: vendor.shopDisplayName || "",
+                address: vendor.shopFullAddress || "",
+                phoneNo: vendor.phone?.work || vendor.phone?.mobile || "",
             }
         })
 

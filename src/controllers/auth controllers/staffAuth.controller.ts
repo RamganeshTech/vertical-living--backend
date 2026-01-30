@@ -178,7 +178,6 @@ const loginStaff = async (req: Request, res: Response) => {
         }
 
         // Generate JWT Token
-                isGuideRequired:staff.isGuideRequired
         let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, role: staff.role, ownerId: staff.ownerId, organizationId: staff.organizationId ,isGuideRequired:staff.isGuideRequired }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
         let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role: staff.role, ownerId: staff.ownerId, organizationId: staff.organizationId ,isGuideRequired:staff.isGuideRequired }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
 

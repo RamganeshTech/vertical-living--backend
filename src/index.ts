@@ -124,6 +124,7 @@ import toolIssueRoutes from './routers/tool_routes/toolIssue.route';
 import InternalQuoteRoutes from './routers/Quote Routes/QuoteGenerate Routes/internalQuoteNewVersion.routes';
 import MateroialWithLabourRateConfigRoutes from './routers/Quote Routes/RateConfig Routes/materialWithLabourRateConfig.routes';
 import CutlistRoutes from './routers/cutlist_routes/cutlist.routes';
+import CommonAuthRoutes from './routers/commonAuth_routes/commonAuth.routes';
 
 
 // Extend Socket interface for custom properties
@@ -241,6 +242,7 @@ const isProd = process.env.NODE_ENV === "production";
 
 // checkRedisConnection() //for redis
 app.use('/api/auth', authRoutes)
+app.use('/api/auth/v1',CommonAuthRoutes)
 app.use('/api/auth/client', clientRoutes)
 app.use('/api/auth/clientapproval', clientApprovalRoutes)
 app.use('/api/task', task)
