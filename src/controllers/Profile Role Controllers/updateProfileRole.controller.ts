@@ -6,6 +6,7 @@ import CTOModel from "../../models/CTO model/CTO.model";
 import { WorkerModel } from "../../models/worker model/worker.model";
 import { RoleBasedRequest } from "../../types/types";
 import redisClient from "../../config/redisClient";
+import { Model } from "mongoose";
 
 export const updateProfile = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
@@ -29,6 +30,38 @@ export const updateProfile = async (req: RoleBasedRequest, res: Response): Promi
         if (!Model) {
             return res.status(400).json({ ok: false, message: "Invalid role." });
         }
+
+
+
+        // 1. GLOBAL UNIQUE CHECK (Email & Phone)
+        // Ensure the new email or phone isn't used by ANYONE ELSE in ANY table
+        if (email || phoneNo) {
+            const allModels:Model<any>[] = [UserModel, StaffModel, WorkerModel, CTOModel, ClientModel];
+            
+            for (const model of allModels) {
+                const query: any = {
+                    $or: [],
+                    // Critically: if it's the same model as the current user, 
+                    // exclude the current user's ID from the search
+                    _id: { $ne: user._id } 
+                };
+
+                if (email) query.$or.push({ email });
+                if (phoneNo) query.$or.push({ phoneNo });
+
+                const existingUser:any = await model.findOne(query).lean();
+
+                if (existingUser) {
+                    const conflictField = existingUser.email === email ? "Email" : "Phone Number";
+                    return res.status(400).json({
+                        ok: false,
+                        message: `${conflictField} is already taken by another user.`,
+                    });
+                }
+            }
+        }
+
+
 
         // build dynamic update object
         const updateFields: Record<string, any> = {};
@@ -68,19 +101,19 @@ export const updateProfile = async (req: RoleBasedRequest, res: Response): Promi
 
 
         // Check for email uniqueness within the same model
-        if (email) {
-            const existingEmail = await Model.findOne({
-                email,
-                _id: { $ne: user._id }, // exclude self
-            });
+        // if (email) {
+        //     const existingEmail = await Model.findOne({
+        //         email,
+        //         _id: { $ne: user._id }, // exclude self
+        //     });
 
-            if (existingEmail) {
-                return res.status(400).json({
-                    ok: false,
-                    message: "Email already exists. Please use a different one.",
-                });
-            }
-        }
+        //     if (existingEmail) {
+        //         return res.status(400).json({
+        //             ok: false,
+        //             message: "Email already exists. Please use a different one.",
+        //         });
+        //     }
+        // }
 
 
         // update document
