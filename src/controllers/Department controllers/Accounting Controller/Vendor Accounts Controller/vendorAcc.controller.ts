@@ -807,8 +807,10 @@ export const getAllvendors = async (req: RoleBasedRequest, res: Response): Promi
 
 export const getAllvendorDropDown = async (req: Request, res: Response): Promise<any> => {
     try {
+
+        const {organizationId} = req.params
         const {
-            organizationId, priority
+             priority
         } = req.query;
 
 
