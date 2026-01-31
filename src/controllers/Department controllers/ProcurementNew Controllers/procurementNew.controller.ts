@@ -679,7 +679,9 @@ export const getProcurementItemsPublic = async (req: Request, res: Response): Pr
             return res.status(400).json({ ok: false, message: "Order Id is not provided" });
         }
 
-        const order = await ProcurementModelNew.findById(orderId);
+        const order = await ProcurementModelNew.findById(orderId)
+            .populate("shopQuotes.shopId")                // ✅ populate each shop in quotes
+            .populate("selectedShopId");
 
         if (!order)
             return res.status(404).json({ ok: false, message: "Order not found" });
@@ -688,6 +690,19 @@ export const getProcurementItemsPublic = async (req: Request, res: Response): Pr
         //     return res.status(403).json({ ok: false, message: "Rates already submitted" });
 
 
+        let shopQuoteDetail = null;
+
+        if (order.shopQuotes && order.shopQuotes?.length > 0) {
+            const firstShop: any | null = order.shopQuotes[0]?.shopId
+            shopQuoteDetail = {
+                shopName: firstShop?.shopDisplayName || "",
+                address: firstShop?.shopName || "",
+                contactPerson: firstShop?.firstName || "",
+                phoneNumber: firstShop?.phone.work || firstShop?.phone.mobile || "",
+                upiId: firstShop?.upiId || ""
+            }
+        }
+
         const shopQuote = (order.shopQuotes as any).id(quoteId)
 
         return res.json({
@@ -695,7 +710,7 @@ export const getProcurementItemsPublic = async (req: Request, res: Response): Pr
             data: {
                 // selectedUnits: order?.selectedUnits,
                 selectedUnits: shopQuote?.selectedUnits,
-                shopDetails: order.shopDetails,
+                shopDetails: shopQuoteDetail || order.shopDetails,
                 deliveryLocationDetails: order.deliveryLocationDetails,
                 isConfirmedRate: order.isConfirmedRate
             }
@@ -1231,6 +1246,7 @@ export const sendProcurementToPayment = async (req: Request, res: Response): Pro
         await AccountingModel.findOneAndUpdate(
             {
                 orderMaterialRefId: procurement.fromDeptRefId,
+                orderMaterialDeptNumber:procurement.fromDeptNumber
             },
             {
                 $set: {
@@ -1245,6 +1261,7 @@ export const sendProcurementToPayment = async (req: Request, res: Response): Pro
 
                     referenceId: procurement._id!,
                     referenceModel: "ProcurementModelNew",
+                    deptRecordFrom: "Procurement",
 
                     // Optional: Update person ID if vendor changed
                     assoicatedPersonId: null,

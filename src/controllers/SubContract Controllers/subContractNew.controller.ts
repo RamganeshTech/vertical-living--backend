@@ -820,23 +820,25 @@ export const updateWorkerStatus = async (req: RoleBasedRequest, res: Response): 
 
         if (status === "accepted") {
             const existingAccounting = await AccountingModel.findOne({
-                subContractId: subContract._id
+                referenceId: subContract._id
             });
 
             if (!existingAccounting) {
                 const transactionNumber = await generateTransactionNumber(subContract.organizationId);
 
-                await AccountingModel.create({
-                    subContractId: subContract._id, // <--- new link
+                await AccountingModel.create({                    
                     organizationId: subContract.organizationId,
                     projectId: subContract.projectId,
-                    transactionNumber: transactionNumber,
-                    transactionType: "expense",
-                    totalAmount: {
-                        amount: subContract?.totalCost,
-                        taxAmount: 0
-                    },
-                    status: "pending",
+                    recordNumber: transactionNumber,
+                    deptRecordFrom: "Sub Contract",
+                    referenceModel: "SubContractModel",
+                    referenceId: subContract._id,
+                    amount: subContract?.totalCost || 0,
+                    // totalAmount: {
+                    //     amount: subContract?.totalCost,
+                    //     taxAmount: 0
+                    // },
+                    // status: "pending",
                 })
 
                 // await createAccountingEntry({

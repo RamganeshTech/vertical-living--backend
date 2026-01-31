@@ -1,5 +1,6 @@
 // utils/sendEmail.ts
 import nodemailer from 'nodemailer';
+import { COMPANY_NAME } from '../../../controllers/stage controllers/ordering material controller/pdfOrderHistory.controller';
 
 export const sendDeadlineReminderEmail = async ({ to, stageName, deadline, projectName }: { to: string, stageName: string, deadline: Date, projectName: string }) => {
   const transporter = nodemailer.createTransport({
@@ -18,14 +19,14 @@ export const sendDeadlineReminderEmail = async ({ to, stageName, deadline, proje
 
 
   await transporter.sendMail({
-    from: '"Vertical Living Notifications" <noreply@verticalliving.com>',
+    from: `${COMPANY_NAME} Notifications <noreply@verticalliving.com>`,
     to,
     subject: `⏰ Reminder: Project Deadline for ${stageName}`,
     html: `
       <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 40px 20px;">
         <div style="max-width: 600px; margin: auto; background-color: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
           <div style="background-color: #1c63ffb3; color: white; padding: 20px; text-align: center;">
-            <h1 style="margin: 0;">Vertical Living</h1>
+            <h1 style="margin: 0;">${COMPANY_NAME}</h1>
             <p style="margin: 5px 0 0;">Project Stage Deadline Reminder</p>
           </div>
 
@@ -45,7 +46,7 @@ export const sendDeadlineReminderEmail = async ({ to, stageName, deadline, proje
             </p>
 
             <p style="margin-top: 30px; font-size: 14px; color: #888;">
-              — Team Vertical Living
+              — Team ${COMPANY_NAME}
             </p>
           </div>
 

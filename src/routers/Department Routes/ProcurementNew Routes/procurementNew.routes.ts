@@ -17,6 +17,7 @@ procurementNewRoutes.get("/getprocurementsingle/:id", getProcurementNewSingleIte
 procurementNewRoutes.patch("/generatepdf/:id", multiRoleAuthMiddleware("owner", "CTO", "staff"), generateProcurementPDFController);
 
 procurementNewRoutes.delete('/deletepdf/:id/:pdfId', multiRoleAuthMiddleware("owner", "staff", "CTO",), deleteProcurementPdf)
+// not in use
 procurementNewRoutes.post('/generatetoken/:orderId', multiRoleAuthMiddleware("owner", "staff", "CTO",), generateSecureProcurementLink)
 
 // not used below one

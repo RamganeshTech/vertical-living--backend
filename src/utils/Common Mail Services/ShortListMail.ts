@@ -1,6 +1,7 @@
 // utils/sendShortlistedDesignsEmail.ts
 import nodemailer from "nodemailer";
 import dotenv from "dotenv"
+import { COMPANY_NAME } from "../../controllers/stage controllers/ordering material controller/pdfOrderHistory.controller";
 
 dotenv.config()
 
@@ -70,13 +71,13 @@ export const sendShortlistedDesignsEmail = async ({
     <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;" />
 
     <p style="font-size: 14px; color: #999; text-align: center;">
-      — Team Vertical Living
+      — Team ${COMPANY_NAME}
     </p>
   </div>
 `
 
   await transporter.sendMail({
-    from: `Vertical Living <${process.env.EMAIL_USER}>`,
+    from: `${COMPANY_NAME} <${process.env.EMAIL_USER}>`,
     to: clientEmail,
     subject: `Shortlisted Designs for ${roomName}`,
     html: htmlContent,

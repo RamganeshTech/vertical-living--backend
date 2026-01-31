@@ -58,6 +58,8 @@ export interface IVendor extends Document {
     // customerOwner?: mongoose.Types.ObjectId;
 
     mainImage?: IUpload
+    priority: string[]
+
 
 }
 
@@ -73,7 +75,7 @@ const VendorSchema = new Schema<IVendor>(
     {
         organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
         clientId: { type: Schema.Types.ObjectId, ref: "ClientModel", default: null },
-        //   salutation: { type: String },
+        //   salutation: { typ`e: String },
         firstName: { type: String, default: null },
         companyName: { type: String, default: null },
         shopDisplayName: { type: String, default: null },
@@ -87,7 +89,7 @@ const VendorSchema = new Schema<IVendor>(
         language: { type: String, default: "English" },
         shopFullAddress: { type: String, default: null }, // Added
 
-        mapUrl: {type:String, default:null},
+        mapUrl: { type: String, default: null },
 
         location: {
             latitude: { type: Number, default: null },
@@ -117,7 +119,9 @@ const VendorSchema = new Schema<IVendor>(
 
         shopImages: { type: [fileSchema], default: [] }, // Added
         documents: { type: [fileSchema], default: [] },
-        mainImage: { type: fileSchema, default: null }
+        mainImage: { type: fileSchema, default: null },
+        priority: { type: [String], default: [] },
+
     },
     { timestamps: true }
 );

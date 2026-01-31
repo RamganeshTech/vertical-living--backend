@@ -25,6 +25,12 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
             req.body.openingBalance = parseFloat(req.body.openingBalance);
         }
 
+
+        if (req.body.priority && typeof req.body.priority === 'string') {
+            req.body.priority = parseFloat(req.body.priority);
+
+        }
+
         // // Convert string boolean to actual boolean
         // if (req.body.enablePortal !== undefined && typeof req.body.enablePortal === 'string') {
         //     req.body.enablePortal = req.body.enablePortal === 'true';
@@ -802,7 +808,7 @@ export const getAllvendors = async (req: RoleBasedRequest, res: Response): Promi
 export const getAllvendorDropDown = async (req: Request, res: Response): Promise<any> => {
     try {
         const {
-            organizationId
+            organizationId, priority
         } = req.query;
 
 
@@ -816,6 +822,7 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
 
 
 
+
         // Build filter object
         const filter: any = {};
 
@@ -823,12 +830,25 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
             filter.organizationId = organizationId;
         }
 
+        // Filter by Priority if provided in query
+        // if (priority) {
+        //     // This checks if the string priority exists inside the priority array in DB
+        //     filter.priority = { $in: [priority] };
+        // }
+
+        // To this (Case-insensitive fuzzy match):
+        if (priority) {
+            filter.priority = {
+                $elemMatch: { $regex: new RegExp(`^${priority}$`, 'i') }
+            };
+        }
+
 
         // Create cache key based on filters
-        const cacheKey = `vendors:dropdown:organizationId:${organizationId || 'all'}`;
+        const cacheKey = `vendors:dropdown:organizationId:${organizationId || 'all'}:pri:${priority || 'all'}`;
 
         // Check cache
-        await redisClient.del(cacheKey);
+        // await redisClient.del(cacheKey);
         const cachedData = await redisClient.get(cacheKey);
 
         if (cachedData) {
@@ -841,7 +861,7 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
 
 
         // Fetch vendors with pagination
-        const vendors = await VendorAccountModel.find(filter).select('_id firstName lastName email shopDisplayName shopFullAddress phone') // Only select needed fields
+        const vendors = await VendorAccountModel.find(filter).select('_id firstName lastName email shopDisplayName shopFullAddress phone priority') // Only select needed fields
             .lean();
 
         let modifiedvendor = vendors.map(vendor => {
@@ -852,6 +872,7 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
                 shopName: vendor.shopDisplayName || "",
                 address: vendor.shopFullAddress || "",
                 phoneNo: vendor.phone?.work || vendor.phone?.mobile || "",
+                priority: vendor?.priority || []
             }
         })
 

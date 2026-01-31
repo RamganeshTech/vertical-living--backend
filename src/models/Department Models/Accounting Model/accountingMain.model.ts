@@ -227,7 +227,7 @@ const accountingSchema = new Schema<IAccounting>({
   deptDueDate: { type: Date, default: null, },
   
   orderMaterialDeptNumber: { type: String, },
-  orderMaterialRefId: { type: Schema.Types.ObjectId, refPath: "OrderMaterialHistoryModel", default: null },
+  orderMaterialRefId: { type: Schema.Types.ObjectId, ref: "OrderMaterialHistoryModel", default: null },
 
 
   referenceId: { type: Schema.Types.ObjectId, refPath: "referenceModel", default: null },
@@ -250,7 +250,7 @@ const accountingSchema = new Schema<IAccounting>({
   assoicatedPersonId: { type: Schema.Types.ObjectId, refPath: "assoicatedPersonModel", default: null },
   assoicatedPersonModel: { type: String, default: null },
 
-  deptRecordFrom: { type: String, default: null },   //"Retail Invoice" | "Invoice" | "Bill" | "Expense" | "Vendor Payment"
+  deptRecordFrom: { type: String, default: null },   //"Retail Invoice" | "Invoice" | "Bill" | "Expense" | "Vendor Payment"  | "Procurement"
 
   amount: {
     type: Number,

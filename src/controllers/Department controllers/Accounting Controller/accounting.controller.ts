@@ -674,7 +674,7 @@ export const syncAccountingRecord = async (
     orderMaterialDeptNumber?: string | null;
     orderMaterialRefId?: string | null
 
-    assoicatedPersonName?: string;
+    assoicatedPersonName?: string | null;
     assoicatedPersonId?: any | null;
     assoicatedPersonModel?: string | null;
     amount?: number;
@@ -684,11 +684,30 @@ export const syncAccountingRecord = async (
   // session: mongoose.ClientSession | null = null
 ) => {
   try {
+
+    // 1. SMART FILTER: Look for specific IDs first
+    let filter: any = {};
+
+    if (data.referenceId && data.referenceModel) {
+      filter = { referenceId: data.referenceId, referenceModel: data.referenceModel };
+    } else if (data.orderMaterialDeptNumber) {
+      // Look for the specific Order Number to see if we've synced it before
+      filter = { orderMaterialDeptNumber: data.orderMaterialDeptNumber };
+    } else {
+      // If everything is null, force it to find nothing so a new record is created
+      filter = { _id: new mongoose.Types.ObjectId() };
+    }
+
+
+
+    const existingRecord = await AccountingModel.findOne(filter);
+
+
     // 1. Try to find existing Ledger for this Source (Bill/Expense)
-    const existingRecord = await AccountingModel.findOne({
-      referenceId: data.referenceId,
-      referenceModel: data.referenceModel
-    })
+    // const existingRecord = await AccountingModel.findOne({
+    //   referenceId: data.referenceId,
+    //   referenceModel: data.referenceModel
+    // })
 
     // 2. Prepare Payload
     let payload: any = { ...data };
@@ -708,11 +727,8 @@ export const syncAccountingRecord = async (
     }
 
     // 5. Upsert
-    const result = await AccountingModel.findOneAndUpdate(
-      {
-        referenceId: data.referenceId,
-        referenceModel: data.referenceModel
-      },
+    const result = await AccountingModel.findOneAndUpdate(  // for checking when it has been creaed rely on the updatedAt, dont rely on the createdAt field 
+      filter,
       { $set: payload },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
@@ -733,6 +749,7 @@ export const syncAccountingRecord = async (
 const formatLedgerItem = (item: any) => {
   const source = item.referenceId || {}; // Populated Bill, Invoice, or Expense
   const payment = item.paymentId || {};  // Populated Payment
+  const orderMaterialDoc = item.orderMaterialRefId || {}; // The populated OrderMaterialHistoryModel
 
   // 1. NORMALIZE SOURCE FIELDS
   // We map specific fields from different models to a common standard
@@ -748,9 +765,61 @@ const formatLedgerItem = (item: any) => {
   let docDiscountPercent = 0
 
   // Check type based on deptRecordFrom
-  const type = item.deptRecordFrom; // "Bill", "Invoice", "Expense"
+  const type = item.deptRecordFrom; // "Bill", "Invoice", "Expense", Procuremnt
 
-  if (type === "Bill") {
+  // console.log("orderMaterialDoc",orderMaterialDoc )
+  // console.log("recordNumber", item?.recordNumber)
+  // console.log("item.Order",item?.orderMaterialDeptNumber )
+  // ✨ NEW LOGIC: Handle Order Material Items specifically
+
+
+  // 1. HIGHEST PRIORITY: PROCUREMENT DATA
+  // If procurement has happened, it's the most accurate source of rates and vendors
+  console.log("type", type)
+  console.log("source", source)
+  if (type === "Procurement" && source._id) {
+    docNumber = source.procurementNumber || "N/A";
+    docDate = source.createdAt;
+    docTotal = source.totalCost || 0;
+    docNotes = source.notes || "";
+    
+    // Use selectedUnits from Procurement as they contain the confirmed rates
+    docItems = (source?.selectedUnits || []).map((unit: any) => ({
+      itemName: unit.subItemName,
+      unit: unit.unit,
+      quantity: unit.quantity,
+      rate: unit.rate || 0,
+      totalCost: unit.totalCost || 0
+    }));
+  }
+ else if (item?.orderMaterialDeptNumber && orderMaterialDoc?.orderedItems) {
+    // Search for the specific order inside the project's orderedItems array
+    const specificOrder = (orderMaterialDoc?.orderedItems || [])?.find(
+      (order: any) => order?.orderMaterialNumber === item?.orderMaterialDeptNumber
+    );
+
+    console.log("specificOrder", specificOrder)
+
+    if (specificOrder) {
+      docNumber = specificOrder.orderMaterialNumber;
+      docDate = specificOrder.createdAt;
+
+      // Map OrderSubItemSchema to the standard ledger item format
+      docItems = (specificOrder.subItems || []).map((sub: any) => ({
+        itemName: sub.subItemName,
+        unit: sub.unit,
+        quantity: sub.quantity,
+        rate: 0,
+        totalCost: 0
+      }));
+
+      // Calculate total if not explicitly stored
+      docTotal = 0
+    }
+
+
+  }
+  else if (type === "Bill") {
     docNumber = source.billNumber;
     docDate = source.billDate;
     docDueDate = source.dueDate;
@@ -833,7 +902,7 @@ const formatLedgerItem = (item: any) => {
 
     // Person Info
     person: {
-      name: item.assoicatedPersonName,
+      name: item?.assoicatedPersonName || "",
       id: item.assoicatedPersonId,
       model: item.assoicatedPersonModel
     },
@@ -995,17 +1064,24 @@ export const getAllAccountingRecords = async (req: Request, res: Response): Prom
         path: "referenceId",
         // We select common fields. Mongoose ignores fields that don't exist on the specific model.
         // select: "billNumber billDate expenseNumber invoiceNumber invoiceDate expenseDate grandTotal amount status dueDate items"
-        select: "billNumber billDate expenseNumber invoiceNumber invoiceDate expenseDate amount totalAmount grandTotal taxAmount taxPercentage discountAmount discountPercentage status dueDate items notes customerNotes description terms"
+        select: "procurementNumber selectedUnits totalCost createdAt billNumber billDate expenseNumber invoiceNumber invoiceDate expenseDate amount totalAmount grandTotal taxAmount taxPercentage discountAmount discountPercentage status dueDate items notes customerNotes description terms"
 
       })
       // Populate Payment Record
       .populate({
         path: "paymentId",
         select: "paymentNumber paymentDate generalStatus transactionId items"
+      })
+      .populate({
+        path: "orderMaterialRefId",
+        select: "_id projectId orderedItems"
       });
 
     // 4. Get Total Count (For Pagination)
     const total = await AccountingModel.countDocuments(filter);
+
+
+
 
     // 5. Format Response
     const formattedData = records.map(record => formatLedgerItem(record));
@@ -1046,12 +1122,16 @@ export const getSingleAccountingRecord = async (req: Request, res: Response): Pr
       .populate({
         path: "referenceId",
         // Select ALL possible fields across models to ensure we get data regardless of type
-        select: "billNumber billDate expenseNumber invoiceNumber invoiceDate expenseDate amount totalAmount grandTotal taxAmount taxPercentage discountAmount discountPercentage status dueDate items notes customerNotes description terms"
+        select: "procurementNumber selectedUnits totalCost createdAt billNumber billDate expenseNumber invoiceNumber invoiceDate expenseDate amount totalAmount grandTotal taxAmount taxPercentage discountAmount discountPercentage status dueDate items notes customerNotes description terms"
       })
       // 2. Populate Payment
       .populate({
         path: "paymentId",
         select: "paymentNumber paymentDate generalStatus transactionId items grandTotal"
+      })
+      .populate({
+        path: "orderMaterialRefId",
+        select: "_id projectId orderedItems"
       });
 
     if (!record) {

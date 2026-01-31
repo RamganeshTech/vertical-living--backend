@@ -1,5 +1,6 @@
 // utils/sendMail.ts
 import nodemailer from "nodemailer";
+import { COMPANY_NAME } from "../../controllers/stage controllers/ordering material controller/pdfOrderHistory.controller";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -21,7 +22,7 @@ export const sendClientStageEmail = async ({
   pdfUrl: string;
 }) => {
   const info = await transporter.sendMail({
-    from: `Vertical Living <${process.env.EMAIL_USER}>`,
+    from: `${COMPANY_NAME} <${process.env.EMAIL_USER}>`,
     to,
     subject: `📦 Project Update – ${stageName} Documentation Ready`,
     html: `

@@ -72,7 +72,7 @@ const procurementItemSchema = new Schema<IProcurementItemsNew>({
 
 const shopQuoteSchema = new Schema<IShopQuotes>({
   generatedLink: { type: String, default: null },
-  shopId: { type: mongoose.Types.ObjectId, ref: "OrderShopDetailsModel", default: null },
+  shopId: { type: mongoose.Types.ObjectId, ref: "VendorAccountModel", default: null },
   selectedUnits: { type: [procurementItemSchema], default: [] },
 }, { _id: true });
 

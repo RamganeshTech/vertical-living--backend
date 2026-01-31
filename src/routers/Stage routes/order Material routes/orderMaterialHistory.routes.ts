@@ -11,7 +11,8 @@ import {
     addSubItemToUnitNew, deleteAllSubUnitsNew,deleteSubItemFromUnitNew, updateSubItemInUnitNew,
     
     deleteOrderingMaterialImage, deleteOrderMaterialPdf, generateOrderHistoryPDFController, getOrderHistoryMaterial, getPublicDetails, getSingleOrderedItem,  orderMaterialHistoryCompletionStatus, placeOrderToProcurement, setOrderMaterialHistoryStageDeadline, submitOrderMaterial, updateDeliveryLocationDetails, updatePdfStatus, updateShopDetails, uploadOrderMaterialImages, 
-    placeOrderToProcurementv1} from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
+    placeOrderToProcurementv1,
+    placeOrderToProcurementv2} from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
 import { imageUploadToS3, processUploadFiles } from '../../../utils/s3Uploads/s3upload';
 // import { generateOrderHistoryPDFController } from '../../../controllers/stage controllers/ordering material controller/pdfOrderHistory.controller';
 
@@ -57,6 +58,7 @@ orderMaterialHistoryRoutes.put("/:projectId/submitorder", multiRoleAuthMiddlewar
 orderMaterialHistoryRoutes.put("/:projectId/:orderItemId/:organizationId/senttoprocurement", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), placeOrderToProcurement);
 
 orderMaterialHistoryRoutes.put("/v1/:projectId/:orderItemId/:organizationId/senttoprocurement", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), placeOrderToProcurementv1);
+orderMaterialHistoryRoutes.put("/v2/:projectId/:orderItemId/:organizationId/senttoprocurement", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), placeOrderToProcurementv2);
 
 orderMaterialHistoryRoutes.get("/:projectId/:orderItemId/getsingleorderedItem", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), getSingleOrderedItem);
 

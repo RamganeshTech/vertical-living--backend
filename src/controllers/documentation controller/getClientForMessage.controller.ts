@@ -2,6 +2,7 @@ import { Response } from "express";
 import ClientModel from "../../models/client model/client.model";
 import { RoleBasedRequest } from "../../types/types";
 import { StageDocumentationModel } from "../../models/Documentation Model/documentation.model";
+import { COMPANY_NAME } from "../stage controllers/ordering material controller/pdfOrderHistory.controller";
 
 export const getClientByProjectId = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
@@ -39,7 +40,7 @@ export const getStageShareMessage = async (req: RoleBasedRequest, res: Response)
     if (!stage) return res.status(404).json({ ok: false, message: "Stage not found." });
 
 
-    const company = `From *Vertical Living*,`;
+    const company = `From *${COMPANY_NAME}*,`;
 
     const title = `*Stage Update*\nStage: *${stage.stageKey}* (Stage ${stage.stageNumber})`;
 
@@ -80,7 +81,6 @@ export const getStageShareMessage = async (req: RoleBasedRequest, res: Response)
       data: { message: fullMessage },
     });
   } catch (err) {
-    // console.error("WhatsApp message generation error:", err);
     return res.status(500).json({ ok: false, message: "Server error" });
   }
 };
