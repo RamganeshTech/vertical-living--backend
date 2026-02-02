@@ -327,6 +327,12 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
     const cleanSimpleItems = (section: any[]): any[] =>
       (section || []).map((item) => ({
         itemName: item.itemName || null,
+        brandName: item?.brandName || null,
+        // brandId: item?.brandId || null,
+        // ✅ FIX: Convert the string ID from the payload into a real MongoDB ObjectId
+        brandId: item?.brandId && Types.ObjectId.isValid(item.brandId)
+          ? new Types.ObjectId(item.brandId)
+          : null,
         description: item.description || null,
         quantity: Number(item.quantity || 0),
         profitOnMaterial: Number(item?.profitOnMaterial || 0),
@@ -336,12 +342,8 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
 
     const processedFurniture = (furnitures || []).map((furniture: any, furnitureIndex: number) => {
       const coreMaterials = (furniture.coreMaterials || []).map((material: any, materialIndex: number) => {
-
         const fieldKey = `images[${furnitureIndex}][${materialIndex}]`;
         const matchedFile = fileMap[fieldKey];
-
-
-
         return {
           itemName: material.itemName || null,
           // imageU/rl: material.imageUrl || null, // 💡 not changing, only preserving

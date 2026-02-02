@@ -35,6 +35,49 @@ export const getMaterialCategories = async (req: Request, res: Response): Promis
   }
 };
 
+
+// Controller: only used for the internal quote for selectig the brands thats it
+export const getMaterialItemsForFittings = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { categoryName, itemName } = req.query; // 🆕 Get itemName from query string
+
+    if (!categoryName) {
+      return res.status(400).json({ ok: false, message: "categoryName is required" });
+    }
+
+
+    
+
+    // ✅ FIX: Use a regex to match the categoryName regardless of surrounding spaces
+    // ^ = start, \s* = optional whitespace, $ = end
+    const escapedCategory = String(categoryName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const categoryRegex = new RegExp(`^\\s*${escapedCategory}\\s*$`, "i");
+
+    // Build query object
+    // let query: any = { categoryName: categoryName.trim() };
+
+    let query: any = {
+      categoryName: categoryRegex
+    };
+
+    // 🆕 If itemName is provided, filter the nested 'data.Item' field
+    if (itemName) {
+      query["data.Item"] = { $regex: itemName, $options: "i" };
+    }
+
+    const items = await ItemModel.find(query).lean();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Items fetched successfully",
+      data: items,
+    });
+  } catch (error: any) {
+    console.error("Error fetching items:", error);
+    return res.status(500).json({ ok: false, message: "Internal server error" });
+  }
+};
+
 /**
  * Get all material items under a specific category
  */
@@ -129,7 +172,7 @@ export const createMaterialCategory = async (req: Request, res: Response): Promi
 // Controller to create material items
 export const createMaterialItems = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { categoryId , organizationId} = req.params; // categoryId passed in URL
+    const { categoryId, organizationId } = req.params; // categoryId passed in URL
     const items: Record<string, any>[] = req.body.items; // expecting array of objects
 
     // console.log("items", items)
@@ -188,7 +231,7 @@ export const createMaterialItems = async (req: Request, res: Response): Promise<
     const itemDocs = items.map((data) => ({
       organizationId,
       categoryId,
-      categoryName:category.name,
+      categoryName: category.name,
       data,
     }));
 

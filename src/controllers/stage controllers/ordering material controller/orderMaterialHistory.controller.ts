@@ -14,7 +14,7 @@ import { IRoomItemEntry } from "../../../models/Stage Models/MaterialRoom Confir
 import { SelectedExternalModel } from './../../../models/externalUnit model/SelectedExternalUnit model/selectedExternalUnit.model';
 import { RoleBasedRequest } from "../../../types/types";
 import { generateOrderingToken } from "../../../utils/generateToken";
-import { generateOrderHistoryPDF } from "./pdfOrderHistory.controller";
+import { COMPANY_NAME, generateOrderHistoryPDF } from "./pdfOrderHistory.controller";
 import { updateInventoryRemainingQuantity } from "../Inventory controllers/inventory.controller";
 import { InventoryModel } from "../../../models/Stage Models/Inventory Model/inventroy.model";
 import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
@@ -26,6 +26,7 @@ import { JOB_NAMES } from "../../../constants/BEconstants";
 import crypto from "crypto";
 import { OrderShopDetailsLibModel } from "../../../models/Stage Models/Ordering Material Model/OrderShopLibrary.model";
 import VendorAccountModel from "../../../models/Department Models/Accounting Model/vendor.model";
+import { sendWhatsAppNotification } from "../../../utils/Whatsapp/sendWhatsAppNotification";
 
 
 export const restoreInventoryQuantities = async ({
@@ -2177,9 +2178,29 @@ export const placeOrderToProcurementv2 = async (req: Request, res: Response): Pr
         const ProcurementNewItems = Object.values(subItemMap);
 
         // 2. Find Matching Shops based on Priority
-        const matchingShops = await VendorAccountModel.find({ _id: vendorId }).lean();
+        const matchingShops = await VendorAccountModel.find({_id: vendorId}).lean();
 
         const firstVendor = matchingShops[0] || null;
+
+
+
+        // const shopQuoteData:any = {
+        //     _id: null,
+        //     shopId: null,
+        //     generatedLink: null,
+        //     selectedUnits: []
+        // }
+
+        // const quoteId = new mongoose.Types.ObjectId();
+        // const secureToken = crypto.randomBytes(16).toString('hex');
+        // const generatedLink = `${process.env.FRONTEND_URL}/${organizationId}/procurement/public/?token=${secureToken}&quoteId=${quoteId}&orderId=${procurementId}`;
+
+
+        // shopQuoteData._id = quoteId
+        // shopQuoteData.shopId = firstVendor?._id
+        // shopQuoteData.generatedLink = generatedLink
+        // shopQuoteData.selectedUnits = ProcurementNewItems?.map(item => ({ ...item, _id: new mongoose.Types.ObjectId() }))
+        
 
 
         // 3. Prepare Shop Quotes with unique tokens/IDs
@@ -2201,7 +2222,7 @@ export const placeOrderToProcurementv2 = async (req: Request, res: Response): Pr
         });
 
 
-        const selectedUnits = ProcurementNewItems.map(item => ({ ...item, _id: new mongoose.Types.ObjectId() }))
+        const selectedUnits = ProcurementNewItems?.map(item => ({ ...item, _id: new mongoose.Types.ObjectId() }))
 
 
         // 4. Create Procurement Document
@@ -2214,6 +2235,8 @@ export const placeOrderToProcurementv2 = async (req: Request, res: Response): Pr
             selectedUnits: selectedUnits, // Initially empty until rate is confirmed
             selectedShopId: null,
             shopQuotes: shopQuotesData,
+            // shopQuote: shopQuoteData,
+            // generatedLink: generatedLink,
             refPdfId: orderItemId,
             isSyncWithPaymentsSection: false,
             isConfirmedRate: false,
@@ -2226,6 +2249,29 @@ export const placeOrderToProcurementv2 = async (req: Request, res: Response): Pr
         });
 
         // console.log("newProcurement", newProcurement)
+
+        // Inside placeOrderToProcurementv2 controller, after newProcurement is created
+
+        // if (firstVendor?.phone?.whatsappNumber && shopQuoteData?.shopId) {
+        //     const firstQuote = shopQuoteData; // Sending to the prioritized vendor
+
+        //     // Professionals don't send raw long URLs in the body text.
+        //     // They use "Button Variables" to keep the message clean.
+        //     // const dynamicUrlSuffix = `?token=${firstQuote.secureToken}&quoteId=${firstQuote._id}&orderId=${procurementId}`;
+
+        //     // const generatedLink = `${process.env.FRONTEND_URL}/${organizationId}/procurement/public/?token=${secureToken}&quoteId=${quoteId}&orderId=${procurementId}`;
+
+        //     await sendWhatsAppNotification({
+        //         to: firstVendor.phone.whatsappNumber,
+        //         templateName: "procurement_quote_request", // Must match your Meta Template name
+        //         variables: [
+        //             firstVendor.firstName || "Vendor", // {{1}} - Vendor Name
+        //             orderItem?.orderMaterialNumber || "N/A", // {{2}} - Order Ref
+        //             COMPANY_NAME // {{3}} - Project/Company Name
+        //         ],
+        //         buttonVariable: generatedLink // Pass the dynamic part of the link here
+        //     });
+        // }
 
 
         // ... [Existing Accounting and Population Logic] ...
@@ -2292,7 +2338,7 @@ export const placeOrderToProcurementv2 = async (req: Request, res: Response): Pr
 
         return res.status(200).json({
             data: newProcurement,
-            message: `Procurement created with ${shopQuotesData.length} shop quotes.`,
+            message: `Procurement created with the selected shop`,
             ok: true,
             account
         });

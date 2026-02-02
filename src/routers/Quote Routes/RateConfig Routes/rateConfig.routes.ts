@@ -4,12 +4,15 @@ import { createMaterialCategory,   createMaterialItems,
   deleteMaterialItem,
   deleteMaterialCategory,
   getMaterialCategories,
-  getMaterialItemsByCategory, } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
+  getMaterialItemsByCategory,
+  getMaterialItemsForFittings, } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 
 const RateConfigRoutes = Router();
 
 
+
+RateConfigRoutes.get("/categories/fittings",  multiRoleAuthMiddleware("owner","CTO", "staff"), getMaterialItemsForFittings);
 
 RateConfigRoutes.get("/categories/:organizationId",  multiRoleAuthMiddleware("owner","CTO", "staff"), getMaterialCategories);
 RateConfigRoutes.get("/categories/:categoryId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),  getMaterialItemsByCategory);

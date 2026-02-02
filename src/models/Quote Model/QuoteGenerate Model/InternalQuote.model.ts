@@ -35,6 +35,8 @@ export interface IMaterial {
 export interface ISimpleItem {
   itemName: string | null;
   description: string | null;
+  brandId: Types.ObjectId | null;
+  brandName: string,
   quantity: number;
   cost: number;
   profitOnMaterial?: number
@@ -218,6 +220,9 @@ const SimpleItemSchema = new Schema<ISimpleItem>(
   {
     itemName: { type: String, default: null },
     description: { type: String, default: null },
+    brandId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
+    brandName: { type: String, default: null },
+
     quantity: { type: Number, default: 0 },
     profitOnMaterial: { type: Number, default: 0 },
     cost: { type: Number, default: 0 },

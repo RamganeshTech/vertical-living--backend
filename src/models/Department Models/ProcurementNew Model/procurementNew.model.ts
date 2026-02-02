@@ -20,7 +20,8 @@ export interface IProcurementNew {
 
   isConfirmedRate: boolean,
   procurementNumber: string;
-  shopQuotes: IShopQuotes[]
+  shopQuotes: IShopQuotes[] //not in use but dont remove it 
+  shopQuote: IShopQuotes
 
   selectedUnits: IProcurementItemsNew[],
   selectedShopId: Types.ObjectId | null
@@ -100,7 +101,8 @@ const procurementPurchaseOrderSchema = new Schema<IProcurementNew>({
   deliveryLocationDetails: DeliveryLocationDetailsSchema,
 
 
-  shopQuotes: { type: [shopQuoteSchema], default: [] },
+  shopQuotes: { type: [shopQuoteSchema], default: [] }, //not in use
+  shopQuote: { type: shopQuoteSchema, default: null },
 
   selectedUnits: { type: [procurementItemSchema], default: [] },
   selectedShopId: { type: mongoose.Types.ObjectId, ref: "OrderShopDetailsModel", default: null },

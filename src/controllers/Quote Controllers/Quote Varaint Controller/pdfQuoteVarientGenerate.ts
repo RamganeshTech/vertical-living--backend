@@ -1164,6 +1164,180 @@ const wrapText = (text: string, maxWidth: number, font: any, fontSize: number) =
 };
 
 
+
+/**
+ * Utility to generate the attractive Cover Page for Client Quotes
+ */
+export const drawClientQuoteCoverPage = async (
+    pdfDoc: PDFDocument,
+    page: PDFPage,
+    orgInfo: any,
+    clientData: any,
+    projectData: any,
+    quoteNo: string,
+    PRIMARY_COLOR: any,
+    yPosition: number,
+    width: number,
+    height: number,
+) => {
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const normalFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    // const page = pdfDoc.addPage();
+    // const { width, height } = page.getSize();
+
+    const TEXT_COLOR = rgb(0, 0, 0);
+    const MUTED_COLOR = rgb(0.4, 0.4, 0.4);
+    const LINE_COLOR = rgb(0.8, 0.8, 0.8);
+
+    // yPosition = height - 50;
+    let currentY = yPosition;
+    const margin = 50;
+
+    // --- TOP HEADER SECTION ---
+    // Top Left: Logo + Company Name
+    try {
+        const logoRes = await fetch(COMPANY_LOGO);
+        const logoBuffer = await logoRes.arrayBuffer();
+        const logoImage = await pdfDoc.embedJpg(logoBuffer);
+        const logoDims = logoImage.scale(0.35);
+
+        page.drawImage(logoImage, {
+            x: margin,
+            y: yPosition - logoDims.height,
+            width: logoDims.width,
+            height: logoDims.height,
+        });
+
+        page.drawText(orgInfo?.organizationName || COMPANY_NAME, {
+            x: margin + logoDims.width + 10,
+            y: yPosition - (logoDims.height / 2) - 5,
+            size: 18,
+            font: boldFont,
+            color: PRIMARY_COLOR,
+        });
+    } catch (err) {
+        page.drawText(orgInfo?.organizationName || COMPANY_NAME, {
+            x: margin,
+            y: yPosition - 20,
+            size: 18,
+            font: boldFont,
+            color: PRIMARY_COLOR,
+        });
+    }
+
+    // Top Right: GSTIN, Address, Phone
+    // --- 2. TOP RIGHT: FIXED ALIGNMENT BLOCK ---
+    // We define a starting X point for the right block so labels align perfectly
+    const rightBlockStartX = width - 200;
+    let rightY = yPosition - 5;
+    const headerDetailSize = 8;
+
+    const drawAlignedRow = (label: string, value: string, isBold = false) => {
+        if (!value) return;
+
+        // Draw Label
+        page.drawText(label, {
+            x: rightBlockStartX,
+            y: rightY,
+            size: headerDetailSize,
+            font: boldFont,
+            color: TEXT_COLOR,
+        });
+
+        // Draw Value (Offset by label width or fixed gap)
+        const valueX = rightBlockStartX + 45;
+
+        if (label === "Address:") {
+            // Special handling for long addresses to prevent overflow
+            const maxWidth = (width - margin) - valueX;
+            const lines = wrapText(value, maxWidth, normalFont, headerDetailSize);
+            lines.forEach((line, i) => {
+                page.drawText(line, {
+                    x: valueX,
+                    y: rightY - (i * 10),
+                    size: headerDetailSize,
+                    font: normalFont,
+                    color: MUTED_COLOR,
+                });
+            });
+            rightY -= (lines.length * 10) + 2;
+        } else {
+            page.drawText(value, {
+                x: valueX,
+                y: rightY,
+                size: headerDetailSize,
+                font: isBold ? boldFont : normalFont,
+                color: isBold ? TEXT_COLOR : MUTED_COLOR,
+            });
+            rightY -= 12;
+        }
+    };
+
+    drawAlignedRow("GSTIN:", orgInfo?.gstin, true);
+    drawAlignedRow("Ph No:", orgInfo?.organizationPhoneNo);
+    drawAlignedRow("Address:", orgInfo?.address);
+
+    // Adjust Y-axis for the divider based on how long the address was
+    yPosition = Math.min(yPosition - 50, rightY - 20);
+
+    // Divider
+    page.drawLine({
+        start: { x: margin, y: yPosition },
+        end: { x: width - margin, y: yPosition },
+        thickness: 1,
+        color: PRIMARY_COLOR,
+    });
+
+
+    // --- CLIENT vs PROJECT DETAILS SECTION ---
+    yPosition -= 20;
+    const colWidth = (width / 2) - margin - 20;
+    const leftColX = margin;
+    const rightColX = width / 2 + 20;
+    const sectionTitleSize = 12;
+
+    // Left: Client Info
+    page.drawText("CLIENT INFORMATION", { x: leftColX, y: yPosition, size: sectionTitleSize, font: boldFont, color: PRIMARY_COLOR });
+    let clientY = yPosition - 25;
+
+    const drawDetail = (label: string, value: string, x: number, y: number, isClient: boolean = false) => {
+        page.drawText(label.toUpperCase(), { x, y, size: 8, font: boldFont, color: MUTED_COLOR });
+        const placeholder = isClient ? "Not Entered Yet" : "-";
+        // const val = value || isClient ? "Not Entered Yet" : "-";
+        const val = (value && value.trim() !== "") ? value : placeholder;
+        const wrapped = wrapText(val, colWidth, normalFont, 10);
+        wrapped.forEach((line, i) => {
+            page.drawText(line, { x, y: y - 12 - (i * 12), size: 10, font: normalFont, color: TEXT_COLOR });
+        });
+        return y - 15 - (wrapped.length * 12) - 10;
+    };
+
+    clientY = drawDetail("Client Name", clientData.clientName, leftColX, clientY, true);
+    clientY = drawDetail("Email Address", clientData.email, leftColX, clientY, true);
+    clientY = drawDetail("Contact", clientData.whatsapp, leftColX, clientY, true);
+    clientY = drawDetail("Site Location", clientData.location, leftColX, clientY, true);
+
+    // Right: Project Info
+    let projectY = yPosition - 25;
+    page.drawText("PROJECT DETAILS", { x: rightColX, y: yPosition, size: sectionTitleSize, font: boldFont, color: PRIMARY_COLOR });
+
+    projectY = drawDetail("Project Name", projectData?.projectName, rightColX, projectY);
+    projectY = drawDetail("Quotation Number", quoteNo, rightColX, projectY);
+    projectY = drawDetail("Date of Issue", new Date().toLocaleDateString('en-IN'), rightColX, projectY);
+
+    // Decorative Middle Line
+    const lineBottom = Math.min(clientY, projectY);
+    page.drawLine({
+        start: { x: width / 2, y: yPosition },
+        end: { x: width / 2, y: lineBottom },
+        thickness: 0.5,
+        color: LINE_COLOR,
+    });
+
+    return page;
+};
+
+
 export const generateClientQuoteVariantPdfwithTemplates = async ({
     quoteId,
     projectId,
@@ -1210,262 +1384,282 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
         const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
         const normalFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
+        // const detailsPage = pdfDoc.addPage();
+        // const { width, height } = detailsPage.getSize();
+        // let yPosition = height - 50;
 
-        // START OF FIRST PAGE OLD VERSION
 
-        // // === PAGE 1: Company + Client Info + Project Details === //
+
+
+        // // START OF FIRST PAGE OLD VERSION
+
+        // // // === PAGE 1: Company + Client Info + Project Details === //
+        // const detailsPage = pdfDoc.addPage();
+        // const { width, height } = detailsPage.getSize();
+        // let yPosition = height - 50;
+
+
+        // // // Draw Company Logo and Name horizontally centered
+        // // // --- HEADER SECTION ---
+        // try {
+        //     // Use the specific company logo if available, or fall back to a default
+        //     // const logoUrl = orgInfo.companyLogo || COMPANY_LOGO; 
+        //     const logoUrl = COMPANY_LOGO;
+
+        //     const logoRes = await fetch(logoUrl);
+        //     const logoBuffer = await logoRes.arrayBuffer();
+        //     const logoImage = await pdfDoc.embedJpg(logoBuffer);
+
+        //     const logoScale = 0.4;
+        //     const logoDims = logoImage.scale(logoScale);
+
+        //     const brandText = orgName; // 👈 Uses dynamic Org Name
+        //     const brandFontSize = 22;
+        //     const brandTextWidth = boldFont.widthOfTextAtSize(brandText, brandFontSize);
+
+        //     const spacing = 15;
+        //     const totalWidth = logoDims.width + spacing + brandTextWidth;
+        //     const combinedX = (width - totalWidth) / 2;
+
+        //     // Draw Logo
+        //     detailsPage.drawImage(logoImage, {
+        //         x: combinedX,
+        //         y: yPosition - logoDims.height,
+        //         width: logoDims.width,
+        //         height: logoDims.height,
+        //     });
+
+        //     // Draw Organization Name
+        //     detailsPage.drawText(brandText, {
+        //         x: combinedX + logoDims.width + spacing,
+        //         y: yPosition - (logoDims.height / 2) - (brandFontSize / 4),
+        //         size: brandFontSize,
+        //         font: boldFont,
+        //         color: PRIMARY_COLOR,
+        //     });
+
+        //     yPosition -= (logoDims.height + 10);
+
+        // } catch (err) {
+        //     // Fallback if logo fetch fails
+        //     const brandFontSize = 22;
+        //     const textWidth = boldFont.widthOfTextAtSize(orgName, brandFontSize);
+        //     detailsPage.drawText(orgName, {
+        //         x: (width - textWidth) / 2,
+        //         y: yPosition,
+        //         size: brandFontSize,
+        //         font: boldFont,
+        //         color: PRIMARY_COLOR,
+        //     });
+        //     yPosition -= 30;
+        // }
+
+        // // Draw Line
+        // detailsPage.drawLine({
+        //     start: { x: 50, y: yPosition },
+        //     end: { x: width - 50, y: yPosition },
+        //     thickness: 1,
+        //     color: LINE_COLOR,
+        // });
+
+        // const rightColX = width / 2 + 20;
+        // const labelFontSize = 9;
+        // const leftColX = 50;
+        // const detailFontSize = 9;
+        // const TEXT_COLOR = rgb(0.1, 0.1, 0.1);
+        // const MUTED_COLOR = rgb(0.5, 0.5, 0.5);
+
+        // // --- 2. ORGANIZATION INFO BLOCK (Left Aligned) ---
+        // yPosition -= 25;
+
+        // // Draw GSTIN (Top line, left side)
+        // if (orgGstin) {
+        //     detailsPage.drawText(`GSTIN: ${orgGstin}`, {
+        //         x: leftColX,
+        //         y: yPosition,
+        //         size: detailFontSize,
+        //         font: boldFont,
+        //         color: TEXT_COLOR,
+        //     });
+        //     yPosition -= 16;
+        // }
+
+        // // Draw Phone Number
+        // if (orgPhone) {
+        //     const phoneLabel = "Phone: ";
+        //     const phoneLabelWidth = boldFont.widthOfTextAtSize(phoneLabel, detailFontSize);
+
+        //     // We establish this as our vertical alignment "anchor" for the address too
+        //     const valueStartX = leftColX + phoneLabelWidth;
+
+        //     detailsPage.drawText(phoneLabel, {
+        //         x: leftColX,
+        //         y: yPosition,
+        //         size: detailFontSize,
+        //         font: boldFont,
+        //         color: TEXT_COLOR,
+        //     });
+
+        //     detailsPage.drawText(orgPhone, {
+        //         x: valueStartX,
+        //         y: yPosition,
+        //         size: detailFontSize,
+        //         font: normalFont,
+        //         color: MUTED_COLOR,
+        //     });
+
+        //     yPosition -= 14;
+
+        //     // --- Draw Address (Anchored to the same level as Phone) ---
+        //     if (orgAddress) {
+        //         const addrLabel = "Address: ";
+        //         const addrLabelWidth = boldFont.widthOfTextAtSize(addrLabel, detailFontSize);
+
+        //         // We use a fixed width to ensure it doesn't cross the middle of the page
+        //         const availableAddrWidth = (width / 2) - valueStartX;
+        //         const wrappedAddr = wrapText(orgAddress, availableAddrWidth, normalFont, detailFontSize);
+
+        //         wrappedAddr.forEach((line, idx) => {
+        //             if (idx === 0) {
+        //                 // Label starts at the far left
+        //                 detailsPage.drawText(addrLabel, {
+        //                     x: leftColX,
+        //                     y: yPosition,
+        //                     size: detailFontSize,
+        //                     font: boldFont,
+        //                     color: TEXT_COLOR
+        //                 });
+        //                 // Value starts at the same level as the Phone value
+        //                 detailsPage.drawText(line, {
+        //                     x: valueStartX + 10,
+        //                     y: yPosition,
+        //                     size: detailFontSize,
+        //                     font: normalFont,
+        //                     color: MUTED_COLOR
+        //                 });
+        //             } else {
+        //                 // Indented lines start at the same valueStartX level
+        //                 detailsPage.drawText(line, {
+        //                     x: valueStartX + 10,
+        //                     y: yPosition,
+        //                     size: detailFontSize,
+        //                     font: normalFont,
+        //                     color: MUTED_COLOR
+        //                 });
+        //             }
+        //             yPosition -= 12;
+        //         });
+        //     }
+        // }
+
+        // // Reset Y for the Client/Project sections below
+        // yPosition -= 40;
+
+        // // --- 3. DUAL COLUMN LAYOUT (Client vs Project) ---
+        // const sectionTitleSize = 14;
+        // const columnTopY = yPosition;
+
+        // // --- LEFT COLUMN: CLIENT INFORMATION ---
+        // detailsPage.drawText("CLIENT INFORMATION", {
+        //     x: leftColX,
+        //     y: yPosition,
+        //     size: sectionTitleSize,
+        //     font: boldFont,
+        //     color: PRIMARY_COLOR,
+        // });
+
+        // let clientY = yPosition - 30;
+        // const columnWidth = (width / 2) - leftColX - 20;
+
+        // const drawElegantDetail = (page: any, label: string, value: string, x: number, y: number) => {
+
+        //     // 1. Draw the Label in muted caps
+        //     page.drawText(label.toUpperCase(), {
+        //         x,
+        //         y,
+        //         size: labelFontSize,
+        //         font: boldFont,
+        //         color: MUTED_COLOR
+        //     });
+
+        //     const textValue = value || "-";
+        //     const valueYStart = y - 15;
+
+        //     // 2. Wrap the value text based on the column width
+        //     // We use detailFontSize + 1 to match your current styling
+        //     const wrappedLines = wrapText(textValue, columnWidth, normalFont, detailFontSize + 1);
+
+        //     // 3. Draw each line of the wrapped text
+        //     wrappedLines.forEach((line, index) => {
+        //         page.drawText(line, {
+        //             x,
+        //             y: valueYStart - (index * (detailFontSize + 5)), // Spacing between lines
+        //             size: detailFontSize + 1,
+        //             font: normalFont,
+        //             color: TEXT_COLOR
+        //         });
+        //     });
+
+        //     // 4. Return the new Y position dynamically
+        //     // This ensures the next label starts after all lines of the previous value
+        //     const totalValueHeight = wrappedLines.length * (detailFontSize + 5);
+        //     return valueYStart - totalValueHeight - 20; // 20 is the gap between sections
+        // };
+
+        // clientY = drawElegantDetail(detailsPage, "Client Name", clientData.clientName, leftColX, clientY);
+        // clientY = drawElegantDetail(detailsPage, "Email Address", clientData.email, leftColX, clientY);
+        // clientY = drawElegantDetail(detailsPage, "Contact Number", clientData.whatsapp, leftColX, clientY);
+        // clientY = drawElegantDetail(detailsPage, "Site Location", clientData.location, leftColX, clientY);
+
+        // // --- RIGHT COLUMN: PROJECT INFORMATION ---
+        // yPosition = columnTopY; // Reset Y to top of section for the right column
+
+        // detailsPage.drawText("PROJECT DETAILS", {
+        //     x: rightColX,
+        //     y: yPosition,
+        //     size: sectionTitleSize,
+        //     font: boldFont,
+        //     color: PRIMARY_COLOR,
+        // });
+
+        // let projectY = yPosition - 30;
+
+        // projectY = drawElegantDetail(detailsPage, "Project Name", projectData?.projectName || "-", rightColX, projectY);
+        // projectY = drawElegantDetail(detailsPage, "Quotation Number", newVariant.quoteNo, rightColX, projectY);
+        // projectY = drawElegantDetail(detailsPage, "Date of Issue", new Date().toLocaleDateString('en-IN'), rightColX, projectY);
+        // // if (newVariant?.brandName) {
+        // //     projectY = drawElegantDetail(detailsPage, "Material Brand", newVariant.brandName, rightColX, projectY);
+        // // }
+
+        // // --- 4. DECORATIVE DIVIDER ---
+        // // Draw a vertical line to separate Client and Project sections elegantly
+        // const lineBottom = Math.min(clientY, projectY);
+        // detailsPage.drawLine({
+        //     start: { x: width / 2, y: columnTopY },
+        //     end: { x: width / 2, y: lineBottom + 20 },
+        //     thickness: 0.5,
+        //     color: rgb(0.8, 0.8, 0.8),
+        // });
+
+        // yPosition = lineBottom - 50;
+
+        //  END OF FIRST PAGE NEW VERSION
+
         const detailsPage = pdfDoc.addPage();
         const { width, height } = detailsPage.getSize();
         let yPosition = height - 50;
 
-
-        // // Draw Company Logo and Name horizontally centered
-        // // --- HEADER SECTION ---
-        try {
-            // Use the specific company logo if available, or fall back to a default
-            // const logoUrl = orgInfo.companyLogo || COMPANY_LOGO; 
-            const logoUrl = COMPANY_LOGO;
-
-            const logoRes = await fetch(logoUrl);
-            const logoBuffer = await logoRes.arrayBuffer();
-            const logoImage = await pdfDoc.embedJpg(logoBuffer);
-
-            const logoScale = 0.4;
-            const logoDims = logoImage.scale(logoScale);
-
-            const brandText = orgName; // 👈 Uses dynamic Org Name
-            const brandFontSize = 22;
-            const brandTextWidth = boldFont.widthOfTextAtSize(brandText, brandFontSize);
-
-            const spacing = 15;
-            const totalWidth = logoDims.width + spacing + brandTextWidth;
-            const combinedX = (width - totalWidth) / 2;
-
-            // Draw Logo
-            detailsPage.drawImage(logoImage, {
-                x: combinedX,
-                y: yPosition - logoDims.height,
-                width: logoDims.width,
-                height: logoDims.height,
-            });
-
-            // Draw Organization Name
-            detailsPage.drawText(brandText, {
-                x: combinedX + logoDims.width + spacing,
-                y: yPosition - (logoDims.height / 2) - (brandFontSize / 4),
-                size: brandFontSize,
-                font: boldFont,
-                color: PRIMARY_COLOR,
-            });
-
-            yPosition -= (logoDims.height + 10);
-
-        } catch (err) {
-            // Fallback if logo fetch fails
-            const brandFontSize = 22;
-            const textWidth = boldFont.widthOfTextAtSize(orgName, brandFontSize);
-            detailsPage.drawText(orgName, {
-                x: (width - textWidth) / 2,
-                y: yPosition,
-                size: brandFontSize,
-                font: boldFont,
-                color: PRIMARY_COLOR,
-            });
-            yPosition -= 30;
-        }
-
-        // Draw Line
-        detailsPage.drawLine({
-            start: { x: 50, y: yPosition },
-            end: { x: width - 50, y: yPosition },
-            thickness: 1,
-            color: LINE_COLOR,
-        });
-
-        const rightColX = width / 2 + 20;
-        const labelFontSize = 9;
-        const leftColX = 50;
-        const detailFontSize = 9;
-        const TEXT_COLOR = rgb(0.1, 0.1, 0.1);
-        const MUTED_COLOR = rgb(0.5, 0.5, 0.5);
-
-        // --- 2. ORGANIZATION INFO BLOCK (Left Aligned) ---
-        yPosition -= 25;
-
-        // Draw GSTIN (Top line, left side)
-        if (orgGstin) {
-            detailsPage.drawText(`GSTIN: ${orgGstin}`, {
-                x: leftColX,
-                y: yPosition,
-                size: detailFontSize,
-                font: boldFont,
-                color: TEXT_COLOR,
-            });
-            yPosition -= 16;
-        }
-
-        // Draw Phone Number
-        if (orgPhone) {
-            const phoneLabel = "Phone: ";
-            const phoneLabelWidth = boldFont.widthOfTextAtSize(phoneLabel, detailFontSize);
-
-            // We establish this as our vertical alignment "anchor" for the address too
-            const valueStartX = leftColX + phoneLabelWidth;
-
-            detailsPage.drawText(phoneLabel, {
-                x: leftColX,
-                y: yPosition,
-                size: detailFontSize,
-                font: boldFont,
-                color: TEXT_COLOR,
-            });
-
-            detailsPage.drawText(orgPhone, {
-                x: valueStartX,
-                y: yPosition,
-                size: detailFontSize,
-                font: normalFont,
-                color: MUTED_COLOR,
-            });
-
-            yPosition -= 14;
-
-            // --- Draw Address (Anchored to the same level as Phone) ---
-            if (orgAddress) {
-                const addrLabel = "Address: ";
-                const addrLabelWidth = boldFont.widthOfTextAtSize(addrLabel, detailFontSize);
-
-                // We use a fixed width to ensure it doesn't cross the middle of the page
-                const availableAddrWidth = (width / 2) - valueStartX;
-                const wrappedAddr = wrapText(orgAddress, availableAddrWidth, normalFont, detailFontSize);
-
-                wrappedAddr.forEach((line, idx) => {
-                    if (idx === 0) {
-                        // Label starts at the far left
-                        detailsPage.drawText(addrLabel, {
-                            x: leftColX,
-                            y: yPosition,
-                            size: detailFontSize,
-                            font: boldFont,
-                            color: TEXT_COLOR
-                        });
-                        // Value starts at the same level as the Phone value
-                        detailsPage.drawText(line, {
-                            x: valueStartX + 10,
-                            y: yPosition,
-                            size: detailFontSize,
-                            font: normalFont,
-                            color: MUTED_COLOR
-                        });
-                    } else {
-                        // Indented lines start at the same valueStartX level
-                        detailsPage.drawText(line, {
-                            x: valueStartX + 10,
-                            y: yPosition,
-                            size: detailFontSize,
-                            font: normalFont,
-                            color: MUTED_COLOR
-                        });
-                    }
-                    yPosition -= 12;
-                });
-            }
-        }
-
-        // Reset Y for the Client/Project sections below
-        yPosition -= 40;
-
-        // --- 3. DUAL COLUMN LAYOUT (Client vs Project) ---
-        const sectionTitleSize = 14;
-        const columnTopY = yPosition;
-
-        // --- LEFT COLUMN: CLIENT INFORMATION ---
-        detailsPage.drawText("CLIENT INFORMATION", {
-            x: leftColX,
-            y: yPosition,
-            size: sectionTitleSize,
-            font: boldFont,
-            color: PRIMARY_COLOR,
-        });
-
-        let clientY = yPosition - 30;
-        const columnWidth = (width / 2) - leftColX - 20;
-
-        const drawElegantDetail = (page: any, label: string, value: string, x: number, y: number) => {
-            // page.drawText(label.toUpperCase(), { x, y, size: labelFontSize, font: boldFont, color: MUTED_COLOR });
-            // page.drawText(value || "-", { x, y: y - 15, size: detailFontSize + 1, font: normalFont, color: TEXT_COLOR });
-            // return y - 45;
-
-            // 1. Draw the Label in muted caps
-            page.drawText(label.toUpperCase(), {
-                x,
-                y,
-                size: labelFontSize,
-                font: boldFont,
-                color: MUTED_COLOR
-            });
-
-            const textValue = value || "-";
-            const valueYStart = y - 15;
-
-            // 2. Wrap the value text based on the column width
-            // We use detailFontSize + 1 to match your current styling
-            const wrappedLines = wrapText(textValue, columnWidth, normalFont, detailFontSize + 1);
-
-            // 3. Draw each line of the wrapped text
-            wrappedLines.forEach((line, index) => {
-                page.drawText(line, {
-                    x,
-                    y: valueYStart - (index * (detailFontSize + 5)), // Spacing between lines
-                    size: detailFontSize + 1,
-                    font: normalFont,
-                    color: TEXT_COLOR
-                });
-            });
-
-            // 4. Return the new Y position dynamically
-            // This ensures the next label starts after all lines of the previous value
-            const totalValueHeight = wrappedLines.length * (detailFontSize + 5);
-            return valueYStart - totalValueHeight - 20; // 20 is the gap between sections
-        };
-
-        clientY = drawElegantDetail(detailsPage, "Client Name", clientData.clientName, leftColX, clientY);
-        clientY = drawElegantDetail(detailsPage, "Email Address", clientData.email, leftColX, clientY);
-        clientY = drawElegantDetail(detailsPage, "Contact Number", clientData.whatsapp, leftColX, clientY);
-        clientY = drawElegantDetail(detailsPage, "Site Location", clientData.location, leftColX, clientY);
-
-        // --- RIGHT COLUMN: PROJECT INFORMATION ---
-        yPosition = columnTopY; // Reset Y to top of section for the right column
-
-        detailsPage.drawText("PROJECT DETAILS", {
-            x: rightColX,
-            y: yPosition,
-            size: sectionTitleSize,
-            font: boldFont,
-            color: PRIMARY_COLOR,
-        });
-
-        let projectY = yPosition - 30;
-
-        projectY = drawElegantDetail(detailsPage, "Project Name", projectData?.projectName || "-", rightColX, projectY);
-        projectY = drawElegantDetail(detailsPage, "Quotation Number", newVariant.quoteNo, rightColX, projectY);
-        projectY = drawElegantDetail(detailsPage, "Date of Issue", new Date().toLocaleDateString('en-IN'), rightColX, projectY);
-        // if (newVariant?.brandName) {
-        //     projectY = drawElegantDetail(detailsPage, "Material Brand", newVariant.brandName, rightColX, projectY);
-        // }
-
-        // --- 4. DECORATIVE DIVIDER ---
-        // Draw a vertical line to separate Client and Project sections elegantly
-        const lineBottom = Math.min(clientY, projectY);
-        detailsPage.drawLine({
-            start: { x: width / 2, y: columnTopY },
-            end: { x: width / 2, y: lineBottom + 20 },
-            thickness: 0.5,
-            color: rgb(0.8, 0.8, 0.8),
-        });
-
-        yPosition = lineBottom - 50;
-        //  END OF FIRST PAGE NEW VERSION
+        await drawClientQuoteCoverPage(
+            pdfDoc,
+            detailsPage,
+            orgInfo,
+            clientData,
+            projectData,
+            newVariant.quoteNo,
+            PRIMARY_COLOR,
+            yPosition,
+            width, height
+        );
 
 
 
@@ -1594,14 +1788,14 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
             //     color: color,
             // });
 
-           
+
             const isMaskCall = text === "QUANTITY_MASK" || text === "COST_AMOUNT_MASK";
 
 
             if (isBlurred && isMaskCall) {
 
                 const FIXED_WIDTH = 45;
-                const FIXED_X = x + (width / 2) + (isBlurred ? 15 : 20  ); // Center of the specific cell
+                const FIXED_X = x + (width / 2) + (isBlurred ? 15 : 20); // Center of the specific cell
 
 
 
@@ -1649,12 +1843,51 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
             const padding = 8;
 
             // Draw header background
+            // currentPage.drawRectangle({
+            //     x: startX,
+            //     y: yPosition - headerHeight + 5,
+            //     width: tableWidth,
+            //     height: headerHeight,
+            //     color: TABLE_HEADER_BG_COLOR,
+            // });
+
+
+            // ✅ NEW: DRAW ROUNDED TOP HEADER FOR SIMPLE SECTIONS
+            const borderRadius = 10;
+            const headerColor = TABLE_HEADER_BG_COLOR; // Or whichever color your simple header uses
+
+            // Main body
             currentPage.drawRectangle({
                 x: startX,
-                y: yPosition - headerHeight + 5,
+                y: yPosition - headerHeight,
                 width: tableWidth,
-                height: headerHeight,
-                color: TABLE_HEADER_BG_COLOR,
+                height: headerHeight - borderRadius,
+                color: headerColor,
+            });
+
+            // Top connection
+            currentPage.drawRectangle({
+                x: startX + borderRadius,
+                y: yPosition - borderRadius,
+                width: tableWidth - (borderRadius * 2),
+                height: borderRadius,
+                color: headerColor,
+            });
+
+            // Left corner
+            currentPage.drawCircle({
+                x: startX + borderRadius,
+                y: yPosition - borderRadius,
+                size: borderRadius,
+                color: headerColor,
+            });
+
+            // Right corner
+            currentPage.drawCircle({
+                x: startX + tableWidth - borderRadius,
+                y: yPosition - borderRadius,
+                size: borderRadius,
+                color: headerColor,
             });
 
             // Draw header text and vertical borders
@@ -1938,13 +2171,57 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
             const sectionStartY = yPosition;
 
             // Draw FULL header background
+            // currentPage.drawRectangle({
+            //     x: startX,
+            //     y: yPosition - headerHeight + 5,
+            //     width: tableWidth,
+            //     height: headerHeight,
+            //     color: TABLE_HEADER_BG_COLOR,
+            // });
+
+
+
+            // ✅ NEW: DRAW ROUNDED TOP HEADER FOR CORE MATERIALS
+            const borderRadius = 10;
+            const headerColor = TABLE_HEADER_BG_COLOR;
+            const headerRectY = yPosition - headerHeight + 5;
+
+            // Main rectangle body (square bottom)
             currentPage.drawRectangle({
                 x: startX,
-                y: yPosition - headerHeight + 5,
+                y: headerRectY,
                 width: tableWidth,
-                height: headerHeight,
-                color: TABLE_HEADER_BG_COLOR,
+                height: headerHeight - borderRadius,
+                color: headerColor,
             });
+
+            // Top rounded part
+            currentPage.drawRectangle({
+                x: startX + borderRadius,
+                y: headerRectY + headerHeight - borderRadius,
+                width: tableWidth - (borderRadius * 2),
+                height: borderRadius,
+                color: headerColor,
+            });
+
+            // Top Left Circle
+            currentPage.drawCircle({
+                x: startX + borderRadius,
+                y: headerRectY + headerHeight - borderRadius,
+                size: borderRadius,
+                color: headerColor,
+            });
+
+            // Top Right Circle
+            currentPage.drawCircle({
+                x: startX + tableWidth - borderRadius,
+                y: headerRectY + headerHeight - borderRadius,
+                size: borderRadius,
+                color: headerColor,
+            });
+
+
+
 
             // Draw header text
             let xPos = startX;
@@ -2265,6 +2542,133 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
             yPosition -= SECTION_SPACE;
         };
 
+
+        const drawBrandSpecificationTable = async (furniture: any) => {
+            // 1. Group Brands (Same logic as your UI)
+            const uniqueFittings = Array.from(new Set(
+                furniture.fittingsAndAccessories?.filter((item: any) => item.brandName).map((item: any) => item.brandName)
+            )).join(", ");
+
+            const uniqueGlues = Array.from(new Set(
+                furniture.glues?.filter((item: any) => item.brandName).map((item: any) => item.brandName)
+            )).join(", ");
+
+            const specs = [
+                { category: "Plywood", brand: furniture.plywoodBrand, desc: "" },
+                { category: "Inner Laminate", brand: furniture.innerLaminateBrand, desc: "" },
+                { category: "Outer Laminate", brand: furniture.outerLaminateBrand, desc: "" },
+                { category: "Fittings & Accessories", brand: uniqueFittings, desc: "" },
+                { category: "Adhesives/Glues", brand: uniqueGlues, desc: "" },
+            ].filter(s => s.brand);
+
+            if (specs.length === 0) return;
+
+            // Header logic
+            ensureSpace(120); // Space for header + at least 2 rows
+            const tableWidth = width - 100;
+            const colWidth = tableWidth / 3;
+            const rowHeight = 25;
+            const borderRadius = 10; // ✅ Adjust for more/less roundedness
+
+            // Draw Section Title
+            currentPage.drawText("Brand Specifications", {
+                x: 50,
+                y: yPosition,
+                font: boldFont,
+                size: 12,
+                color: PRIMARY_COLOR,
+            });
+            yPosition -= 20;
+
+            // Draw Rounded Header Background
+            const headerHeight = 25;
+            const headerColor = rgb(0.95, 0.97, 1);
+
+            currentPage.drawRectangle({
+                x: 50,
+                y: yPosition - headerHeight,
+                width: tableWidth,
+                // height: headerHeight,
+                height: headerHeight - borderRadius,
+                color: headerColor, // Light blue-ish gray
+            });
+
+            // Rounded top corners (overlapping circles and a smaller rectangle)
+            currentPage.drawRectangle({
+                x: 50 + borderRadius,
+                y: yPosition - borderRadius,
+                width: tableWidth - (borderRadius * 2),
+                height: borderRadius,
+                color: headerColor,
+            });
+            currentPage.drawCircle({
+                x: 50 + borderRadius,
+                y: yPosition - borderRadius,
+                size: borderRadius,
+                color: headerColor,
+            });
+            currentPage.drawCircle({
+                x: 50 + tableWidth - borderRadius,
+                y: yPosition - borderRadius,
+                size: borderRadius,
+                color: headerColor,
+            });
+
+            // Draw Table Headers
+            const headers = ["Category", "Brand Standard", "Description"];
+            headers.forEach((header, i) => {
+                currentPage.drawText(header.toUpperCase(), {
+                    x: 55 + (i * colWidth),
+                    y: yPosition - 17,
+                    font: boldFont,
+                    size: 8,
+                    color: rgb(0.3, 0.3, 0.3),
+                });
+            });
+            yPosition -= headerHeight;
+
+            // Draw Rows
+            for (const spec of specs) {
+                // Wrap brand text in case of many comma-separated values
+                const brandLines = calculateTextLines(spec.brand || "", colWidth - 10, normalFont, 9);
+                const dynamicRowHeight = Math.max(rowHeight, brandLines * 12 + 10);
+
+                ensureSpace(dynamicRowHeight + 20);
+
+                // Draw Row Border (Bottom only)
+                currentPage.drawLine({
+                    start: { x: 50, y: yPosition - dynamicRowHeight },
+                    end: { x: 50 + tableWidth, y: yPosition - dynamicRowHeight },
+                    thickness: 0.5,
+                    color: rgb(0.9, 0.9, 0.9),
+                });
+
+                // Category
+                currentPage.drawText(spec.category, {
+                    x: 55,
+                    y: yPosition - 15,
+                    font: boldFont,
+                    size: 9,
+                    color: rgb(0.2, 0.2, 0.2),
+                });
+
+                // Brand (with wrapping for comma-separated lists)
+                drawLeftAlignedText(spec.brand || "-", 55 + colWidth, colWidth, yPosition - 5, normalFont, 9, rgb(0.1, 0.4, 0.9));
+
+                // Description
+                currentPage.drawText(spec.desc || "---", {
+                    x: 55 + (colWidth * 2),
+                    y: yPosition - 15,
+                    font: normalFont,
+                    size: 9,
+                    color: rgb(0.5, 0.5, 0.5),
+                });
+
+                yPosition -= dynamicRowHeight;
+            }
+            yPosition -= 20; // Extra space after table
+        };
+
         // Main furniture loop
         for (const furniture of newVariant.furnitures) {
             ensureSpace(100);
@@ -2277,6 +2681,12 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
                 color: rgb(0.1, 0.3, 0.5),
             });
             yPosition -= 30;
+
+
+            // ✅ NEW: Insert Brand Specification Table for Type 2 and Type 3
+            if (templateType === "type 2" || templateType === "type 3") {
+                await drawBrandSpecificationTable(furniture);
+            }
 
             const coreMaterials = filterMaterialRows(furniture.coreMaterials);
             if (coreMaterials.length > 0) {
@@ -2711,8 +3121,6 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
         throw new Error("Failed to generate variant quote PDF.");
     }
 };
-
-
 
 
 

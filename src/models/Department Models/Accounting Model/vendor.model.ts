@@ -27,6 +27,7 @@ export interface IVendor extends Document {
     phone: {
         work: string | null; //shoudl support landline also it shoudl allow 11 nunbers also for landline 
         mobile: string | null;
+        whatsappNumber: string | null;
     };
     location?: IVendorLocation;
     mapUrl?: string | null
@@ -85,6 +86,7 @@ const VendorSchema = new Schema<IVendor>(
         phone: {
             work: { type: String, default: null },
             mobile: { type: String, default: null },
+            whatsappNumber: { type: String, default: null },
         },
         language: { type: String, default: "English" },
         shopFullAddress: { type: String, default: null }, // Added
