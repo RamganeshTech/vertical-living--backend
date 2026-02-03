@@ -45,6 +45,11 @@ export interface ISimpleItem {
 
 export interface IFurniture {
   furnitureName: string;
+  dimention?: {
+    height: number,
+    width: number,
+    depth: number,
+  }
   furnitureProfit?: number
   fabricationCost?: number
   coreMaterials: IMaterial[];
@@ -234,6 +239,14 @@ const SimpleItemSchema = new Schema<ISimpleItem>(
 // Each furniture entry
 const FurnitureSchema = new mongoose.Schema<IFurniture>({
   furnitureName: { type: String, default: null },
+  dimention: {
+    type: {
+      height: { type: Number, default: null },
+      width: { type: Number, default: null },
+      depth: { type: Number, default: null },
+    },
+    default: {}
+  },
   furnitureProfit: { type: Number, default: null },
   fabricationCost: { type: Number, default: null },
   coreMaterials: [MaterialSchema],

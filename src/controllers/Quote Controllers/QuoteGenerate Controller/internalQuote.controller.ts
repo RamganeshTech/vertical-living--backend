@@ -393,6 +393,7 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
 
       return {
         furnitureName: furniture.furnitureName,
+        dimention: furniture?.dimention,
         furnitureProfit: Number(furniture.furnitureProfit || 0),
         fabricationCost: Number(furniture.fabricationCost || 0),
         coreMaterials,

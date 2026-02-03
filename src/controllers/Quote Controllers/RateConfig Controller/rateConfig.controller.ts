@@ -40,13 +40,19 @@ export const getMaterialCategories = async (req: Request, res: Response): Promis
 export const getMaterialItemsForFittings = async (req: Request, res: Response): Promise<any> => {
   try {
     const { categoryName, itemName } = req.query; // 🆕 Get itemName from query string
+    const { organizationId } = req.params
 
+
+    if (!organizationId) {
+      return res.status(400).json({ ok: false, message: "organizationId is required" });
+
+    }
     if (!categoryName) {
       return res.status(400).json({ ok: false, message: "categoryName is required" });
     }
 
 
-    
+
 
     // ✅ FIX: Use a regex to match the categoryName regardless of surrounding spaces
     // ^ = start, \s* = optional whitespace, $ = end
@@ -56,14 +62,41 @@ export const getMaterialItemsForFittings = async (req: Request, res: Response): 
     // Build query object
     // let query: any = { categoryName: categoryName.trim() };
 
+    // let query: any = {
+    //   categoryName: categoryRegex,
+    //   organizationId,
+    // };
+
+    // // 🆕 If itemName is provided, filter the nested 'data.Item' field
+    // if (itemName) {
+    //   query["data.Item"] = { $regex: itemName, $options: "i" };
+    // }
+
+
+
+    //   NEW VERSION
+
+
     let query: any = {
-      categoryName: categoryRegex
+      categoryName: categoryRegex,
+      organizationId,
     };
 
-    // 🆕 If itemName is provided, filter the nested 'data.Item' field
+    // ✅ TRUE includes-based dynamic matching
     if (itemName) {
-      query["data.Item"] = { $regex: itemName, $options: "i" };
+      const words = String(itemName)
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(Boolean);
+
+      if (words.length > 0) {
+        query["data.Item"] = {
+          $regex: words.join("|"), // OR match any word
+          $options: "i",
+        };
+      }
     }
+
 
     const items = await ItemModel.find(query).lean();
 

@@ -163,7 +163,7 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
       if (existingQuote.furnitures && furnitures) {
         existingQuote.furnitures = existingQuote.furnitures.map((existingFurn: IFurniture, index: number) => {
           const incomingFurn = furnitures[index];
-          
+
           if (incomingFurn) {
             // ONLY update the Brand IDs
             existingFurn.plywoodBrandId = incomingFurn.plywoodBrandId || null;
@@ -185,6 +185,100 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
     const quoteNo = await generateNextQuoteNumber(organizationId);
 
 
+    // 1. Fetch data from Project and Requirement models
+    const [projectData, requirementDoc] = await Promise.all([
+      ProjectModel.findById(projectId).populate("organizationId"),
+      RequirementFormModel.findOne({ projectId }),
+    ]);
+
+    const clientRaw: any = requirementDoc?.clientData || {};
+
+
+    // 2. Format Client Details String
+    const clientDetailsString = `Name: ${clientRaw.clientName || 'Not Entered Yet'}
+Email: ${clientRaw.email || 'Not Entered Yet'}
+WhatsApp: ${clientRaw.whatsapp || 'Not Entered Yet'}
+Location: ${clientRaw.location || 'Not Entered Yet'}`;
+
+    // 3. Format Project Details String
+    const projectDetailsString = `Project Name: ${projectData?.projectName || '-'}
+Quotation No: ${quoteNo}
+Date of Issue: ${new Date().toLocaleDateString('en-IN')}`;
+
+    // 4. Extract Unique Brands for Brandlist String
+    const allFittings = furnitures.flatMap(f => f.fittingsAndAccessories || []);
+    const allCommon = commonMaterials || [];
+
+    const uniqueFittings = [...new Set(allFittings.map(item => item.brandName).filter(Boolean))];
+    const uniqueCommon = [...new Set(allCommon.map((item: any) => item.brandName).filter(Boolean))];
+
+    // Get plywood/laminate brands from furniture blocks
+    const uniquePlywood = [...new Set(furnitures.map(f => f.plywoodBrand).filter(Boolean))];
+    const uniqueInnerLam = [...new Set(furnitures.map(f => f.innerLaminateBrand).filter(Boolean))];
+    const uniqueOuterLam = [...new Set(furnitures.map(f => f.outerLaminateBrand).filter(Boolean))];
+
+    const brandlistString = `Plywood: ${uniquePlywood.join(", ") || 'Standard'}
+Inner Laminate: ${uniqueInnerLam.join(", ") || 'Standard'}
+Outer Laminate: ${uniqueOuterLam.join(", ") || 'Standard'}
+Fittings: ${uniqueFittings.join(", ") || 'N/A'}
+Common Materials: ${uniqueCommon.join(", ") || 'N/A'}`;
+
+
+
+    // --- FORMATTING THE PAYMENT MILESTONES ---
+    const milestones = [
+      { m: "Booking Advance", a: "INR 10,000 (fixed)", w: "Site visit, discussion, proposal" },
+      { m: "Design Approval", a: "INR 15,000 (fixed)", w: "2D/3D design, site measurement, BOQ" },
+      { m: "Procurement", a: "80% of total", w: "Material purchase, fabrication initiation" },
+      { m: "Execution", a: "10% of total", w: "Installation, finishing, electrical/plumbing" },
+      { m: "Handover", a: "10% of total", w: "Snag closure, cleaning, final handover" }
+    ];
+
+    // Create the Milestone Table string
+    let termsString = "VERTICAL LIVING – PAYMENT TERMS\n";
+    termsString += "------------------------------------------------------------\n";
+    termsString += "MILESTONE | AMOUNT | WORK INCLUDED\n";
+
+    milestones.forEach(item => {
+      termsString += `◆ ${item.m}: ${item.a} (${item.w})\n`;
+    });
+
+    // --- FORMATTING THE LEGAL CONDITIONS ---
+    termsString += "\nPAYMENT TERMS AND CONDITIONS\n";
+    termsString += "------------------------------------------------------------\n";
+
+    const conditions = [
+      { label: "Delayed Payments:", text: "Interest of 2% per month applies after 5 working days." },
+      { label: "GST:", text: "Added as applicable by law." },
+      { label: "Forfeiture Clause:", text: "If next milestone is not paid within 7 days, previous fixed payments (INR 25,000) are forfeited. Vertical Living reserves the right to suspend project." },
+      { label: "Legal Validity:", text: "Acceptance via digital/physical signature or email is enforceable under the IT Act, 2000." }
+    ];
+
+    conditions.forEach(cond => {
+      termsString += `• ${cond.label} ${cond.text}\n`;
+    });
+
+
+
+    const whatsIncluded = `• All modular furniture as per approved design.
+• Quality raw materials and premium hardware.
+• Professional factory finish and edge-banding.
+• On-site installation and finishing by skilled teams.`
+
+    const whatsNotIncluded = `• Civil, and plumbing works.
+• Granite or Quartz countertop supply and fitting.
+• External appliances and loose furniture items.`
+
+    const whatIsFree = `• Standard design consultation.
+• Basic maintenance kit and support.
+• Multiple Quote Variations.`
+
+    const disclaimer = `• Final billing subject to actual site measurements.
+• Design and material subject to availability.
+• Quote valid for 15 days from issuance date.
+• Digital acceptance is considered legally valid.`
+
+
 
 
     // 🟢 Create DB entry (pdfLink: null for now, will update after PDF gen)
@@ -202,6 +296,24 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
       furnitures,
       commonMaterials,
 
+
+      // ✅ Store pre-formatted strings for Type 4 textareas
+      clientDetails: clientDetailsString,
+      projectDetails: projectDetailsString,
+      brandlist: brandlistString,
+
+      // Set default values for other textarea fields if empty
+      // whatsIncluded: "Standard interior execution as per design...",
+      // whatsNotIncluded: "Civil work, electrical points, and appliances...",
+      // whatIsFree: "Complementary deep cleaning post-installation",
+      // disclaimer: "Final measurements subject to site conditions.",
+
+
+      whatsIncluded,
+      whatsNotIncluded,
+      whatIsFree,
+      disclaimer,
+      TermsAndConditions: termsString,
       commonProfitOverride,
       globalTransportation,
       globalProfitPercent,
@@ -246,6 +358,58 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
   }
 };
 
+
+
+// controllers/quoteVariantController.js
+
+export const updateQuoteVaraintforClient = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { quoteId } = req.params;
+    const {
+      clientDetails,
+      projectDetails,
+      whatsIncluded,
+      whatsNotIncluded,
+      whatIsFree,
+      TermsAndConditions,
+      disclaimer,
+      brandlist
+    } = req.body;
+
+    const updatedQuote = await QuoteVarientGenerateModel.findByIdAndUpdate(
+      quoteId,
+      {
+        $set: {
+          clientDetails,
+          projectDetails,
+          whatsIncluded,
+          whatsNotIncluded,
+          whatIsFree,
+          TermsAndConditions,
+          disclaimer,
+          brandlist
+        }
+      },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedQuote) {
+      return res.status(404).json({ ok: false, message: "Quote not found" });
+    }
+
+    res.status(200).json({
+      ok: true,
+      message: "Template details saved successfully",
+      data: updatedQuote
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      ok: false,
+      message: "Failed to create variant quote",
+      error: error.message,
+    });
+  }
+};
 
 
 export const deleteClientQuote = async (req: Request, res: Response): Promise<any> => {

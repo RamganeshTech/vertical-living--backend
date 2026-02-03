@@ -3,7 +3,7 @@ import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3
 import { createMainInternalQuoteResidentialVersion, createMaterialQuote,  deleteMaterialQuoteById,  duplicateInternalQuote,  editQuoteMaterial,  getMaterialQuoteEntries, getSingleInternalQuoteResidentialVersion, updateMainInternalQuoteResidentialVersion, updateSqftRateQuoteContent } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/internalQuote.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { getMaterialCategories } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
-import {  createVariantQuotePdfGenerator, deleteClientQuote, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
+import {  createVariantQuotePdfGenerator, deleteClientQuote, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails, updateQuoteVaraintforClient } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
 import { generateClientPdfWithTypes, getAllClientQuotes, getAllClientQuotesFromDropDown, getSingleClientQuote, storeQuoteToPaymentStage, toggleBlurring } from "../../../controllers/Quote Controllers/Client Quote Controllers/clientQuote.controller";
 
 const QuoteRouter = express.Router();
@@ -125,6 +125,9 @@ QuoteRouter.post(
 
 
 
+
+
+
 QuoteRouter.get(
   "/getquotepdf/quote/:projectId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
@@ -147,6 +150,16 @@ QuoteRouter.get(
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   getAllClientQuotesFromDropDown
 );
+
+
+
+
+QuoteRouter.put(
+  "/:quoteId/update",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"), // if needed
+  updateQuoteVaraintforClient
+);
+
 
 
 

@@ -16,6 +16,17 @@ export interface IQuoteVarientMain extends IMaterialQuote {
     brandName: string | null;
     innerLaminateBrand: string | null;
     outerLaminateBrand: string | null;
+
+    whatsIncluded: string | null
+    whatsNotIncluded: string | null
+    projectDetails: string | null
+    clientDetails: string | null
+    whatIsFree: string | null
+    brandlist: string  | null
+    TermsAndConditions: string | null
+    disclaimer: string | null
+
+
     pdfLink: IQuoteVarientUpload | null
     isBlured: boolean
     pdfType: templateTypePdf[]
@@ -165,6 +176,17 @@ const QuoteVarientGenerateSchema = new mongoose.Schema<IQuoteVarientMain>({
 
     furnitures: [QuoteFurnitureSchema],
     commonMaterials: { type: [QuoteSimpleItemSchema], default: [] },
+
+
+    whatsIncluded: { type: String, default: null },
+    whatsNotIncluded: { type: String, default: null },
+    projectDetails: { type: String, default: null },
+    clientDetails: { type: String, default: null },
+    whatIsFree: { type: String, default: null },
+    brandlist: { type: String, default: null },
+    TermsAndConditions: { type: String, default: null },
+    disclaimer: { type: String, default: null },
+
     sqftRateWork: { type: [SqftWorkSchema], default: [] },
 
     commonProfitOverride: { type: Number, default: 0 },

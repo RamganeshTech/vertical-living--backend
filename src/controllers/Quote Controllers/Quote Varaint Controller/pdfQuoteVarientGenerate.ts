@@ -2322,7 +2322,7 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
                 // 2. Find the geometric center of the merged image column
                 const imageCenterY = rowsStartY - (totalRowsHeight / 2);
 
-                const text = "No Image";
+                const text = "";
                 const fontSize = FONT_SIZE - 2;
                 const textWidth = normalFont.widthOfTextAtSize(text, fontSize);
 
@@ -2469,15 +2469,15 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
             // Template Type 3: Show only subtotal without table
             if (templateType === "type 3") {
                 ensureSpace(30);
-                const totalText = `${title} ${showSubtotalText} Rs: ${total}`;
-                currentPage.drawText(`${title} ${showSubtotalText} Rs: ${total}`, {
-                    x: width - 250,
-                    y: yPosition,
-                    font: boldFont,
-                    size: FONT_SIZE,
-                    color: SUBTOTAL_COLOR
-                });
+                // currentPage.drawText(`${title} ${showSubtotalText} Rs: ${total}`, {
+                //     x: width - 250,
+                //     y: yPosition,
+                //     font: boldFont,
+                //     size: FONT_SIZE,
+                //     color: SUBTOTAL_COLOR
+                // });
 
+                // const totalText = `${title} ${showSubtotalText} Rs: ${total}`;
                 // drawTextOrBlur({
                 //     page: currentPage,
                 //     text: totalText,
@@ -2490,6 +2490,37 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
                 //     isRightAligned: true,
                 //     maskWidth: 150
                 // });
+
+
+
+
+                // Inside renderSimpleSection function
+
+                // 1. Format the total for Indian numbering (e.g., 1,59,236.00)
+                const formattedSimpleTotal = Number(total).toLocaleString('en-IN', {
+                    maximumFractionDigits: 2,
+                    minimumFractionDigits: 2
+                });
+
+                const simpleTotalText = `${showSubtotalText} Rs: ${formattedSimpleTotal}`;
+
+                // 2. Define the fixed right anchor (should match your table edge)
+                const RIGHT_ANCHOR = width - 50;
+
+                // 3. Calculate exact text width to determine starting X
+                const simpleTextWidth = boldFont.widthOfTextAtSize(simpleTotalText, FONT_SIZE);
+
+                // 4. Draw the text starting from the calculated X
+                ensureSpace(30);
+                currentPage.drawText(simpleTotalText, {
+                    x: RIGHT_ANCHOR - simpleTextWidth, // This forces perfect right-alignment
+                    y: yPosition,
+                    font: boldFont,
+                    size: FONT_SIZE,
+                    color: SUBTOTAL_COLOR
+                });
+
+                yPosition -= SECTION_SPACE;
 
 
                 yPosition -= SECTION_SPACE;
@@ -2518,13 +2549,41 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
 
             // Subtotal
             ensureSpace(30);
-            currentPage.drawText(`${showSubtotalText} Rs: ${total}`, {
-                x: width - 200,
+            // currentPage.drawText(`${showSubtotalText} Rs: ${total}`, {
+            //     x: width - 200,
+            //     y: yPosition,
+            //     font: boldFont,
+            //     size: FONT_SIZE,
+            //     color: SUBTOTAL_COLOR
+            // });
+
+            // Inside renderSimpleSection function
+
+            // 1. Format the total for Indian numbering (e.g., 1,59,236.00)
+            const formattedSimpleTotal = Number(total).toLocaleString('en-IN', {
+                maximumFractionDigits: 2,
+                minimumFractionDigits: 2
+            });
+
+            const simpleTotalText = `${title} ${showSubtotalText} Rs: ${formattedSimpleTotal}`;
+
+            // 2. Define the fixed right anchor (should match your table edge)
+            const RIGHT_ANCHOR = width - 50;
+
+            // 3. Calculate exact text width to determine starting X
+            const simpleTextWidth = boldFont.widthOfTextAtSize(simpleTotalText, FONT_SIZE);
+
+            // 4. Draw the text starting from the calculated X
+            ensureSpace(30);
+            currentPage.drawText(simpleTotalText, {
+                x: RIGHT_ANCHOR - simpleTextWidth, // This forces perfect right-alignment
                 y: yPosition,
                 font: boldFont,
                 size: FONT_SIZE,
                 color: SUBTOTAL_COLOR
             });
+
+            yPosition -= SECTION_SPACE;
 
 
             // drawTextOrBlur({
@@ -2569,6 +2628,13 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
             const colWidth = tableWidth / 3;
             const rowHeight = 25;
             const borderRadius = 10; // ✅ Adjust for more/less roundedness
+            const headerHeight = 25;
+            const headerColor = rgb(0.95, 0.97, 1);
+            const borderColor = rgb(0.85, 0.85, 0.85); // Professional light gray border
+
+
+            // Store the starting Y to draw vertical borders later
+            const tableTopY = yPosition;
 
             // Draw Section Title
             currentPage.drawText("Brand Specifications", {
@@ -2579,10 +2645,8 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
                 color: PRIMARY_COLOR,
             });
             yPosition -= 20;
+            const headerStartY = yPosition;
 
-            // Draw Rounded Header Background
-            const headerHeight = 25;
-            const headerColor = rgb(0.95, 0.97, 1);
 
             currentPage.drawRectangle({
                 x: 50,
@@ -2664,16 +2728,54 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
                     color: rgb(0.5, 0.5, 0.5),
                 });
 
+
+                // --- DRAW VERTICAL OUTLINE BORDERS FOR THIS ROW ---
+                // Left Border
+                currentPage.drawLine({
+                    start: { x: 50, y: yPosition },
+                    end: { x: 50, y: yPosition - dynamicRowHeight },
+                    thickness: 0.5,
+                    color: borderColor,
+                });
+                // Right Border
+                currentPage.drawLine({
+                    start: { x: 50 + tableWidth, y: yPosition },
+                    end: { x: 50 + tableWidth, y: yPosition - dynamicRowHeight },
+                    thickness: 0.5,
+                    color: borderColor,
+                });
+
+
+
                 yPosition -= dynamicRowHeight;
             }
+
+
+
+            // --- FINAL VERTICAL HEADER BORDERS ---
+            // This connects the rounded header to the first row's borders
+            currentPage.drawLine({
+                start: { x: 50, y: headerStartY - borderRadius },
+                end: { x: 50, y: headerStartY - headerHeight },
+                thickness: 0.5,
+                color: borderColor,
+            });
+            currentPage.drawLine({
+                start: { x: 50 + tableWidth, y: headerStartY - borderRadius },
+                end: { x: 50 + tableWidth, y: headerStartY - headerHeight },
+                thickness: 0.5,
+                color: borderColor,
+            });
             yPosition -= 20; // Extra space after table
         };
 
+
+        let productCounter = 1;
         // Main furniture loop
         for (const furniture of newVariant.furnitures) {
             ensureSpace(100);
 
-            currentPage.drawText(`Product: ${furniture.furnitureName}`, {
+            currentPage.drawText(`${productCounter}.) Product: ${furniture.furnitureName}`, {
                 x: 50,
                 y: yPosition,
                 font: boldFont,
@@ -2733,25 +2835,51 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
 
                 await drawCoreMaterialsTable(headers, columnWidths, coreMaterials, templateType);
 
-                // --- FORMATTING SUBTOTALS ---
+                // // --- FORMATTING SUBTOTALS ---
+                // const formattedSubtotal = Number(furniture?.coreMaterialsTotal).toLocaleString('en-IN', {
+                //     maximumFractionDigits: 2,
+                //     minimumFractionDigits: 2
+                // });
+
+                // // Subtotal
+                // ensureSpace(30);
+                // currentPage.drawText(`Subtotal Rs: ${formattedSubtotal}`, {
+                //     x: width - 200,
+                //     y: yPosition,
+                //     font: boldFont,
+                //     size: FONT_SIZE,
+                //     color: SUBTOTAL_COLOR,
+
+                // });
+
+
+                // --- 1. CORE MATERIALS SUBTOTAL ALIGNMENT ---
                 const formattedSubtotal = Number(furniture?.coreMaterialsTotal).toLocaleString('en-IN', {
                     maximumFractionDigits: 2,
                     minimumFractionDigits: 2
                 });
 
-                // Subtotal
+                const subtotalLabel = `Subtotal Rs: `;
+                const subtotalValue = formattedSubtotal;
+                const subtotalText = subtotalLabel + subtotalValue;
+
+                // Fixed Right Anchor Point (e.g., 50 units from the right edge)
+                const RIGHT_ANCHOR = width - 50;
+
+                // Calculate the width of the text to find the exact X starting position
+                const subtotalWidth = boldFont.widthOfTextAtSize(subtotalText, FONT_SIZE);
+
                 ensureSpace(30);
-                const subtotalText = `Subtotal Rs: ${formattedSubtotal}`;
-                currentPage.drawText(`Subtotal Rs: ${formattedSubtotal}`, {
-                    x: width - 200,
+                currentPage.drawText(subtotalText, {
+                    x: RIGHT_ANCHOR - subtotalWidth, // This ensures the text ENDS at the anchor
                     y: yPosition,
                     font: boldFont,
                     size: FONT_SIZE,
                     color: SUBTOTAL_COLOR,
-
                 });
 
 
+                // const subtotalText = `Subtotal Rs: ${formattedSubtotal}`;
                 // drawTextOrBlur({
                 //     page: currentPage,
                 //     text: subtotalText,
@@ -2775,17 +2903,37 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
 
             // Furniture Total
             ensureSpace(40);
-            // --- FORMATTING SUBTOTALS ---
-            const formattedSubtotal = Number(furniture.furnitureTotal).toLocaleString('en-IN', {
+            // // --- FORMATTING SUBTOTALS ---
+            // const formattedSubtotal = Number(furniture.furnitureTotal).toLocaleString('en-IN', {
+            //     maximumFractionDigits: 2,
+            //     minimumFractionDigits: 2
+            // });
+
+            // currentPage.drawText(`Product Total: Rs: ${formattedSubtotal}`, {
+            //     x: width - 250,
+            //     y: yPosition,
+            //     font: boldFont,
+            //     size: 14,
+            //     color: PRODUCTTOTAL_COLOR
+            // });
+
+            // --- 2. PRODUCT TOTAL ALIGNMENT ---
+            const formattedProductTotal = Number(furniture.furnitureTotal).toLocaleString('en-IN', {
                 maximumFractionDigits: 2,
                 minimumFractionDigits: 2
             });
+            const RIGHT_ANCHOR = width - 50;
 
-            currentPage.drawText(`Product Total: Rs: ${formattedSubtotal}`, {
-                x: width - 250,
+            const totalText = `Product Total: Rs: ${formattedProductTotal}`;
+            const totalFontSize = 14;
+            const totalTextWidth = boldFont.widthOfTextAtSize(totalText, totalFontSize);
+
+            ensureSpace(40);
+            currentPage.drawText(totalText, {
+                x: RIGHT_ANCHOR - totalTextWidth, // Alignment fix: right-justified to the same anchor
                 y: yPosition,
                 font: boldFont,
-                size: 14,
+                size: totalFontSize,
                 color: PRODUCTTOTAL_COLOR
             });
 
@@ -2805,6 +2953,9 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
             //     maskWidth: 180
             // });
             yPosition -= SECTION_SPACE * 1.5;
+
+            // 3. Increment the counter for the next product
+            productCounter++;
         }
 
 
@@ -2820,59 +2971,66 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
 
         // === GRAND TOTAL ===
         // This ensures 2 decimal places and adds Indian style commas (e.g., 93,559.96)
+        // const formattedGrandTotal = Number(newVariant.grandTotal).toLocaleString('en-IN', {
+        //     maximumFractionDigits: 2,
+        //     minimumFractionDigits: 2
+        // });
+        // const grandTotalFullText = `Grand Total Rs: ${formattedGrandTotal}`;
+
+        // if (yPosition > 100) {
+        //     currentPage.drawText(`Grand Total Rs:${formattedGrandTotal}`, {
+        //         x: width - 250,
+        //         y: yPosition,
+        //         font: boldFont,
+        //         size: 16,
+        //         // color: rgb(0.1, 0.5, 0.1),
+        //         color: GRAND_TOTAL_COLOR,
+        //     });
+        // } else {
+        //     currentPage = pdfDoc.addPage();
+        //     yPosition = currentPage.getHeight() - 100;
+
+        //     const fullText = `GRAND TOTAL Rs: ${formattedGrandTotal}`;
+        //     currentPage.drawText(fullText, {
+        //         x: (width - boldFont.widthOfTextAtSize(fullText, 16)) / 2,
+        //         y: yPosition,
+        //         font: boldFont,
+        //         size: 16,
+        //         color: GRAND_TOTAL_COLOR,
+        //     });
+
+
+
+        // }
+
+
+        // === GRAND TOTAL ===
         const formattedGrandTotal = Number(newVariant.grandTotal).toLocaleString('en-IN', {
             maximumFractionDigits: 2,
             minimumFractionDigits: 2
         });
+
         const grandTotalFullText = `Grand Total Rs: ${formattedGrandTotal}`;
-        if (yPosition > 100) {
-            currentPage.drawText(`Grand Total Rs:${formattedGrandTotal}`, {
-                x: width - 250,
-                y: yPosition,
-                font: boldFont,
-                size: 16,
-                // color: rgb(0.1, 0.5, 0.1),
-                color: GRAND_TOTAL_COLOR,
-            });
-            // drawTextOrBlur({
-            //     page: currentPage,
-            //     text: grandTotalFullText,
-            //     x: width - 50,
-            //     y: yPosition,
-            //     fontSize: 16,
-            //     font: boldFont,
-            //     color: GRAND_TOTAL_COLOR,
-            //     isBlurred: isBlurred,
-            //     isRightAligned: true,
-            //     maskWidth: 200 // Larger mask to cover "Grand Total Rs: XXXXX"
-            // });
-        } else {
+        const grandTotalFontSize = 16;
+        const RIGHT_ANCHOR = width - 50; // ✅ Matches your table and subtotal ending point
+
+        // Calculate text width for right-alignment
+        const grandTotalWidth = boldFont.widthOfTextAtSize(grandTotalFullText, grandTotalFontSize);
+
+        if (yPosition < 100) {
+            // Not enough space? Add a new page
             currentPage = pdfDoc.addPage();
             yPosition = currentPage.getHeight() - 100;
-
-            const fullText = `GRAND TOTAL Rs: ${formattedGrandTotal}`;
-            currentPage.drawText(fullText, {
-                x: (width - boldFont.widthOfTextAtSize(fullText, 16)) / 2,
-                y: yPosition,
-                font: boldFont,
-                size: 16,
-                color: GRAND_TOTAL_COLOR,
-            });
-
-            // drawTextOrBlur({
-            //     page: currentPage,
-            //     text: grandTotalFullText,
-            //     x: width - 50,
-            //     y: yPosition,
-            //     fontSize: 16,
-            //     font: boldFont,
-            //     color: GRAND_TOTAL_COLOR,
-            //     isBlurred: isBlurred,
-            //     isRightAligned: true,
-            //     maskWidth: 200 // Larger mask to cover "Grand Total Rs: XXXXX"
-            // });
-
         }
+
+        // ✅ Draw right-aligned Grand Total
+        currentPage.drawText(grandTotalFullText, {
+            x: RIGHT_ANCHOR - grandTotalWidth, // This aligns the end of the text to the anchor
+            y: yPosition,
+            font: boldFont,
+            size: grandTotalFontSize,
+            color: GRAND_TOTAL_COLOR,
+        });
 
         // === TERMS AND CONDITIONS ===
         // for (let i = 0; i < 3; i++) {
@@ -3077,6 +3235,57 @@ export const generateClientQuoteVariantPdfwithTemplates = async ({
         //     thickness: 1,
         //     color: rgb(0, 0, 0),
         // });
+
+
+
+        // Add this utility function inside your PDF generator file
+        const addAttractiveFooter = (pdfDoc: PDFDocument, boldFont: any, PRIMARY_COLOR: any) => {
+            const pages = pdfDoc.getPages();
+            const totalPages = pages.length;
+
+            pages.forEach((page, index) => {
+                const { width } = page.getSize();
+                const footerY = 30; // Position from bottom
+                const pageNumText = `Page ${index + 1} of ${totalPages}`;
+                const fontSize = 10;
+                const textWidth = boldFont.widthOfTextAtSize(pageNumText, fontSize);
+
+                // 1. Draw a thin, elegant line above the footer
+                page.drawLine({
+                    start: { x: 50, y: footerY + 15 },
+                    end: { x: width - 50, y: footerY + 15 },
+                    thickness: 0.5,
+                    color: rgb(0.8, 0.8, 0.8),
+                });
+
+                // 2. Draw a small colorful accent box behind the page number
+                const boxWidth = textWidth + 20;
+                const boxHeight = 18;
+                page.drawRectangle({
+                    x: (width - boxWidth) / 2,
+                    y: footerY - 5,
+                    width: boxWidth,
+                    height: boxHeight,
+                    color: PRIMARY_COLOR,
+                    opacity: 0.1, // Soft light blue background
+                });
+
+                // 3. Draw the Page Number text centered
+                page.drawText(pageNumText, {
+                    x: (width - textWidth) / 2,
+                    y: footerY,
+                    size: fontSize,
+                    font: boldFont,
+                    color: PRIMARY_COLOR,
+                });
+            });
+        };
+
+
+        // ✅ FINAL STEP: Add page numbers to all created pages
+        addAttractiveFooter(pdfDoc, boldFont, PRIMARY_COLOR);
+
+
 
         const pdfBytes = await pdfDoc.save();
         const fileName = `home-interior-quote-${newVariant.quoteNo}-${Date.now()}.pdf`;
@@ -3715,6 +3924,54 @@ export const generateClientQuoteVariantSqftRatePdfwithTemplates = async ({
 
 
         // --- 6. FINAL GENERATION & UPLOAD ---
+
+
+        // Add this utility function inside your PDF generator file
+        const addAttractiveFooter = (pdfDoc: PDFDocument, boldFont: any, PRIMARY_COLOR: any) => {
+            const pages = pdfDoc.getPages();
+            const totalPages = pages.length;
+
+            pages.forEach((page, index) => {
+                const { width } = page.getSize();
+                const footerY = 30; // Position from bottom
+                const pageNumText = `Page ${index + 1} of ${totalPages}`;
+                const fontSize = 10;
+                const textWidth = boldFont.widthOfTextAtSize(pageNumText, fontSize);
+
+                // 1. Draw a thin, elegant line above the footer
+                page.drawLine({
+                    start: { x: 50, y: footerY + 15 },
+                    end: { x: width - 50, y: footerY + 15 },
+                    thickness: 0.5,
+                    color: rgb(0.8, 0.8, 0.8),
+                });
+
+                // 2. Draw a small colorful accent box behind the page number
+                const boxWidth = textWidth + 20;
+                const boxHeight = 18;
+                page.drawRectangle({
+                    x: (width - boxWidth) / 2,
+                    y: footerY - 5,
+                    width: boxWidth,
+                    height: boxHeight,
+                    color: PRIMARY_COLOR,
+                    opacity: 0.1, // Soft light blue background
+                });
+
+                // 3. Draw the Page Number text centered
+                page.drawText(pageNumText, {
+                    x: (width - textWidth) / 2,
+                    y: footerY,
+                    size: fontSize,
+                    font: boldFont,
+                    color: PRIMARY_COLOR,
+                });
+            });
+        };
+
+
+        // ✅ FINAL STEP: Add page numbers to all created pages
+        addAttractiveFooter(pdfDoc, boldFont, PRIMARY_COLOR);
 
 
 
