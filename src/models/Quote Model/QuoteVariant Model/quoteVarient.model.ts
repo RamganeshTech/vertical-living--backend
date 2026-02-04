@@ -120,7 +120,14 @@ const QuoteSimpleItemSchema = new Schema<ISimpleItem>(
 // Each furniture entry
 const QuoteFurnitureSchema = new mongoose.Schema<IQuoteFurniture>({
     furnitureName: { type: String, default: null },
-
+    dimention: {
+        type: {
+            height: { type: Number, default: null },
+            width: { type: Number, default: null },
+            depth: { type: Number, default: null },
+        },
+        default: {}
+    },
     furnitureProfit: { type: Number, default: null },
     fabricationCost: { type: Number, default: null },
     scopeOfWork: { type: String, default: null },
