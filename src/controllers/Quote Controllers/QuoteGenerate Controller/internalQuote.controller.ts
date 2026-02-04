@@ -62,6 +62,7 @@ export const createMainInternalQuoteResidentialVersion = async (req: Request, re
         quoteId: newQuote._id, // Link to the internal quote
         quoteNo: quoteNo,
         organizationId,
+        internalQuote: quoteNumber,
         projectId,
         mainQuoteName,
         quoteType,
@@ -455,7 +456,14 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
 export const getMaterialQuoteEntries = async (req: Request, res: Response): Promise<any> => {
   try {
     const { organizationId } = req.params;
-    const { projectId, createdAt, quoteNo } = req.query;
+    const { projectId,
+      createdAt,
+      searchTerm,
+      startDate,
+      endDate,
+      quoteNo,
+      quoteType,
+    } = req.query;
     // Optional: Validate inputs
     if (!organizationId) {
       return res.status(400).json({ ok: false, message: "Invalid organizationId" });
@@ -469,11 +477,43 @@ export const getMaterialQuoteEntries = async (req: Request, res: Response): Prom
       filters.projectId = projectId;
     }
 
-    // ✅ Add quote number search (partial match)
+    // // ✅ Add quote number search (partial match)
     if (quoteNo) {
       const q = String(quoteNo).trim();
       filters.quoteNo = { $regex: q.replace(/Q-/, ''), $options: 'i' };
     }
+
+
+    // 2. Multi-Field Search (mainQuoteName OR quoteNo)
+    if (searchTerm) {
+      filters.$or = [
+        { mainQuoteName: { $regex: searchTerm, $options: 'i' } },
+        { quoteNo: { $regex: searchTerm, $options: 'i' } }
+      ];
+    }
+
+
+    // 3. Date Range Filter
+    // Handles filtering between a start and end point
+    if (startDate || endDate) {
+      filters.createdAt = {};
+      if (startDate) {
+        filters.createdAt.$gte = new Date(startDate as string);
+      }
+      if (endDate) {
+        // Set to end of day (23:59:59) to include the full end date
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        filters.createdAt.$lte = end;
+      }
+    }
+
+
+    // 4. Specific Quote Type filter (optional)
+    if (quoteType && quoteType !== 'all') {
+      filters.quoteType = quoteType;
+    }
+
 
     // ✅ Add createdAt filter (match same day)
     if (createdAt) {
@@ -492,7 +532,7 @@ export const getMaterialQuoteEntries = async (req: Request, res: Response): Prom
 
     const quotes = await InternalQuoteEntryModel.find(filters)
       .sort({ createdAt: -1 })
-      .populate("projectId");
+      .populate("projectId", "_id projectName");
 
     return res.status(200).json({
       ok: true,

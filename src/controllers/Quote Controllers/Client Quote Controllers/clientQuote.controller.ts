@@ -42,7 +42,9 @@ export const getAllClientQuotes = async (req: Request, res: Response): Promise<a
         }
 
 
-        const quotes = await QuoteVarientGenerateModel.find(filters).sort({ createdAt: -1 }).populate("projectId");
+        const quotes = await QuoteVarientGenerateModel.find(filters).sort({ createdAt: -1 })
+        .populate("projectId", "_id projectName")
+        .populate("quoteId", "_id quoteNo mainQuoteName quoteType quoteCategory")
 
         return res.status(200).json({
             ok: true,

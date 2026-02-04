@@ -157,6 +157,8 @@ QuoteRouter.get(
 QuoteRouter.put(
   "/:quoteId/update",
   multiRoleAuthMiddleware("owner", "staff", "CTO"), // if needed
+  imageUploadToS3.any(), // ✅ Capture all files
+    processUploadFiles,
   updateQuoteVaraintforClient
 );
 

@@ -27,6 +27,8 @@ export interface IQuoteVarientMain extends IMaterialQuote {
     TermsAndConditions: string | null
     disclaimer: string | null
 
+    internalQuote: string | null
+
 
     pdfLink: IQuoteVarientUpload | null
     isBlured: boolean

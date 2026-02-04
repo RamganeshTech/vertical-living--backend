@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Types } from "mongoose"
 import InternalQuoteEntryModel, { IFurniture } from "../../../models/Quote Model/QuoteGenerate Model/InternalQuote.model";
 import { CategoryModel, ItemModel } from "../../../models/Quote Model/RateConfigAdmin Model/rateConfigAdmin.model";
 import QuoteVarientGenerateModel from "../../../models/Quote Model/QuoteVariant Model/quoteVarient.model";
@@ -285,12 +286,36 @@ Common Materials: ${uniqueCommon.join(", ") || 'N/A'}`;
     // • Basic maintenance kit and support.
     // • Multiple Quote Variations.`
 
-    const whatIsFree = `• Electrical Work is complementary`
+    // const whatIsFree = `• Electrical Work is complementary`
+    const whatIsFree = `Complimentary (Applicable for projects above ₹5,00,000):
+• Electrical labour for open-wall wiring only
+• Excludes wall cutting/chasing, plastering, patchwork, painting
+• Excludes all electrical materials and accessories
+• Subject to Complimentary Terms mentioned in Disclaimer`
 
-    const disclaimer = `• Final billing subject to actual site measurements.
-• Design and material subject to availability.
-• Quote valid for 15 days from issuance date.
-• Digital acceptance is considered legally valid.`
+   const disclaimer = `DISCLAIMER, PRELIMINARY ESTIMATE & CHANGE CONTROL
+------------------------------------------------------------
+1. PURPOSE OF PRELIMINARY QUOTES: Any rough estimate or sqft-based pricing is shared solely to help the Client assess budget feasibility. Final project cost may vary significantly once actual requirements and scope are defined.
+
+2. INDICATIVE NATURE OF QUOTES: Rates shared without complete inputs (design, site measurements, material preferences) are only indicative and not binding. Final pricing is issued only after design finalization and material selection.
+
+3. DESIGN FINALITY: All dimensions, finishes, and specifications are based on details approved at the time of quotation. Changes requested after approval will be treated as variations with additional costs.
+
+4. SCOPE BOUNDARIES: Covers only explicitly mentioned items. Extra civil, electrical, or plumbing works requested during execution will be charged separately via revised quotation.
+
+5. MATERIAL & PRICE FLUCTUATIONS: Materials are subject to market availability. Prices are subject to change due to supplier revisions, tax changes, or logistics costs.
+
+6. TIMELINE DEPENDENCIES: Estimates depend on timely approvals and site readiness. External delays or design changes will result in automatic timeline extensions without penalty to the Company.
+
+7. CLIENT APPROVALS: Approvals given via email, WhatsApp, or signature are final. Rework requested after approval is chargeable.
+
+8. SITE CONDITIONS: Quotation is based on visible conditions. Hidden structural defects, dampness, or concealed plumbing/electrical issues discovered during execution are out of scope and charged separately.
+
+9. NO COMMITMENT: No price or timeline is locked until a detailed final quotation is formally approved. Preliminary numbers do not constitute a commitment.
+
+10. NO VERBAL COMMITMENTS: Only specifications recorded in writing within this document shall be binding.
+
+11. FORCE MAJEURE: The Company is not liable for delays caused by strikes, lockdowns, transport disruptions, or natural calamities.`
 
 
 
@@ -431,34 +456,144 @@ export const updateQuoteVaraintforClient = async (req: Request, res: Response): 
       whatIsFree,
       TermsAndConditions,
       disclaimer,
-      brandlist
+      brandlist,
+      furnitureUpdates
+
     } = req.body;
 
-    const updatedQuote = await QuoteVarientGenerateModel.findByIdAndUpdate(
-      quoteId,
-      {
-        $set: {
-          clientDetails,
-          projectDetails,
-          whatsIncluded,
-          whatsNotIncluded,
-          whatIsFree,
-          TermsAndConditions,
-          disclaimer,
-          brandlist
-        }
-      },
-      { new: true } // Return the updated document
-    );
 
-    if (!updatedQuote) {
+
+    const files = req.files as any[] | undefined;
+    const parsedUpdates = furnitureUpdates ? JSON.parse(furnitureUpdates) : [];
+
+    // 1. Prepare the basic updates
+    let updateObject: any = {
+      $set: {
+        clientDetails,
+        projectDetails,
+        whatsIncluded,
+        whatsNotIncluded,
+        whatIsFree,
+        TermsAndConditions,
+        disclaimer,
+        brandlist,
+      }
+    };
+
+
+    // 2. Fetch the current quote to ensure we have the structure
+    const quote = await QuoteVarientGenerateModel.findById(quoteId);
+    if (!quote) return res.status(404).json({ ok: false, message: "Quote not found" });
+
+    // 3. Process Furniture Updates (Image URLs and Dimensions)
+    // parsedUpdates.forEach((update: any) => {
+    //   const { furnitureId, dimention } = update;
+
+    //   // Find if a file was uploaded for this specific furniture
+    //   const fieldKey = `furnitureImage_${furnitureId}`;
+    //   const matchedFile = files?.find(f => f.fieldname === fieldKey);
+
+    //   // Update dimensions
+    //   updateObject.$set[`furnitures.$[elem].dimention`] = dimention;
+
+    //   // Update Image URL ONLY if a new file was uploaded
+    //   if (matchedFile) {
+    //     // We update the imageUrl inside the coreMaterials[0] specifically
+    //     updateObject.$set[`furnitures.$[elem].coreMaterials.0.imageUrl`] = matchedFile.location;
+    //   }
+    // });
+
+    // const updatedQuote = await QuoteVarientGenerateModel.findByIdAndUpdate(
+    //   quoteId,
+    //   updateObject,
+    //   {
+    //     arrayFilters: [{ "elem._id": { $in: parsedUpdates.map((u: any) => u.furnitureId) } }],
+    //     new: true
+    //   }
+    // );
+
+
+
+    // 1. Prepare bulk operations
+    const bulkOps = [];
+
+    // 2. Add the general text field updates (clientDetails, etc.)
+    // 1. General Fields Update (Only if values exist)
+    bulkOps.push({
+      updateOne: {
+        filter: { _id: new Types.ObjectId(quoteId) },
+        update: {
+          $set: {
+            clientDetails,
+            projectDetails,
+            whatsIncluded,
+            whatsNotIncluded,
+            whatIsFree,
+            TermsAndConditions,
+            disclaimer,
+            brandlist,
+            updatedAt: new Date()
+          }
+        }
+      }
+    });
+
+    // 3. Add individual furniture updates to the bulk array
+    // 2. Individual Furniture Updates
+    // 2. Individual Furniture Updates
+    parsedUpdates.forEach((update: any) => {
+      const fieldKey = `furnitureImage_${update.furnitureId}`;
+      const matchedFile = files?.find(f => f.fieldname === fieldKey);
+
+      const setPayload: any = {
+        "furnitures.$[elem].dimention": update.dimention,
+        "furnitures.$[elem].scopeOfWork": update.scopeOfWork
+      };
+
+      if (matchedFile) {
+        setPayload["furnitures.$[elem].coreMaterials.0.imageUrl"] = matchedFile.location;
+      }
+
+      bulkOps.push({
+        updateOne: {
+          // ✅ Convert both IDs to ObjectIds
+          filter: { _id: new Types.ObjectId(quoteId) },
+          update: { $set: setPayload },
+          arrayFilters: [{ "elem._id": new Types.ObjectId(update.furnitureId) }]
+        }
+      });
+    });
+
+    // Execute bulkWrite with timestamps disabled for the individual array ops if needed,
+    // or just run it standard as below:
+    const result = await QuoteVarientGenerateModel.collection.bulkWrite(bulkOps, { ordered: true });
+
+
+    // const updatedQuote = await QuoteVarientGenerateModel.findByIdAndUpdate(
+    //   quoteId,
+    //   {
+    //     $set: {
+    //       clientDetails,
+    //       projectDetails,
+    //       whatsIncluded,
+    //       whatsNotIncluded,
+    //       whatIsFree,
+    //       TermsAndConditions,
+    //       disclaimer,
+    //       brandlist
+    //     }
+    //   },
+    //   { new: true } // Return the updated document
+    // );
+
+    if (!result) {
       return res.status(404).json({ ok: false, message: "Quote not found" });
     }
 
     res.status(200).json({
       ok: true,
       message: "Template details saved successfully",
-      data: updatedQuote
+      data: result
     });
   } catch (error: any) {
     res.status(500).json({
