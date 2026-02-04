@@ -7,7 +7,16 @@ import { generateClientQuoteVariantPdfwithTemplates, generateClientQuoteVariantS
 export const getAllClientQuotes = async (req: Request, res: Response): Promise<any> => {
     try {
         const { organizationId } = req.params;
-        const { projectId, createdAt, quoteNo } = req.query;
+        const {
+            projectId,
+            createdAt, quoteNo,
+
+            search,      // Global search term
+            startDate,   // Filter start
+            endDate,     // Filter end
+            quoteType    // basic, sqft_rate, etc.
+
+        } = req.query;
         // Optional: Validate inputs
         if (!organizationId) {
             return res.status(400).json({ ok: false, message: "Invalid organizationId" });
@@ -42,9 +51,38 @@ export const getAllClientQuotes = async (req: Request, res: Response): Promise<a
         }
 
 
+        if (search) {
+            const searchRegex = new RegExp(String(search).trim(), 'i');
+            filters.$or = [
+                { quoteNo: { $regex: searchRegex } },
+                { mainQuoteName: { $regex: searchRegex } }
+            ];
+        }
+
+        // ✅ Quote Type Filter
+        if (quoteType && quoteType !== 'all') {
+            filters.quoteType = quoteType;
+        }
+
+        // ✅ Date Range Filter (startDate to endDate)
+        if (startDate || endDate) {
+            filters.createdAt = {};
+            if (startDate) {
+                const start = new Date(startDate as string);
+                start.setHours(0, 0, 0, 0);
+                filters.createdAt.$gte = start;
+            }
+            if (endDate) {
+                const end = new Date(endDate as string);
+                end.setHours(23, 59, 59, 999); // Include the full end day
+                filters.createdAt.$lte = end;
+            }
+        }
+
+
         const quotes = await QuoteVarientGenerateModel.find(filters).sort({ createdAt: -1 })
-        .populate("projectId", "_id projectName")
-        .populate("quoteId", "_id quoteNo mainQuoteName quoteType quoteCategory")
+            .populate("projectId", "_id projectName")
+            .populate("quoteId", "_id quoteNo mainQuoteName quoteType quoteCategory")
 
         return res.status(200).json({
             ok: true,
@@ -226,7 +264,7 @@ export const toggleBlurring = async (req: Request, res: Response): Promise<any> 
 export const generateClientPdfWithTypes = async (req: Request, res: Response): Promise<any> => {
     try {
         const { quoteId, projectId } = req.params
-        const {isBlurred=false, quoteType = "basic", type} = req.body //type 1, 2, 3
+        const { isBlurred = false, quoteType = "basic", type } = req.body //type 1, 2, 3
 
 
         const newVariant = await QuoteVarientGenerateModel.findById(quoteId).populate('projectId')
@@ -240,7 +278,7 @@ export const generateClientPdfWithTypes = async (req: Request, res: Response): P
         let pdfResponse = null
 
         // console.log("new varient", newVariant)
-        if(quoteType === "basic"){
+        if (quoteType === "basic") {
             pdfResponse = await generateClientQuoteVariantPdfwithTemplates({ quoteId, projectId, newVariant, templateType: type, isBlurred });
         }
         // const pdfResponse = await generateQuoteVariantPdfWithTemplate({ quoteId, projectId, newVariant , templateType});
@@ -249,7 +287,7 @@ export const generateClientPdfWithTypes = async (req: Request, res: Response): P
         // await newVariant.save()
 
         if (quoteType === "sqft_rate") {
-            pdfResponse = await generateClientQuoteVariantSqftRatePdfwithTemplates({quoteId, projectId, newVariant, templateType: "type 1", isBlurred})
+            pdfResponse = await generateClientQuoteVariantSqftRatePdfwithTemplates({ quoteId, projectId, newVariant, templateType: "type 1", isBlurred })
         }
 
 

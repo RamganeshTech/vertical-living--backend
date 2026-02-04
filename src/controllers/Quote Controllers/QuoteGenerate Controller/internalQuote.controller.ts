@@ -456,13 +456,15 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
 export const getMaterialQuoteEntries = async (req: Request, res: Response): Promise<any> => {
   try {
     const { organizationId } = req.params;
-    const { projectId,
-      createdAt,
-      searchTerm,
+    const { 
+      projectId,
+      search,
       startDate,
       endDate,
-      quoteNo,
       quoteType,
+
+      createdAt,
+      quoteNo,
     } = req.query;
     // Optional: Validate inputs
     if (!organizationId) {
@@ -485,10 +487,10 @@ export const getMaterialQuoteEntries = async (req: Request, res: Response): Prom
 
 
     // 2. Multi-Field Search (mainQuoteName OR quoteNo)
-    if (searchTerm) {
+    if (search) {
       filters.$or = [
-        { mainQuoteName: { $regex: searchTerm, $options: 'i' } },
-        { quoteNo: { $regex: searchTerm, $options: 'i' } }
+        { mainQuoteName: { $regex: search, $options: 'i' } },
+        { quoteNo: { $regex: search, $options: 'i' } }
       ];
     }
 

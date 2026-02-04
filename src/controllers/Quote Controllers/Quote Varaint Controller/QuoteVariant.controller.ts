@@ -273,27 +273,76 @@ Common Materials: ${uniqueCommon.join(", ") || 'N/A'}`;
 
 
 
-    const whatsIncluded = `• All modular furniture as per approved design.
-• Quality raw materials and premium hardware.
-• Professional factory finish and edge-banding.
-• On-site installation and finishing by skilled teams.`
+    //     const whatsIncluded = `• All modular furniture as per approved design.
+    // • Quality raw materials and premium hardware.
+    // • Professional factory finish and edge-banding.
+    // • On-site installation and finishing by skilled teams.`
 
-    const whatsNotIncluded = `• Civil, and plumbing works.
-• Granite or Quartz countertop supply and fitting.
-• External appliances and loose furniture items.`
+
+    const whatsIncluded = `
+• Modular Furniture (As per Approved Design)  
+  Supply and installation of modular furniture strictly as per the final approved designs, layouts, dimensions, and specifications.
+
+• Materials & Hardware (As Specified in the Quote)  
+  Quality raw materials including boards/plywood, laminates/finishes, and premium hardware as mentioned in this quotation by brand, model, thickness, and finish.  
+  Any upgrades or changes can be accommodated with a revised quote after your approval.
+
+• Factory Finish & Edge Banding (2mm Standard Finish)  
+  Professional factory finish with 2mm edge banding as part of the standard manufacturing process for the selected materials and finishes.  
+  Special finishes or different edge band thickness can be provided based on your preference with a revised quote.
+`;
+
+    //     const whatsNotIncluded = `• Civil, and plumbing works.
+    // • Granite or Quartz countertop supply and fitting.
+    // • External appliances and loose furniture items.`
+
+    const whatsNotIncluded = `
+• Electrical, Plumbing, Painting & Civil Works (Unless Specifically Quoted)  
+  Electrical works, plumbing works, painting, wall cutting/chasing, patchwork, plastering, and any other civil modifications are not included unless they are specifically mentioned in this quotation.
+
+• Appliances, Lights & Loose Accessories  
+  Appliances, lights, fixtures, decorative fittings, and loose accessories are not included unless explicitly specified in the quotation.
+
+• Debris Removal, Permissions & Third-Party Charges  
+  Debris removal, waste disposal, building permissions, society or association charges, parking or loading fees, lift usage charges, and any third-party coordination or approvals are not included unless clearly mentioned in this quotation.
+`;
+
 
     //     const whatIsFree = `• Standard design consultation.
     // • Basic maintenance kit and support.
     // • Multiple Quote Variations.`
 
     // const whatIsFree = `• Electrical Work is complementary`
-    const whatIsFree = `Complimentary (Applicable for projects above ₹5,00,000):
-• Electrical labour for open-wall wiring only
-• Excludes wall cutting/chasing, plastering, patchwork, painting
-• Excludes all electrical materials and accessories
-• Subject to Complimentary Terms mentioned in Disclaimer`
+    //     const whatIsFree = `Complimentary (Applicable for projects above ₹5,00,000):
+    // • Electrical labour for open-wall wiring only
+    // • Excludes wall cutting/chasing, plastering, patchwork, painting
+    // • Excludes all electrical materials and accessories
+    // • Subject to Complimentary Terms mentioned in Disclaimer`
 
-   const disclaimer = `DISCLAIMER, PRELIMINARY ESTIMATE & CHANGE CONTROL
+    const whatIsFree = `Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
+
+• Complimentary electrical labour is provided only for open-wall wiring within the approved interior work scope.
+
+• This complimentary service covers labour charges only and does not include any electrical materials or accessories such as wires, conduits, switches, sockets, switchboards, MCBs, DBs, fittings, lights, fans, or fixtures.
+
+• Wall cutting, wall chasing, wall breaking, plastering, patchwork, painting, finishing, or restoration work is strictly excluded and will be charged separately if required.
+
+• Complimentary electrical labour applies only to new wiring in open walls and excludes rewiring of existing concealed wiring, fault finding, rectification, shifting of main lines, or modifications to existing electrical infrastructure unless expressly quoted.
+
+• Any additional electrical points, layout changes, or work beyond the approved electrical layout shall be chargeable.
+
+• Complimentary electrical labour is applicable only if the final approved and executed project value exceeds ₹5,00,000. If the project value is revised below this threshold due to scope reduction, cancellation, or client-driven changes, the Company reserves the right to withdraw this benefit.
+
+• Approvals, permits, inspections, and coordination with building management or authorities are not included and remain the Client’s responsibility unless separately quoted.
+
+• This complimentary service does not extend the project delivery timeline. Delays due to material availability, client approvals, or site readiness shall not be attributed to the Company.
+
+• Complimentary electrical labour is provided at the Company’s discretion, may be modified or withdrawn in case of payment delays, scope changes, site constraints, or non-compliance with payment terms, and is not a contractual entitlement.
+
+(Refer to Disclaimer section for detailed terms and conditions.)`
+
+
+    const disclaimer = `DISCLAIMER, PRELIMINARY ESTIMATE & CHANGE CONTROL
 ------------------------------------------------------------
 1. PURPOSE OF PRELIMINARY QUOTES: Any rough estimate or sqft-based pricing is shared solely to help the Client assess budget feasibility. Final project cost may vary significantly once actual requirements and scope are defined.
 
@@ -325,39 +374,123 @@ Common Materials: ${uniqueCommon.join(", ") || 'N/A'}`;
     // const model = genAI.models.generateContent({ model: "gemini-1.5-flash" });
 
     // --- GEMINI SCOPE OF WORK GENERATION ---
+    // const furnituresWithAIQuotes = await Promise.all(
+    //   furnitures.map(async (furniture: any) => {
+
+
+    //     try {
+    //       const promptText = `
+    //     Act as a professional interior designer for "Vertical Living". 
+    //     Write a professional "Scope of Work" (max 2 sentences) for this furniture: ${furniture.furnitureName}.
+    //     Details:
+    //     - Material: ${furniture.plywoodBrand || 'Premium'} Plywood.
+    //     - Finish: ${furniture.outerLaminateBrand || 'Selected'} Outer Laminate and ${furniture.innerLaminateBrand || 'Matching'} Inner Laminate.
+    //     - Hardware: ${furniture.fittingsAndAccessories?.map((f: any) => f.itemName).join(", ") || 'Standard branded fittings'}.
+
+    //     Write it in a formal tone focusing on manufacturing quality and installation.
+    //   `;
+
+    //       // In @google/genai, you call generateContent directly from models
+    //       // The 'contents' property requires a specific structure: [{ role: 'user', parts: [{ text: '...' }] }]
+    //       const result = await genAI.models.generateContent({
+    //         model: "gemini-1.5-flash",
+    //         contents: [{ role: 'user', parts: [{ text: promptText }] }] // ✅ Fixed 'contents' requirement
+    //       });
+
+    //       // Extract text from the candidate parts
+    //       const text = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+
+    //       return {
+    //         ...furniture,
+    //         scopeOfWork: text || `Professional fabrication and installation of ${furniture.furnitureName}.`
+    //       };
+    //     } catch (aiError) {
+    //       console.error("AI Generation failed for a furniture item:", aiError);
+    //       return {
+    //         ...furniture,
+    //         scopeOfWork: `Comprehensive manufacturing and installation of ${furniture.furnitureName} as per approved site measurements.`
+    //       };
+    //     }
+    //   })
+    // );
+
+
+    const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+    // --- GEMINI SCOPE OF WORK GENERATION ---
     const furnituresWithAIQuotes = await Promise.all(
-      furnitures.map(async (furniture: any) => {
+      furnitures.map(async (furniture: any, index:number) => {
+
+        await delay(500 * index);
+
         try {
+          // 1. Build a clean dataset of ONLY what exists
+          const technicalData = [];
+
+          if (furniture?.plywoodBrand) technicalData.push(`Plywood: ${furniture.plywoodBrand}`);
+          if (furniture?.outerLaminateBrand) technicalData.push(`Outer Mica: ${furniture.outerLaminateBrand}`);
+          if (furniture?.innerLaminateBrand) technicalData.push(`Inner Mica: ${furniture.innerLaminateBrand}`);
+
+          const hardware = furniture?.fittingsAndAccessories
+            ?.map((f: any) => f.itemName)
+            .filter((name: string) => name && name.trim() !== "")
+            .join(", ");
+          if (hardware) technicalData.push(`Hardware Integration: ${hardware}`);
+
+          const dim = furniture?.dimention || {};
+          if (dim?.width && dim?.height && dim?.depth) {
+            technicalData.push(`Form Factor: ${dim.width}mm x ${dim.height}mm x ${dim.depth}mm`);
+          }
+
+          // 2. Construct the Engineering Prompt
           const promptText = `
-        Act as a professional interior designer for "Vertical Living". 
-        Write a professional "Scope of Work" (max 2 sentences) for this furniture: ${furniture.furnitureName}.
-        Details:
-        - Material: ${furniture.plywoodBrand || 'Premium'} Plywood.
-        - Finish: ${furniture.outerLaminateBrand || 'Selected'} Outer Laminate and ${furniture.innerLaminateBrand || 'Matching'} Inner Laminate.
-        - Hardware: ${furniture.fittingsAndAccessories?.map((f: any) => f.itemName).join(", ") || 'Standard branded fittings'}.
-        
-        Write it in a formal tone focusing on manufacturing quality and installation.
+        Act as a Lead Production Engineer and  
+        Write a highly technical, engineering-grade "Execution Scope" for a furniture unit.
+
+        Input Specifications:
+        ${technicalData.join("\n")}
+
+        Constraints:
+        1. Write exactly 4-5 detailed sentences. Do not provide a short summary.
+        2. Describe the fabrication process: CNC precision cutting, edge-banding sealing, and structural reinforcement.
+        3. Mention the specific brands provided above ONLY. Never make up a brand.
+        4. Focus on "Mechanical Tolerances," "Structural Load-Bearing Integrity," and "Precision Assembly."
+        5. NO FILLER: Do not use words like "N/A", "Unknown", "Nila", or default brands. 
+        6 NO LABELS: If a value was not provided above, do not mention that category at all.
+        7. NO COMMERCIALS: Strictly prohibited to mention cost, price, INR, profit, or currency.
+        8. NO ITEM NAMES: Do not repeat the name of the furniture item in the description.
+        9. STYLE: Focus on "structural stability," "precision joinery," "mechanical tolerances," and "material performance."
       `;
 
-          // In @google/genai, you call generateContent directly from models
-          // The 'contents' property requires a specific structure: [{ role: 'user', parts: [{ text: '...' }] }]
           const result = await genAI.models.generateContent({
-            model: "gemini-1.5-flash",
-            contents: [{ role: 'user', parts: [{ text: promptText }] }] // ✅ Fixed 'contents' requirement
+            model: "gemini-2.0-flash-lite",
+            contents: [{ role: 'user', parts: [{ text: promptText }] }],
+            config: {
+              temperature: 0.5,
+              maxOutputTokens: 300
+            },
           });
 
-          // Extract text from the candidate parts
           const text = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
 
+          // 3. Final Cleanup: Remove any accidental "N/A" or "item" mentions
+          const engineeringText = text
+            .replace(/\b(N\/A|undefined|null|unknown|price|cost|profit|INR|Rs)\b/gi, "")
+            .replace(/\s+/g, ' ')
+            .trim();
+
+
+
+          console.log("engineeringText", engineeringText)
           return {
             ...furniture,
-            scopeOfWork: text || `Professional fabrication and installation of ${furniture.furnitureName}.`
+            scopeOfWork: engineeringText || `Technical fabrication and modular assembly executed to precision engineering tolerances and site-specific standards.`
           };
         } catch (aiError) {
-          console.error("AI Generation failed for a furniture item:", aiError);
+          console.error("Engineering AI Generation failed:", aiError);
           return {
             ...furniture,
-            scopeOfWork: `Comprehensive manufacturing and installation of ${furniture.furnitureName} as per approved site measurements.`
+            scopeOfWork: `Precision manufacturing and modular installation executed as per technical specifications and approved material standards.`
           };
         }
       })
