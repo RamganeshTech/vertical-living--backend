@@ -7,6 +7,16 @@ import { RequirementFormModel } from "../../../models/Stage Models/requirment mo
 // import { generatePdfMaterialPacakgeComparison } from "../../stage controllers/material Room confirmation/materialRoomConfirmation.controller";
 import { generateQuoteVariantPdf } from "./pdfQuoteVarientGenerate";
 
+
+
+import { GoogleGenAI } from "@google/genai";
+import dotenv from 'dotenv';
+dotenv.config()
+
+// Initialize Gemini (Ensure your API Key is in .env)
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+
 export const getMaterialQuoteSingle = async (req: Request, res: Response): Promise<any> => {
   try {
     const { organizationId, id } = req.params;
@@ -194,8 +204,10 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
     const clientRaw: any = requirementDoc?.clientData || {};
 
 
+
+    console.log("clientRaw", clientRaw)
     // 2. Format Client Details String
-    const clientDetailsString = `Name: ${clientRaw.clientName || 'Not Entered Yet'}
+    const clientDetailsString = `Name: ${clientRaw?.clientName || 'Not Entered Yet'}
 Email: ${clientRaw.email || 'Not Entered Yet'}
 WhatsApp: ${clientRaw.whatsapp || 'Not Entered Yet'}
 Location: ${clientRaw.location || 'Not Entered Yet'}`;
@@ -269,9 +281,11 @@ Common Materials: ${uniqueCommon.join(", ") || 'N/A'}`;
 • Granite or Quartz countertop supply and fitting.
 • External appliances and loose furniture items.`
 
-    const whatIsFree = `• Standard design consultation.
-• Basic maintenance kit and support.
-• Multiple Quote Variations.`
+    //     const whatIsFree = `• Standard design consultation.
+    // • Basic maintenance kit and support.
+    // • Multiple Quote Variations.`
+
+    const whatIsFree = `• Electrical Work is complementary`
 
     const disclaimer = `• Final billing subject to actual site measurements.
 • Design and material subject to availability.
@@ -279,6 +293,50 @@ Common Materials: ${uniqueCommon.join(", ") || 'N/A'}`;
 • Digital acceptance is considered legally valid.`
 
 
+
+
+
+    // --- GEMINI SCOPE OF WORK GENERATION ---
+    // const model = genAI.models.generateContent({ model: "gemini-1.5-flash" });
+
+    // --- GEMINI SCOPE OF WORK GENERATION ---
+    const furnituresWithAIQuotes = await Promise.all(
+      furnitures.map(async (furniture: any) => {
+        try {
+          const promptText = `
+        Act as a professional interior designer for "Vertical Living". 
+        Write a professional "Scope of Work" (max 2 sentences) for this furniture: ${furniture.furnitureName}.
+        Details:
+        - Material: ${furniture.plywoodBrand || 'Premium'} Plywood.
+        - Finish: ${furniture.outerLaminateBrand || 'Selected'} Outer Laminate and ${furniture.innerLaminateBrand || 'Matching'} Inner Laminate.
+        - Hardware: ${furniture.fittingsAndAccessories?.map((f: any) => f.itemName).join(", ") || 'Standard branded fittings'}.
+        
+        Write it in a formal tone focusing on manufacturing quality and installation.
+      `;
+
+          // In @google/genai, you call generateContent directly from models
+          // The 'contents' property requires a specific structure: [{ role: 'user', parts: [{ text: '...' }] }]
+          const result = await genAI.models.generateContent({
+            model: "gemini-1.5-flash",
+            contents: [{ role: 'user', parts: [{ text: promptText }] }] // ✅ Fixed 'contents' requirement
+          });
+
+          // Extract text from the candidate parts
+          const text = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+
+          return {
+            ...furniture,
+            scopeOfWork: text || `Professional fabrication and installation of ${furniture.furnitureName}.`
+          };
+        } catch (aiError) {
+          console.error("AI Generation failed for a furniture item:", aiError);
+          return {
+            ...furniture,
+            scopeOfWork: `Comprehensive manufacturing and installation of ${furniture.furnitureName} as per approved site measurements.`
+          };
+        }
+      })
+    );
 
 
     // 🟢 Create DB entry (pdfLink: null for now, will update after PDF gen)
@@ -293,7 +351,7 @@ Common Materials: ${uniqueCommon.join(", ") || 'N/A'}`;
 
       organizationId,
       projectId,
-      furnitures,
+      furnitures: furnituresWithAIQuotes,
       commonMaterials,
 
 

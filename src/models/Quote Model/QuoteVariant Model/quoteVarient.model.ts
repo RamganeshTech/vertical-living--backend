@@ -6,6 +6,7 @@ export interface IQuoteVarientCoreItem extends IMaterial { }
 
 export interface IQuoteFurniture extends IFurniture {
     plywoodBrand: string | null;
+    scopeOfWork?: string | null
     // laminateBrand: string | null;
     innerLaminateBrand: string | null;
     outerLaminateBrand: string | null;
@@ -22,7 +23,7 @@ export interface IQuoteVarientMain extends IMaterialQuote {
     projectDetails: string | null
     clientDetails: string | null
     whatIsFree: string | null
-    brandlist: string  | null
+    brandlist: string | null
     TermsAndConditions: string | null
     disclaimer: string | null
 
@@ -120,7 +121,7 @@ const QuoteFurnitureSchema = new mongoose.Schema<IQuoteFurniture>({
 
     furnitureProfit: { type: Number, default: null },
     fabricationCost: { type: Number, default: null },
-
+    scopeOfWork: { type: String, default: null },
     coreMaterials: [QuoteMaterialSchema],
     fittingsAndAccessories: [QuoteSimpleItemSchema],
     glues: [QuoteSimpleItemSchema],

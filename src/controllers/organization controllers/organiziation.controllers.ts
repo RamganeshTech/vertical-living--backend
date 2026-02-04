@@ -171,6 +171,7 @@ const updateOrganizationDetails = async (req: RoleBasedRequest, res: Response) =
         const user = req.user;
         const updatedData = req.body;
         const { orgId } = req.params;
+        console.log("im getting calledm updateOrganizationDetails")
 
         if (!user || !user._id) {
             return res.status(404).json({ message: "User not associated with this organization", ok: false });

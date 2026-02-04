@@ -9,6 +9,11 @@ export interface IOrganization extends Document {
     logoUrl?: string;
     organizationPhoneNo?: string
 
+    registeredEntity?: string
+    email?: string
+    secondaryPhoneNo?: string
+    website?: string
+
     planType: "basic" | "enterprise" | "advanced"
     planStatus: "active" | "inactive"
     planValidTill: Date | null
@@ -37,6 +42,22 @@ const OrganizationSchema = new Schema<IOrganization>({
         default: "",
     },
     organizationPhoneNo: {
+        type: String,
+        default: "",
+    },
+    registeredEntity: {
+        type: String,
+        default: null
+    },
+    email: {
+        type: String,
+        default: null,
+    },
+    secondaryPhoneNo: {
+        type: String,
+        default: "",
+    },
+    website: {
         type: String,
         default: "",
     },
