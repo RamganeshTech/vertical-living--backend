@@ -125,10 +125,10 @@ export const updateClientDataRequirement = async (req: Request, res: Response,):
       
 
         // Validate required client info
-        if (!clientData?.clientName || !clientData?.whatsapp) {
+        if (!clientData?.clientName) {
             res.status(400).json({
-                success: false,
-                message: "Missing required client information.",
+                ok: false,
+                message: "Missing client Name.",
             });
             return;
         }
