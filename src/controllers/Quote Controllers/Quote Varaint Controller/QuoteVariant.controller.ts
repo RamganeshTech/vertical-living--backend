@@ -312,7 +312,7 @@ Common Materials: ${uniqueCommon.join(", ") || 'N/A'}`;
     // • Basic maintenance kit and support.
     // • Multiple Quote Variations.`
 
-        const whatIsFree = `Complimentary (Applicable for projects above ₹5,00,000):
+    const whatIsFree = `Complimentary (Applicable for projects above ₹5,00,000):
     • Electrical labour for open-wall wiring only
     • Excludes wall cutting/chasing, plastering, patchwork, painting
     • Excludes all electrical materials and accessories
@@ -373,132 +373,293 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
 
 
 
-    // --- GEMINI SCOPE OF WORK GENERATION ---
-    // const model = genAI.models.generateContent({ model: "gemini-1.5-flash" });
 
+    const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+
+
+    //  OLD VERSION
     // --- GEMINI SCOPE OF WORK GENERATION ---
     // const furnituresWithAIQuotes = await Promise.all(
-    //   furnitures.map(async (furniture: any) => {
+    //   furnitures.map(async (furniture: any, index:number) => {
 
+    //     await delay(500 * index);
 
     //     try {
-    //       const promptText = `
-    //     Act as a professional interior designer for "Vertical Living". 
-    //     Write a professional "Scope of Work" (max 2 sentences) for this furniture: ${furniture.furnitureName}.
-    //     Details:
-    //     - Material: ${furniture.plywoodBrand || 'Premium'} Plywood.
-    //     - Finish: ${furniture.outerLaminateBrand || 'Selected'} Outer Laminate and ${furniture.innerLaminateBrand || 'Matching'} Inner Laminate.
-    //     - Hardware: ${furniture.fittingsAndAccessories?.map((f: any) => f.itemName).join(", ") || 'Standard branded fittings'}.
+    //       // 1. Build a clean dataset of ONLY what exists
+    //       const technicalData = [];
 
-    //     Write it in a formal tone focusing on manufacturing quality and installation.
+    //       if (furniture?.plywoodBrand) technicalData.push(`Plywood: ${furniture.plywoodBrand}`);
+    //       if (furniture?.outerLaminateBrand) technicalData.push(`Outer Mica: ${furniture.outerLaminateBrand}`);
+    //       if (furniture?.innerLaminateBrand) technicalData.push(`Inner Mica: ${furniture.innerLaminateBrand}`);
+
+    //       const hardware = furniture?.fittingsAndAccessories
+    //         ?.map((f: any) => f.itemName)
+    //         .filter((name: string) => name && name.trim() !== "")
+    //         .join(", ");
+    //       if (hardware) technicalData.push(`Hardware Integration: ${hardware}`);
+
+    //       const dim = furniture?.dimention || {};
+    //       if (dim?.width && dim?.height && dim?.depth) {
+    //         technicalData.push(`Form Factor: ${dim.width}mm x ${dim.height}mm x ${dim.depth}mm`);
+    //       }
+
+    //       // 2. Construct the Engineering Prompt
+    //       const promptText = `
+    //     Act as a Lead Production Engineer and  
+    //     Write a highly technical, engineering-grade "Execution Scope" for a furniture unit.
+
+    //     Input Specifications:
+    //     ${technicalData.join("\n")}
+
+    //     Constraints:
+    //     1. Write exactly 4-5 detailed sentences. Do not provide a short summary.
+    //     2. Describe the fabrication process: CNC precision cutting, edge-banding sealing, and structural reinforcement.
+    //     3. Mention the specific brands provided above ONLY. Never make up a brand.
+    //     4. Focus on "Mechanical Tolerances," "Structural Load-Bearing Integrity," and "Precision Assembly."
+    //     5. NO FILLER: Do not use words like "N/A", "Unknown", "Nila", or default brands. 
+    //     6 NO LABELS: If a value was not provided above, do not mention that category at all.
+    //     7. NO COMMERCIALS: Strictly prohibited to mention cost, price, INR, profit, or currency.
+    //     8. NO ITEM NAMES: Do not repeat the name of the furniture item in the description.
+    //     9. STYLE: Focus on "structural stability," "precision joinery," "mechanical tolerances," and "material performance."
     //   `;
 
-    //       // In @google/genai, you call generateContent directly from models
-    //       // The 'contents' property requires a specific structure: [{ role: 'user', parts: [{ text: '...' }] }]
     //       const result = await genAI.models.generateContent({
-    //         model: "gemini-1.5-flash",
-    //         contents: [{ role: 'user', parts: [{ text: promptText }] }] // ✅ Fixed 'contents' requirement
+    //         model: "gemini-2.0-flash-lite",
+    //         contents: [{ role: 'user', parts: [{ text: promptText }] }],
+    //         config: {
+    //           temperature: 0.5,
+    //           maxOutputTokens: 300
+    //         },
     //       });
 
-    //       // Extract text from the candidate parts
     //       const text = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
 
+    //       // 3. Final Cleanup: Remove any accidental "N/A" or "item" mentions
+    //       const engineeringText = text
+    //         .replace(/\b(N\/A|undefined|null|unknown|price|cost|profit|INR|Rs)\b/gi, "")
+    //         .replace(/\s+/g, ' ')
+    //         .trim();
+
+
+
+    //       console.log("engineeringText", engineeringText)
     //       return {
     //         ...furniture,
-    //         scopeOfWork: text || `Professional fabrication and installation of ${furniture.furnitureName}.`
+    //         scopeOfWork: engineeringText || `Technical fabrication and modular assembly executed to precision engineering tolerances and site-specific standards.`
     //       };
     //     } catch (aiError) {
-    //       console.error("AI Generation failed for a furniture item:", aiError);
+    //       console.error("Engineering AI Generation failed:", aiError);
     //       return {
     //         ...furniture,
-    //         scopeOfWork: `Comprehensive manufacturing and installation of ${furniture.furnitureName} as per approved site measurements.`
+    //         scopeOfWork: `Precision manufacturing and modular installation executed as per technical specifications and approved material standards.`
     //       };
     //     }
     //   })
     // );
 
 
-    const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+
+    //  NEW VERSION
 
     // --- GEMINI SCOPE OF WORK GENERATION ---
     const furnituresWithAIQuotes = await Promise.all(
-      furnitures.map(async (furniture: any, index:number) => {
+      furnitures.map(async (furniture: any, index: number) => {
 
-        await delay(500 * index);
+        await delay(500 * index); // Staggered to prevent 429 errors
 
         try {
-          // 1. Build a clean dataset of ONLY what exists
+          // 1. Build a clean dataset of ONLY existing Brands and Dimensions
           const technicalData = [];
 
-          if (furniture?.plywoodBrand) technicalData.push(`Plywood: ${furniture.plywoodBrand}`);
-          if (furniture?.outerLaminateBrand) technicalData.push(`Outer Mica: ${furniture.outerLaminateBrand}`);
-          if (furniture?.innerLaminateBrand) technicalData.push(`Inner Mica: ${furniture.innerLaminateBrand}`);
 
-          const hardware = furniture?.fittingsAndAccessories
-            ?.map((f: any) => f.itemName)
-            .filter((name: string) => name && name.trim() !== "")
-            .join(", ");
-          if (hardware) technicalData.push(`Hardware Integration: ${hardware}`);
+          // 1. Pre-process Facts for both AI and Fallback
+          const plyBrand = furniture?.plywoodBrand;
+          const outerBrand = furniture?.outerLaminateBrand;
+          const innerBrand = furniture?.innerLaminateBrand;
 
+          // Extract unique brands for fittings and glues just like your render function
+          const uniqueFittings = Array.from(new Set(furniture.fittingsAndAccessories?.filter((item: any) => item.brandName).map((item: any) => item.brandName))).join(", ");
+          // const uniqueGlues = Array.from(new Set(furniture.glues?.filter((item: any) => item.brandName).map((item: any) => item.brandName))).join(", ");
+
+          // if (furniture?.plywoodBrand) technicalData.push(`Plywood Brand: ${furniture.plywoodBrand}`);
+          // if (furniture?.outerLaminateBrand) technicalData.push(`Outer Laminate Brand: ${furniture.outerLaminateBrand}`);
+          // if (furniture?.innerLaminateBrand) technicalData.push(`Inner Laminate Brand: ${furniture.innerLaminateBrand}`);
+          // if (uniqueFittings) technicalData.push(`Hardware/Fittings Brands: ${uniqueFittings}`);
+          // if (uniqueGlues) technicalData.push(`Adhesive/Glue Brands: ${uniqueGlues}`);
+
+          // Dimension logic: Only include if all three parts exist
           const dim = furniture?.dimention || {};
-          if (dim?.width && dim?.height && dim?.depth) {
-            technicalData.push(`Form Factor: ${dim.width}mm x ${dim.height}mm x ${dim.depth}mm`);
-          }
+          // const hasDimensions = dim?.width && dim?.height && dim?.depth;
+          // if (hasDimensions) {
+          //   technicalData.push(`Exact Dimensions: ${dim.width}mm (Width) x ${dim.height}mm (Height) x ${dim.depth}mm (Depth)`);
+          // }
 
-          // 2. Construct the Engineering Prompt
+          const dimParts = [];
+          if (dim.width > 0) dimParts.push(`${dim.width} ft (Width)`);
+          if (dim.height > 0) dimParts.push(`${dim.height} ft (Height)`);
+          if (dim.depth > 0) dimParts.push(`${dim.depth} ft (Depth)`);
+          const hasDim = dimParts.length > 0;
+
+
+          if (plyBrand) technicalData.push(`Plywood Brand: ${plyBrand}`);
+          if (outerBrand) technicalData.push(`Outer Mica Brand: ${outerBrand}`);
+          if (innerBrand) technicalData.push(`Inner Mica Brand: ${innerBrand}`);
+          if (uniqueFittings) technicalData.push(`Hardware Brands: ${uniqueFittings}`);
+          // if (uniqueGlues) technicalData.push(`Adhesive Brands: ${uniqueGlues}`);
+          if (hasDim) technicalData.push(`Dimensions: ${dimParts.join(" x ")}`);
+
+
+
+          // 2. Construct the Strict Engineering Prompt
           const promptText = `
-        Act as a Lead Production Engineer and  
-        Write a highly technical, engineering-grade "Execution Scope" for a furniture unit.
+        Act as a Lead Production Engineer. 
+        Write a professional "Execution Scope of Work" based ONLY on 
+        ${technicalData.join("\n")}.
 
-        Input Specifications:
-        ${technicalData.join("\n")}
+        
 
-        Constraints:
-        1. Write exactly 4-5 detailed sentences. Do not provide a short summary.
-        2. Describe the fabrication process: CNC precision cutting, edge-banding sealing, and structural reinforcement.
-        3. Mention the specific brands provided above ONLY. Never make up a brand.
-        4. Focus on "Mechanical Tolerances," "Structural Load-Bearing Integrity," and "Precision Assembly."
-        5. NO FILLER: Do not use words like "N/A", "Unknown", "Nila", or default brands. 
-        6 NO LABELS: If a value was not provided above, do not mention that category at all.
-        7. NO COMMERCIALS: Strictly prohibited to mention cost, price, INR, profit, or currency.
-        8. NO ITEM NAMES: Do not repeat the name of the furniture item in the description.
-        9. STYLE: Focus on "structural stability," "precision joinery," "mechanical tolerances," and "material performance."
+        Strict Constraints:
+        1. CONTENT: Use ONLY the brands and dimensions provided. Elaborate on their technical application.
+        2. FORBIDDEN WORDS: Never use the word "CNC". 
+        3. STRUCTURE: Write exactly 4-5 detailed, professional sentences. 
+        4. NO LABELS: Do not start sentences with "Plywood:" or "Dimensions:". Integrate them into the flow.
+        5. NO COMMERCIALS: Strictly no mention of cost, price, or profit.
+        6. NO ITEM NAMES: Do not use the name of the furniture piece.
       `;
 
           const result = await genAI.models.generateContent({
             model: "gemini-2.0-flash-lite",
             contents: [{ role: 'user', parts: [{ text: promptText }] }],
             config: {
-              temperature: 0.5,
-              maxOutputTokens: 300
+              temperature: 0.7, // Slightly higher for better elaboration on brands
+              maxOutputTokens: 400
             },
           });
 
           const text = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
 
-          // 3. Final Cleanup: Remove any accidental "N/A" or "item" mentions
+          // 3. Final Cleanup
           const engineeringText = text
-            .replace(/\b(N\/A|undefined|null|unknown|price|cost|profit|INR|Rs)\b/gi, "")
+            .replace(/\b(N\/A|undefined|null|unknown|price|cost|profit|INR|Rs|CNC)\b/gi, "")
             .replace(/\s+/g, ' ')
             .trim();
 
+          console.log("engineeringText", engineeringText);
 
-
-          console.log("engineeringText", engineeringText)
           return {
             ...furniture,
-            scopeOfWork: engineeringText || `Technical fabrication and modular assembly executed to precision engineering tolerances and site-specific standards.`
+            scopeOfWork: engineeringText || `Technical execution utilizing ${furniture.plywoodBrand || 'specified'} materials to precision engineering standards.`
           };
         } catch (aiError) {
-          console.error("Engineering AI Generation failed:", aiError);
+          // console.error("Engineering AI Generation failed:", aiError);
+          // return {
+          //   ...furniture,
+          //   scopeOfWork: `Precision manufacturing and modular installation executed as per technical specifications and approved material standards.`
+          // };
+
+
+          console.error(`Engineering AI Generation failed for ${furniture.furnitureName}:`, aiError);
+
+          // 1. Manually build a technical description using the data we already have
+          // const brandsUsed = [
+          //   furniture.plywoodBrand,
+          //   furniture.outerLaminateBrand,
+          //   furniture.innerLaminateBrand
+          // ].filter(Boolean).join(" and ");
+
+          // 1. Extract strictly factual data
+          const plyBrand = furniture.plywoodBrand;
+          const outerBrand = furniture.outerLaminateBrand;
+          const innerBrand = furniture.innerLaminateBrand;
+
+          const dim = furniture.dimention || {};
+          // const hasDim = dim.width && dim.height && dim.depth;
+          // const dimText = (dim?.width && dim?.height) ? ` with precision dimensions of ${dim?.width}ft x ${dim?.height}ft` : "";
+
+          // 1. Filter dimensions that are present and greater than 0
+          const dimParts = [];
+          if (dim.width > 0) dimParts.push(`${dim.width} ft (Width)`);
+          if (dim.height > 0) dimParts.push(`${dim.height} ft (Height)`);
+          if (dim.depth > 0) dimParts.push(`${dim.depth} ft (Depth)`);
+
+          // 2. Build the sentences based ONLY on available facts
+          let sentences = [];
+
+          // Sentence 1: Substrate Fact
+          sentences.push(
+            plyBrand
+              ? `Primary structural fabrication utilizes ${plyBrand} substrate to ensure core dimensional stability and load-bearing capacity.`
+              : `Structural fabrication is executed using specified core substrates to maintain architectural integrity and load-bearing capacity.`
+          );
+
+          // // 2. Construct a non-generic string
+          // const manualScope = `Technical execution utilizing ${brandsUsed || 'premium grade materials'} for structural assembly${dimText}. ` +
+          //   `The process involves high-pressure lamination and precision edge-sealing to ensure mechanical durability and calibrated site alignment as per engineering standards.`;
+
+
+
+          // Sentence 2: Exterior Finish Fact
+          sentences.push(
+            outerBrand
+              ? `The exterior surfaces are finished with ${outerBrand} cladding, applied with industrial-grade bonding for high-wear resistance.`
+              : `Exterior surfaces involve technical cladding applied to ensure surface durability and environmental protection.`
+          );
+
+          // Sentence 3: Interior/Hardware Fact
+          const hardwarePart = uniqueFittings ? ` and integrated with ${uniqueFittings} hardware systems` : "";
+
+          sentences.push(
+            innerBrand
+              ? `Internal reinforcement includes ${innerBrand} liner application${hardwarePart} to achieve a balanced moisture-resistant seal.`
+              : `Internal reinforcement utilizes technical liners to maintain structural equilibrium and protect internal surfaces.`
+          );
+
+
+          // Sentence 4: Hardware Fittings Fact (Now always shows if available)
+          if (uniqueFittings) {
+            sentences.push(`Mechanical integration is completed using ${uniqueFittings} hardware systems, specifically selected for high-cycle operational longevity.`);
+          } else {
+            sentences.push(`The unit integrates standardized mechanical hardware systems to support essential structural load distribution.`);
+          }
+
+          // Sentence 4: Dimension Fact
+          // if (hasDim) {
+          //   sentences.push(`The unit is manufactured to precise engineering specifications of ${dim.width}mm x ${dim.height}mm x ${dim.depth}mm.`);
+          // }
+
+
+          // Sentence 5: Dynamic Dimension Fact (Strictly Factual & in Feet)
+          if (dimParts.length > 0) {
+            sentences.push(`The technical assembly is manufactured to precise engineering specifications of ${dimParts.join(" x ")}.`);
+          }
+
+
+          // Sentence 5: Final Execution Fact (Always factual)
+          // sentences.push(`Final assembly follows a modular protocol focusing on precision edge-sealing and calibrated site-fitment to meet professional standards.`);
+
+
+          // Sentence 6: Final Execution Fact (Ensures 4-5 sentences if dimensions are missing)
+          // if (!hasDim) {
+          //     sentences.push(`Final execution follows a modular installation protocol focusing on precision edge-sealing and calibrated site-fitment.`);
+          // }
+
+          // If dimensions were missing, we add one more technical process sentence to reach the 4-5 sentence goal
+          // if (!hasDim) {
+          //   sentences.push(`Every component is processed to maintain strict mechanical tolerances during the final joinery and onsite installation phase.`);
+          // }
+
+          sentences.push(`Final execution follows a modular installation protocol focusing on precision edge-sealing and calibrated site-fitment to meet professional standards.`);
+
+          const manualScope = sentences.join(" ");
           return {
             ...furniture,
-            scopeOfWork: `Precision manufacturing and modular installation executed as per technical specifications and approved material standards.`
+            scopeOfWork: manualScope
           };
         }
       })
     );
-
 
     // 🟢 Create DB entry (pdfLink: null for now, will update after PDF gen)
     const newVariant = await QuoteVarientGenerateModel.create({
