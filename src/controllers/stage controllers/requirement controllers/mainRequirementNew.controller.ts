@@ -115,6 +115,56 @@ export const submitRequirementForm = async (req: Request, res: Response,): Promi
 };
 
 
+
+export const updateClientDataRequirement = async (req: Request, res: Response,): Promise<void> => {
+    try {
+        const { projectId } = req.params
+        const { clientData } = req.body;
+
+
+      
+
+        // Validate required client info
+        if (!clientData?.clientName || !clientData?.whatsapp) {
+            res.status(400).json({
+                success: false,
+                message: "Missing required client information.",
+            });
+            return;
+        }
+
+        const form = await RequirementFormModel.findOne({ projectId })
+
+        if (!form) {
+            res.status(404).json({ ok: false, message: "Form not found or token invalid." });
+            return;
+        }
+
+       
+
+
+        form.clientData = {
+            clientName: clientData?.clientName,
+            email: clientData?.email || null,
+            whatsapp: clientData?.whatsapp,
+            location: clientData?.location || "",
+        };
+        form.clientConfirmed = true;
+        // timerFunctionlity(form, "startedAt")
+        form.shareTokenExpiredAt = new Date();
+
+        await form.save();
+
+        await populateWithAssignedToField({ stageModel: RequirementFormModel, projectId, dataToCache: form })
+
+        res.status(201).json({ ok: true, message: "Requirement form submitted successfully.", data: form, });
+    } catch (error: any) {
+        res.status(500).json({ ok: false, message: "Server error, try again after some time", error: error.message, });
+        return
+    }
+};
+
+
 export const createRoomRequirement = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params

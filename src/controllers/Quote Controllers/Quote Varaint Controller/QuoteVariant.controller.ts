@@ -312,34 +312,12 @@ Common Materials: ${uniqueCommon.join(", ") || 'N/A'}`;
     // • Basic maintenance kit and support.
     // • Multiple Quote Variations.`
 
-    // const whatIsFree = `• Electrical Work is complementary`
-    //     const whatIsFree = `Complimentary (Applicable for projects above ₹5,00,000):
-    // • Electrical labour for open-wall wiring only
-    // • Excludes wall cutting/chasing, plastering, patchwork, painting
-    // • Excludes all electrical materials and accessories
-    // • Subject to Complimentary Terms mentioned in Disclaimer`
+        const whatIsFree = `Complimentary (Applicable for projects above ₹5,00,000):
+    • Electrical labour for open-wall wiring only
+    • Excludes wall cutting/chasing, plastering, patchwork, painting
+    • Excludes all electrical materials and accessories
+    • Subject to Complimentary Terms mentioned in Disclaimer`
 
-    const whatIsFree = `Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
-
-• Complimentary electrical labour is provided only for open-wall wiring within the approved interior work scope.
-
-• This complimentary service covers labour charges only and does not include any electrical materials or accessories such as wires, conduits, switches, sockets, switchboards, MCBs, DBs, fittings, lights, fans, or fixtures.
-
-• Wall cutting, wall chasing, wall breaking, plastering, patchwork, painting, finishing, or restoration work is strictly excluded and will be charged separately if required.
-
-• Complimentary electrical labour applies only to new wiring in open walls and excludes rewiring of existing concealed wiring, fault finding, rectification, shifting of main lines, or modifications to existing electrical infrastructure unless expressly quoted.
-
-• Any additional electrical points, layout changes, or work beyond the approved electrical layout shall be chargeable.
-
-• Complimentary electrical labour is applicable only if the final approved and executed project value exceeds ₹5,00,000. If the project value is revised below this threshold due to scope reduction, cancellation, or client-driven changes, the Company reserves the right to withdraw this benefit.
-
-• Approvals, permits, inspections, and coordination with building management or authorities are not included and remain the Client’s responsibility unless separately quoted.
-
-• This complimentary service does not extend the project delivery timeline. Delays due to material availability, client approvals, or site readiness shall not be attributed to the Company.
-
-• Complimentary electrical labour is provided at the Company’s discretion, may be modified or withdrawn in case of payment delays, scope changes, site constraints, or non-compliance with payment terms, and is not a contractual entitlement.
-
-(Refer to Disclaimer section for detailed terms and conditions.)`
 
 
     const disclaimer = `DISCLAIMER, PRELIMINARY ESTIMATE & CHANGE CONTROL
@@ -364,7 +342,32 @@ Common Materials: ${uniqueCommon.join(", ") || 'N/A'}`;
 
 10. NO VERBAL COMMITMENTS: Only specifications recorded in writing within this document shall be binding.
 
-11. FORCE MAJEURE: The Company is not liable for delays caused by strikes, lockdowns, transport disruptions, or natural calamities.`
+11. FORCE MAJEURE: The Company is not liable for delays caused by strikes, lockdowns, transport disruptions, or natural calamities.
+
+------------------------------------------------------------------------------------------------------------------------
+
+Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
+
+• Complimentary electrical labour is provided only for open-wall wiring within the approved interior work scope.
+
+• This complimentary service covers labour charges only and does not include any electrical materials or accessories such as wires, conduits, switches, sockets, switchboards, MCBs, DBs, fittings, lights, fans, or fixtures.
+
+• Wall cutting, wall chasing, wall breaking, plastering, patchwork, painting, finishing, or restoration work is strictly excluded and will be charged separately if required.
+
+• Complimentary electrical labour applies only to new wiring in open walls and excludes rewiring of existing concealed wiring, fault finding, rectification, shifting of main lines, or modifications to existing electrical infrastructure unless expressly quoted.
+
+• Any additional electrical points, layout changes, or work beyond the approved electrical layout shall be chargeable.
+
+• Complimentary electrical labour is applicable only if the final approved and executed project value exceeds ₹5,00,000. If the project value is revised below this threshold due to scope reduction, cancellation, or client-driven changes, the Company reserves the right to withdraw this benefit.
+
+• Approvals, permits, inspections, and coordination with building management or authorities are not included and remain the Client’s responsibility unless separately quoted.
+
+• This complimentary service does not extend the project delivery timeline. Delays due to material availability, client approvals, or site readiness shall not be attributed to the Company.
+
+• Complimentary electrical labour is provided at the Company’s discretion, may be modified or withdrawn in case of payment delays, scope changes, site constraints, or non-compliance with payment terms, and is not a contractual entitlement.
+
+(Refer to Disclaimer section for detailed terms and conditions.)
+`
 
 
 

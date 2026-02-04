@@ -1,5 +1,5 @@
 import express from 'express';
-import {  createRoomRequirement, deleteRequirementSectionFileController, deleteRequirementStageFile, deleteRoomItemController, deleteRoomRequirement, generateShareableFormLink, getAllInfo, getSingleRoom, markFormAsCompleted, setRequirementStageDeadline, submitRequirementForm, updateRoomItem, uploadRequirementSectionFilesController } from '../../../controllers/stage controllers/requirement controllers/mainRequirementNew.controller';
+import {  createRoomRequirement, deleteRequirementSectionFileController, deleteRequirementStageFile, deleteRoomItemController, deleteRoomRequirement, generateShareableFormLink, getAllInfo, getSingleRoom, markFormAsCompleted, setRequirementStageDeadline, submitRequirementForm, updateClientDataRequirement, updateRoomItem, uploadRequirementSectionFilesController } from '../../../controllers/stage controllers/requirement controllers/mainRequirementNew.controller';
 import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware';
 import { uploadGenericController } from '../../../utils/common features/uploadFiles';
 import { RequirementFormModel } from '../../../models/Stage Models/requirment model/mainRequirementNew.model';
@@ -22,6 +22,7 @@ requirementRoutes.delete('/deleteitem/:projectId/:roomId/:itemId', multiRoleAuth
 
 // for clinet info
 requirementRoutes.post('/createrequirement/:projectId', submitRequirementForm)
+requirementRoutes.put('/update/clientinfo/:projectId', updateClientDataRequirement)
 // need to change
 
 requirementRoutes.get('/getrequirementform/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO", "client", "worker"), getAllInfo)
