@@ -135,6 +135,9 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
     } = req.body;
 
 
+    // console.log("projectId from the quote varaint", projectId)
+
+
     // console.log("furnitures",furnitures)
     // console.log("core mateiral 1",furnitures[0].coreMaterials[0])
     // console.log("core mateiral 1",furnitures[0].coreMaterials[1])
@@ -195,12 +198,16 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
 
     const quoteNo = await generateNextQuoteNumber(organizationId);
 
+    // const projectId = existingQuote?.projectId
 
     // 1. Fetch data from Project and Requirement models
     const [projectData, requirementDoc] = await Promise.all([
       ProjectModel.findById(projectId).populate("organizationId"),
       RequirementFormModel.findOne({ projectId }),
     ]);
+
+    // console.log("projectData", projectData)
+    // console.log("requirementDoc", requirementDoc)
 
     const clientRaw: any = requirementDoc?.clientData || {};
 
@@ -366,7 +373,6 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
 
 • Complimentary electrical labour is provided at the Company’s discretion, may be modified or withdrawn in case of payment delays, scope changes, site constraints, or non-compliance with payment terms, and is not a contractual entitlement.
 
-(Refer to Disclaimer section for detailed terms and conditions.)
 `
 
 
@@ -467,7 +473,8 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
     const furnituresWithAIQuotes = await Promise.all(
       furnitures.map(async (furniture: any, index: number) => {
 
-        await delay(500 * index); // Staggered to prevent 429 errors
+        await delay(500 * index); // to prevent 429 errors it will be occuring because of calling the gemini api continiously,
+        //  it will suspect and it will block us because of rate limiting
 
         try {
           // 1. Build a clean dataset of ONLY existing Brands and Dimensions
@@ -481,13 +488,6 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
 
           // Extract unique brands for fittings and glues just like your render function
           const uniqueFittings = Array.from(new Set(furniture.fittingsAndAccessories?.filter((item: any) => item.brandName).map((item: any) => item.brandName))).join(", ");
-          // const uniqueGlues = Array.from(new Set(furniture.glues?.filter((item: any) => item.brandName).map((item: any) => item.brandName))).join(", ");
-
-          // if (furniture?.plywoodBrand) technicalData.push(`Plywood Brand: ${furniture.plywoodBrand}`);
-          // if (furniture?.outerLaminateBrand) technicalData.push(`Outer Laminate Brand: ${furniture.outerLaminateBrand}`);
-          // if (furniture?.innerLaminateBrand) technicalData.push(`Inner Laminate Brand: ${furniture.innerLaminateBrand}`);
-          // if (uniqueFittings) technicalData.push(`Hardware/Fittings Brands: ${uniqueFittings}`);
-          // if (uniqueGlues) technicalData.push(`Adhesive/Glue Brands: ${uniqueGlues}`);
 
           // Dimension logic: Only include if all three parts exist
           const dim = furniture?.dimention || {};
@@ -518,15 +518,18 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
         Write a professional "Execution Scope of Work" based ONLY on 
         ${technicalData.join("\n")}.
 
-        
-
+      
         Strict Constraints:
-        1. CONTENT: Use ONLY the brands and dimensions provided. Elaborate on their technical application.
-        2. FORBIDDEN WORDS: Never use the word "CNC". 
-        3. STRUCTURE: Write exactly 4-5 detailed, professional sentences. 
-        4. NO LABELS: Do not start sentences with "Plywood:" or "Dimensions:". Integrate them into the flow.
-        5. NO COMMERCIALS: Strictly no mention of cost, price, or profit.
-        6. NO ITEM NAMES: Do not use the name of the furniture piece.
+        1. ANTI-HALLUCINATION: Use ONLY the specific brands and dimensions provided above. If a brand for a specific category (like Plywood or Hardware) is missing from the facts, DO NOT mention that category or invent a brand.
+        1. STARTING RULE: DO NOT start with "Here is," "The scope of work is," "This project involves," or any introductory conversational filler.
+        3. VOICE: Use formal engineering passive voice (e.g., "Fabrication is executed," "Surface cladding is applied").
+        4. CONTENT: Use ONLY the brands and dimensions provided. Elaborate on their technical application.
+        5. FORBIDDEN WORDS: Never use the word "CNC". 
+        6. STRUCTURE: Write exactly 4-5 detailed, professional sentences. 
+        7. NO LABELS: Do not start sentences with "Plywood:" or "Dimensions:". Integrate them into the flow.
+        8. NO COMMERCIALS: Strictly no mention of cost, price, or profit.
+        9. NO ITEM NAMES: Do not use the name of the furniture piece.
+        10. TONE: The description must sound like an industrial engineering manual, not a sales pitch.
       `;
 
           const result = await genAI.models.generateContent({
@@ -561,13 +564,6 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
 
 
           console.error(`Engineering AI Generation failed for ${furniture.furnitureName}:`, aiError);
-
-          // 1. Manually build a technical description using the data we already have
-          // const brandsUsed = [
-          //   furniture.plywoodBrand,
-          //   furniture.outerLaminateBrand,
-          //   furniture.innerLaminateBrand
-          // ].filter(Boolean).join(" and ");
 
           // 1. Extract strictly factual data
           const plyBrand = furniture.plywoodBrand;

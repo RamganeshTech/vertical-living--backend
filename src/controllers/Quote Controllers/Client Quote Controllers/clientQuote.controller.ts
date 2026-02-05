@@ -101,6 +101,114 @@ export const getAllClientQuotes = async (req: Request, res: Response): Promise<a
 };
 
 
+export const getAllClientQuotesV1 = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { organizationId } = req.params;
+        const {
+            projectId,
+            createdAt,
+            quoteNo,
+            search,
+            startDate,
+            endDate,
+            quoteType
+        } = req.query;
+
+        if (!organizationId) {
+            return res.status(400).json({ ok: false, message: "Invalid organizationId" });
+        }
+
+        // 1. Build dynamic filters
+        const filters: any = { organizationId };
+
+        if (projectId) filters.projectId = projectId;
+
+        if (quoteNo) {
+            const q = String(quoteNo).trim();
+            filters.quoteNo = { $regex: q.replace(/Q-/, ''), $options: 'i' };
+        }
+
+         // ✅ Add createdAt filter (match same day)
+        if (createdAt) {
+            const selectedDate = new Date(createdAt as string); // "yyyy-mm-dd"
+            selectedDate.setHours(0, 0, 0, 0);
+
+            const endOfDay = new Date(selectedDate);
+            endOfDay.setDate(endOfDay.getDate() + 1); // next day start
+
+            filters.createdAt = {
+                $gte: selectedDate,
+                $lt: endOfDay,
+            };
+        }
+
+        if (search) {
+            const searchRegex = new RegExp(String(search).trim(), 'i');
+            filters.$or = [
+                { quoteNo: { $regex: searchRegex } },
+                { mainQuoteName: { $regex: searchRegex } }
+            ];
+        }
+
+        if (quoteType && quoteType !== 'all') {
+            filters.quoteType = quoteType;
+        }
+
+        if (startDate || endDate) {
+            filters.createdAt = {};
+            if (startDate) {
+                const start = new Date(startDate as string);
+                start.setHours(0, 0, 0, 0);
+                filters.createdAt.$gte = start;
+            }
+            if (endDate) {
+                const end = new Date(endDate as string);
+                end.setHours(23, 59, 59, 999);
+                filters.createdAt.$lte = end;
+            }
+        }
+
+        // 2. Fetch with Projection (Removing the heavy fields)
+        const quotes = await QuoteVarientGenerateModel.find(filters)
+            .sort({ createdAt: -1 })
+            // Exclude fields by prefixing with minus '-'
+            .select([
+                "-furnitures",
+                "-commonMaterials",
+                "-sqftRateWork",
+                "-whatsIncluded",
+                "-whatsNotIncluded",
+                "-projectDetails",
+                "-clientDetails",
+                "-whatIsFree",
+                "-brandlist",
+                "-TermsAndConditions",
+                "-disclaimer",
+                "-pdfType",
+                "-pdfLink",
+            ].join(" "))
+            .populate("projectId", "_id projectName")
+            .populate("quoteId", "_id quoteNo mainQuoteName quoteType quoteCategory")
+            .lean(); // Use lean for better performance on read-only operations
+
+        return res.status(200).json({
+            ok: true,
+            message: "Quotes (V2) fetched successfully with optimized payload",
+            // count: quotes.length,
+            data: quotes,
+        });
+
+    } catch (error: any) {
+        console.error("Error in getAllClientQuotesV2:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Failed to fetch quotes (V2)",
+            error: error?.message,
+        });
+    }
+};
+
+
 
 export const getAllClientQuotesFromDropDown = async (req: Request, res: Response): Promise<any> => {
     try {

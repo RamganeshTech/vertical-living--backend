@@ -323,7 +323,7 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
     const globalTransportation = Number(req?.body?.globalTransportation || 0);
     const globalProfitPercent = Number(req?.body?.globalProfitPercent || 0);
     const notes = req?.body?.notes || null;
-    const quoteNo = req?.body?.quoteNo || null;
+    // const quoteNo = req?.body?.quoteNo || null;
 
     const cleanSimpleItems = (section: any[]): any[] =>
       (section || []).map((item) => ({
@@ -410,15 +410,13 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
       };
     });
 
-
-
     const processedCommonMaterials = cleanSimpleItems(commonMaterials)
 
 
     const updatedQuote = await InternalQuoteEntryModel.findByIdAndUpdate(
       id,
       {
-        quoteNo,
+        // quoteNo,
         furnitures: processedFurniture,
         commonMaterials: processedCommonMaterials,
         commonProfitOverride: commonProfitOverride,

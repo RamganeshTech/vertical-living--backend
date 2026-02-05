@@ -4,7 +4,7 @@ import { createMainInternalQuoteResidentialVersion, createMaterialQuote,  delete
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { getMaterialCategories } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
 import {  createVariantQuotePdfGenerator, deleteClientQuote, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails, updateQuoteVaraintforClient } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
-import { generateClientPdfWithTypes, getAllClientQuotes, getAllClientQuotesFromDropDown, getSingleClientQuote, storeQuoteToPaymentStage, toggleBlurring } from "../../../controllers/Quote Controllers/Client Quote Controllers/clientQuote.controller";
+import { generateClientPdfWithTypes, getAllClientQuotes, getAllClientQuotesFromDropDown, getAllClientQuotesV1, getSingleClientQuote, storeQuoteToPaymentStage, toggleBlurring } from "../../../controllers/Quote Controllers/Client Quote Controllers/clientQuote.controller";
 
 const QuoteRouter = express.Router();
 
@@ -138,10 +138,17 @@ QuoteRouter.get(
 
 
 // client quote routes
+//  not in use currrently, but it might be used in mobile version
 QuoteRouter.get(
   "/getallquotevarients/:organizationId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   getAllClientQuotes
+);
+
+QuoteRouter.get(
+  "/v1/getallquotevarients/:organizationId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  getAllClientQuotesV1
 );
 
 
