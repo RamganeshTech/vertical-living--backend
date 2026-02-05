@@ -376,7 +376,7 @@ export const updateMaterailWithLabourItem = async (req: Request, res: Response):
 
     return res.status(200).json({
       ok: true,
-      message: "labours rate updated successfully",
+      message: "updated successfully",
       data: item,
     });
   } catch (error: any) {

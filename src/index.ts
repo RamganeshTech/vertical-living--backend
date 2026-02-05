@@ -125,6 +125,7 @@ import InternalQuoteRoutes from './routers/Quote Routes/QuoteGenerate Routes/int
 import MateroialWithLabourRateConfigRoutes from './routers/Quote Routes/RateConfig Routes/materialWithLabourRateConfig.routes';
 import CutlistRoutes from './routers/cutlist_routes/cutlist.routes';
 import CommonAuthRoutes from './routers/commonAuth_routes/commonAuth.routes';
+import PreSalesRoutes from './routers/preSalesQuote_routes/preSalesQuote.route';
 
 
 // Extend Socket interface for custom properties
@@ -377,6 +378,7 @@ app.use('/api/quote/labour/rateconfig', LabourRateConfigRoutes)
 app.use('/api/quote/materialwithlabour/rateconfig', MateroialWithLabourRateConfigRoutes)
 app.use('/api/quote/quotegenerate', QuoteRouter)
 app.use('/api/quote/quotegenerate', InternalQuoteRoutes)
+app.use('/api/quote/presales', PreSalesRoutes)
 
 app.use('/api/cutlist', CutlistRoutes)
 
