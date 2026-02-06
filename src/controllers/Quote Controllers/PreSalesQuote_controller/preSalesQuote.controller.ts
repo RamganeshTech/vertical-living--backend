@@ -39,13 +39,30 @@ export const createPreSalesQuote = async (req: Request, res: Response): Promise<
 export const getAllPreSalesQuotes = async (req: Request, res: Response): Promise<any> => {
     try {
         const { organizationId } = req.query; // Ensure this is passed from frontend
-        const { search, status, page = 1, limit = 20 } = req.query;
+        const { search, status, page = 1, limit = 20, startDate, endDate } = req.query;
 
         if (!organizationId) {
             return res.status(400).json({ ok: false, message: "Organization ID is required" });
         }
 
         const query: any = { organizationId: new mongoose.Types.ObjectId(organizationId as string) };
+
+
+        // 1. ADD DATE FILTER LOGIC HERE
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) {
+                // Set to start of the day (00:00:00)
+                query.createdAt.$gte = new Date(startDate as string);
+            }
+            if (endDate) {
+                // Set to end of the day (23:59:59) to include today's results
+                const end = new Date(endDate as string);
+                end.setHours(23, 59, 59, 999);
+                query.createdAt.$lte = end;
+            }
+        }
+        
 
         // Search logic for Quote No, Client Name, or Main Quote Name
         if (search) {
