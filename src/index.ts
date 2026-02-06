@@ -126,6 +126,7 @@ import MateroialWithLabourRateConfigRoutes from './routers/Quote Routes/RateConf
 import CutlistRoutes from './routers/cutlist_routes/cutlist.routes';
 import CommonAuthRoutes from './routers/commonAuth_routes/commonAuth.routes';
 import PreSalesRoutes from './routers/preSalesQuote_routes/preSalesQuote.route';
+import PreSalesMaterialRateConfigRoutes from './routers/Quote Routes/RateConfig Routes/preSalesRateConfig.routes';
 
 
 // Extend Socket interface for custom properties
@@ -376,6 +377,7 @@ app.use('/api/department/accounting/vendorpayment', VendorPaymentRoutes)
 app.use('/api/quote/rateconfig', RateConfigRoutes)
 app.use('/api/quote/labour/rateconfig', LabourRateConfigRoutes)
 app.use('/api/quote/materialwithlabour/rateconfig', MateroialWithLabourRateConfigRoutes)
+app.use('/api/quote/presales/rateconfig', PreSalesMaterialRateConfigRoutes)
 app.use('/api/quote/quotegenerate', QuoteRouter)
 app.use('/api/quote/quotegenerate', InternalQuoteRoutes)
 app.use('/api/quote/presales', PreSalesRoutes)
