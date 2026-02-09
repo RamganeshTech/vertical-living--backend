@@ -1,6 +1,6 @@
 import express from 'express';
 import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
-import { createPreSalesQuote, deletePreSalesQuote, getAllPreSalesQuotes, getSinglePreSalesQuote, updatePreSalesQuote } from '../../controllers/Quote Controllers/PreSalesQuote_controller/preSalesQuote.controller';
+import { clonePreSalesQuote, createPreSalesQuote, deletePreSalesQuote, getAllPreSalesQuotes, getSinglePreSalesQuote, updatePreSalesQuote, updatePreSalesQuoteName } from '../../controllers/Quote Controllers/PreSalesQuote_controller/preSalesQuote.controller';
 
 const PreSalesRoutes = express.Router();
 
@@ -14,6 +14,18 @@ PreSalesRoutes.post(
     multiRoleAuthMiddleware("owner", "staff", "CTO"),
     createPreSalesQuote
 );
+
+
+// 1. Create Initial Main Quote (Step 1)
+PreSalesRoutes.put(
+    "/updatemainquote/:quoteId",
+    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    updatePreSalesQuoteName
+);
+
+
+
+
 
 // 2. Get All Quotes (Infinite Scroll / List View)
 // Note: organizationId should be passed in query params or as a route param
@@ -43,5 +55,14 @@ PreSalesRoutes.delete(
     multiRoleAuthMiddleware("owner", "staff", "CTO"),
     deletePreSalesQuote
 );
+
+
+//  clone
+PreSalesRoutes.put(
+    "/clone/:quoteId",
+    multiRoleAuthMiddleware("owner", "staff", "CTO"),
+    clonePreSalesQuote
+);
+
 
 export default PreSalesRoutes;

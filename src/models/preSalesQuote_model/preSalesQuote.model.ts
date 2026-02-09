@@ -4,10 +4,17 @@ export interface IPreSalesQuote extends Document {
     organizationId: Types.ObjectId;
     quoteNo: string;
     mainQuoteName: string;
-    clientName?: string;
-    phone?: string;
-    email?: string;
-    location?: string;
+    clientData?: {
+        clientName: string,
+        whatsapp: string,
+        email: string,
+        location: string,
+    },
+    projectDetails?: {
+        projectName: string,
+        quoteNo: string,
+        dateofIssue: Date
+    },
     carpetArea: number;
     bhk: string;
     finishTier: string;
@@ -25,10 +32,16 @@ const PreSalesQuoteSchema = new Schema<IPreSalesQuote>(
         organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel", required: true },
         quoteNo: { type: String, },
         mainQuoteName: { type: String, required: true, },
-        clientName: { type: String, default: null },
-        phone: { type: String, default: null },
-        email: { type: String, default: null },
-        location: { type: String, default: null },
+        clientData: {
+            clientName: { type: String, default: null },
+            whatsapp: { type: String, default: null },
+            email: { type: String, default: null },
+            location: { type: String, default: null },
+        },
+        projectDetails: {
+            projectName: { type: String, default: null },
+            dateOfIssue: { type: Date, default: null },
+        },
         carpetArea: { type: Number, default: 0 },
         bhk: { type: String, default: null },
         finishTier: { type: String, default: null },

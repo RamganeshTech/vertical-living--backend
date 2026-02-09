@@ -33,6 +33,56 @@ export const createPreSalesQuote = async (req: Request, res: Response): Promise<
     }
 };
 
+
+
+export const updatePreSalesQuoteName = async (req:Request, res:Response): Promise<any>  => {
+    try {
+        const { quoteId } = req.params;
+        const { mainQuoteName } = req.body;
+
+        if (!quoteId) {
+            return res.status(400).json({
+                ok: false,
+                message: "Quote ID (quoteId) is required"
+            });
+        }
+
+        if (!mainQuoteName || !mainQuoteName.trim()) {
+            return res.status(400).json({
+                ok: false,
+                message: "mainQuoteName is required"
+            });
+        }
+
+        // 1️⃣ Find existing quote
+        const existingQuote = await PreSalesQuoteModel.findByIdAndUpdate(quoteId, {$set: {mainQuoteName: mainQuoteName}},  { new: true } );
+
+        if (!existingQuote) {
+            return res.status(404).json({
+                ok: false,
+                message: "Quote not found"
+            });
+        }
+
+
+        return res.status(200).json({
+            ok: true,
+            message: "Quote name updated successfully",
+            data: existingQuote
+        });
+
+    } catch (error:any) {
+        console.error("Update PreSales Quote Name Error:", error);
+        return res.status(500).json({
+            ok: false,
+            message: error.message
+        });
+    }
+};
+
+
+
+
 /**
  * GET ALL: Retrieve list with search, status filter, and pagination
  */
@@ -62,7 +112,7 @@ export const getAllPreSalesQuotes = async (req: Request, res: Response): Promise
                 query.createdAt.$lte = end;
             }
         }
-        
+
 
         // Search logic for Quote No, Client Name, or Main Quote Name
         if (search) {
@@ -123,11 +173,9 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
     try {
         const { quoteId } = req.params;
         const {
-           
-            clientName,
-            phone,
-            email,
-            location,
+
+            clientData,
+            projectDetails,
             carpetArea,
             bhk,
             finishTier,
@@ -140,10 +188,8 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
             quoteId,
             {
                 $set: {
-                    clientName,
-                    phone,
-                    email,
-                    location,
+                    clientData,
+                    projectDetails,
                     carpetArea,
                     bhk,
                     finishTier,
@@ -169,6 +215,8 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
     }
 };
 
+
+
 /**
  * DELETE: Remove a quote
  */
@@ -188,5 +236,106 @@ export const deletePreSalesQuote = async (req: Request, res: Response): Promise<
         });
     } catch (error: any) {
         return res.status(500).json({ ok: false, message: "Deletion failed", error: error.message });
+    }
+};
+
+
+
+
+//  COPY OF THE CONTRLLER
+
+export const clonePreSalesQuote = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { quoteId } = req.params;
+
+        if (!quoteId) {
+            return res.status(400).json({
+                ok: false,
+                message: "Quote ID (quoteId) is required"
+            });
+        }
+
+        // 1️⃣ Find existing quote
+        const sourceQuote = await PreSalesQuoteModel.findById(quoteId).lean();
+
+        if (!sourceQuote) {
+            return res.status(404).json({
+                ok: false,
+                message: "Quote not found"
+            });
+        }
+
+  // 2️⃣ Determine Root Name
+        const currentName = sourceQuote.mainQuoteName || "Quote";
+        let rootName = currentName;
+
+        if (currentName.startsWith("Copy of ")) {
+            rootName = currentName
+                .replace(/^Copy of /, "")
+                .replace(/ \(\d+\)$/, "");
+        }
+
+        // 3️⃣ Find existing copies
+        const escapedRoot = rootName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+        const regex = new RegExp(
+            `^Copy of ${escapedRoot}(?: \\((\\d+)\\))?$`
+        );
+
+        const existingCopies = await PreSalesQuoteModel.find({
+            organizationId: sourceQuote.organizationId,
+            mainQuoteName: { $regex: regex }
+        }).select("mainQuoteName");
+
+        // 4️⃣ Calculate next number
+        let nextNumber = 0;
+
+        if (existingCopies.length > 0) {
+            const numbers = existingCopies.map(c => {
+                const match = c.mainQuoteName?.match(/\((\d+)\)$/);
+                return match ? parseInt(match[1]) : 0;
+            });
+
+            nextNumber = Math.max(...numbers) + 1;
+        }
+
+        // 5️⃣ Format new name
+        let newQuoteName = "";
+
+        if (existingCopies.length === 0) {
+            newQuoteName = `Copy of ${rootName}`;
+        } else {
+            newQuoteName = `Copy of ${rootName} (${nextNumber})`;
+        }
+
+        // 6️⃣ Remove restricted fields
+        const {
+            _id,
+            quoteNo,
+            createdAt,
+            updatedAt,
+            __v,
+            ...quoteData
+        } = sourceQuote;
+
+        // 7️⃣ Apply new name & reset status
+        quoteData.mainQuoteName = newQuoteName;
+        quoteData.status = "draft";
+        // 3️⃣ Create new quote (this will trigger pre-save hook)
+        const newQuote = new PreSalesQuoteModel(quoteData);
+        await newQuote.save()
+
+        return res.status(201).json({
+            ok: true,
+            message: "Pre-sales quote cloned successfully",
+            data: newQuote
+        });
+
+    } catch (error:any) {
+        console.error("Clone PreSales Quote Error:", error);
+        return res.status(500).json({
+            ok: false,
+            message: error?.message
+        });
     }
 };
