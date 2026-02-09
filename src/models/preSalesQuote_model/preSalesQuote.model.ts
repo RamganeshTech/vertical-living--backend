@@ -4,6 +4,7 @@ export interface IPreSalesQuote extends Document {
     organizationId: Types.ObjectId;
     quoteNo: string;
     mainQuoteName: string;
+
     clientData?: {
         clientName: string,
         whatsapp: string,
@@ -15,11 +16,24 @@ export interface IPreSalesQuote extends Document {
         quoteNo: string,
         dateofIssue: Date
     },
+
+
     carpetArea: number;
     bhk: string;
     finishTier: string;
     // Deep configuration object for Rooms > Products > Materials
     config: Record<string, any>;
+
+    clientDataTextArea: string | null
+    projectDetailsTextArea: string | null
+    whatsIncluded: string | null
+    whatsNotIncluded: string | null
+    whatIsFree: string | null
+    brandlist: string | null
+    TermsAndConditions: string | null
+    disclaimer: string | null
+
+
     totalAmount: number;
     // status: "draft" | "sent" | "approved" | "cancelled";
     status: string
@@ -42,6 +56,18 @@ const PreSalesQuoteSchema = new Schema<IPreSalesQuote>(
             projectName: { type: String, default: null },
             dateOfIssue: { type: Date, default: null },
         },
+
+        clientDataTextArea: { type: String, default: null },
+        projectDetailsTextArea: { type: String, default: null },
+        
+        whatsIncluded: { type: String, default: null },
+        whatsNotIncluded: { type: String, default: null },
+        whatIsFree: { type: String, default: null },
+        brandlist: { type: String, default: null },
+        TermsAndConditions: { type: String, default: null },
+        disclaimer: { type: String, default: null },
+
+
         carpetArea: { type: Number, default: 0 },
         bhk: { type: String, default: null },
         finishTier: { type: String, default: null },

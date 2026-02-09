@@ -1,6 +1,7 @@
 import express from 'express';
 import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
-import { clonePreSalesQuote, createPreSalesQuote, deletePreSalesQuote, getAllPreSalesQuotes, getSinglePreSalesQuote, updatePreSalesQuote, updatePreSalesQuoteName } from '../../controllers/Quote Controllers/PreSalesQuote_controller/preSalesQuote.controller';
+import { clonePreSalesQuote, createPreSalesQuote, deletePreSalesQuote, getAllPreSalesQuotes, getSinglePreSalesQuote, updatePreSalesQuote, updatePreSalesQuote4, updatePreSalesQuoteName } from '../../controllers/Quote Controllers/PreSalesQuote_controller/preSalesQuote.controller';
+import { imageUploadToS3, processUploadFiles } from '../../utils/s3Uploads/s3upload';
 
 const PreSalesRoutes = express.Router();
 
@@ -47,6 +48,17 @@ PreSalesRoutes.put(
     "/update/:quoteId",
     multiRoleAuthMiddleware("owner", "staff", "CTO"),
     updatePreSalesQuote
+);
+
+
+
+
+PreSalesRoutes.put(
+    "/update/quotepdfdetails/:quoteId",
+    multiRoleAuthMiddleware("owner", "staff", "CTO"), // if needed
+    imageUploadToS3.any(), // ✅ Capture all files
+    processUploadFiles,
+    updatePreSalesQuote4
 );
 
 // 5. Delete Quote
