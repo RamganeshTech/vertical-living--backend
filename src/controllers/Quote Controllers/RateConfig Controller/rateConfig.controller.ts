@@ -203,6 +203,78 @@ export const createMaterialCategory = async (req: Request, res: Response): Promi
 };
 
 
+export const updateMaterialCategoryAndSyncItems = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { categoryId, organizationId } = req.params;
+        const { name, fields } = req.body;
+
+        // 1. Fetch the existing category
+        const existingCategory = await CategoryModel.findById(categoryId);
+        if (!existingCategory) {
+            return res.status(404).json({ ok: false, message: "Category not found" });
+        }
+
+        // Use 'key' to match your Schema interface MaterialCategoryDoc
+        const oldFieldKeys = existingCategory.fields.map(f => f.key);
+        const newFieldKeys = fields.map((f: any) => f.key);
+
+        // 2. Identify changes
+        const fieldsToAdd = newFieldKeys.filter((k:any) => !oldFieldKeys.includes(k));
+        const fieldsToRemove = oldFieldKeys.filter(k => !newFieldKeys.includes(k));
+
+        // 3. Update Category Model
+        // existingCategory.name = name || existingCategory.name;
+        existingCategory.fields = fields; 
+        await existingCategory.save();
+
+        // 4. SYNC WITH ITEM MODEL
+        // Filter must match your ItemModel field: 'categoryId'
+        const itemFilter = { 
+            categoryId: categoryId, 
+            organizationId: organizationId 
+        };
+
+        // A. Handle Removals: Use dot notation "data.key" to reach inside the Mixed object
+        if (fieldsToRemove.length > 0) {
+            const unsetObj: any = {};
+            fieldsToRemove.forEach(key => {
+                unsetObj[`data.${key}`] = ""; 
+            });
+
+            await ItemModel.updateMany(itemFilter, { $unset: unsetObj });
+        }
+
+        // B. Handle Additions: Set default values inside the "data" object
+        if (fieldsToAdd.length > 0) {
+            const setObj: any = {};
+            fieldsToAdd.forEach((key:any) => {
+                const fieldConfig = fields.find((f: any) => f.key === key);
+                
+                // Determine a safe default based on type
+                let defaultValue: any = "";
+                if (fieldConfig?.type === "number") defaultValue = 0;
+                if (fieldConfig?.type === "boolean") defaultValue = false;
+
+                setObj[`data.${key}`] = defaultValue;
+            });
+
+            await ItemModel.updateMany(itemFilter, { $set: setObj });
+        }
+
+        return res.status(200).json({
+            ok: true,
+            message: "Category updated and all items synced successfully",
+            syncDetails: { added: fieldsToAdd, removed: fieldsToRemove },
+            data: existingCategory
+        });
+
+    } catch (error: any) {
+        console.error("Sync Update Error:", error);
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+
 // Controller to create material items
 export const createMaterialItems = async (req: Request, res: Response): Promise<any> => {
   try {

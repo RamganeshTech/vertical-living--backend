@@ -5,7 +5,8 @@ import { createMaterialCategory,   createMaterialItems,
   deleteMaterialCategory,
   getMaterialCategories,
   getMaterialItemsByCategory,
-  getMaterialItemsForFittings, } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
+  getMaterialItemsForFittings,
+  updateMaterialCategoryAndSyncItems, } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 
 const RateConfigRoutes = Router();
@@ -22,6 +23,7 @@ RateConfigRoutes.get("/categories/:categoryId/items", multiRoleAuthMiddleware("o
  */
 // Create category (e.g., Plywood, Adhesive, etc.)
 RateConfigRoutes.post("/categories", multiRoleAuthMiddleware("owner","CTO", "staff"), createMaterialCategory);
+RateConfigRoutes.put("/categories/update/:organizationId/:categoryId", multiRoleAuthMiddleware("owner","CTO", "staff"), updateMaterialCategoryAndSyncItems);
 
 // Delete category and its items
 RateConfigRoutes.delete("/categories/:categoryId",multiRoleAuthMiddleware("owner","CTO", "staff"), deleteMaterialCategory);

@@ -5,6 +5,7 @@ import { updatePreSalesMaterialItem } from "../../../controllers/Quote Controlle
 const PreSalesMaterialRateConfigRoutes = Router();
 
 // Update single item
+//  but currently not used anywhere
 PreSalesMaterialRateConfigRoutes.put("/items/:itemId", multiRoleAuthMiddleware("owner", "CTO", "staff"), updatePreSalesMaterialItem);
 
 export default PreSalesMaterialRateConfigRoutes;
