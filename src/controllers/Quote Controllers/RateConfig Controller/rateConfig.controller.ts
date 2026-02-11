@@ -171,7 +171,7 @@ export const createMaterialCategory = async (req: Request, res: Response): Promi
           message: "Each field must have a key",
         });
       }
-      if (field.type && !["string", "number", "boolean"].includes(field.type)) {
+      if (field.type && !["string", "number", "boolean", "file"].includes(field.type)) {
         return res.status(400).json({
           ok: false,
           message: `Invalid type '${field.type}' for field '${field.key}'`,
@@ -180,7 +180,7 @@ export const createMaterialCategory = async (req: Request, res: Response): Promi
 
       // Validate visibleIn (Optional: Ensure it's an array of strings)
       if (field.visibleIn && !Array.isArray(field.visibleIn)) {
-         return res.status(400).json({ ok: false, message: `visibleIn for '${field.key}' must be an array` });
+        return res.status(400).json({ ok: false, message: `visibleIn for '${field.key}' must be an array` });
       }
     }
 
@@ -209,74 +209,74 @@ export const createMaterialCategory = async (req: Request, res: Response): Promi
 
 
 export const updateMaterialCategoryAndSyncItems = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { categoryId, organizationId } = req.params;
-        const { name, fields } = req.body;
+  try {
+    const { categoryId, organizationId } = req.params;
+    const { name, fields } = req.body;
 
-        // 1. Fetch the existing category
-        const existingCategory = await CategoryModel.findById(categoryId);
-        if (!existingCategory) {
-            return res.status(404).json({ ok: false, message: "Category not found" });
-        }
-
-        // Use 'key' to match your Schema interface MaterialCategoryDoc
-        const oldFieldKeys = existingCategory.fields.map(f => f.key);
-        const newFieldKeys = fields.map((f: any) => f.key);
-
-        // 2. Identify changes
-        const fieldsToAdd = newFieldKeys.filter((k:any) => !oldFieldKeys.includes(k));
-        const fieldsToRemove = oldFieldKeys.filter(k => !newFieldKeys.includes(k));
-
-        // 3. Update Category Model
-        // existingCategory.name = name || existingCategory.name;
-        existingCategory.fields = fields; 
-        await existingCategory.save();
-
-        // 4. SYNC WITH ITEM MODEL
-        // Filter must match your ItemModel field: 'categoryId'
-        const itemFilter = { 
-            categoryId: categoryId, 
-            organizationId: organizationId 
-        };
-
-        // A. Handle Removals: Use dot notation "data.key" to reach inside the Mixed object
-        if (fieldsToRemove.length > 0) {
-            const unsetObj: any = {};
-            fieldsToRemove.forEach(key => {
-                unsetObj[`data.${key}`] = ""; 
-            });
-
-            await ItemModel.updateMany(itemFilter, { $unset: unsetObj });
-        }
-
-        // B. Handle Additions: Set default values inside the "data" object
-        if (fieldsToAdd.length > 0) {
-            const setObj: any = {};
-            fieldsToAdd.forEach((key:any) => {
-                const fieldConfig = fields.find((f: any) => f.key === key);
-                
-                // Determine a safe default based on type
-                let defaultValue: any = "";
-                if (fieldConfig?.type === "number") defaultValue = 0;
-                if (fieldConfig?.type === "boolean") defaultValue = false;
-
-                setObj[`data.${key}`] = defaultValue;
-            });
-
-            await ItemModel.updateMany(itemFilter, { $set: setObj });
-        }
-
-        return res.status(200).json({
-            ok: true,
-            message: "Category updated and all items synced successfully",
-            syncDetails: { added: fieldsToAdd, removed: fieldsToRemove },
-            data: existingCategory
-        });
-
-    } catch (error: any) {
-        console.error("Sync Update Error:", error);
-        return res.status(500).json({ ok: false, message: error.message });
+    // 1. Fetch the existing category
+    const existingCategory = await CategoryModel.findById(categoryId);
+    if (!existingCategory) {
+      return res.status(404).json({ ok: false, message: "Category not found" });
     }
+
+    // Use 'key' to match your Schema interface MaterialCategoryDoc
+    const oldFieldKeys = existingCategory.fields.map(f => f.key);
+    const newFieldKeys = fields.map((f: any) => f.key);
+
+    // 2. Identify changes
+    const fieldsToAdd = newFieldKeys.filter((k: any) => !oldFieldKeys.includes(k));
+    const fieldsToRemove = oldFieldKeys.filter(k => !newFieldKeys.includes(k));
+
+    // 3. Update Category Model
+    // existingCategory.name = name || existingCategory.name;
+    existingCategory.fields = fields;
+    await existingCategory.save();
+
+    // 4. SYNC WITH ITEM MODEL
+    // Filter must match your ItemModel field: 'categoryId'
+    const itemFilter = {
+      categoryId: categoryId,
+      organizationId: organizationId
+    };
+
+    // A. Handle Removals: Use dot notation "data.key" to reach inside the Mixed object
+    if (fieldsToRemove.length > 0) {
+      const unsetObj: any = {};
+      fieldsToRemove.forEach(key => {
+        unsetObj[`data.${key}`] = "";
+      });
+
+      await ItemModel.updateMany(itemFilter, { $unset: unsetObj });
+    }
+
+    // B. Handle Additions: Set default values inside the "data" object
+    if (fieldsToAdd.length > 0) {
+      const setObj: any = {};
+      fieldsToAdd.forEach((key: any) => {
+        const fieldConfig = fields.find((f: any) => f.key === key);
+
+        // Determine a safe default based on type
+        let defaultValue: any = "";
+        if (fieldConfig?.type === "number") defaultValue = 0;
+        if (fieldConfig?.type === "boolean") defaultValue = false;
+
+        setObj[`data.${key}`] = defaultValue;
+      });
+
+      await ItemModel.updateMany(itemFilter, { $set: setObj });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: "Category updated and all items synced successfully",
+      syncDetails: { added: fieldsToAdd, removed: fieldsToRemove },
+      data: existingCategory
+    });
+
+  } catch (error: any) {
+    console.error("Sync Update Error:", error);
+    return res.status(500).json({ ok: false, message: error.message });
+  }
 };
 
 
@@ -284,7 +284,13 @@ export const updateMaterialCategoryAndSyncItems = async (req: Request, res: Resp
 export const createMaterialItems = async (req: Request, res: Response): Promise<any> => {
   try {
     const { categoryId, organizationId } = req.params; // categoryId passed in URL
-    const items: Record<string, any>[] = req.body.items; // expecting array of objects
+    // const items: Record<string, any>[] = req.body.items; // expecting array of objects
+
+    const files = req.files as (Express.Multer.File & { location: string })[];
+
+    // const items = JSON.parse(req.body.items);
+
+    const items = typeof req.body.items === 'string' ? JSON.parse(req.body.items) : req.body.items;
 
     // console.log("items", items)
     // console.log("req.body", req.body)
@@ -338,15 +344,38 @@ export const createMaterialItems = async (req: Request, res: Response): Promise<
       });
     }
 
+    //  OLD VERSION
     // Prepare documents for bulk insert
-    const itemDocs = items.map((data) => ({
-      organizationId,
-      categoryId,
-      categoryName: category.name,
-      data,
-    }));
+    // const itemDocs = items.map((data) => ({
+    //   organizationId,
+    //   categoryId,
+    //   categoryName: category.name,
+    //   data,
+    // }));
 
-    const createdItems = await ItemModel.insertMany(itemDocs);
+
+    // Find which field is of type 'file'
+    const imageField = category.fields.find((f: any) => f.type === 'file');
+    const imageFieldKey = imageField?.key;
+
+    // 3. Map files to items
+    const finalItems = items.map((itemData: any, index: number) => {
+      // Look for a file named "file-0", "file-1", etc. based on row index
+      const rowFile = files?.find(f => f.fieldname === `file-${index}`);
+
+      if (rowFile && imageFieldKey) {
+        itemData[imageFieldKey] = rowFile.location; // Store S3 URL
+      }
+
+      return {
+        organizationId,
+        categoryId,
+        categoryName: category.name,
+        data: itemData
+      };
+    });
+
+    const createdItems = await ItemModel.insertMany(finalItems);
 
     return res.status(201).json({
       ok: true,
@@ -369,6 +398,12 @@ export const updateMaterialItem = async (req: Request, res: Response): Promise<a
     const { itemId } = req.params;
     const updates: Record<string, any> = req.body; // expect flat object like { brand: "X", rate: 120 }
 
+    // const items = typeof req.body.items === 'string' ? JSON.parse(req.body.items) : req.body.items;
+
+
+    // 2. Extract uploaded files (Multer-S3 provides this)
+    const files = req.files as (Express.Multer.File & { location: string })[];
+
     // Find the existing item
     const item = await ItemModel.findById(itemId);
     if (!item) {
@@ -390,7 +425,12 @@ export const updateMaterialItem = async (req: Request, res: Response): Promise<a
     // Validate updates against category fields
     const errors: string[] = [];
     for (const fieldDef of category.fields) {
-      const value = updates[fieldDef.key] ?? item.data[fieldDef.key]; // use updated or existing value
+      let value = updates[fieldDef.key] ?? item.data[fieldDef.key]; // use updated or existing value
+
+      if (fieldDef.type === "number" && typeof value === "string" && value !== "") {
+        value = Number(value);
+        updates[fieldDef.key] = value; // Update the object so the parsed number is saved
+      }
 
       if (fieldDef.required && (value === undefined || value === null || value === "")) {
         errors.push(`Field '${fieldDef.key}' is required`);
@@ -417,8 +457,22 @@ export const updateMaterialItem = async (req: Request, res: Response): Promise<a
       });
     }
 
+
+
+    // 3. Map uploaded file to the correct field key
+    if (files && files.length > 0) {
+      // Find which field in this category is the 'file' (image) type
+      const imageField = category.fields.find((f: any) => f.type === 'file');
+      if (imageField) {
+        // Use the first uploaded file's S3 location
+        updates[imageField.key] = files[0].location;
+      }
+    }
+
+
     // Merge updates into item.data
     item.data = { ...item.data.toObject?.() ?? item.data, ...updates };
+    item.markModified('data');
     await item.save();
 
     return res.status(200).json({

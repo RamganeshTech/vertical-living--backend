@@ -8,6 +8,7 @@ import { createMaterialCategory,   createMaterialItems,
   getMaterialItemsForFittings,
   updateMaterialCategoryAndSyncItems, } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
+import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
 
 const RateConfigRoutes = Router();
 
@@ -32,10 +33,14 @@ RateConfigRoutes.delete("/categories/:categoryId",multiRoleAuthMiddleware("owner
  * ITEM ROUTES
  */
 // Create items under a category
-RateConfigRoutes.post("/categories/:organizationId/:categoryId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),createMaterialItems);
+RateConfigRoutes.post("/categories/:organizationId/:categoryId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),
+imageUploadToS3.any(), processUploadFiles,
+createMaterialItems);
 
 // Update single item
-RateConfigRoutes.put("/items/:itemId", multiRoleAuthMiddleware("owner","CTO", "staff"),updateMaterialItem);
+RateConfigRoutes.put("/items/:itemId", multiRoleAuthMiddleware("owner","CTO", "staff"),
+imageUploadToS3.any(), processUploadFiles,
+updateMaterialItem);
 
 // Delete single item
 RateConfigRoutes.delete("/items/:itemId",multiRoleAuthMiddleware("owner","CTO", "staff"), deleteMaterialItem);
