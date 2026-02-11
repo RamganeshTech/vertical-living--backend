@@ -117,6 +117,26 @@ export const createModularUnitNew = async (req: Request, res: Response): Promise
             }
         }
 
+        // Inside your createModularUnitNew backend function:
+        let dimentionParsed:any = { height: null, width: null, depth: null };
+        if (req.body.dimention) {
+            try {
+                const parsed = typeof req.body.dimention === 'string'
+                    ? JSON.parse(req.body.dimention)
+                    : req.body.dimention;
+
+                dimentionParsed = {
+                    height: parsed.height ? Number(parsed.height) : null,
+                    width: parsed.width ? Number(parsed.width) : null,
+                    depth: parsed.depth ? Number(parsed.depth) : null,
+                };
+            } catch (e) {
+                console.error("Dimension parsing error:", e);
+            }
+        }
+
+        // Then use dimentionParsed in your new ModularUnitModelNew({...})
+
         const serialNo = await generateSerialNumber(organizationId)
 
         // Create new modular unit
@@ -125,11 +145,12 @@ export const createModularUnitNew = async (req: Request, res: Response): Promise
             // productName: null,
             attributes: req.body.attributes ? JSON.parse(req.body.attributes) : [],
             serialNo: serialNo || null,
-            dimention: {
-                height: req.body.dimention.height || null,
-                width: req.body.dimention.width || null,
-                depth: req.body.dimention.depth || null,
-            },
+            // dimention: {
+            //     height: req.body.dimention.height || null,
+            //     width: req.body.dimention.width || null,
+            //     depth: req.body.dimention.depth || null,
+            // },
+            dimention: dimentionParsed,
             parts,
             description: req.body.description,
             totalAreaSqFt: req.body.totalAreaSqFt,
@@ -502,7 +523,7 @@ export const updateModularUnitNew = async (req: Request, res: Response): Promise
         const depth = req.body['dimention.depth'] || req.body.depth || dimentionData?.depth;
 
         // Update dimensions if any dimension field is provided
-        if (height !== undefined || width !== undefined ) {
+        if (height !== undefined || width !== undefined) {
             updateData.dimention = {
                 height: height ? Number(height) : existingUnit.dimention.height,
                 width: width ? Number(width) : existingUnit.dimention.width,
@@ -603,9 +624,9 @@ export const generateModularUnitCutlistPdf = async (req: Request, res: Response)
         const orgName = orgData ? orgData.organizationName : COMPANY_NAME;
 
         // 3. Call Helper Function
-        const pdfResponse = await generateModularUnitCutlistPdfHelper({ 
-            unitData, 
-            orgName 
+        const pdfResponse = await generateModularUnitCutlistPdfHelper({
+            unitData,
+            orgName
         });
 
         return res.status(200).json({

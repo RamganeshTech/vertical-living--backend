@@ -7,6 +7,7 @@ export interface MaterialCategoryDoc extends Document {
     key: string;   // e.g., "brand", "thickness", "rate", "notes"
     type: "string" | "number" | "boolean"; 
     required?: boolean;
+    visibleIn?: boolean;
   }[];
 }
 
@@ -18,6 +19,7 @@ const MaterialCategorySchema = new Schema<MaterialCategoryDoc>({
       key: { type: String,  },
       type: { type: String,  default: "string" },
       required: { type: Boolean, default: false },
+      visibleIn: {type: [String], default: [] },
     },
   ],
 }, { timestamps: true });

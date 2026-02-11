@@ -177,6 +177,11 @@ export const createMaterialCategory = async (req: Request, res: Response): Promi
           message: `Invalid type '${field.type}' for field '${field.key}'`,
         });
       }
+
+      // Validate visibleIn (Optional: Ensure it's an array of strings)
+      if (field.visibleIn && !Array.isArray(field.visibleIn)) {
+         return res.status(400).json({ ok: false, message: `visibleIn for '${field.key}' must be an array` });
+      }
     }
 
     const newCategory = new CategoryModel({
