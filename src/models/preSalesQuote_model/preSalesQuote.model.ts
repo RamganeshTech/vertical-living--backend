@@ -21,6 +21,7 @@ export interface IPreSalesQuote extends Document {
     carpetArea: number;
     bhk: string;
     finishTier: string;
+    purpose: string;
     // Deep configuration object for Rooms > Products > Materials
     config: Record<string, any>;
 
@@ -35,6 +36,7 @@ export interface IPreSalesQuote extends Document {
 
 
     totalAmount: number;
+    globalDimType: string;
     // status: "draft" | "sent" | "approved" | "cancelled";
     status: string
     createdAt: Date;
@@ -59,7 +61,7 @@ const PreSalesQuoteSchema = new Schema<IPreSalesQuote>(
 
         clientDataTextArea: { type: String, default: null },
         projectDetailsTextArea: { type: String, default: null },
-        
+
         whatsIncluded: { type: String, default: null },
         whatsNotIncluded: { type: String, default: null },
         whatIsFree: { type: String, default: null },
@@ -71,6 +73,7 @@ const PreSalesQuoteSchema = new Schema<IPreSalesQuote>(
         carpetArea: { type: Number, default: 0 },
         bhk: { type: String, default: null },
         finishTier: { type: String, default: null },
+        purpose: { type: String, default: null },
         config: { type: Object, default: {} },
         totalAmount: { type: Number, default: 0 },
         status: {
@@ -78,6 +81,8 @@ const PreSalesQuoteSchema = new Schema<IPreSalesQuote>(
             // enum: ["draft", "sent", "approved", "cancelled"],
             default: "draft",
         },
+
+        globalDimType: { type: String, default: null }
     },
     { timestamps: true }
 );

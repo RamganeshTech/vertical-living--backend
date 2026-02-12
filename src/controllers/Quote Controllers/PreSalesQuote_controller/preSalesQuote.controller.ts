@@ -177,11 +177,13 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
             clientData,
             projectDetails,
             carpetArea,
+            purpose,
             bhk,
             finishTier,
             config,
             totalAmount,
-            status
+            status,
+            globalDimType
         } = req.body;
 
 
@@ -418,6 +420,9 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
                     whatIsFree,
                     disclaimer,
                     TermsAndConditions: termsString,
+
+                    purpose: purpose || null,
+                    globalDimType: globalDimType || null
                 }
             },
             { new: true }
