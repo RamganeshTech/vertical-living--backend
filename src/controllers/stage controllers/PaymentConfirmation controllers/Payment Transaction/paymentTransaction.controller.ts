@@ -104,7 +104,6 @@ const verifyPaymentConfirmation = async (req: Request, res: Response): Promise<a
     }
 };
 
-
 const getPaymentTransaction = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;

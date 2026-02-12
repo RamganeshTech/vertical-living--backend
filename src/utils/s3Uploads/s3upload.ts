@@ -83,11 +83,11 @@ export const processUploadFiles = async (req: Request, res: Response, next: Next
 
     for (const file of files) {
       if (file.mimetype === "application/pdf") {
-        if (file.size > 10 * 1024 * 1024) {
-          return res
-            .status(400)
-            .json({ message: `PDF ${file.originalname} exceeds 10MB limit.` });
-        }
+        // if (file.size > 10 * 1024 * 1024) {
+        //   return res
+        //     .status(400)
+        //     .json({ message: `PDF ${file.originalname} exceeds 10MB limit.` });
+        // }
         console.log("file", file)
         const s3Key = `pdfs/${generateS3Key(file.originalname)}`;
         const params = {

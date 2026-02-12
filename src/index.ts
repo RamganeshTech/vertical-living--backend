@@ -127,6 +127,7 @@ import CutlistRoutes from './routers/cutlist_routes/cutlist.routes';
 import CommonAuthRoutes from './routers/commonAuth_routes/commonAuth.routes';
 import PreSalesRoutes from './routers/preSalesQuote_routes/preSalesQuote.route';
 import PreSalesMaterialRateConfigRoutes from './routers/Quote Routes/RateConfig Routes/preSalesRateConfig.routes';
+import MaterialShopRoutes from './routers/shopMaterialDocument_routes/shopMaterialDocument.routes';
 
 
 // Extend Socket interface for custom properties
@@ -383,6 +384,7 @@ app.use('/api/quote/quotegenerate', InternalQuoteRoutes)
 app.use('/api/quote/presales', PreSalesRoutes)
 
 app.use('/api/cutlist', CutlistRoutes)
+app.use('/api/materialshop/document', MaterialShopRoutes)
 
 
 
