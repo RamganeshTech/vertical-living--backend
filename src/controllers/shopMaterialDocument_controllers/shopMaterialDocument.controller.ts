@@ -4,6 +4,7 @@ import { MaterialShopDocumentModel } from '../../models/ShopMaterial_document_mo
 import { GoogleGenAI } from "@google/genai";
 import dotenv from 'dotenv';
 import axios from 'axios';
+import mongoose from 'mongoose';
 dotenv.config()
 
 
@@ -12,30 +13,34 @@ const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
 export const createMaterialShopDocuments = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { categoryName } = req.body;
+    const { categoryName, organizationId } = req.body;
     const files = req.files as (Express.Multer.File & { location: string })[];
 
     if (!files || files.length === 0) {
       return res.status(400).json({ message: "No PDF/Image files provided.", ok: false });
     }
 
+    if (!organizationId) return res.status(400).json({ message: "Organization ID is required.", ok: false });
+
     if (!categoryName) {
       return res.status(400).json({ message: "Category name is required.", ok: false });
     }
 
 
+    const orgObjectId = new mongoose.Types.ObjectId(organizationId);
     const trimmedCategory = categoryName.trim();
 
     // 2. Check for Duplicate Category (Case-Insensitive)
-    const existingCategory = await MaterialShopDocumentModel.findOne({ 
-        categoryName: { $regex: new RegExp(`^${trimmedCategory}$`, 'i') } 
+    const existingCategory = await MaterialShopDocumentModel.findOne({
+      organizationId: orgObjectId,
+      categoryName: { $regex: new RegExp(`^${trimmedCategory}$`, 'i') }
     });
 
     if (existingCategory) {
       // Throw error if category already exists
-      return res.status(400).json({ 
-        message: `The category "${trimmedCategory}" already exists. Please select it from the list or use a different name.`, 
-        ok: false 
+      return res.status(400).json({
+        message: `The category "${trimmedCategory}" already exists. Please select it from the list or use a different name.`,
+        ok: false
       });
     }
 
@@ -78,6 +83,7 @@ export const createMaterialShopDocuments = async (req: Request, res: Response): 
 
     // Create ONE document with the array of files
     const savedDocument = await MaterialShopDocumentModel.create({
+      organizationId: orgObjectId,
       categoryName,
       file: mappedFiles, // Stores the whole array
       extractDetails: []
@@ -114,9 +120,9 @@ export const editMaterialShopCategoryName = async (req: Request, res: Response):
     });
 
     if (duplicateCheck) {
-      return res.status(400).json({ 
-        message: `The category "${trimmedName}" already exists. Please choose a unique name.`, 
-        ok: false 
+      return res.status(400).json({
+        message: `The category "${trimmedName}" already exists. Please choose a unique name.`,
+        ok: false
       });
     }
 
@@ -188,10 +194,20 @@ export const updateFilesToMaterialDocument = async (req: Request, res: Response)
 
 export const getAllMaterialShopDocuments = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { categoryName, page = 1, limit = 10 } = req.query;
+    const { categoryName, organizationId, page = 1, limit = 10 } = req.query;
 
     // Build Filter
     const filter: any = {};
+
+    // if (organizationId) filter.organizationId = organizationId
+
+    // 2. Organization Filter with ObjectId conversion
+    if (organizationId) {
+      // Convert to ObjectId to ensure the index is used effectively
+      filter.organizationId = new mongoose.Types.ObjectId(organizationId as string);
+    }
+
+
     if (categoryName) {
       // Using regex for partial match, or just { categoryName } for exact
       filter.categoryName = { $regex: categoryName, $options: 'i' };
@@ -417,7 +433,7 @@ export const extractShopMaterialDocDetails = async (req: Request, res: Response)
     // }
 
     targetFile.isExtracted = true
-    
+
 
 
     await document.save();

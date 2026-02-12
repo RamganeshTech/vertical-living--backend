@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export interface IMaterialFile {
   type: "image" | "pdf";
@@ -15,6 +15,7 @@ interface IExtractedShopQuoteDetails {
 }
 
 export interface IMaterialShopDocument extends Document {
+  organizationId: Types.ObjectId
   categoryName: string | null;
   file: IMaterialFile[];
   extractDetails: IExtractedShopQuoteDetails[]
@@ -38,6 +39,8 @@ const fileSchema = new Schema<IMaterialFile>({
 }, {_id: true});
 
 const MaterialShopDocumentSchema: Schema = new Schema({
+  organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel", },
+
   categoryName: {
     type: String,
     default: null,
