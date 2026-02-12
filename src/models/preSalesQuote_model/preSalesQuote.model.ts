@@ -37,6 +37,7 @@ export interface IPreSalesQuote extends Document {
 
     totalAmount: number;
     globalDimType: string;
+    globalProfitPercentage: number;
     // status: "draft" | "sent" | "approved" | "cancelled";
     status: string
     createdAt: Date;
@@ -82,7 +83,8 @@ const PreSalesQuoteSchema = new Schema<IPreSalesQuote>(
             default: "draft",
         },
 
-        globalDimType: { type: String, default: null }
+        globalDimType: { type: String, default: null },
+        globalProfitPercentage: { type: Number, default: null }
     },
     { timestamps: true }
 );
