@@ -105,16 +105,22 @@ export const createMaterialShopDocuments = async (req: Request, res: Response): 
 export const editMaterialShopCategoryName = async (req: Request, res: Response): Promise<any> => {
   try {
     const { id } = req.params;
-    const { categoryName } = req.body;
+    const { categoryName, organizationId } = req.body;
 
     if (!categoryName || !categoryName.trim()) {
       return res.status(400).json({ message: "Category name cannot be empty.", ok: false });
     }
 
+    if (!organizationId) {
+      return res.status(400).json({ message: "Organization ID is required.", ok: false });
+    }
+
     const trimmedName = categoryName.trim();
+    const orgObjectId = new mongoose.Types.ObjectId(organizationId as string);
 
     // 1. Check if the new name is already taken by ANOTHER document
     const duplicateCheck = await MaterialShopDocumentModel.findOne({
+organizationId: orgObjectId,
       _id: { $ne: id }, // Exclude the current document
       categoryName: { $regex: new RegExp(`^${trimmedName}$`, 'i') }
     });
