@@ -797,31 +797,5 @@ export const updateSqftRateQuoteContent = async (req: Request, res: Response): P
 
 
 
-/**
- * Utility to migrate old client quote variants.
- * Sets quoteType to 'basic' for all documents where it's missing or null.
- */
-export const migrateQuoteVariantsToBasic = async () => {
-  try {
-    console.log("--- Starting Quote Variant Migration ---");
 
-    // 1. Find all documents where quoteType is not set or is null
-    const result = await QuoteVarientGenerateModel.updateMany(
-      {
-        $or: [
-          { quoteType: { $exists: false } },
-          { quoteType: null }
-        ]
-      },
-      {
-        $set: { quoteType: "basic" }
-      }
-    );
 
-    console.log(`--- Migration Complete: Updated ${result.modifiedCount} documents ---`);
-
-  } catch (error: any) {
-    console.error("Migration Error:", error);
-
-  }
-};

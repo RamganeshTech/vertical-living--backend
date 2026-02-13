@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { Types } from "mongoose"
 import InternalQuoteEntryModel, { IFurniture } from "../../../models/Quote Model/QuoteGenerate Model/InternalQuote.model";
 import { CategoryModel, ItemModel } from "../../../models/Quote Model/RateConfigAdmin Model/rateConfigAdmin.model";
-import QuoteVarientGenerateModel from "../../../models/Quote Model/QuoteVariant Model/quoteVarient.model";
 import ProjectModel from "../../../models/project model/project.model";
 import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
 // import { generatePdfMaterialPacakgeComparison } from "../../stage controllers/material Room confirmation/materialRoomConfirmation.controller";
@@ -12,6 +11,9 @@ import { generateQuoteVariantPdf } from "./pdfQuoteVarientGenerate";
 
 import { GoogleGenAI } from "@google/genai";
 import dotenv from 'dotenv';
+import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
+import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
+import QuoteVarientGenerateModel from "../../../models/Quote Model/QuoteVariant Model/quoteVarient.model";
 dotenv.config()
 
 // Initialize Gemini (Ensure your API Key is in .env)
@@ -960,3 +962,354 @@ export const getVariantQuoteDetails = async (req: Request, res: Response): Promi
 
 
 
+
+
+// export const extractQuoteToOrderMaterial = async (req: Request, res: Response): Promise<any> => {
+
+//   try {
+//     const { quoteId } = req.params;
+
+//     // 1. Fetch the Internal Quote
+//     const quote = await InternalQuoteEntryModel.findById(quoteId);
+//     if (!quote) {
+//       return res.status(404).json({ message: "Internal Quote not found", ok: false });
+//     }
+
+//     const projectId = quote.projectId;
+
+//     // 2. Find or Create Order History for this Project
+//     let orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+
+//     if (!orderDoc) {
+
+//       const timer = {
+//         startedAt: new Date(),
+//         completedAt: null,
+//         deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+//         reminderSent: false,
+//       };
+
+
+//       // Initialize basic structure if not exists
+//       orderDoc = new OrderMaterialHistoryModel({
+//         projectId,
+//         status: "pending",
+//         isEditable: true,
+//         assignedTo: null,
+
+//         orderedItems: [],
+//         timer,
+//         deliveryLocationDetails: {
+//           siteName: "",
+//           address: "",
+//           siteSupervisor: "",
+//           phoneNumber: "",
+//         },
+//         currentOrder: {
+//           orderMaterialNumber: "",
+//           subItems: []
+//         },
+//         images: [],
+//         shopDetails: {
+//           shopName: "",
+//           address: "",
+//           contactPerson: "",
+//           phoneNumber: "",
+//         },
+//         // currentOrder: { subItems: [], orderMaterialNumber: "" },
+//         // orderedItems: []
+//       });
+//     }
+
+//     // 3. Extraction Logic: Prepare Sub-Items
+//     const extractedSubItems: any[] = [];
+//     let maxNumber = 0;
+
+//     // Helper to find max existing MAT number in current session
+//     const calculateMaxNumber = (items: any[]) => {
+//       items.forEach((sub: any) => {
+//         if (sub.refId) {
+//           const num = parseInt(sub.refId.replace(/^\D+/, ""), 10);
+//           if (!isNaN(num)) maxNumber = Math.max(maxNumber, num);
+//         }
+//       });
+//     };
+
+//     calculateMaxNumber(orderDoc.currentOrder?.subItems || []);
+
+//     // Function to process items into subItems array
+//     const processItem = (itemName: string | null, quantity: number) => {
+//       // if (!itemName || !quantity) return;
+//       maxNumber++;
+//       extractedSubItems.push({
+//         subItemName: itemName,
+//         refId: `MAT-${maxNumber}`,
+//         quantity: quantity,
+//         unit: "nos"
+//       });
+//     };
+
+//     // A. Extract from Furnitures
+//     quote.furnitures.forEach(furniture => {
+//       // Core Materials (Plywood/Laminate)
+//       furniture.coreMaterials.forEach(core => {
+//         if (core.plywoodNos?.quantity) processItem(`${core.itemName} (Plywood)`, core.plywoodNos.quantity);
+//         // if (core.laminateNos?.quantity) processItem(`${core.itemName} (Laminate)`, core.laminateNos.quantity);
+//         // if (core.innerLaminate?.quantity) processItem(`${core.itemName} (Inner Lam)`, core.innerLaminate.quantity);
+//         // if (core.outerLaminate?.quantity) processItem(`${core.itemName} (Outer Lam)`, core.outerLaminate.quantity);
+//       });
+
+//       // Fittings, Glues, Non-Branded
+//       furniture.fittingsAndAccessories.forEach(item => processItem(item.itemName, item.quantity));
+//       furniture.glues.forEach(item => processItem(item.itemName, item.quantity));
+//       furniture.nonBrandMaterials.forEach(item => processItem(item.itemName, item.quantity));
+//     });
+
+//     // B. Extract from Common Materials
+//     quote.commonMaterials.forEach(item => processItem(item.itemName, item.quantity));
+
+//     if (extractedSubItems.length === 0) {
+//       return res.status(400).json({ message: "No items found in quote to extract", ok: false });
+//     }
+
+//     // 4. Generate Order Number (ORD-PROJ-YEAR-XXX)
+//     let nextNumber = 1;
+//     if (orderDoc.orderedItems && orderDoc.orderedItems.length > 0) {
+//       const numbers = orderDoc.orderedItems.map(ele => {
+//         const match = ele.orderMaterialNumber?.match(/-(\d+)$/);
+//         return match ? parseInt(match[1], 10) : 0;
+//       });
+//       nextNumber = Math.max(...numbers, 0) + 1;
+//     }
+
+//     const currentYear = new Date().getFullYear();
+//     const paddedNumber = String(nextNumber).padStart(3, "0");
+//     const rawProjectId = projectId.toString().slice(-3);
+//     const orderNumber = `ORD-${rawProjectId}-${currentYear}-${paddedNumber}`;
+
+//     // 5. Create New Order Entry
+//     const newOrderEntry = {
+//       subItems: extractedSubItems,
+//       shopDetails: orderDoc.shopDetails || null,
+//       deliveryLocationDetails: orderDoc.deliveryLocationDetails || null,
+//       images: orderDoc.images || [],
+//       pdfLink: [],
+//       orderMaterialNumber: orderNumber,
+//       createdAt: new Date(),
+//       priority: "High",
+//       isSyncWithProcurement: false,
+//       isPublicOrder: false
+//     };
+
+//     // 6. Update Document and increment next order number for CurrentOrder
+//     orderDoc.orderedItems.push(newOrderEntry);
+
+//     // Prepare next order number for the UI placeholder
+//     const nextPadNumber = String(nextNumber + 1).padStart(3, "0");
+//     orderDoc.currentOrder = {
+//       subItems: extractedSubItems, // Set extracted items as current working set
+//       orderMaterialNumber: `ORD-${rawProjectId}-${currentYear}-${nextPadNumber}`
+//     };
+
+//     await orderDoc.save();
+
+//     // 7. Clear Redis Cache
+//     await populateWithAssignedToField({
+//       stageModel: OrderMaterialHistoryModel,
+//       projectId: projectId.toString(),
+//       dataToCache: orderDoc
+//     });
+
+//     return res.status(200).json({
+//       message: "Quote materials extracted and ordered successfully",
+//       data: orderDoc,
+
+//       ok: true
+//     });
+
+//   } catch (error: any) {
+//     console.error("Extraction Error:", error);
+//     return res.status(500).json({ message: "Server error during extraction", ok: false });
+//   }
+// };
+
+
+
+
+//  NEW VERSION
+
+
+
+export const extractQuoteToOrderMaterial = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { quoteId } = req.params;
+
+    // 1. Fetch from the Quote Variant Model instead of Internal Quote
+    const quote = await QuoteVarientGenerateModel.findById(quoteId);
+    if (!quote) {
+      return res.status(404).json({ message: "Quote Variant not found", ok: false });
+    }
+
+    const projectId = quote.projectId;
+
+    // 2. Find or Create Order History for this Project
+    let orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+
+    if (!orderDoc) {
+      const timer = {
+        startedAt: new Date(),
+        completedAt: null,
+        deadLine: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+        reminderSent: false,
+      };
+
+      orderDoc = new OrderMaterialHistoryModel({
+        projectId,
+        status: "pending",
+        isEditable: true,
+        assignedTo: null,
+        orderedItems: [],
+        timer,
+        deliveryLocationDetails: { siteName: "", address: "", siteSupervisor: "", phoneNumber: "" },
+        currentOrder: { orderMaterialNumber: "", subItems: [] },
+        images: [],
+        shopDetails: { shopName: "", address: "", contactPerson: "", phoneNumber: "" },
+      });
+    }
+
+    // 3. Extraction Logic
+    const extractedSubItems: any[] = [];
+    let maxNumber = 0;
+
+    const calculateMaxNumber = (items: any[]) => {
+      items.forEach((sub: any) => {
+        if (sub.refId) {
+          const num = parseInt(sub.refId.replace(/^\D+/, ""), 10);
+          if (!isNaN(num)) maxNumber = Math.max(maxNumber, num);
+        }
+      });
+    };
+
+    calculateMaxNumber(orderDoc.currentOrder?.subItems || []);
+
+    const processItem = (itemName: string | null, quantity: number) => {
+      if (!itemName) return;
+      maxNumber++;
+      extractedSubItems.push({
+        subItemName: itemName.trim(),
+        refId: `MAT-${maxNumber}`,
+        quantity: quantity,
+        unit: "nos"
+      });
+    };
+
+    // A. Extract from Furnitures with Brand Names
+    quote.furnitures.forEach(furniture => {
+      // Casting to any to access the brand strings defined in QuoteFurnitureSchema
+      const f = furniture as any;
+
+      const pBrand = f.plywoodBrand ? ` - ${f.plywoodBrand}` : "";
+      const iBrand = f.innerLaminateBrand ? ` - ${f.innerLaminateBrand}` : "";
+      const oBrand = f.outerLaminateBrand ? ` - ${f.outerLaminateBrand}` : "";
+
+      // Loop through coreMaterials inside this furniture
+      furniture.coreMaterials.forEach(core => {
+        // 1. Plywood: Uses the furniture-level plywoodBrand
+        if (core.plywoodNos?.quantity) {
+          processItem(`${core.itemName} (Plywood${pBrand})`, core.plywoodNos.quantity);
+        }
+
+        // 2. Inner Laminate: Uses the furniture-level innerLaminateBrand
+        if (core.innerLaminate?.quantity) {
+          processItem(`${core.itemName} (Inner Laminate${iBrand})`, core.innerLaminate.quantity);
+        }
+
+        // 3. Outer Laminate: Uses the furniture-level outerLaminateBrand
+        if (core.outerLaminate?.quantity) {
+          processItem(`${core.itemName} (Outer Laminate${oBrand})`, core.outerLaminate.quantity);
+        }
+      });
+
+      // Fittings, Glues, Non-Branded (These usually have brandName in QuoteSimpleItemSchema)
+      furniture.fittingsAndAccessories.forEach(item => {
+        const brand = item.brandName ? ` (${item.brandName})` : "";
+        processItem(`${item.itemName}${brand}`, item.quantity);
+      });
+
+      furniture.glues.forEach(item => {
+        const brand = item.brandName ? ` (${item.brandName})` : "";
+        processItem(`${item.itemName}${brand}`, item.quantity);
+      });
+
+      furniture.nonBrandMaterials.forEach(item => {
+        processItem(item.itemName, item.quantity);
+      });
+    });
+
+    // B. Extract from Common Materials
+    quote.commonMaterials.forEach(item => {
+      const brand = item.brandName ? ` (${item.brandName})` : "";
+      processItem(`${item.itemName}${brand}`, item.quantity);
+    });
+
+    if (extractedSubItems.length === 0) {
+      return res.status(400).json({ message: "No items found in quote to extract", ok: false });
+    }
+
+    // 4. Generate Order Number
+    let nextNumber = 1;
+    if (orderDoc.orderedItems && orderDoc.orderedItems.length > 0) {
+      const numbers = orderDoc.orderedItems.map(ele => {
+        const match = ele.orderMaterialNumber?.match(/-(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      });
+      nextNumber = Math.max(...numbers, 0) + 1;
+    }
+
+    const currentYear = new Date().getFullYear();
+    const paddedNumber = String(nextNumber).padStart(3, "0");
+    const rawProjectId = projectId.toString().slice(-3);
+    const orderNumber = `ORD-${rawProjectId}-${currentYear}-${paddedNumber}`;
+
+    // 5. Create Entry
+    const newOrderEntry = {
+      subItems: extractedSubItems,
+      shopDetails: orderDoc.shopDetails || null,
+      deliveryLocationDetails: orderDoc.deliveryLocationDetails || null,
+      images: orderDoc.images || [],
+      pdfLink: [],
+      orderMaterialNumber: orderNumber,
+      createdAt: new Date(),
+      priority: "High",
+      isSyncWithProcurement: false,
+      isPublicOrder: false
+    };
+
+    // 6. Update History
+    orderDoc.orderedItems.push(newOrderEntry);
+    const nextPadNumber = String(nextNumber + 1).padStart(3, "0");
+    orderDoc.currentOrder = {
+      subItems: [],
+      orderMaterialNumber: `ORD-${rawProjectId}-${currentYear}-${nextPadNumber}`
+    };
+
+    await orderDoc.save();
+
+    // 7. Cache Sync
+    await populateWithAssignedToField({
+      stageModel: OrderMaterialHistoryModel,
+      projectId: projectId.toString(),
+      dataToCache: orderDoc
+    });
+
+    return res.status(200).json({
+      message: "Variant materials extracted successfully",
+      data: orderDoc,
+      ok: true
+    });
+
+  } catch (error: any) {
+    console.error("Extraction Error:", error);
+    return res.status(500).json({ message: "Server error during extraction", ok: false });
+  }
+};

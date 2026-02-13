@@ -1631,7 +1631,7 @@ export const submitOrderMaterial = async (req: Request, res: Response): Promise<
             shopDetails: orderDoc.shopDetails,
             deliveryLocationDetails: orderDoc.deliveryLocationDetails,
             images: orderDoc.images,
-            pdfLink: null,
+            pdfLink: [],
             orderMaterialNumber: orderNumber,
             createdAt: new Date(),
             priority: null,
@@ -1742,6 +1742,209 @@ export const getSingleOrderedItem = async (req: Request, res: Response): Promise
     }
 
 }
+
+
+
+export const addSubItemToSpecificOrder = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, orderItemId } = req.params;
+        const { subItemName, quantity, unit, index } = req.body; // 🔹 index received here
+
+        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+        if (!orderDoc) return res.status(404).json({ ok: false, message: "Order history not found" });
+
+        const targetOrder = (orderDoc.orderedItems as any).id(orderItemId);
+        if (!targetOrder) return res.status(404).json({ ok: false, message: "Order not found" });
+
+        // 1. Procurement Check
+        if (targetOrder.isSyncWithProcurement) {
+            return res.status(400).json({ 
+                ok: false, 
+                message: "This order is already synced with procurement and cannot be modified." 
+            });
+        }
+
+        // 2. Duplicate Check
+        const isExists = targetOrder.subItems.find((item: any) => 
+            item.subItemName?.toLowerCase()?.trim() === subItemName?.toLowerCase()?.trim()
+        );
+        if (isExists) return res.status(400).json({ ok: false, message: "Item already exists in this order" });
+
+        // 3. Generate MAT-X refId (Checking across all current subItems)
+        let maxNumber = 0;
+        targetOrder.subItems.forEach((sub: any) => {
+            if (sub.refId) {
+                const num = parseInt(sub.refId.replace(/^\D+/, ""), 10);
+                if (!isNaN(num)) maxNumber = Math.max(maxNumber, num);
+            }
+        });
+
+        const newSubItem = {
+            subItemName: subItemName,
+            refId: `MAT-${maxNumber + 1}`,
+            quantity,
+            unit
+        };
+
+        // 4. 🔹 Insert at specific index using Splice
+        // If index is provided and valid, insert there; otherwise, fallback to push
+        if (typeof index === 'number' && index >= 0 && index <= targetOrder.subItems.length) {
+            targetOrder.subItems.splice(index, 0, newSubItem);
+        } else {
+            targetOrder.subItems.push(newSubItem);
+        }
+
+        await orderDoc.save();
+        
+        // 5. Update Redis
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc });
+
+        res.json({ ok: true, message: "Item added at specific position", data:targetOrder, subItems: targetOrder.subItems });
+
+        // 6. Update Inventory
+        if(subItemName){
+            updateInventoryRemainingQuantity({ itemName: subItemName, orderedQuantity: quantity });
+        }
+    } catch (error: any) {
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+
+export const updateSubItemInSpecificOrder = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, orderItemId, subItemId } = req.params;
+        const { subItemName, quantity, unit } = req.body;
+
+        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+        if (!orderDoc) return res.status(404).json({ ok: false, message: "History not found" });
+
+        const targetOrder = (orderDoc.orderedItems as any).id(orderItemId);
+        if (!targetOrder) return res.status(404).json({ ok: false, message: "Order not found" });
+
+        // 🛡️ Procurement Sync Check
+        if (targetOrder.isSyncWithProcurement) {
+            return res.status(400).json({ ok: false, message: "Cannot edit items in a synced order" });
+        }
+
+        const subItemObj = (targetOrder.subItems as any).id(subItemId);
+        if (!subItemObj) return res.status(404).json({ ok: false, message: "Material not found" });
+
+        const oldQuantity = subItemObj.quantity || 0;
+
+
+        // Only update if the value is actually provided (not undefined)
+if (subItemName !== undefined) subItemObj.subItemName = subItemName.trim();
+if (quantity !== undefined) subItemObj.quantity = quantity;
+if (unit !== undefined) subItemObj.unit = unit;
+
+
+        // // Update values
+        // subItemObj.subItemName = subItemName.trim();
+        // subItemObj.quantity = quantity;
+        // subItemObj.unit = unit;
+
+        await orderDoc.save();
+        await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc });
+
+        res.json({ ok: true, message: "Material updated", subItem: subItemObj , data:targetOrder});
+
+        // Inventory adjustment logic
+        const diff = quantity - oldQuantity;
+        // if (diff !== 0) handleInventoryAdjustment(subItemName, diff);
+
+        if (quantity !== null && quantity !== oldQuantity) {
+            const diff = quantity - oldQuantity;
+
+            (async () => {
+                try {
+                    if (diff > 0) {
+                        await updateInventoryRemainingQuantity({
+                            itemName: subItemName.trim(),
+                            orderedQuantity: diff,
+                        });
+                    } else if (diff < 0) {
+                        await InventoryModel.updateOne(
+                            { "subItems.itemName": subItemName.trim() },
+                            { $inc: { "subItems.$.remainingQuantity": Math.abs(diff) } }
+                        ).exec();
+                        console.log(
+                            `Inventory restored: Item "${subItemName}" increased by ${Math.abs(diff)}`
+                        );
+                    }
+                } catch (err) {
+                    console.error("Background inventory update failed:", err);
+                }
+            })();
+        }
+
+    } catch (error: any) {
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+
+export const deleteSubItemFromSpecificOrder = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, orderItemId, subItemId } = req.params;
+
+        const orderDoc = await OrderMaterialHistoryModel.findOne({ projectId });
+        if (!orderDoc) return res.status(404).json({ ok: false, message: "Order history not found" });
+
+        // 1. Find the specific order in the history
+        const targetOrder = (orderDoc.orderedItems as any).id(orderItemId);
+        if (!targetOrder) return res.status(404).json({ ok: false, message: "Order record not found" });
+
+        // 2. 🛡️ Procurement Sync Check
+        if (targetOrder.isSyncWithProcurement) {
+            return res.status(400).json({ 
+                ok: false, 
+                message: "This order is already synced with procurement. Items cannot be deleted." 
+            });
+        }
+
+        // 3. Find the sub-item to get its details before deletion (for inventory restoration)
+        const subItemObj = (targetOrder.subItems as any).id(subItemId);
+        if (!subItemObj) return res.status(404).json({ ok: false, message: "Material item not found" });
+
+        const itemNameToRestore = subItemObj.subItemName;
+        const quantityToRestore = subItemObj.quantity || 0;
+
+        // 4. Remove the sub-item using Mongoose's .pull()
+        (targetOrder.subItems as any).pull(subItemId);
+
+        await orderDoc.save();
+        
+        // 5. Update Redis Cache
+        await populateWithAssignedToField({ 
+            stageModel: OrderMaterialHistoryModel, 
+            projectId, 
+            dataToCache: orderDoc 
+        });
+
+        res.json({ ok: true, data:targetOrder, message: "Material item deleted and inventory restored" });
+
+        // 6. 🔄 Restore Inventory (Background)
+        if (quantityToRestore > 0) {
+            (async () => {
+                try {
+                    // We increment the remaining quantity because the order was cancelled/deleted
+                    await InventoryModel.updateOne(
+                        { "subItems.itemName": itemNameToRestore.trim() },
+                        { $inc: { "subItems.$.remainingQuantity": quantityToRestore } }
+                    ).exec();
+                    console.log(`Inventory restored: ${itemNameToRestore} increased by ${quantityToRestore}`);
+                } catch (err) {
+                    console.error("Inventory restoration failed:", err);
+                }
+            })();
+        }
+
+    } catch (error: any) {
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
 
 // // old version
 export const placeOrderToProcurement = async (req: Request, res: Response): Promise<any> => {
@@ -2348,6 +2551,8 @@ export const placeOrderToProcurementv2 = async (req: Request, res: Response): Pr
         return res.status(500).json({ ok: false, message: error.message });
     }
 }
+
+
 
 
 

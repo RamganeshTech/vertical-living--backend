@@ -1,7 +1,7 @@
 import { PDFDocument, PDFName, rgb, StandardFonts } from 'pdf-lib';
 // import fetch from 'node-fetch';
 import { s3, S3_BUCKET } from "../../../utils/s3Uploads/s3Client";
-import { OrderMaterialHistoryModel } from '../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
+import { IPdfGenerator, OrderMaterialHistoryModel } from '../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model';
 
 import mongoose, { Types } from 'mongoose';
 import { CommonOrderHistoryModel } from '../../../models/Stage Models/Ordering Material Model/CommonOrderMaterialHistory Model/commonOrderMaterialHistory.model';
@@ -10,7 +10,7 @@ export const COMPANY_LOGO = "https://th.bing.com/th/id/OIP.Uparc9uI63RDb82OupdPv
 export const COMPANY_NAME = "Vertical Living";
 
 // Upload PDF to S3
-const uploadToS3:any = async (pdfBytes: any, fileName: any) => {
+const uploadToS3: any = async (pdfBytes: any, fileName: any) => {
     const params = {
         Bucket: S3_BUCKET,
         Key: fileName,
@@ -660,137 +660,137 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
         // for (const unit of orderItem?.subItems) {
 
 
-            //no room condition - only show unit if it has subitems
-            // if (!unit?.subItems || unit?.subItems?.length === 0) {
-            //     continue; // Skip units without subitems
-            // }
+        //no room condition - only show unit if it has subitems
+        // if (!unit?.subItems || unit?.subItems?.length === 0) {
+        //     continue; // Skip units without subitems
+        // }
 
-            // // Unit name heading
-            // if (unit.unitName) {
-            //     page.drawText(`Unit: ${unit.unitName}`, {
-            //         x: 50,
-            //         y: yPosition,
-            //         size: 14,
-            //         font: boldFont,
-            //         color: rgb(0.2, 0.2, 0.2),
-            //     });
-            //     yPosition -= 30;
-            // }
+        // // Unit name heading
+        // if (unit.unitName) {
+        //     page.drawText(`Unit: ${unit.unitName}`, {
+        //         x: 50,
+        //         y: yPosition,
+        //         size: 14,
+        //         font: boldFont,
+        //         color: rgb(0.2, 0.2, 0.2),
+        //     });
+        //     yPosition -= 30;
+        // }
 
-            // Check if we need a new page
-            if (yPosition < 150) {
-                page = pdfDoc.addPage([595, 842]);
-                yPosition = height - 50;
-            }
+        // Check if we need a new page
+        if (yPosition < 150) {
+            page = pdfDoc.addPage([595, 842]);
+            yPosition = height - 50;
+        }
 
-            // Table headers
-            const tableStartY = yPosition;
-            const rowHeight = 25;
-            // const columnWidths = [60, , 300, 80, 80]; // S.No, Material Item, Quantity, Unit
-            // const columnPositions = [50, 110, 410, 490];
+        // Table headers
+        const tableStartY = yPosition;
+        const rowHeight = 25;
+        // const columnWidths = [60, , 300, 80, 80]; // S.No, Material Item, Quantity, Unit
+        // const columnPositions = [50, 110, 410, 490];
 
-            const columnWidths = [50, 100, 200, 80, 50];
-            const columnPositions = [
-                50,  // S.No
-                100, // Ref ID
-                180, // Material Item
-                420, // Quantity
-                500  // Unit
-            ];
-            // Draw table header background
-            page.drawRectangle({
-                x: 45,
-                y: yPosition - 5,
-                width: 500,
-                height: rowHeight,
-                color: rgb(0.9, 0.9, 0.9),
+        const columnWidths = [50, 100, 200, 80, 50];
+        const columnPositions = [
+            50,  // S.No
+            100, // Ref ID
+            180, // Material Item
+            420, // Quantity
+            500  // Unit
+        ];
+        // Draw table header background
+        page.drawRectangle({
+            x: 45,
+            y: yPosition - 5,
+            width: 500,
+            height: rowHeight,
+            color: rgb(0.9, 0.9, 0.9),
+        });
+
+        // Table headers
+        const headers = ['S.No', 'Ref ID', 'Material Item', 'Quantity', 'Unit'];
+        headers.forEach((header, index) => {
+            page.drawText(header, {
+                x: columnPositions[index],
+                y: yPosition,
+                size: 12,
+                font: boldFont,
+                color: rgb(0.2, 0.2, 0.2),
             });
+        });
 
-            // Table headers
-            const headers = ['S.No', 'Ref ID', 'Material Item', 'Quantity', 'Unit'];
-            headers.forEach((header, index) => {
-                page.drawText(header, {
-                    x: columnPositions[index],
-                    y: yPosition,
-                    size: 12,
-                    font: boldFont,
-                    color: rgb(0.2, 0.2, 0.2),
-                });
-            });
+        yPosition -= rowHeight + 5;
 
-            yPosition -= rowHeight + 5;
-
-            // Table content - sub items
-            if (orderItem?.subItems && orderItem?.subItems.length > 0) {
-                orderItem?.subItems.forEach((subItem, index) => {
-                    // Alternate row coloring
-                    if (index % 2 === 0) {
-                        page.drawRectangle({
-                            x: 45,
-                            y: yPosition - 5,
-                            width: 500,
-                            height: rowHeight,
-                            color: rgb(0.98, 0.98, 0.98),
-                        });
-                    }
-
-                    // Table borders
+        // Table content - sub items
+        if (orderItem?.subItems && orderItem?.subItems.length > 0) {
+            orderItem?.subItems.forEach((subItem, index) => {
+                // Alternate row coloring
+                if (index % 2 === 0) {
                     page.drawRectangle({
                         x: 45,
                         y: yPosition - 5,
                         width: 500,
                         height: rowHeight,
-                        borderColor: rgb(0.8, 0.8, 0.8),
-                        borderWidth: 0.5,
+                        color: rgb(0.98, 0.98, 0.98),
                     });
+                }
 
-                    const rowData = [
-                        serialNumber.toString(),
-                        subItem.refId || "N/A",
-                        subItem.subItemName || 'N/A',
-                        (subItem.quantity || 0).toString(),
-                        subItem.unit || 'N/A'
-                    ];
+                // Table borders
+                page.drawRectangle({
+                    x: 45,
+                    y: yPosition - 5,
+                    width: 500,
+                    height: rowHeight,
+                    borderColor: rgb(0.8, 0.8, 0.8),
+                    borderWidth: 0.5,
+                });
 
-                    rowData.forEach((data, colIndex) => {
-                        let displayText = data;
-                        // Truncate long text to fit in column
-                        if (colIndex === 1 && data.length > 35) {
-                            displayText = data.substring(0, 32) + '...';
-                        }
+                const rowData = [
+                    serialNumber.toString(),
+                    subItem.refId || "N/A",
+                    subItem.subItemName || 'N/A',
+                    (subItem.quantity || 0).toString(),
+                    subItem.unit || 'N/A'
+                ];
 
-                        page.drawText(displayText, {
-                            x: columnPositions[colIndex],
-                            y: yPosition,
-                            size: 10,
-                            font: regularFont,
-                            color: rgb(0.3, 0.3, 0.3),
-                        });
-                    });
-
-                    yPosition -= rowHeight;
-                    serialNumber++;
-
-                    // Check if we need a new page
-                    if (yPosition < 100) {
-                        page = pdfDoc.addPage([595, 842]);
-                        yPosition = height - 50;
+                rowData.forEach((data, colIndex) => {
+                    let displayText = data;
+                    // Truncate long text to fit in column
+                    if (colIndex === 1 && data.length > 35) {
+                        displayText = data.substring(0, 32) + '...';
                     }
-                });
-            } else {
-                // No sub items message
-                page.drawText('No sub-items available', {
-                    x: columnPositions[1],
-                    y: yPosition,
-                    size: 10,
-                    font: regularFont,
-                    color: rgb(0.6, 0.6, 0.6),
-                });
-                yPosition -= rowHeight;
-            }
 
-            yPosition -= 20; // Space between units
-        
+                    page.drawText(displayText, {
+                        x: columnPositions[colIndex],
+                        y: yPosition,
+                        size: 10,
+                        font: regularFont,
+                        color: rgb(0.3, 0.3, 0.3),
+                    });
+                });
+
+                yPosition -= rowHeight;
+                serialNumber++;
+
+                // Check if we need a new page
+                if (yPosition < 100) {
+                    page = pdfDoc.addPage([595, 842]);
+                    yPosition = height - 50;
+                }
+            });
+        } else {
+            // No sub items message
+            page.drawText('No sub-items available', {
+                x: columnPositions[1],
+                y: yPosition,
+                size: 10,
+                font: regularFont,
+                color: rgb(0.6, 0.6, 0.6),
+            });
+            yPosition -= rowHeight;
+        }
+
+        yPosition -= 20; // Space between units
+
         // }
 
         // // Total cost section
@@ -838,18 +838,18 @@ const generateOrderHistoryPDF = async (projectId: string, organizationId: string
             _id: new mongoose.Types.ObjectId()
         };
 
-        // if (Array.isArray(orderHistory.generatedLink)) {
-        //     orderHistory?.generatedLink?.push(pdfData as IPdfGenerator);
-        // } else {
-        //     orderHistory.generatedLink = []
-        //     orderHistory?.generatedLink.push(pdfData as IPdfGenerator)
-        // }
+        if (Array.isArray(orderItem.pdfLink)) {
+            orderItem.pdfLink?.push(pdfData as IPdfGenerator);
+        } else {
+            orderItem.pdfLink = []
+            orderItem.pdfLink.push(pdfData as IPdfGenerator)
+        }
 
         // console.log("orderHistory.generatedLink", orderHistory.generatedLink)
 
 
 
-        orderItem.pdfLink = pdfData
+        // orderItem.pdfLink = pdfData
 
 
 
@@ -1286,6 +1286,7 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
             refUniquePdf, // <-- now has projectName-uniquenumber-pdf
             pdfName: "Order Material",
             status: "pending",
+            uploadedAt: new Date(),
             _id: new mongoose.Types.ObjectId()
         };
 
@@ -1361,7 +1362,15 @@ export const generatePublicOrderHistoryPdf = async (projectId: string, organizat
         orderHistory.needsStaffReview = false;
 
 
-        orderItem.pdfLink = pdfData
+        // orderItem.pdfLink = pdfData
+
+
+        if (Array.isArray(orderItem.pdfLink)) {
+            orderItem.pdfLink?.push(pdfData as IPdfGenerator);
+        } else {
+            orderItem.pdfLink = []
+            orderItem.pdfLink.push(pdfData as IPdfGenerator)
+        }
 
 
 
@@ -1939,7 +1948,7 @@ export const generateCommonOrderHistoryPDF = async (id: string, organizationId: 
         // Fetch order history data
         // Fetch order history data
         const orderHistory = await CommonOrderHistoryModel.findById(id)
-            // .populate('projectId', 'projectName _id organizationId')
+        // .populate('projectId', 'projectName _id organizationId')
 
 
         if (!orderHistory) {
@@ -2565,137 +2574,137 @@ export const generateCommonOrderHistoryPDF = async (id: string, organizationId: 
         // for (const unit of orderItem?.subItems) {
 
 
-            //no room condition - only show unit if it has subitems
-            // if (!unit?.subItems || unit?.subItems?.length === 0) {
-            //     continue; // Skip units without subitems
-            // }
+        //no room condition - only show unit if it has subitems
+        // if (!unit?.subItems || unit?.subItems?.length === 0) {
+        //     continue; // Skip units without subitems
+        // }
 
-            // // Unit name heading
-            // if (unit.unitName) {
-            //     page.drawText(`Unit: ${unit.unitName}`, {
-            //         x: 50,
-            //         y: yPosition,
-            //         size: 14,
-            //         font: boldFont,
-            //         color: rgb(0.2, 0.2, 0.2),
-            //     });
-            //     yPosition -= 30;
-            // }
+        // // Unit name heading
+        // if (unit.unitName) {
+        //     page.drawText(`Unit: ${unit.unitName}`, {
+        //         x: 50,
+        //         y: yPosition,
+        //         size: 14,
+        //         font: boldFont,
+        //         color: rgb(0.2, 0.2, 0.2),
+        //     });
+        //     yPosition -= 30;
+        // }
 
-            // Check if we need a new page
-            if (yPosition < 150) {
-                page = pdfDoc.addPage([595, 842]);
-                yPosition = height - 50;
-            }
+        // Check if we need a new page
+        if (yPosition < 150) {
+            page = pdfDoc.addPage([595, 842]);
+            yPosition = height - 50;
+        }
 
-            // Table headers
-            const tableStartY = yPosition;
-            const rowHeight = 25;
-            // const columnWidths = [60, , 300, 80, 80]; // S.No, Material Item, Quantity, Unit
-            // const columnPositions = [50, 110, 410, 490];
+        // Table headers
+        const tableStartY = yPosition;
+        const rowHeight = 25;
+        // const columnWidths = [60, , 300, 80, 80]; // S.No, Material Item, Quantity, Unit
+        // const columnPositions = [50, 110, 410, 490];
 
-            const columnWidths = [50, 100, 200, 80, 50];
-            const columnPositions = [
-                50,  // S.No
-                100, // Ref ID
-                180, // Material Item
-                420, // Quantity
-                500  // Unit
-            ];
-            // Draw table header background
-            page.drawRectangle({
-                x: 45,
-                y: yPosition - 5,
-                width: 500,
-                height: rowHeight,
-                color: rgb(0.9, 0.9, 0.9),
+        const columnWidths = [50, 100, 200, 80, 50];
+        const columnPositions = [
+            50,  // S.No
+            100, // Ref ID
+            180, // Material Item
+            420, // Quantity
+            500  // Unit
+        ];
+        // Draw table header background
+        page.drawRectangle({
+            x: 45,
+            y: yPosition - 5,
+            width: 500,
+            height: rowHeight,
+            color: rgb(0.9, 0.9, 0.9),
+        });
+
+        // Table headers
+        const headers = ['S.No', 'Ref ID', 'Material Item', 'Quantity', 'Unit'];
+        headers.forEach((header, index) => {
+            page.drawText(header, {
+                x: columnPositions[index],
+                y: yPosition,
+                size: 12,
+                font: boldFont,
+                color: rgb(0.2, 0.2, 0.2),
             });
+        });
 
-            // Table headers
-            const headers = ['S.No', 'Ref ID', 'Material Item', 'Quantity', 'Unit'];
-            headers.forEach((header, index) => {
-                page.drawText(header, {
-                    x: columnPositions[index],
-                    y: yPosition,
-                    size: 12,
-                    font: boldFont,
-                    color: rgb(0.2, 0.2, 0.2),
-                });
-            });
+        yPosition -= rowHeight + 5;
 
-            yPosition -= rowHeight + 5;
-
-            // Table content - sub items
-            if (orderItem?.subItems && orderItem?.subItems.length > 0) {
-                orderItem?.subItems.forEach((subItem, index) => {
-                    // Alternate row coloring
-                    if (index % 2 === 0) {
-                        page.drawRectangle({
-                            x: 45,
-                            y: yPosition - 5,
-                            width: 500,
-                            height: rowHeight,
-                            color: rgb(0.98, 0.98, 0.98),
-                        });
-                    }
-
-                    // Table borders
+        // Table content - sub items
+        if (orderItem?.subItems && orderItem?.subItems.length > 0) {
+            orderItem?.subItems.forEach((subItem, index) => {
+                // Alternate row coloring
+                if (index % 2 === 0) {
                     page.drawRectangle({
                         x: 45,
                         y: yPosition - 5,
                         width: 500,
                         height: rowHeight,
-                        borderColor: rgb(0.8, 0.8, 0.8),
-                        borderWidth: 0.5,
+                        color: rgb(0.98, 0.98, 0.98),
                     });
+                }
 
-                    const rowData = [
-                        serialNumber.toString(),
-                        subItem.refId || "N/A",
-                        subItem.subItemName || 'N/A',
-                        (subItem.quantity || 0).toString(),
-                        subItem.unit || 'N/A'
-                    ];
+                // Table borders
+                page.drawRectangle({
+                    x: 45,
+                    y: yPosition - 5,
+                    width: 500,
+                    height: rowHeight,
+                    borderColor: rgb(0.8, 0.8, 0.8),
+                    borderWidth: 0.5,
+                });
 
-                    rowData.forEach((data, colIndex) => {
-                        let displayText = data;
-                        // Truncate long text to fit in column
-                        if (colIndex === 1 && data.length > 35) {
-                            displayText = data.substring(0, 32) + '...';
-                        }
+                const rowData = [
+                    serialNumber.toString(),
+                    subItem.refId || "N/A",
+                    subItem.subItemName || 'N/A',
+                    (subItem.quantity || 0).toString(),
+                    subItem.unit || 'N/A'
+                ];
 
-                        page.drawText(displayText, {
-                            x: columnPositions[colIndex],
-                            y: yPosition,
-                            size: 10,
-                            font: regularFont,
-                            color: rgb(0.3, 0.3, 0.3),
-                        });
-                    });
-
-                    yPosition -= rowHeight;
-                    serialNumber++;
-
-                    // Check if we need a new page
-                    if (yPosition < 100) {
-                        page = pdfDoc.addPage([595, 842]);
-                        yPosition = height - 50;
+                rowData.forEach((data, colIndex) => {
+                    let displayText = data;
+                    // Truncate long text to fit in column
+                    if (colIndex === 1 && data.length > 35) {
+                        displayText = data.substring(0, 32) + '...';
                     }
-                });
-            } else {
-                // No sub items message
-                page.drawText('No sub-items available', {
-                    x: columnPositions[1],
-                    y: yPosition,
-                    size: 10,
-                    font: regularFont,
-                    color: rgb(0.6, 0.6, 0.6),
-                });
-                yPosition -= rowHeight;
-            }
 
-            yPosition -= 20; // Space between units
-        
+                    page.drawText(displayText, {
+                        x: columnPositions[colIndex],
+                        y: yPosition,
+                        size: 10,
+                        font: regularFont,
+                        color: rgb(0.3, 0.3, 0.3),
+                    });
+                });
+
+                yPosition -= rowHeight;
+                serialNumber++;
+
+                // Check if we need a new page
+                if (yPosition < 100) {
+                    page = pdfDoc.addPage([595, 842]);
+                    yPosition = height - 50;
+                }
+            });
+        } else {
+            // No sub items message
+            page.drawText('No sub-items available', {
+                x: columnPositions[1],
+                y: yPosition,
+                size: 10,
+                font: regularFont,
+                color: rgb(0.6, 0.6, 0.6),
+            });
+            yPosition -= rowHeight;
+        }
+
+        yPosition -= 20; // Space between units
+
         // }
 
         // // Total cost section
@@ -2735,7 +2744,7 @@ export const generateCommonOrderHistoryPDF = async (id: string, organizationId: 
         // console.log("generateld dat", uploadResult.Location)
 
 
-        const pdfData:any = {
+        const pdfData: any = {
             url: uploadResult.Location,
             refUniquePdf, // <-- now has projectName-uniquenumber-pdf
             pdfName: "Common Order Material",

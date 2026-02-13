@@ -7,7 +7,7 @@ export interface MaterialCategoryDoc extends Document {
     key: string;   // e.g., "brand", "thickness", "rate", "notes"
     type: "string" | "number" | "boolean"; 
     required?: boolean;
-    visibleIn?: boolean;
+    visibleIn?: string[];
   }[];
 }
 

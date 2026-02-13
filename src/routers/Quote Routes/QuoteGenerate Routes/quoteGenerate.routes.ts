@@ -3,7 +3,7 @@ import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3
 import { createMainInternalQuoteResidentialVersion, createMaterialQuote,  deleteMaterialQuoteById,  duplicateInternalQuote,  editQuoteMaterial,  getMaterialQuoteEntries, getSingleInternalQuoteResidentialVersion, updateMainInternalQuoteResidentialVersion, updateSqftRateQuoteContent } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/internalQuote.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { getMaterialCategories } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
-import {  createVariantQuotePdfGenerator, deleteClientQuote, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails, updateQuoteVaraintforClient } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
+import {  createVariantQuotePdfGenerator, deleteClientQuote, extractQuoteToOrderMaterial, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails, updateQuoteVaraintforClient } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
 import { generateClientPdfWithTypes, getAllClientQuotes, getAllClientQuotesFromDropDown, getAllClientQuotesV1, getSingleClientQuote, storeQuoteToPaymentStage, toggleBlurring } from "../../../controllers/Quote Controllers/Client Quote Controllers/clientQuote.controller";
 
 const QuoteRouter = express.Router();
@@ -137,6 +137,8 @@ QuoteRouter.get(
 
 
 
+
+
 // client quote routes
 //  not in use currrently, but it might be used in mobile version
 QuoteRouter.get(
@@ -203,6 +205,16 @@ QuoteRouter.patch("/toggleblur/:organizationId/:id",
 QuoteRouter.put("/clientquote/generatepdf/:projectId/:quoteId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
   generateClientPdfWithTypes)
+
+
+
+  
+QuoteRouter.post(
+  "/extract/createordermaterial/:quoteId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  extractQuoteToOrderMaterial
+);
+
 
 
 

@@ -82,6 +82,7 @@ export interface IPdfGenerator {
     refUniquePdf: string
     pdfName: string | null;
     status: string,
+    uploadedAt: Date,
 }
 
 // Timer schema
@@ -142,7 +143,7 @@ export interface IOrderedItems {
     isPublicOrder: boolean
     deliveryLocationDetails: OrderMaterialSiteDetail;
     images: IPdfGenerator[]
-    pdfLink: IPdfGenerator | null;
+    pdfLink: IPdfGenerator[];
     priority: string | null
     isSyncWithProcurement: boolean,
     createdAt: Date
@@ -159,7 +160,8 @@ export const pdfGeneratorSchema = new Schema<IPdfGenerator>({
     url: { type: String, default: null },
     refUniquePdf: { type: String, default: null },
     pdfName: { type: String, default: null },
-    status: { type: String, default: "pending" } //delivered, shipped, ordered, cancelled, yet to order
+    status: { type: String, default: "pending" }, //delivered, shipped, ordered, cancelled, yet to order
+    uploadedAt: { type: Date, default: new Date() }
 }, { _id: true })
 
 
@@ -183,7 +185,7 @@ const orderedItems = new Schema<IOrderedItems>({
     shopDetails: { type: ShopDetailsSchema, default: null },
     deliveryLocationDetails: { type: DeliveryLocationDetailsSchema, default: null },
     images: { type: [pdfGeneratorSchema], default: [] },
-    pdfLink: { type: pdfGeneratorSchema, default: null },
+    pdfLink: { type: [pdfGeneratorSchema], default: [] },
     isSyncWithProcurement: { type: Boolean, default: false },
     priority: { type: String, default: null },
     isPublicOrder: { type: Boolean, default: false },

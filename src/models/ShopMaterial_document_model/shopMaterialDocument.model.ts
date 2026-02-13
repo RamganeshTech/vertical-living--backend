@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export interface IMaterialFile {
-  type: "image" | "pdf";
+  type: string;
   url: string;
   originalName: string;
   uploadedAt: Date;
@@ -16,12 +16,11 @@ interface IExtractedShopQuoteDetails {
 
 export interface IMaterialShopDocument extends Document {
   organizationId: Types.ObjectId
+  materialCategoryId: Types.ObjectId
   categoryName: string | null;
   file: IMaterialFile[];
   extractDetails: IExtractedShopQuoteDetails[]
 }
-
-
 
 
 const extractedDetails = new Schema({
@@ -32,36 +31,30 @@ const extractedDetails = new Schema({
 
 const fileSchema = new Schema<IMaterialFile>({
   type: { type: String, enum: ["image", "pdf"] },
-  url: { type: String,  },
+  url: { type: String, },
   originalName: String,
   uploadedAt: { type: Date, default: new Date() },
-  isExtracted: {type: Boolean, default:false}
-}, {_id: true});
+  isExtracted: { type: Boolean, default: false }
+}, { _id: true });
 
-const MaterialShopDocumentSchema: Schema = new Schema({
+const MaterialShopDocumentSchema: Schema = new Schema<IMaterialShopDocument>({
   organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel", },
-
+  materialCategoryId: { type: Schema.Types.ObjectId, ref: "MaterialCategoryModel", default: null },
   categoryName: {
     type: String,
     default: null,
-    // required: true // Added required since you categorize them
   },
-  // file: {
-  //   type: {
-  //     type: String, enum: ["image", "pdf"],
-  //   },
-  //   url: { type: String, },
-  //   originalName: { type: String, },
-  //   uploadedAt: { type: Date, default: new Date() }
-  // },
 
-  file: {type:[fileSchema], default: []},
+  file: { type: [fileSchema], default: [] },
 
   extractDetails: {
     type: [extractedDetails],
     default: []
   },
 }, { timestamps: true });
+
+
+MaterialShopDocumentSchema.index({ organizationId: 1 })
 
 export const MaterialShopDocumentModel = mongoose.model<IMaterialShopDocument>(
   'MaterialShopDocument',
