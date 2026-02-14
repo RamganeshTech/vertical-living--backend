@@ -171,6 +171,11 @@ export const getMaterialItemsForallCategories = async (req: Request, res: Respon
         searchQuery.$or = [
           { "data.itemName": regexPattern },
           { "data.item": regexPattern },
+          { "data.item name": regexPattern },
+          { "data.Item Name": regexPattern },
+          { "data.ItemName": regexPattern },
+          { "data.Item name": regexPattern },
+          { "data.Itemname": regexPattern },
           { "data.Item": regexPattern },
           { "data.productName": regexPattern }
         ];
