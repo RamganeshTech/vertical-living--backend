@@ -162,9 +162,6 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
     }
 
 
-
-
-
     // 1. Fetch the existing Internal Quote to preserve its numeric data
     const existingQuote = await InternalQuoteEntryModel.findById(quoteId);
 

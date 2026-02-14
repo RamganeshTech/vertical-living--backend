@@ -2324,7 +2324,6 @@ export const placeOrderToProcurementv1 = async (req: Request, res: Response): Pr
 
 
 // send to one single shop only not to mulitple shop 
-
 export const placeOrderToProcurementv2 = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId, orderItemId, organizationId } = req.params;

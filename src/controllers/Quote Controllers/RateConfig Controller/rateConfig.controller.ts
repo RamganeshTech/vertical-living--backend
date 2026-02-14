@@ -37,6 +37,37 @@ export const getMaterialCategories = async (req: Request, res: Response): Promis
 };
 
 
+/**
+ * Get all material items under a specific category
+ */
+export const getMaterialItemsByCategory = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { categoryId } = req.params;
+
+    if (!categoryId) {
+      return res.status(400).json({
+        ok: false,
+        message: "categoryId is required",
+      });
+    }
+
+    const items = await ItemModel.find({ categoryId }).lean();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Items fetched successfully",
+      data: items,
+    });
+  } catch (error: any) {
+    console.error("Error fetching items:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 // Controller: only used for the internal quote for selectig the brands thats it
 export const getMaterialItemsForFittings = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -112,36 +143,62 @@ export const getMaterialItemsForFittings = async (req: Request, res: Response): 
   }
 };
 
-/**
- * Get all material items under a specific category
- */
-export const getMaterialItemsByCategory = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { categoryId } = req.params;
 
-    if (!categoryId) {
-      return res.status(400).json({
-        ok: false,
-        message: "categoryId is required",
-      });
+// Controller: Search all items in an organization by name, regardless of category used in teh non branded materials 
+export const getMaterialItemsForallCategories = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { itemName } = req.query;
+    const { organizationId } = req.params;
+
+    if (!organizationId) {
+      return res.status(400).json({ ok: false, message: "organizationId is required" });
     }
 
-    const items = await ItemModel.find({ categoryId }).lean();
+    // 1. Prepare the Dynamic Regex
+    let searchQuery: any = { organizationId };
+
+    if (itemName) {
+      const words = String(itemName)
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(Boolean);
+
+      if (words.length > 0) {
+        const regexPattern = { $regex: words.join("|"), $options: "i" };
+
+        // 2. Handle multiple possible field names using $or
+        // This covers itemName, item, Item, and productName inside the 'data' object
+        searchQuery.$or = [
+          { "data.itemName": regexPattern },
+          { "data.item": regexPattern },
+          { "data.Item": regexPattern },
+          { "data.productName": regexPattern }
+        ];
+      }
+    }
+
+    // 3. Execute Query
+    // We lean() for performance, and since categoryName is a top-level field 
+    // in your schema, it will naturally be included.
+    const items = await ItemModel.find(searchQuery).lean();
 
     return res.status(200).json({
       ok: true,
-      message: "Items fetched successfully",
-      data: items,
+      count: items.length,
+      message: "Items retrieved successfully",
+      data: items.map(item => ({
+        ...item,
+        // We ensure the category context is clear for the frontend
+        sourceCategory: item.categoryName || "Uncategorized" 
+      })),
     });
+
   } catch (error: any) {
-    console.error("Error fetching items:", error);
-    return res.status(500).json({
-      ok: false,
-      message: "Internal server error",
-      error: error.message,
-    });
+    console.error("Error searching organization items:", error);
+    return res.status(500).json({ ok: false, message: "Internal server error" });
   }
 };
+
 
 
 // GET CONTORLELR TO GET THE SELECTED CATGOY MATIERIAL ITEMS

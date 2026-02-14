@@ -334,6 +334,7 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
         brandId: item?.brandId && Types.ObjectId.isValid(item.brandId)
           ? new Types.ObjectId(item.brandId)
           : null,
+        imageUrl: item?.imageUrl || null,
         description: item.description || null,
         quantity: Number(item.quantity || 0),
         profitOnMaterial: Number(item?.profitOnMaterial || 0),
@@ -454,7 +455,7 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
 export const getMaterialQuoteEntries = async (req: Request, res: Response): Promise<any> => {
   try {
     const { organizationId } = req.params;
-    const { 
+    const {
       projectId,
       search,
       startDate,

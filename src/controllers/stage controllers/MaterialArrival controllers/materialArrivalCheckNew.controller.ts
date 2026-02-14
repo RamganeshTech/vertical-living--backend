@@ -461,7 +461,7 @@ export const syncMaterialArrivalNew = async (projectId: string) => {
 // };
 
 
-// public
+// public but currnetlynot used but used in mobile
 export const updateMaterialArrivalItem = async (req: Request, res: Response): Promise<any> => {
     try {
         // We need orderNumber to find the group, and subItemId to find the specific item
@@ -561,6 +561,98 @@ export const updateMaterialArrivalItem = async (req: Request, res: Response): Pr
 };
 
 
+export const updateMaterialArrivalItemV1 = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, orderNumber, subItemId } = req.params;
+        const { arrivedQuantity } = req.body;
+
+        // Use req.files for multiple uploads
+        const files = req.files as (Express.Multer.File & { location: string })[];
+
+        if (!projectId || !orderNumber || !subItemId) {
+            return res.status(400).json({ ok: false, message: "Missing required parameters" });
+        }
+
+        const doc = await MaterialArrivalModel.findOne({ projectId });
+        if (!doc) return res.status(404).json({ ok: false, message: "Project not found" });
+
+        const orderGroup = doc.materialArrivalList.find((order: any) => order.orderMaterialDeptNumber === orderNumber);
+        if (!orderGroup) return res.status(404).json({ ok: false, message: "Order Group not found" });
+
+        const subItem = orderGroup.subItems.find((item: any) => String(item._id) === subItemId);
+        if (!subItem) return res.status(404).json({ ok: false, message: "Sub-item not found" });
+
+        // Update Quantity
+        if (arrivedQuantity !== undefined && arrivedQuantity !== null) {
+            subItem.arrivedQuantity = Number(arrivedQuantity);
+        }
+
+        // 4. Append Multiple Images
+        if (files && files.length > 0) {
+            const mappedFiles = files.map(file => ({
+                type: file.mimetype.startsWith("image") ? "image" : "pdf" as "image" | "pdf",
+                url: file.location,
+                originalName: file.originalname,
+                uploadedAt: new Date()
+            }));
+
+            // Push all new files into the existing array
+            subItem.images.push(...mappedFiles);
+        }
+
+        await doc.save();
+
+        const redisMainkey = `stage:MaterialArrivalModel:${projectId}`;
+        await redisClient.del(redisMainkey);
+
+        return res.status(200).json({ ok: true, message: "Item updated successfully", data: subItem });
+    } catch (err: any) {
+        return res.status(500).json({ ok: false, message: err.message || "Server error" });
+    }
+};
+
+
+export const deleteMaterialArrivalImagePublic = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, orderNumber, subItemId, imageId } = req.params;
+
+        if (!projectId || !orderNumber || !subItemId || !imageId) {
+            return res.status(400).json({ ok: false, message: "All IDs are required for deletion" });
+        }
+
+        // Efficiently remove the specific image from the nested array
+        const result = await MaterialArrivalModel.findOneAndUpdate(
+            { 
+                projectId, 
+                "materialArrivalList.orderMaterialDeptNumber": orderNumber,
+                "materialArrivalList.subItems._id": subItemId 
+            },
+            { 
+                $pull: { 
+                    "materialArrivalList.$[group].subItems.$[item].images": { _id: imageId } 
+                } 
+            },
+            { 
+                arrayFilters: [
+                    { "group.orderMaterialDeptNumber": orderNumber },
+                    { "item._id": subItemId }
+                ],
+                new: true 
+            }
+        );
+
+        if (!result) return res.status(404).json({ ok: false, message: "Item not found" });
+
+        // Clear Cache
+        const redisMainkey = `stage:MaterialArrivalModel:${projectId}`;
+        await redisClient.del(redisMainkey);
+
+        return res.status(200).json({ ok: true, message: "Image removed successfully" });
+    } catch (err: any) {
+        return res.status(500).json({ ok: false, message: "Failed to delete image" });
+    }
+};
+
 
 export const updateStaffMaterialArrivalQuantity = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -628,7 +720,7 @@ export const updateStaffMaterialArrivalQuantity = async (req: Request, res: Resp
 
 
 
-
+// .not used but used in mobile version
 export const updateMaterialArrivalImage = async (req: Request, res: Response): Promise<any> => {
     try {
         // We need orderNumber to find the group, and subItemId to find the specific item
@@ -719,6 +811,128 @@ export const updateMaterialArrivalImage = async (req: Request, res: Response): P
 };
 
 
+export const uploadMaterialArrivalImagesV1 = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, orderNumber, subItemId } = req.params;
+
+        // 1. Handle Multiple Files from Multer
+        // Note: Using 'req.files' for multiple uploads
+        const files = req.files as (Express.Multer.File & { location: string })[];
+
+        if (!projectId || !orderNumber || !subItemId) {
+            return res.status(400).json({ ok: false, message: "Missing required parameters" });
+        }
+
+        if (!files || files.length === 0) {
+            return res.status(400).json({ ok: false, message: "No images provided for upload" });
+        }
+
+        // 2. Find the Document
+        const doc = await MaterialArrivalModel.findOne({ projectId });
+        if (!doc) {
+            return res.status(404).json({ ok: false, message: "Project not found" });
+        }
+
+        // 3. Navigate to the specific Sub-Item
+        const orderGroup = doc.materialArrivalList.find(
+            (order: any) => order.orderMaterialDeptNumber === orderNumber
+        );
+
+        if (!orderGroup) {
+            return res.status(404).json({ ok: false, message: "Order Group not found" });
+        }
+
+        const subItem = orderGroup.subItems.find(
+            (item: any) => String(item._id) === subItemId
+        );
+
+        if (!subItem) {
+            return res.status(404).json({ ok: false, message: "Sub-item not found" });
+        }
+
+        // 4. Map the new files into your UploadSchema format
+        const newMappedFiles = files.map(file => ({
+            type: file.mimetype.startsWith("image") ? "image" : "pdf" as "image" | "pdf",
+            url: file.location, // S3 URL from multer-s3
+            originalName: file.originalname,
+            uploadedAt: new Date(),
+        }));
+
+        // 5. ✅ CRITICAL CHANGE: Use .push() with spread operator 
+        // This appends to the array instead of replacing it: subItem.images = [...]
+        if (!subItem.images) subItem.images = []; 
+        subItem.images.push(...newMappedFiles);
+
+        // 6. Save and Clear Cache
+        await doc.save();
+
+        const redisMainkey = `stage:MaterialArrivalModel:${projectId}`;
+        await redisClient.del(redisMainkey);
+
+        return res.status(200).json({
+            ok: true,
+            message: `${newMappedFiles.length} image(s) added successfully`,
+            data: subItem,
+        });
+
+    } catch (err: any) {
+        console.error("Error in multi-image upload:", err);
+        return res.status(500).json({
+            ok: false,
+            message: err.message || "Server error",
+        });
+    }
+};
+
+export const deleteMaterialArrivalImageV1 = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId, orderNumber, subItemId, imageId } = req.params;
+
+        if (!projectId || !orderNumber || !subItemId || !imageId) {
+            return res.status(400).json({ ok: false, message: "All parameters (projectId, orderNumber, subItemId, imageId) are required" });
+        }
+
+        // ✅ Use findOneAndUpdate with $pull to remove the specific image by its _id
+        const updatedDoc = await MaterialArrivalModel.findOneAndUpdate(
+            { 
+                projectId, 
+                "materialArrivalList.orderMaterialDeptNumber": orderNumber,
+                "materialArrivalList.subItems._id": subItemId 
+            },
+            { 
+                $pull: { 
+                    "materialArrivalList.$[group].subItems.$[item].images": { _id: imageId } 
+                } 
+            },
+            { 
+                arrayFilters: [
+                    { "group.orderMaterialDeptNumber": orderNumber },
+                    { "item._id": subItemId }
+                ],
+                new: true 
+            }
+        );
+
+        if (!updatedDoc) {
+            return res.status(404).json({ ok: false, message: "Material arrival item or image not found" });
+        }
+
+        // Cache Invalidation
+        const redisMainkey = `stage:MaterialArrivalModel:${projectId}`;
+        await redisClient.del(redisMainkey);
+
+        return res.status(200).json({
+            ok: true,
+            message: "Image deleted successfully",
+        });
+
+    } catch (err: any) {
+        console.error("Error deleting material arrival image:", err);
+        return res.status(500).json({ ok: false, message: err.message || "Server error" });
+    }
+};
+
+
 export const toggleMaterialVerification = async (req: Request, res: Response): Promise<any> => {
     try {
         // We use subItemId for precision instead of unitName (names can be duplicates)
@@ -771,9 +985,6 @@ export const toggleMaterialVerification = async (req: Request, res: Response): P
         return res.status(500).json({ message: "Internal server error", ok: false });
     }
 };
-
-
-
 
 
 

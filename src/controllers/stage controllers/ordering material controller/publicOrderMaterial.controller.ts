@@ -372,7 +372,7 @@ export const submitPublicOrders = async (req: Request, res: Response): Promise<a
                 shopDetails,
                 deliveryLocationDetails,
                 images,
-                priority: null,
+                priority: null,           
                 pdfLink: [],
                 orderMaterialNumber: orderNumber,
                 isSyncWithProcurement: false,

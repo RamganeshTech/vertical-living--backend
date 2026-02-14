@@ -20,6 +20,7 @@ export interface IUploadFile {
 
 export interface MaterialArrivalSingle {
   image: IUploadFile | null,
+  images: IUploadFile[] | null,
   quantity: number,
   // customId: string,
   unitName: string,
@@ -53,7 +54,7 @@ const UploadSchema = new Schema<IUploadFile>({
   url: { type: String, },
   originalName: { type: String },
   uploadedAt: { type: Date, default: new Date() },
-}, { _id: false });
+}, { _id: true });
 
 
 const MaterialSchema = new Schema<MaterialArrivalSingle>({
