@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import CutlistModel from '../../models/Cutlist_model/cutlist.model';
 import { generateCutlistPDF } from './pdfCutlistcontroller';
 import { COMPANY_LOGO, COMPANY_NAME } from '../stage controllers/ordering material controller/pdfOrderHistory.controller';
+import { RoleBasedRequest } from '../../types/types';
+import mongoose from 'mongoose';
+import { getModelNameByRole } from '../../utils/common features/utils';
 
 
 
@@ -48,7 +51,7 @@ const processRoomsWithImages = (roomsArray: any[], fileMap: Record<string, any>)
 
 
 
-export const saveCutlist = async (req: Request, res: Response): Promise<any> => {
+export const saveCutlist = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { id } = req.query; // Present for Update, absent for Create
         const { organizationId, projectId, clientId,
@@ -79,11 +82,16 @@ export const saveCutlist = async (req: Request, res: Response): Promise<any> => 
         const versionNo = req.body.versionNo || "1.0";
         const clientName = req.body.clientName || null;
         const location = req.body.location || null;
+        const creatorName = req.body.creatorName || null;
 
         // Clean up IDs: Convert "null" strings from FormData back to real nulls
         const cleanProjectId = (projectId === 'null' || projectId === '') ? null : projectId;
         const cleanQuoteId = (quoteId === 'null' || quoteId === '') ? null : quoteId;
         const cleanClientId = (clientId === 'null' || clientId === '') ? null : clientId;
+
+        // 2. Identify the Creator (using your reference logic)
+        const userId = req.user?._id;
+        const userRole = req.user?.role || "staff";
 
         if (id) {
             // --- UPDATE LOGIC ---
@@ -109,6 +117,11 @@ export const saveCutlist = async (req: Request, res: Response): Promise<any> => 
 
             return res.status(200).json({ ok: true, message: "Updated", data: updated });
         } else {
+
+            const ModelName = getModelNameByRole(userRole);
+
+
+
             // --- CREATE LOGIC ---
             const newCutlist = new CutlistModel({
                 organizationId,
@@ -119,6 +132,11 @@ export const saveCutlist = async (req: Request, res: Response): Promise<any> => 
                 quoteNo: quoteNo || null, // SAVING NOW
                 versionNo,
                 clientName, location, rooms: processedRooms, summary,
+
+                creatorName: creatorName || "",
+                creatorId: userId ? new mongoose.Types.ObjectId(userId) : null,
+                creatorModel: ModelName,
+
                 status: 'draft',
                 isLocked: false
             });
@@ -137,19 +155,33 @@ export const saveCutlist = async (req: Request, res: Response): Promise<any> => 
 /* 1. CREATE CONTROLLER
  * Extracts specific fields before saving
  */
-export const createCutlist = async (req: Request, res: Response): Promise<any> => {
+export const createCutlist = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const {
             organizationId, projectId, clientId, quoteId,
             quoteNo,
             versionNo, clientName, location,
-            rooms, summary, status = "draft", isLocked = false
+            rooms, summary, status = "draft", isLocked = false,
+            creatorName, // take from the frontend internally
         } = req.body;
 
         // Strict Validation
         if (!organizationId) {
             return res.status(400).json({ ok: false, message: "organizationId is mandatory." });
         }
+
+        // 2. Identify the Creator (using your reference logic)
+        const userId = req.user?._id;
+        const userRole = req.user?.role || "staff";
+        // const userName = req.user?.name || "Unknown";
+
+
+
+        console.log("userId", userId)
+        console.log("userRole", userRole)
+        console.log("creatorName", creatorName)
+        // Use your helper function logic
+        const ModelName = getModelNameByRole(userRole);
 
         const newCutlist = new CutlistModel({
             organizationId,
@@ -163,7 +195,12 @@ export const createCutlist = async (req: Request, res: Response): Promise<any> =
             rooms,
             summary,
             status,
-            isLocked
+            isLocked,
+
+            // Creator Tracking Fields
+            creatorName: creatorName || "",
+            creatorId: userId ? new mongoose.Types.ObjectId(userId) : null,
+            creatorModel: ModelName
         });
 
         const savedCutlist = await newCutlist.save();
@@ -187,6 +224,7 @@ export const updateCutlist = async (req: Request, res: Response): Promise<any> =
         const {
             organizationId, projectId, clientId = null, quoteNo, quoteId,
             versionNo, clientName, location,
+
             rooms, summary, status, isLocked
         } = req.body;
 
@@ -309,7 +347,8 @@ export const getAllCutlists = async (req: Request, res: Response): Promise<any> 
                 .sort({ createdAt: -1 }) // Sort by the actual transaction date (Bill Date), not createdAt
                 .skip(skip)
                 .limit(limitNum)
-                .populate('projectId', "projectName _id"),
+                .populate('projectId', "projectName _id")
+                .populate('creatorId', "_id staffName username CTOName workerName clientName"),
 
             CutlistModel.countDocuments(query)
         ])
@@ -350,6 +389,8 @@ export const getSingleCutlist = async (req: Request, res: Response): Promise<any
         const cutlist = await CutlistModel.findById(id)
             .populate('projectId', "projectName _id")
             .populate("clientId", "_id clientName")
+            .populate('creatorId', "_id staffName username CTOName workerName clientName")
+
         // .populate('organizationId');
 
         if (!cutlist) {
@@ -409,13 +450,13 @@ export const generateCutlistPDFController = async (req: Request, res: Response):
             return res.status(404).json({ ok: false, message: 'Cutlist not found' });
         }
 
-        const orgName = (cutlist.organizationId as any)?.organizationName || COMPANY_NAME   ;
-        
+        const orgName = (cutlist.organizationId as any)?.organizationName || COMPANY_NAME;
+
         // Generate PDF and upload to S3
         const uploadResult = await generateCutlistPDF(cutlist, orgName, COMPANY_LOGO);
 
         // Update DB with the new PDF link (optional but recommended)
-        cutlist.status = 'generated'; 
+        cutlist.status = 'generated';
         // If your schema has a pdfUrl field: cutlist.pdfUrl = uploadResult.Location;
         await cutlist.save();
 
@@ -424,7 +465,7 @@ export const generateCutlistPDFController = async (req: Request, res: Response):
             message: 'PDF generated successfully',
             data: {
                 cutlist,
-                
+
                 pdfUrl: uploadResult.Location,
             }
         });

@@ -50,8 +50,11 @@ export interface IMaterialSummary {
 export interface ICutlist {
     _id?: Types.ObjectId;
     organizationId?: Types.ObjectId;
+    creatorName: string;
+    creatorId?: Types.ObjectId; // Reference to User/Designer from CRM
+    creatorModel: string,
     quoteNo: string | null
-    quoteId?: Types.ObjectId; 
+    quoteId?: Types.ObjectId;
     projectId?: Types.ObjectId;
     clientId?: Types.ObjectId;
     cutlistNo?: string;
@@ -120,13 +123,18 @@ const CutlistSchema = new Schema<ICutlist>({
     organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
     projectId: { type: Types.ObjectId, ref: "ProjectModel" },
     quoteNo: { type: String, default: null },
-    quoteId: {type:Schema.Types.ObjectId, ref:"QuoteVarientGenerateModel", default: null},
+    quoteId: { type: Schema.Types.ObjectId, ref: "QuoteVarientGenerateModel", default: null },
     cutlistNo: { type: String, }, // auto generated using the pre hook only during the creation not in the updation
     versionNo: { type: String, default: null }, // "1.0"
     clientName: { type: String, default: null },
     clientId: { type: Types.ObjectId, ref: "ClientModel" },
     location: { type: String, default: null },
 
+    creatorName: { type: String, default:null },
+    creatorId: {
+        type: Schema.Types.ObjectId, refPath: "creatorModel",
+    },
+    creatorModel: { type: String },
     // Room Data
     rooms: [RoomSchema],
 
@@ -168,11 +176,11 @@ const CutlistSchema = new Schema<ICutlist>({
 // ✅ Pre-save hook to auto-generate unique invoice number
 CutlistSchema.pre("save", async function (next) {
     if (this.isNew && !this.cutlistNo) {
-          const currentYear = new Date().getFullYear();
-          
+        const currentYear = new Date().getFullYear();
+
         const lastDoc = await mongoose
             .model("CutlistModel")
-            .findOne({organizationId: this.organizationId}, { cutlistNo: 1 })
+            .findOne({ organizationId: this.organizationId }, { cutlistNo: 1 })
             .sort({ createdAt: -1 });
 
         let nextNumber = 1;
