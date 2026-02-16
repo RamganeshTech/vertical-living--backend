@@ -10,11 +10,11 @@ dotenv.config()
 
 
 const genAI = new GoogleGenAI({
-   apiKey: process.env.GEMINI_API_KEY!,
-   
+  apiKey: process.env.GEMINI_API_KEY!,
 
 
- });
+
+});
 
 
 export const createMaterialShopDocuments = async (req: Request, res: Response): Promise<any> => {
@@ -549,15 +549,197 @@ export const extractShopMaterialDocDetails = async (req: Request, res: Response)
 
 
 
+// export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Response): Promise<any> => {
+
+
+
+//   try {
+//     const { id, fileId, categoryId, organizationId } = req.params;
+
+
+//     // Modified Step 1 for better multi-tenant security
+//     const [document, category] = await Promise.all([
+//       MaterialShopDocumentModel.findOne({ _id: id, organizationId: organizationId }),
+//       CategoryModel.findOne({ _id: categoryId, organizationId: organizationId })
+//     ]);
+
+//     if (!document || !category) {
+//       return res.status(404).json({ message: "Document or Category not found", ok: false });
+//     }
+
+//     const targetFile = document.file.find((f: any) => f._id.toString() === fileId);
+//     if (!targetFile || !targetFile.url) {
+//       return res.status(404).json({ message: "File not found", ok: false });
+//     }
+
+//     // 2. Identify keys to extract (visibleIn: "material")
+//     const extractionFields = category.fields.filter(f => f.visibleIn?.includes("material"));
+//     const extractionKeys = extractionFields.map(f => f.key);
+
+//     // Define default values based on category schema types
+//     const defaultValues = category.fields.reduce((acc, field) => {
+//       if (field.type === "number") acc[field.key] = 0;
+//       else if (field.type === "boolean") acc[field.key] = false;
+//       else acc[field.key] = null;
+//       return acc;
+//     }, {} as Record<string, any>);
+
+//     // 3. Prepare File for AI
+//     const fileResponse = await axios.get(targetFile.url, { responseType: 'arraybuffer' });
+//     const base64Data = Buffer.from(fileResponse.data).toString('base64');
+//     const mimeType = targetFile.type === 'pdf' ? 'application/pdf' : 'image/jpeg';
+
+//     // 4. Construct Dynamic Prompt
+//     const promptText = `
+//             Analyze this ${targetFile.type} document for a "${category.name}" category.
+//             Extract a list of items. For each item, return a JSON object with these keys: ${extractionKeys.join(", ")}.
+//             Return strictly a JSON array. If a value is missing, return null.
+//             Format: [{"${extractionKeys[0]}": "value", ...}]
+//         `;
+
+//     // 5. Call Gemini
+//     const result = await genAI.models.generateContent({
+//       model: "gemini-2.0-flash-lite",
+//       // model: "gemini-1.5-flash",
+//       contents: [{
+//         role: 'user',
+//         parts: [
+//           { text: promptText },
+//           { inlineData: { data: base64Data, mimeType: mimeType } }
+//         ]
+//       }],
+//       config: { temperature: 0.1, maxOutputTokens: 8192 }
+//     });
+
+//     const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "[]";
+//     const cleanText = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+
+
+
+//     // 🔹 DEBUG LOGS
+//     console.log("--- AI RAW RESPONSE START ---");
+//     console.log(responseText);
+//     console.log("--- AI RAW RESPONSE END ---");
+
+
+
+//     let aiExtractedItems = [];
+//     try {
+//       const start = cleanText.indexOf("[");
+//       const end = cleanText.lastIndexOf("]");
+//       aiExtractedItems = JSON.parse(cleanText.substring(start, end + 1));
+//     } catch (e) {
+//       return res.status(500).json({ message: "AI Parsing Error", ok: false });
+//     }
+
+//     // 6. Map to ItemModel and Append to Database (OLD VERSION)
+//     // const itemsToSave = aiExtractedItems.map((item: any) => ({
+//     //   organizationId: organizationId,
+//     //   categoryId: category._id,
+//     //   categoryName: category.name,
+//     //   data: {
+//     //     ...defaultValues, // Fill all category fields with defaults first
+//     //     ...item           // Overwrite with AI extracted data
+//     //   }
+//     // }));
+
+//     // // Bulk insert the new items
+//     // await ItemModel.insertMany(itemsToSave);
+
+//     // 6. 🛡️ STRICT VALIDATION & MAPPING (NEW VERSION)
+//     const itemsToSave = aiExtractedItems.map((aiItem: any) => {
+//       const filteredData: Record<string, any> = { ...defaultValues };
+
+//       // Only allow keys that exist in extractionKeys
+//       extractionKeys.forEach((key) => {
+//         if (aiItem.hasOwnProperty(key)) {
+//           filteredData[key] = aiItem[key];
+//         }
+//       });
+
+//       return {
+//         organizationId: organizationId,
+//         categoryId: category._id,
+//         categoryName: category.name,
+//         data: filteredData // This now ONLY contains valid category keys
+//       };
+//     });
+
+
+//     // 7. Bulk insert and capture the created documents
+//     let createdItems: any[] = [];
+//     // Bulk insert the validated items
+//     if (itemsToSave.length > 0) {
+//       createdItems = await ItemModel.insertMany(itemsToSave);
+//     }
+
+//     // Update the source document file status
+//     targetFile.isExtracted = true;
+//     await document.save();
+
+//     return res.status(200).json({
+//       message: `Successfully extracted ${itemsToSave.length} items for ${category.name}`,
+//       data: {
+//         document: document,
+//         items: createdItems
+//       },
+//       ok: true
+//     });
+
+//   } catch (error: any) {
+//     console.error("Extraction Error:", error);
+//     // return res.status(500).json({ message: error.message, ok: false });
+
+//     // ✅ Detect Vertex/Gemini 429
+//     const errorMessage =
+//       error?.response?.data?.error?.message ||
+//       error?.message ||
+//       "Something went wrong";
+
+
+
+//     const errorCode =
+//       error?.response?.data?.error?.code ||
+//       error?.response?.status;
+
+//     // 🔥 Handle Rate Limit
+//     if (errorCode === 429 || errorMessage.includes("RESOURCE_EXHAUSTED")) {
+//       return res.status(429).json({
+//         message:
+//           "AI processing limit reached. Please wait a few minutes and try again.",
+//         ok: false,
+//         // type: "AI_RATE_LIMIT"
+//       });
+//     }
+
+//     // 🔥 Handle Gemini failure generally
+//     if (errorMessage.includes("generative") || errorMessage.includes("Gemini")) {
+//       return res.status(503).json({
+//         message:
+//           "AI service is temporarily unavailable. Please try again later.",
+//         ok: false,
+//         // type: "AI_SERVICE_ERROR"
+//       });
+//     }
+
+//     // 🔥 Default fallback
+//     return res.status(500).json({
+//       message: error?.message,
+
+//       ok: false,
+//     });
+//   }
+// };
+
+
+
+//  SECOND VERSION
+
+
 export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Response): Promise<any> => {
   try {
     const { id, fileId, categoryId, organizationId } = req.params;
 
-    // 1. Find the Document and Category Schema
-    // const [document, category] = await Promise.all([
-    //     MaterialShopDocumentModel.findById(id),
-    //     CategoryModel.findById(categoryId)
-    // ]);
 
     // Modified Step 1 for better multi-tenant security
     const [document, category] = await Promise.all([
@@ -576,7 +758,7 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
 
     // 2. Identify keys to extract (visibleIn: "material")
     const extractionFields = category.fields.filter(f => f.visibleIn?.includes("material"));
-    const extractionKeys = extractionFields.map(f => f.key);
+    // const extractionKeys = extractionFields.map(f => f.key);
 
     // Define default values based on category schema types
     const defaultValues = category.fields.reduce((acc, field) => {
@@ -592,12 +774,35 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
     const mimeType = targetFile.type === 'pdf' ? 'application/pdf' : 'image/jpeg';
 
     // 4. Construct Dynamic Prompt
+    // 2. Identify keys to extract
+    const extractionKeys = extractionFields.map(f => f.key);
+
+    // 4. Construct the Dynamic Reasoning Prompt
     const promptText = `
-            Analyze this ${targetFile.type} document for a "${category.name}" category.
-            Extract a list of items. For each item, return a JSON object with these keys: ${extractionKeys.join(", ")}.
-            Return strictly a JSON array. If a value is missing, return null.
-            Format: [{"${extractionKeys[0]}": "value", ...}]
-        `;
+        ACT AS AN EXPERT DATA EXTRACTOR FOR INTERIOR DESIGN CATALOGUES.
+        
+        TARGET CATEGORY: "${category.name}"
+        REQUIRED SYSTEM KEYS: [${extractionKeys.join(", ")}]
+
+        INSTRUCTIONS:
+        1. Analyze the provided ${targetFile.type} and identify individual product items.
+        2. For each item, you must map the information found in the document to the "REQUIRED SYSTEM KEYS" listed above.
+        
+        SEMANTIC MAPPING RULES:
+        - Use logical synonyms. For example, if you find "Price", "MRP", or "Cost", map it to the "Rs" key or if the related keys are mentioned in the REQUIRED SYSTEM KEYS.
+        - If you find "Measurement", "Size", or "W x H", map it to "thickness" or related dimension keys if they exist or if the related keys are mentioned in the REQUIRED SYSTEM KEYS.
+        - Brand Identification: Identify the Brand of the items. This might be a header on the page or mentioned per item. Assign this to the "Brand" key.
+        - STRICT DISCARD: If the document contains information (like "itemName" or "weight") that has no similar or related key in the REQUIRED SYSTEM KEYS, DISCARD that information. Do not create new keys.
+        
+        OUTPUT RULES:
+        - Return ONLY a valid JSON array of objects.
+        - EVERY object in the array MUST contain ALL the following keys: ${extractionKeys.join(", ")}.
+        - If a specific value cannot be found or mapped for an item, set that key's value to null.
+        - Ensure number strings are converted to actual numbers where appropriate (e.g., "Rs": 2000 instead of "Rs": "2000").
+        
+        EXAMPLE OUTPUT FORMAT:
+        [{"${extractionKeys[0]}": "value", "${extractionKeys[1]}": "value", ...}]
+    `;
 
     // 5. Call Gemini
     const result = await genAI.models.generateContent({
@@ -615,6 +820,15 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
 
     const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "[]";
     const cleanText = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+
+
+
+    // 🔹 DEBUG LOGS
+    console.log("--- AI RAW RESPONSE START ---");
+    console.log(responseText);
+    console.log("--- AI RAW RESPONSE END ---");
+
+
 
     let aiExtractedItems = [];
     try {
@@ -640,13 +854,46 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
     // await ItemModel.insertMany(itemsToSave);
 
     // 6. 🛡️ STRICT VALIDATION & MAPPING (NEW VERSION)
-    const itemsToSave = aiExtractedItems.map((aiItem: any) => {
-      const filteredData: Record<string, any> = { ...defaultValues };
+    // const itemsToSave = aiExtractedItems.map((aiItem: any) => {
+    //   const filteredData: Record<string, any> = { ...defaultValues };
 
-      // Only allow keys that exist in extractionKeys
-      extractionKeys.forEach((key) => {
-        if (aiItem.hasOwnProperty(key)) {
-          filteredData[key] = aiItem[key];
+    //   // Only allow keys that exist in extractionKeys
+    //   extractionKeys.forEach((key) => {
+    //     if (aiItem.hasOwnProperty(key)) {
+    //       filteredData[key] = aiItem[key];
+    //     }
+    //   });
+
+    //   return {
+    //     organizationId: organizationId,
+    //     categoryId: category._id,
+    //     categoryName: category.name,
+    //     data: filteredData // This now ONLY contains valid category keys
+    //   };
+    // });
+
+
+    // 6. 🛡️ STRICT VALIDATION & MAPPING
+    const itemsToSave = aiExtractedItems.map((aiItem: any) => {
+      const validatedData: Record<string, any> = {};
+
+      // Loop through the keys the DATABASE expects
+      category.fields.forEach((field) => {
+        const key = field.key;
+        let value = aiItem[key];
+
+        // 1. If AI missed a key, use the default from your defaultValues
+        if (value === undefined) {
+          value = defaultValues[key];
+        }
+
+        // 2. Data Type Enforcement based on your Category Model
+        if (field.type === "number" && value !== null) {
+          // Ensure price/thickness strings like "1,000" or "18mm" become numbers
+          const num = parseFloat(String(value).replace(/[^0-9.]/g, ''));
+          validatedData[key] = isNaN(num) ? 0 : num;
+        } else {
+          validatedData[key] = value;
         }
       });
 
@@ -654,7 +901,7 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
         organizationId: organizationId,
         categoryId: category._id,
         categoryName: category.name,
-        data: filteredData // This now ONLY contains valid category keys
+        data: validatedData
       };
     });
 
@@ -690,7 +937,6 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
       "Something went wrong";
 
 
-
     const errorCode =
       error?.response?.data?.error?.code ||
       error?.response?.status;
@@ -709,7 +955,7 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
     if (errorMessage.includes("generative") || errorMessage.includes("Gemini")) {
       return res.status(503).json({
         message:
-          "AI service is temporarily unavailable. Please try again later.",
+          "AI Extracting service is temporarily unavailable. Please try again later.",
         ok: false,
         // type: "AI_SERVICE_ERROR"
       });
@@ -718,7 +964,6 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
     // 🔥 Default fallback
     return res.status(500).json({
       message: error?.message,
-
       ok: false,
     });
   }
