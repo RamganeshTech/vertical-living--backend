@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import QuoteVarientGenerateModel from "../../../models/Quote Model/QuoteVariant Model/quoteVarient.model";
 import PaymentConfirmationModel from "../../../models/Stage Models/Payment Confirmation model/PaymentConfirmation.model";
 import { generateClientQuoteVariantPdfwithTemplates, generateClientQuoteVariantSqftRatePdfwithTemplates } from "../Quote Varaint Controller/pdfQuoteVarientGenerate";
+import mongoose from "mongoose";
 
 
 export const getAllClientQuotes = async (req: Request, res: Response): Promise<any> => {
@@ -128,7 +129,7 @@ export const getAllClientQuotesV1 = async (req: Request, res: Response): Promise
             filters.quoteNo = { $regex: q.replace(/Q-/, ''), $options: 'i' };
         }
 
-         // ✅ Add createdAt filter (match same day)
+        // ✅ Add createdAt filter (match same day)
         if (createdAt) {
             const selectedDate = new Date(createdAt as string); // "yyyy-mm-dd"
             selectedDate.setHours(0, 0, 0, 0);
@@ -217,6 +218,12 @@ export const getAllClientQuotesFromDropDown = async (req: Request, res: Response
         if (!organizationId) {
             return res.status(400).json({ ok: false, message: "Invalid organizationId" });
         }
+
+
+        // const query = {
+        //     organizationId: new mongoose.Types.ObjectId(organizationId),
+        //     projectId: new mongoose.Types.ObjectId(projectId)
+        // };
 
         const quotes = await QuoteVarientGenerateModel.find({ organizationId, projectId }).sort({ createdAt: -1 }).populate("projectId", "_id projectName");
 

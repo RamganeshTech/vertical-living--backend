@@ -9,7 +9,12 @@ import { CategoryModel, ItemModel } from '../../models/Quote Model/RateConfigAdm
 dotenv.config()
 
 
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+const genAI = new GoogleGenAI({
+   apiKey: process.env.GEMINI_API_KEY!,
+   
+
+
+ });
 
 
 export const createMaterialShopDocuments = async (req: Request, res: Response): Promise<any> => {
@@ -40,7 +45,7 @@ export const createMaterialShopDocuments = async (req: Request, res: Response): 
     // 2. Check for Duplicate Category (Case-Insensitive)
     const existingCategory = await MaterialShopDocumentModel.findOne({
       organizationId: orgObjectId,
-      
+
       categoryName: { $regex: new RegExp(`^${trimmedCategory}$`, 'i') }
     });
 
@@ -148,8 +153,8 @@ export const createMaterialShopDocumentsV1 = async (req: Request, res: Response)
       // --- UPDATE CASE: Push new files to the existing array ---
       existingDocument.file.push(...mappedFiles);
       // Optional: Update the name in case it was edited in RateConfig
-      existingDocument.categoryName = trimmedCategory; 
-      
+      existingDocument.categoryName = trimmedCategory;
+
       await existingDocument.save();
 
       return res.status(200).json({
@@ -159,7 +164,7 @@ export const createMaterialShopDocumentsV1 = async (req: Request, res: Response)
       });
     } else {
 
-      
+
       // --- CREATE CASE: Create the first document for this category ---
       const savedDocument = await MaterialShopDocumentModel.create({
         organizationId: orgObjectId,
@@ -345,15 +350,15 @@ export const getMaterialShopDocumentById = async (req: Request, res: Response): 
 export const getMaterialShopDocumentByIdV1 = async (req: Request, res: Response): Promise<any> => {
   try {
     const { categoryId } = req.params;
-    const document = await MaterialShopDocumentModel.findOne({materialCategoryId: categoryId});
+    const document = await MaterialShopDocumentModel.findOne({ materialCategoryId: categoryId });
 
     // if (!document) {
     //   return res.status(404).json({ message: "Document not found", ok: false });
     // }
 
     return res.status(200).json({ ok: true, data: document });
-  } catch (error:any) {
-    return res.status(500).json({ error: "Error retrieving document", message:error?.message, ok: false });
+  } catch (error: any) {
+    return res.status(500).json({ error: "Error retrieving document", message: error?.message, ok: false });
   }
 };
 
@@ -373,7 +378,7 @@ export const deleteMaterialShopDocument = async (req: Request, res: Response): P
       ok: true
     });
   } catch (error) {
-    return res.status(500).json({ message: "unable to delete document",  ok: false });
+    return res.status(500).json({ message: "unable to delete document", ok: false });
   }
 };
 
@@ -409,9 +414,9 @@ export const deleteMaterialShopFile = async (req: Request, res: Response): Promi
       ok: true
     });
 
-  } catch (error:any) {
+  } catch (error: any) {
     console.error("Delete File Error:", error);
-    return res.status(500).json({ message: "Server error during file deletion", error:error?.message, ok: false });
+    return res.status(500).json({ message: "Server error during file deletion", error: error?.message, ok: false });
   }
 };
 
@@ -597,6 +602,7 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
     // 5. Call Gemini
     const result = await genAI.models.generateContent({
       model: "gemini-2.0-flash-lite",
+      // model: "gemini-1.5-flash",
       contents: [{
         role: 'user',
         parts: [
@@ -604,7 +610,7 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
           { inlineData: { data: base64Data, mimeType: mimeType } }
         ]
       }],
-      config: { temperature: 0.1 }
+      config: { temperature: 0.1, maxOutputTokens: 8192 }
     });
 
     const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "[]";
@@ -619,19 +625,46 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
       return res.status(500).json({ message: "AI Parsing Error", ok: false });
     }
 
-    // 6. Map to ItemModel and Append to Database
-    const itemsToSave = aiExtractedItems.map((item: any) => ({
-      organizationId: organizationId,
-      categoryId: category._id,
-      categoryName: category.name,
-      data: {
-        ...defaultValues, // Fill all category fields with defaults first
-        ...item           // Overwrite with AI extracted data
-      }
-    }));
+    // 6. Map to ItemModel and Append to Database (OLD VERSION)
+    // const itemsToSave = aiExtractedItems.map((item: any) => ({
+    //   organizationId: organizationId,
+    //   categoryId: category._id,
+    //   categoryName: category.name,
+    //   data: {
+    //     ...defaultValues, // Fill all category fields with defaults first
+    //     ...item           // Overwrite with AI extracted data
+    //   }
+    // }));
 
-    // Bulk insert the new items
-    await ItemModel.insertMany(itemsToSave);
+    // // Bulk insert the new items
+    // await ItemModel.insertMany(itemsToSave);
+
+    // 6. 🛡️ STRICT VALIDATION & MAPPING (NEW VERSION)
+    const itemsToSave = aiExtractedItems.map((aiItem: any) => {
+      const filteredData: Record<string, any> = { ...defaultValues };
+
+      // Only allow keys that exist in extractionKeys
+      extractionKeys.forEach((key) => {
+        if (aiItem.hasOwnProperty(key)) {
+          filteredData[key] = aiItem[key];
+        }
+      });
+
+      return {
+        organizationId: organizationId,
+        categoryId: category._id,
+        categoryName: category.name,
+        data: filteredData // This now ONLY contains valid category keys
+      };
+    });
+
+
+    // 7. Bulk insert and capture the created documents
+    let createdItems: any[] = [];
+    // Bulk insert the validated items
+    if (itemsToSave.length > 0) {
+      createdItems = await ItemModel.insertMany(itemsToSave);
+    }
 
     // Update the source document file status
     targetFile.isExtracted = true;
@@ -639,11 +672,54 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
 
     return res.status(200).json({
       message: `Successfully extracted ${itemsToSave.length} items for ${category.name}`,
+      data: {
+        document: document,
+        items: createdItems
+      },
       ok: true
     });
 
   } catch (error: any) {
     console.error("Extraction Error:", error);
-    return res.status(500).json({ message: error.message, ok: false });
+    // return res.status(500).json({ message: error.message, ok: false });
+
+    // ✅ Detect Vertex/Gemini 429
+    const errorMessage =
+      error?.response?.data?.error?.message ||
+      error?.message ||
+      "Something went wrong";
+
+
+
+    const errorCode =
+      error?.response?.data?.error?.code ||
+      error?.response?.status;
+
+    // 🔥 Handle Rate Limit
+    if (errorCode === 429 || errorMessage.includes("RESOURCE_EXHAUSTED")) {
+      return res.status(429).json({
+        message:
+          "AI processing limit reached. Please wait a few minutes and try again.",
+        ok: false,
+        // type: "AI_RATE_LIMIT"
+      });
+    }
+
+    // 🔥 Handle Gemini failure generally
+    if (errorMessage.includes("generative") || errorMessage.includes("Gemini")) {
+      return res.status(503).json({
+        message:
+          "AI service is temporarily unavailable. Please try again later.",
+        ok: false,
+        // type: "AI_SERVICE_ERROR"
+      });
+    }
+
+    // 🔥 Default fallback
+    return res.status(500).json({
+      message: error?.message,
+
+      ok: false,
+    });
   }
 };

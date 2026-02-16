@@ -281,9 +281,10 @@ export const getAllCutlists = async (req: Request, res: Response): Promise<any> 
         if (search) {
             const searchRegex = new RegExp(search as string, "i");
             query.$or = [
-                { quoteNo: searchRegex },           // Searches BILL-001, INV-001
+                { cutlistNo: searchRegex },           // Searches BILL-001, INV-001
+                // { quoteNo: searchRegex },           // Searches BILL-001, INV-001
                 { clientName: searchRegex }, // Searches Vendor/Customer Name
-                { location: searchRegex },         // Searches ACC-REC-001
+                // { location: searchRegex },         // Searches ACC-REC-001
             ];
         }
 
