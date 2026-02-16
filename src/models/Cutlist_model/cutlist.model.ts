@@ -14,7 +14,9 @@ export interface ICutlistImage {
 // 1. Individual Cutlist Item (Row in the table)
 export interface ICutlistItem {
     sNo: number;
-    measurement: string | null;
+    // measurement: string | null;
+    h: number | null;
+    w: number | null;
     plyThickness: string | null;
     innerFace: {
         laminateThickness: string | null;
@@ -86,7 +88,9 @@ export interface ICutlist {
 
 const CutlistItemSchema = new Schema<ICutlistItem>({
     sNo: { type: Number, default: null },
-    measurement: { type: String, default: null },
+    // measurement: { type: String, default: null },
+    h: { type: Number, default: 0 }, // Height
+    w: { type: Number, default: 0 }, // Width
     plyThickness: { type: String, default: null },
     // Face Details
     innerFace: {
@@ -130,7 +134,7 @@ const CutlistSchema = new Schema<ICutlist>({
     clientId: { type: Types.ObjectId, ref: "ClientModel" },
     location: { type: String, default: null },
 
-    creatorName: { type: String, default:null },
+    creatorName: { type: String, default: null },
     creatorId: {
         type: Schema.Types.ObjectId, refPath: "creatorModel",
     },

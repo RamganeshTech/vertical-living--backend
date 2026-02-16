@@ -75,7 +75,20 @@ export const saveCutlist = async (req: RoleBasedRequest, res: Response): Promise
         // 3. Parse and Process Rooms
         // Frontend sends 'rooms' as a stringified JSON in FormData
         const rawRooms = JSON.parse(req.body.rooms || '[]');
-        const processedRooms = processRoomsWithImages(rawRooms, fileMap);
+
+        // 🔥 CONVERT H AND W TO NUMBERS HERE
+        const normalizedRooms = rawRooms.map((room: any) => ({
+            ...room,
+            items: room.items.map((item: any) => ({
+                ...item,
+                h: Number(item.h) || 0, // Force conversion to Number
+                w: Number(item.w) || 0, // Force conversion to Number
+                // sNo: Number(item.sNo) || null
+            }))
+        }));
+
+
+        const processedRooms = processRoomsWithImages(normalizedRooms, fileMap);
 
         // 4. Extract Summary and other fields
         const summary = req.body.summary ? JSON.parse(req.body.summary) : {};
