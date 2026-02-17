@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { RoleBasedRequest } from "../../../types/types";
-import { Types } from "mongoose"
+import mongoose, { Types } from "mongoose"
 import { ShortlistedDesignModel } from "../../../models/Stage Models/sampleDesing model/shortListed.model";
 import { ShortlistedReferenceDesignModel } from "../../../models/Stage Models/sampleDesing model/shortlistReferenceDesign.model";
 
@@ -19,7 +19,7 @@ export const uploadShortlistedReferenceDesignImages = async (req: RoleBasedReque
                     if (req.body.tags.startsWith("[")) {
                         tags = JSON.parse(req.body.tags);
                     } else {
-                        tags = req.body.tags.split(",").map((tag:string) => tag.trim());
+                        tags = req.body.tags.split(",").map((tag: string) => tag.trim());
                     }
                 } else if (Array.isArray(req.body.tags)) {
                     tags = req.body.tags;
@@ -46,7 +46,7 @@ export const uploadShortlistedReferenceDesignImages = async (req: RoleBasedReque
             type: "image" as const,
             url: (file as any).location,
             // imageId: null,
-                        tags: tags || [],
+            tags: tags || [],
             originalName: file.originalname,
             uploadedAt: new Date(),
         }));
@@ -96,11 +96,73 @@ export const getAllShortlistedReferenceDesigns = async (req: Request, res: Respo
     try {
         const { organizationId } = req.params;
 
-        const doc = await ShortlistedReferenceDesignModel.findOne({ organizationId });
+        if (!organizationId) {
+            return res.status(500).json({ message: "organizationId is required", ok: false });
+        }
 
-        if (!doc) {
+        const { search } = req.query
+        // 1. Prepare the search tags
+        let searchTags: string[] = [];
+        if (search) {
+            // Handles both single string and comma-separated "tag1,tag2"
+            searchTags = (search as string).split(',').map(tag => tag.trim());
+        }
+
+        // // 1. If NO search tags, just do a simple findOne (Fastest)
+        // if (searchTags.length === 0) {
+        //     const doc = await ShortlistedReferenceDesignModel.findOne({ organizationId });
+        //     return res.status(200).json({
+        //         ok: true,
+        //         data: doc
+        //     });
+        // }
+
+        // 2. Build the filter
+        const filter: any = { organizationId };
+
+        if (searchTags.length > 0) {
+            // This searches if ANY of the tags in your search array 
+            // exist within the 'referenceImages.tags' array
+            filter["referenceImages.tags"] = { $in: searchTags };
+        }
+
+        const doc = await ShortlistedReferenceDesignModel.findOne(filter).lean();
+
+          if (!doc) {
             return res.status(200).json({ message: "No shortlisted designs found", ok: true, data: null });
         }
+
+        // 4. Optional: Filter the internal array
+        // If the document has 100 images but only 2 match the tags, 
+        // you might want to filter the referenceImages array before sending it back.
+        // if (searchTags.length > 0) {
+        if (searchTags.length > 0 && doc?.referenceImages) {
+            doc.referenceImages = doc.referenceImages?.filter(img => 
+                img?.tags?.some(tag => searchTags.includes(tag))
+            );
+        }
+
+        // // 3. If THERE ARE tags, run the strict aggregation
+        // const docs = await ShortlistedReferenceDesignModel.aggregate([
+        //     { $match: { organizationId: new mongoose.Types.ObjectId(organizationId) } },
+        //     { $unwind: "$referenceImages" },
+        //     // Strict match: only images containing at least one of the search tags
+        //     { $match: { "referenceImages.tags": { $in: searchTags } } },
+        //     {
+        //         $group: {
+        //             _id: "$_id",
+        //             organizationId: { $first: "$organizationId" },
+        //             referenceImages: { $push: "$referenceImages" }
+        //         }
+        //     }
+        // ]);
+
+        // // const doc = docs[0] || null;
+        // const doc = docs.length > 0 ? docs[0] : { organizationId, referenceImages: [] };
+
+        // if (!doc) {
+        //     return res.status(200).json({ message: "No shortlisted designs found", ok: true, data: null });
+        // }
 
         return res.status(200).json({ ok: true, data: doc });
     } catch (error) {
@@ -120,7 +182,7 @@ export const deleteShortlistedReferenceDesign = async (req: RoleBasedRequest, re
             return res.status(400).json({ message: "Missing required data", ok: false });
         }
 
-        const shortlist = await ShortlistedReferenceDesignModel.findOneAndUpdate({ organizationId }, { $pull: { referenceImages: { _id: imageId } } }, { new: true } );
+        const shortlist = await ShortlistedReferenceDesignModel.findOneAndUpdate({ organizationId }, { $pull: { referenceImages: { _id: imageId } } }, { new: true });
 
         if (!shortlist) {
             return res.status(404).json({ message: "Shortlist not found", ok: false });

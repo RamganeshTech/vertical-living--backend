@@ -196,9 +196,18 @@ export const getShortlistedReferenceDesigns = async (req: Request, res: Response
 
 export const getAllReferenceTags = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { q } = req.query; // optional: e.g. ?q=mod
+        const { q, organizationId } = req.query; // optional: e.g. ?q=mod
+
+        // 1. Build the initial match stage
+        const matchStage: any = {};
+        if (organizationId) {
+            // Ensure organizationId is a valid ObjectId before matching
+            matchStage.organizationId = new mongoose.Types.ObjectId(organizationId as string);
+        }
 
         const tagsAggregation = await ShortlistedReferenceDesignModel.aggregate([
+            // 2. Match organization if provided, otherwise matches all
+            { $match: matchStage },
             { $unwind: "$referenceImages" },
             { $unwind: "$referenceImages.tags" },
             {
@@ -219,8 +228,8 @@ export const getAllReferenceTags = async (req: Request, res: Response): Promise<
 
         // Optional filtering if query is passed
         if (q) {
-            tags = tags.filter(tag =>
-                tag.toLowerCase().includes((q as string).toLowerCase())
+            tags = tags?.filter(tag =>
+                tag?.toLowerCase().includes((q as string).toLowerCase())
             );
         }
 
