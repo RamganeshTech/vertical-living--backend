@@ -122,7 +122,8 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
         workerName: newWorker.workerName,
         isauthenticated: true,
         permission: newWorker?.permission || {},
-        isGuideRequired: newWorker.isGuideRequired
+        isGuideRequired: newWorker?.isGuideRequired,
+        
       },
       ok: true
     });
@@ -349,8 +350,8 @@ const workerIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
       workerName: isExist.workerName,
       isauthenticated: true,
       permission: isExist?.permission || {},
-      isGuideRequired: isExist.isGuideRequired
-
+      isGuideRequired: isExist.isGuideRequired,
+      ownerId: isExist?.ownerId
     }
 
     await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })

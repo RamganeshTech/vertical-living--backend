@@ -83,7 +83,7 @@ import LabourRateConfigRoutes from './routers/Quote Routes/RateConfig Routes/lab
 import projectUtilRoutes from './routers/Util routes/util.routes';
 // import { loadDetectionModel } from './controllers/stage controllers/sampledesign contorllers/shortListMica.contorller';
 // import micaDeletectionRoutes from './routers/Stage routes/sample desing routes/shortListMica.routes';
-import shortlistMicaReferenceDesignRoutes from './routers/Stage routes/sample desing routes/shortListMicaReferenceDesign.routes';
+// import shortlistMicaReferenceDesignRoutes from './routers/Stage routes/sample desing routes/shortListMicaReferenceDesign.routes';
 import workLibRoutes from './routers/WorkLibrary Routes/workLibrary.routes';
 import materialInventoryRoutes from './routers/Material Inventory Routes/materialInventory.routes';
 import materialInventoryCartRoutes from './routers/Material Inventory Routes/materialInventoryCart.routes';

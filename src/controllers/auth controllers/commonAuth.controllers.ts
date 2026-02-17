@@ -140,6 +140,7 @@ export const unifiedLogin = async (req: Request, res: Response): Promise<any> =>
             organizationId: foundUser.organizationId,
             permission: foundUser.permission || {},
             isGuideRequired: foundUser.isGuideRequired,
+            ownerId: foundUser?.ownerId || "",
             ok: true
         };
 
@@ -148,22 +149,32 @@ export const unifiedLogin = async (req: Request, res: Response): Promise<any> =>
             case 'owner':
                 responseData.userId = foundUser._id;
                 responseData.userName = foundUser.username;
+                responseData.ownerId = foundUser._id
                 break;
             case 'staff':
                 responseData.staffId = foundUser._id;
                 responseData.staffName = foundUser.staffName;
+                responseData.ownerId = foundUser?.ownerId;
+
+
                 break;
             case 'worker':
                 responseData.workerId = foundUser._id;
                 responseData.workerName = foundUser.workerName;
+                responseData.ownerId = foundUser?.ownerId;
+
                 break;
             case 'CTO':
                 responseData.CTOId = foundUser._id;
                 responseData.CTOName = foundUser.CTOName;
+                responseData.ownerId = foundUser?.ownerId;
+
                 break;
             case 'client':
                 responseData.clientId = foundUser._id;
                 responseData.clientName = foundUser.clientName;
+                responseData.ownerId = foundUser?.ownerId;
+
                 break;
         }
 

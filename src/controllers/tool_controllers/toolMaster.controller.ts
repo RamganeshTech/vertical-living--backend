@@ -130,7 +130,8 @@ export const getAllTools = async (req: any, res: Response): Promise<any> => {
             toolName,
             toolCategory,
             minPrice,
-            maxPrice
+            maxPrice,
+            search
         } = req.query;
 
         const query: any = { organizationId };
@@ -138,6 +139,16 @@ export const getAllTools = async (req: any, res: Response): Promise<any> => {
         // Search Filters
         if (toolName) query.toolName = { $regex: toolName, $options: "i" };
         if (toolCategory) query.toolCategory = toolCategory;
+
+
+         if (search) {
+            query.$or = [
+                { modelNumber: { $regex: search, $options: 'i' } },
+                { toolCode: { $regex: search, $options: 'i' } },
+                { toolName: { $regex: search, $options: 'i' } },
+            ];
+        }
+
 
         // Purchase Value Range Filter
         if (minPrice || maxPrice) {

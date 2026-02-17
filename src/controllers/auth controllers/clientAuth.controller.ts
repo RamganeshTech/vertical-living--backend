@@ -386,7 +386,9 @@ const isClientAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             clientName: isExist.clientName,
             isauthenticated: true,
             permission: isExist?.permission || {},
-            isGuideRequired: isExist.isGuideRequired
+            isGuideRequired: isExist.isGuideRequired,
+            ownerId: isExist?.ownerId
+
 
         }
 
