@@ -92,6 +92,62 @@ export const uploadShortlistedReferenceDesignImages = async (req: RoleBasedReque
 };
 
 
+export const updateImageTags = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { organizationId, imageId } = req.params;
+        const { tags } = req.body; // Expecting string[]
+
+        // 1. Validation
+        if (!organizationId || !imageId) {
+            return res.status(400).json({ 
+                message: "organizationId and imageId are required", 
+                ok: false 
+            });
+        }
+
+        if (!Array.isArray(tags)) {
+            return res.status(400).json({ 
+                message: "Tags must be provided as an array of strings", 
+                ok: false 
+            });
+        }
+
+        // 2. Update logic using the positional operator ($)
+        // We find the document where organizationId matches AND the referenceImages array has a matching _id
+        const result = await ShortlistedReferenceDesignModel.findOneAndUpdate(
+            { 
+                organizationId: new mongoose.Types.ObjectId(organizationId), 
+                "referenceImages._id": new mongoose.Types.ObjectId(imageId) 
+            },
+            { 
+                $set: { "referenceImages.$.tags": tags } 
+            },
+            { new: true } // Return the updated document
+        );
+
+        if (!result) {
+            return res.status(404).json({ 
+                message: "Image not found or unauthorized", 
+                ok: false 
+            });
+        }
+
+        return res.status(200).json({ 
+            message: "Tags updated successfully", 
+            ok: true, 
+            data: result 
+        });
+
+    } catch (error) {
+        console.error("Error updating image tags:", error);
+        return res.status(500).json({ 
+            message: "Internal server error", 
+            ok: false 
+        });
+    }
+};
+
+
 export const getAllShortlistedReferenceDesigns = async (req: Request, res: Response): Promise<any> => {
     try {
         const { organizationId } = req.params;

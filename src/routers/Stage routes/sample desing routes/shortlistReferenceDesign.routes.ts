@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
-import { deleteShortlistedReferenceDesign, getAllShortlistedReferenceDesigns, uploadShortlistedReferenceDesignImages } from "../../../controllers/stage controllers/sampledesign contorllers/shortListReferenceDesign.controller";
+import { deleteShortlistedReferenceDesign, getAllShortlistedReferenceDesigns, updateImageTags, uploadShortlistedReferenceDesignImages } from "../../../controllers/stage controllers/sampledesign contorllers/shortListReferenceDesign.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 
 const shortlistReferenceDesign = Router();
@@ -22,6 +22,9 @@ shortlistReferenceDesign.post(
  */
   
 shortlistReferenceDesign.get("/getdesigns/:organizationId", getAllShortlistedReferenceDesigns);
+
+
+shortlistReferenceDesign.patch("/updatetag/:organizationId/:imageId", updateImageTags);
 
 /**
  * @route   DELETE /shortlist/:organizationId/:imageId
