@@ -24,7 +24,7 @@ const ToolSchema = new mongoose.Schema(
 
         toolImages: { type: [toolUploadSchema], default: [] },
 
-        toolCode: { type: String,  },
+        toolCode: { type: String, },
         toolName: { type: String, required: true },
         toolCategory: {
             type: String,
@@ -46,13 +46,17 @@ const ToolSchema = new mongoose.Schema(
             default: "new"
         },
 
+        warrantyFiles: { type: [toolUploadSchema], default: [] },
         availabilityStatus: {
             type: String,
             // enum: ["available", "issued", "repair", "missing"],
             default: "available"
         },
 
-        remarks: { type: String }
+        remarks: { type: String },
+        warrantyDuration: { type: String, default: null },
+        serviceLocation: { type: String, default: null },
+        warrantyDetails: { type: String, default: null },
     },
     { timestamps: true }
 );
