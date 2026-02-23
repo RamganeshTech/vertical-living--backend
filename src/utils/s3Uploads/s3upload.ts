@@ -100,10 +100,19 @@ export const processUploadFiles = async (req: Request, res: Response, next: Next
         const { Location } = await s3.upload(params).promise();
         (file as any).location = Location;
       } else if (file.mimetype.startsWith("image/")) {
-        const optimized = await sharp(file.buffer)
+        
+        let optimized: Buffer;
+
+        try{
+        optimized = await sharp(file.buffer)
           .resize({ width: 800 })
           .jpeg({ quality: 80 })
           .toBuffer();
+        }
+        catch(e){
+          console.log(e)
+          optimized = file.buffer;
+        }
 
         const s3Key = `images/${generateS3Key(file.originalname)}`;
         const params = {

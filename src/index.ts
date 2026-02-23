@@ -128,6 +128,7 @@ import CommonAuthRoutes from './routers/commonAuth_routes/commonAuth.routes';
 import PreSalesRoutes from './routers/preSalesQuote_routes/preSalesQuote.route';
 import PreSalesMaterialRateConfigRoutes from './routers/Quote Routes/RateConfig Routes/preSalesRateConfig.routes';
 import MaterialShopRoutes from './routers/shopMaterialDocument_routes/shopMaterialDocument.routes';
+import PublicPaymentTransactionRoutes from './routers/publicPaymentTransaction_routes/publicPaymentTransaction.routes';
 
 
 // Extend Socket interface for custom properties
@@ -232,10 +233,19 @@ global.socketIO = io;
 
 // console.log("env file", process.env.FRONTEND_URL)
 
+const allowedOrigins:string[] = [
+  'https://theverticalliving.com',
+  'https://www.theverticalliving.com',
+  process.env.FRONTEND_URL!
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
+  // origin: process.env.FRONTEND_URL,
+  origin: allowedOrigins,
   credentials: true
 }))
+
+
 app.use(cookieParser())
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json({ limit: "50mb" }));
@@ -245,7 +255,7 @@ const isProd = process.env.NODE_ENV === "production";
 
 // checkRedisConnection() //for redis
 app.use('/api/auth', authRoutes)
-app.use('/api/auth/v1',CommonAuthRoutes)
+app.use('/api/auth/v1', CommonAuthRoutes)
 app.use('/api/auth/client', clientRoutes)
 app.use('/api/auth/clientapproval', clientApprovalRoutes)
 app.use('/api/task', task)
@@ -411,6 +421,9 @@ app.use("/api/cad", cadRoutes)
 app.use("/api/toolmaster", toolMasterRoutes)
 app.use("/api/toolroom", toolRoomRoutes)
 app.use("/api/tool", toolIssueRoutes)
+
+app.use("/api/v1/public/transaction", PublicPaymentTransactionRoutes)
+
 
 
 
