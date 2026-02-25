@@ -15,13 +15,13 @@ const razorpay = new Razorpay({
 // Use a constant Org ID from .env for security
 const VERTICAL_LIVING_ORG_ID = process.env.VERTICAL_LIVING_ORG_ID;
 
-export const createOrderPublicTransaction = async (req: Request<{}, {}, ICreateOrderRequest>, res: Response):Promise<any> => {
+export const createOrderPublicTransaction = async (req: Request<{}, {}, ICreateOrderRequest>, res: Response): Promise<any> => {
   try {
     const { amount, customerDetails } = req.body;
 
     console.log("getting caled ")
 
-    const options:any = {
+    const options: any = {
       amount: amount * 100, // Convert to paise
       currency: "INR",
       receipt: `v_living_${Date.now()}`,
@@ -61,7 +61,7 @@ export const createOrderPublicTransaction = async (req: Request<{}, {}, ICreateO
   }
 };
 
-export const verifyPaymentPublicTransaction = async (req: Request<{}, {}, IVerifyPaymentRequest>, res: Response):Promise<any> => {
+export const verifyPaymentPublicTransaction = async (req: Request<{}, {}, IVerifyPaymentRequest>, res: Response): Promise<any> => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
@@ -76,17 +76,17 @@ export const verifyPaymentPublicTransaction = async (req: Request<{}, {}, IVerif
       // Update the existing transaction record
       const transaction = await PublicPaymentTransaction.findOneAndUpdate(
         { razorpay_order_id: razorpay_order_id },
-        { 
-          status: 'captured', 
-          razorpay_payment_id: razorpay_payment_id 
+        {
+          status: 'success',
+          razorpay_payment_id: razorpay_payment_id
         },
         { new: true }
       );
 
-      return res.status(200).json({ 
-        ok: true, 
+      return res.status(200).json({
+        ok: true,
         message: "Payment verified successfully",
-        transactionId: transaction?._id 
+        transactionId: transaction?._id
       });
     } else {
       return res.status(400).json({ ok: false, message: "Invalid signature" });
@@ -96,21 +96,69 @@ export const verifyPaymentPublicTransaction = async (req: Request<{}, {}, IVerif
   }
 };
 
-export const getAllOrgTransactions = async (req: Request, res: Response):Promise<any> => {
+export const getAllOrgTransactions = async (req: Request, res: Response): Promise<any> => {
   try {
     // In a real CRM, you'd get this ID from the authenticated user's session
-    const { organizationId } = req.query; 
+    const { organizationId, search,
+      startDate,
+      endDate,
+      status,
+      minAmount, // New parameter
+      maxAmount  // New parameter
+    } = req.query;
 
     if (!organizationId) {
       return res.status(400).json({ ok: false, message: "Organization ID is required" });
     }
 
+    // Initialize the query with the organizationId
+    const query: any = { organizationId };
+
+    // 1. Filter by Status (if provided)
+    if (status) {
+      query.status = status;
+    }
+
+    // 2. Search Logic (Case-insensitive regex search across multiple fields)
+    if (search) {
+      const searchRegex = new RegExp(String(search), 'i');
+      query.$or = [
+        { "customerDetails.name": searchRegex },
+        { "customerDetails.email": searchRegex },
+        { "customerDetails.phone": searchRegex },
+        { "razorpay_payment_id": searchRegex },
+        { "razorpay_order_id": searchRegex }
+      ];
+    }
+
+    // 3. Date Range Logic
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) {
+        query.createdAt.$gte = new Date(String(startDate));
+      }
+      if (endDate) {
+        // Set to end of the day (23:59:59) to include the entire end date
+        const end = new Date(String(endDate));
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    }
+
+    // 4. Amount Range Logic (New)
+    if (minAmount !== undefined || maxAmount !== undefined) {
+      query.amount = {};
+      if (minAmount !== undefined) {
+        query.amount.$gte = Number(minAmount);
+      }
+      if (maxAmount !== undefined) {
+        query.amount.$lte = Number(maxAmount);
+      }
+    }
+
     // Fetch transactions, populate plan details if needed, and sort by newest first
-    const transactions = await PublicPaymentTransaction.find({ 
-      organizationId,
-    //   status: 'captured' // Only show successful payments
-    })
-    .sort({ createdAt: -1 });
+    const transactions = await PublicPaymentTransaction.find(query)
+      .sort({ createdAt: -1 });
 
     res.status(200).json({ ok: true, data: transactions });
   } catch (error: any) {

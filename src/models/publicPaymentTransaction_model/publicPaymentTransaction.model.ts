@@ -47,13 +47,13 @@ const PublicTransactionSchema = new Schema<IPublicPaymentTransaction>({
     ref: 'OrganizationModel', 
     default: null,
   },
-  razorpay_order_id: { type: String, required: true },
+  razorpay_order_id: { type: String,  },
   razorpay_payment_id: { type: String },
   amount: { type: Number,  },
   currency: { type: String, default: 'INR' },
   status: { 
     type: String, 
-    enum: ['pending', 'captured', 'failed'], 
+    enum: ['pending', 'success', 'failed'], 
     default: 'pending' 
   },
   customerDetails: {
