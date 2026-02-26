@@ -383,289 +383,330 @@ export const getSingleLogisticsShipment = async (req: Request, res: Response): P
 
 // TRACKING 
 
-// export const updateDriverLocation = async (req: Request, res: Response): Promise<any> => {
-//     try {
-//         const { shipmentId } = req.params;
-//         const { latitude, longitude } = req.body;
-
-//         if (!shipmentId || !Types.ObjectId.isValid(shipmentId)) {
-//             return res.status(400).json({ ok: false, message: "Invalid shipmentId" });
-//         }
-
-//         if (!latitude || !longitude) {
-//             return res.status(400).json({ ok: false, message: "latitude and longitude are required" });
-//         }
-
-//         const shipment = await LogisticsShipmentModel.findById(shipmentId);
-
-//         if (!shipment) {
-//             return res.status(404).json({ ok: false, message: "Shipment not found" });
-//         }
-
-//         // Check if shipment is active
-//         if (!["in_transit", "pickedup"].includes(shipment.shipmentStatus || "")) {
-//             return res.status(400).json({
-//                 ok: false,
-//                 message: "Cannot track - shipment is not active"
-//             });
-//         }
-
-//         const now = new Date();
-
-//         // Update current location
-//         shipment.currentLocation = {
-//             latitude,
-//             longitude,
-//             updatedAt: now
-//         };
-
-//         shipment.lastLocationUpdate = now;
-
-//         // Add to location history
-//         shipment.locationHistory.push({
-//             latitude,
-//             longitude,
-//             timestamp: now
-//         });
-
-//         await shipment.save();
-
-//         // ✅ EMIT TO WEBSOCKET using SocketService
-//         await SocketService.emitLocationUpdate(
-//             shipment.organizationId.toString(),
-//             {
-//                 shipmentId: shipment._id.toString(),
-//                 latitude,
-//                 longitude,
-//                 updatedAt: now,
-//                 shipmentStatus: shipment.shipmentStatus || "",
-//                 vehicleDetails: shipment.vehicleDetails,
-//                 shipmentNumber: shipment.shipmentNumber || ""
-//             }
-//         );
-
-//         return res.status(200).json({
-//             ok: true,
-//             message: "Location updated successfully",
-//             data: {
-//                 currentLocation: shipment.currentLocation,
-//                 shipmentStatus: shipment.shipmentStatus
-//             }
-//         });
-
-//     } catch (err: any) {
-//         console.error("Error updating driver location:", err);
-//         return res.status(500).json({
-//             ok: false,
-//             message: "Failed to update location",
-//             error: err.message
-//         });
-//     }
-// };
+export const updateDriverLocation = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { shipmentId } = req.params;
+        const { latitude, longitude } = req.body;
 
 
-// // ============================================
-// // 🚀 Start Tracking
-// // ============================================
-// export const startTracking = async (req: Request, res: Response): Promise<any> => {
-//     try {
-//         const { shipmentId } = req.params;
+        console.log("latitude", latitude)
+        console.log("longitude", longitude)
 
-//         if (!shipmentId || !Types.ObjectId.isValid(shipmentId)) {
-//             return res.status(400).json({ ok: false, message: "Invalid shipmentId" });
-//         }
+        if (!shipmentId || !Types.ObjectId.isValid(shipmentId)) {
+            return res.status(400).json({ ok: false, message: "Invalid shipmentId" });
+        }
 
-//         const shipment = await LogisticsShipmentModel.findById(shipmentId);
+        if (!latitude || !longitude) {
+            return res.status(400).json({ ok: false, message: "latitude and longitude are required" });
+        }
 
-//         if (!shipment) {
-//             return res.status(404).json({ ok: false, message: "Shipment not found" });
-//         }
+        const shipment = await LogisticsShipmentModel.findById(shipmentId);
 
-//         // Generate tracking ID if not exists
-//         // if (!shipment.trackingId) {
-//         //     shipment.trackingId = `TRK-${shipmentId.toString().slice(-8).toUpperCase()}`;
-//         // }
+        if (!shipment) {
+            return res.status(404).json({ ok: false, message: "Shipment not found" });
+        }
 
-//         // Update status to in_transit if it was pending/assigned
-//         if (shipment.shipmentStatus === "pending" || shipment.shipmentStatus === "assigned") {
-//             shipment.shipmentStatus = "pickedup";
-//             shipment.actualPickupTime = new Date();
-//         }
+        // Check if shipment is active
+        // if (!["in_transit", "pickedup"].includes(shipment.shipmentStatus || "")) {
+        //     return res.status(400).json({
+        //         ok: false,
+        //         message: "Cannot track - shipment is not active"
+        //     });
+        // }
 
-//         await shipment.save();
+        const now = new Date();
 
-//         // ✅ EMIT TRACKING STARTED
-//         await SocketService.emitTrackingStarted(
-//             shipment.organizationId.toString(),
-//             {
-//                 shipmentId: shipment._id.toString(),
-//                 // trackingId: shipment.trackingId.toString(),
-//                 shipmentNumber: shipment.shipmentNumber || "",
-//                 vehicleDetails: shipment.vehicleDetails,
-//                 destination: shipment.destination
-//             }
-//         );
+        // Update current location
+        shipment.currentLocation = {
+            latitude,
+            longitude,
+            updatedAt: now
+        };
 
-//         return res.status(200).json({
-//             ok: true,
-//             message: "Tracking started",
-//             data: {
-//                 // trackingId: shipment.trackingId,
-//                 shipmentId: shipment._id,
-//                 status: shipment.shipmentStatus
-//             }
-//         });
+        shipment.lastLocationUpdate = now;
 
-//     } catch (err: any) {
-//         console.error("Error starting tracking:", err);
-//         return res.status(500).json({
-//             ok: false,
-//             message: "Failed to start tracking",
-//             error: err.message
-//         });
-//     }
-// };
+        // Add to location history
+        shipment.locationHistory.push({
+            latitude,
+            longitude,
+            timestamp: now
+        });
 
+        await shipment.save();
 
-// // ============================================
-// // 🚀 Get Active Shipments with Location
-// // ============================================
-// export const getActiveShipmentsWithLocation = async (req: Request, res: Response): Promise<any> => {
-//     try {
-//         const { organizationId, projectId } = req.query;
+        // ✅ EMIT TO WEBSOCKET using SocketService
+        await SocketService.emitLocationUpdate(
+            shipment.organizationId.toString(),
+            {
+                shipmentId: shipment._id.toString(),
+                latitude,
+                longitude,
+                updatedAt: now,
+                shipmentStatus: shipment.shipmentStatus || "",
+                vehicleDetails: shipment.vehicleDetails,
+                shipmentNumber: shipment.shipmentNumber || ""
+            }
+        );
 
-//         if (!organizationId) {
-//             return res.status(400).json({ ok: false, message: "organizationId is required" });
-//         }
+        return res.status(200).json({
+            ok: true,
+            message: "Location updated successfully",
+            data: {
+                currentLocation: shipment.currentLocation,
+                shipmentStatus: shipment.shipmentStatus
+            }
+        });
 
-//         const filters: any = {
-//             organizationId,
-//             shipmentStatus: { $in: ["in_transit", "pickedup"] }
-//         };
-
-//         if (projectId) {
-//             filters.projectId = projectId;
-//         }
-
-//         const activeShipments = await LogisticsShipmentModel.find(filters)
-//             .select('shipmentNumber currentLocation lastLocationUpdate vehicleDetails destination origin shipmentStatus eta trackingId')
-//             .lean();
-
-//         // ✅ OPTIONAL: Send bulk update via WebSocket when dashboard requests
-//         if (activeShipments.length > 0) {
-//             const shipmentData = activeShipments.map(s => ({
-//                 shipmentId: s._id.toString(),
-//                 currentLocation: s.currentLocation || { latitude: 0, longitude: 0, updatedAt: new Date() },
-//                 shipmentStatus: s.shipmentStatus || "",
-//                 shipmentNumber: s.shipmentNumber || ""
-//             }));
-
-//             await SocketService.emitBulkLocationUpdate(
-//                 organizationId.toString(),
-//                 shipmentData
-//             );
-//         }
-
-//         return res.status(200).json({
-//             ok: true,
-//             data: activeShipments,
-//             count: activeShipments.length
-//         });
-
-//     } catch (err: any) {
-//         console.error("Error fetching active shipments:", err);
-//         return res.status(500).json({
-//             ok: false,
-//             message: "Failed to fetch active shipments",
-//             error: err.message
-//         });
-//     }
-// };
+    } catch (err: any) {
+        console.error("Error updating driver location:", err);
+        return res.status(500).json({
+            ok: false,
+            message: "Failed to update location",
+            error: err.message
+        });
+    }
+};
 
 
-// // ============================================
-// // 🚀 Get Shipment Route History
-// // ============================================
-// export const getShipmentRouteHistory = async (req: Request, res: Response): Promise<any> => {
-//     try {
-//         const { shipmentId } = req.params;
+// ============================================
+// 🚀 Start Tracking
+// ============================================
+export const startTracking = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { shipmentId } = req.params;
 
-//         if (!shipmentId || !Types.ObjectId.isValid(shipmentId)) {
-//             return res.status(400).json({ ok: false, message: "Invalid shipmentId" });
-//         }
+        if (!shipmentId || !Types.ObjectId.isValid(shipmentId)) {
+            return res.status(400).json({ ok: false, message: "Invalid shipmentId" });
+        }
 
-//         const shipment = await LogisticsShipmentModel.findById(shipmentId)
-//             .select('shipmentNumber locationHistory currentLocation origin destination vehicleDetails shipmentStatus')
-//             .lean();
+        const shipment = await LogisticsShipmentModel.findById(shipmentId);
 
-//         if (!shipment) {
-//             return res.status(404).json({ ok: false, message: "Shipment not found" });
-//         }
+        if (!shipment) {
+            return res.status(404).json({ ok: false, message: "Shipment not found" });
+        }
 
-//         return res.status(200).json({
-//             ok: true,
-//             data: {
-//                 shipmentNumber: shipment.shipmentNumber,
-//                 currentLocation: shipment.currentLocation,
-//                 locationHistory: shipment.locationHistory,
-//                 origin: shipment.origin,
-//                 destination: shipment.destination,
-//                 vehicleDetails: shipment.vehicleDetails,
-//                 shipmentStatus: shipment.shipmentStatus
-//             }
-//         });
+        // Generate tracking ID if not exists
+        // if (!shipment.trackingId) {
+        //     shipment.trackingId = `TRK-${shipmentId.toString().slice(-8).toUpperCase()}`;
+        // }
 
-//     } catch (err: any) {
-//         console.error("Error fetching route history:", err);
-//         return res.status(500).json({
-//             ok: false,
-//             message: "Failed to fetch route history",
-//             error: err.message
-//         });
-//     }
-// };
+        // Update status to in_transit if it was pending/assigned
+        if (shipment.shipmentStatus === "pending" || shipment.shipmentStatus === "assigned") {
+            shipment.shipmentStatus = "pickedup";
+            shipment.actualPickupTime = new Date();
+        }
+
+        await shipment.save();
+
+        // ✅ EMIT TRACKING STARTED
+        await SocketService.emitTrackingStarted(
+            shipment.organizationId.toString(),
+            {
+                shipmentId: shipment._id.toString(),
+                // trackingId: shipment.trackingId.toString(),
+                shipmentNumber: shipment.shipmentNumber || "",
+                vehicleDetails: shipment.vehicleDetails,
+                destination: shipment.destination
+            }
+        );
+
+        return res.status(200).json({
+            ok: true,
+            message: "Tracking started",
+            data: {
+                // trackingId: shipment.trackingId,
+                shipmentId: shipment._id,
+                status: shipment.shipmentStatus
+            }
+        });
+
+    } catch (err: any) {
+        console.error("Error starting tracking:", err);
+        return res.status(500).json({
+            ok: false,
+            message: "Failed to start tracking",
+            error: err.message
+        });
+    }
+};
+
+
+// ============================================
+// 🚀 Get Active Shipments with Location
+// ============================================
+export const getActiveShipmentsWithLocation = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { organizationId, projectId } = req.query;
+
+        if (!organizationId) {
+            return res.status(400).json({ ok: false, message: "organizationId is required" });
+        }
+
+        const filters: any = {
+            organizationId,
+            shipmentStatus: { $in: ["in_transit", "pickedup"] }
+        };
+
+        if (projectId) {
+            filters.projectId = projectId;
+        }
+
+        const activeShipments = await LogisticsShipmentModel.find(filters)
+            .select('shipmentNumber currentLocation lastLocationUpdate vehicleDetails destination origin shipmentStatus eta trackingId')
+            .lean();
+
+        // ✅ OPTIONAL: Send bulk update via WebSocket when dashboard requests
+        if (activeShipments.length > 0) {
+            const shipmentData = activeShipments.map(s => ({
+                shipmentId: s._id.toString(),
+                currentLocation: s.currentLocation || { latitude: 0, longitude: 0, updatedAt: new Date() },
+                shipmentStatus: s.shipmentStatus || "",
+                shipmentNumber: s.shipmentNumber || ""
+            }));
+
+            await SocketService.emitBulkLocationUpdate(
+                organizationId.toString(),
+                shipmentData
+            );
+        }
+
+        return res.status(200).json({
+            ok: true,
+            data: activeShipments,
+            count: activeShipments.length
+        });
+
+    } catch (err: any) {
+        console.error("Error fetching active shipments:", err);
+        return res.status(500).json({
+            ok: false,
+            message: "Failed to fetch active shipments",
+            error: err.message
+        });
+    }
+};
+
+
+// ============================================
+// 🚀 Get Shipment Route History
+// ============================================
+export const getShipmentRouteHistory = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { shipmentId } = req.params;
+
+        if (!shipmentId || !Types.ObjectId.isValid(shipmentId)) {
+            return res.status(400).json({ ok: false, message: "Invalid shipmentId" });
+        }
+
+        const shipment = await LogisticsShipmentModel.findById(shipmentId)
+            .select('shipmentNumber locationHistory currentLocation origin destination vehicleDetails shipmentStatus')
+            .lean();
+
+        if (!shipment) {
+            return res.status(404).json({ ok: false, message: "Shipment not found" });
+        }
+
+        return res.status(200).json({
+            ok: true,
+            data: {
+                shipmentNumber: shipment.shipmentNumber,
+                currentLocation: shipment.currentLocation,
+                locationHistory: shipment.locationHistory,
+                origin: shipment.origin,
+                destination: shipment.destination,
+                vehicleDetails: shipment.vehicleDetails,
+                shipmentStatus: shipment.shipmentStatus
+            }
+        });
+
+    } catch (err: any) {
+        console.error("Error fetching route history:", err);
+        return res.status(500).json({
+            ok: false,
+            message: "Failed to fetch route history",
+            error: err.message
+        });
+    }
+};
 
 
 
 
-// // public
+// public
 
 
-// // Get shipment by token (public endpoint - no auth needed)
-// export const getShipmentByToken = async (req: Request, res: Response): Promise<any> => {
-//     try {
-//         const { token } = req.params;
+// Get shipment by token (public endpoint - no auth needed)
+export const getShipmentByToken = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { token } = req.params;
 
-//         const shipment = await LogisticsShipmentModel.findOne({ token })
-//             .select('shipmentNumber organizationId destination origin vehicleDetails shipmentStatus currentLocation eta items');
+        const shipment = await LogisticsShipmentModel.findOne({ token })
+            .select('shipmentNumber organizationId destination origin vehicleDetails shipmentStatus currentLocation eta items');
 
-//         if (!shipment) {
-//             return res.status(404).json({
-//                 ok: false,
-//                 message: "Invalid or expired tracking link"
-//             });
-//         }
+        if (!shipment) {
+            return res.status(404).json({
+                ok: false,
+                message: "Invalid or expired tracking link"
+            });
+        }
 
-//         // ✅ Check if shipment is already delivered (optional: disable tracking)
-//         if (shipment.shipmentStatus === 'delivered' || shipment.shipmentStatus === 'cancelled') {
-//             return res.status(400).json({
-//                 ok: false,
-//                 message: "This shipment has already been completed"
-//             });
-//         }
+        // ✅ Check if shipment is already delivered (optional: disable tracking)
+        if (shipment.shipmentStatus === 'delivered' || shipment.shipmentStatus === 'cancelled') {
+            return res.status(400).json({
+                ok: false,
+                message: "This shipment has already been completed"
+            });
+        }
 
-//         return res.status(200).json({
-//             ok: true,
-//             data: shipment
-//         });
-//     } catch (err: any) {
-//         return res.status(500).json({
-//             ok: false,
-//             message: "Failed to fetch shipment",
-//             error: err.message
-//         });
-//     }
-// };
+        return res.status(200).json({
+            ok: true,
+            data: shipment
+        });
+    } catch (err: any) {
+        return res.status(500).json({
+            ok: false,
+            message: "Failed to fetch shipment",
+            error: err.message
+        });
+    }
+};
+
+
+//  get shipement by id (public end poiint- no auth needed)
+export const getShipmentByIdPublic = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { id } = req.params;
+
+        const shipment = await LogisticsShipmentModel.findById(id)
+            .select('shipmentNumber organizationId destination origin vehicleDetails shipmentStatus currentLocation locationHistory lastLocationUpdate eta items');
+
+        if (!shipment) {
+            return res.status(404).json({
+                ok: false,
+                message: "Shipment not found for this id"
+            });
+        }
+
+        // ✅ Check if shipment is already delivered (optional: disable tracking)
+        if (shipment.shipmentStatus === 'delivered' || shipment.shipmentStatus === 'cancelled') {
+            return res.status(400).json({
+                ok: false,
+                message: "This shipment has already been completed"
+            });
+        }
+
+        return res.status(200).json({
+            ok: true,
+            data: shipment
+        });
+    } catch (err: any) {
+        return res.status(500).json({
+            ok: false,
+            message: "Failed to fetch shipment",
+            error: err.message
+        });
+    }
+};
 
 
 

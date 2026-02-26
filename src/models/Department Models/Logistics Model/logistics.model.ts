@@ -49,25 +49,25 @@ export interface ILogisticsShipment {
   paymentDeptNumber: string | null,
   paymentRefId: Types.ObjectId | null,
 
-  // currentLocation: {
-  //   latitude: number,
-  //   longitude: number,
-  //   updatedAt: Date
-  // },
+  currentLocation: {
+    latitude: number,
+    longitude: number,
+    updatedAt: Date
+  },
 
-  // lastLocationUpdate: Date,
+  lastLocationUpdate: Date,
 
-  // eta: number,   // minutes
+  eta: number,   // minutes
 
-  // // trackingId: String,
+  trackingId: String,
 
-  // locationHistory: [{
-  //   latitude: number,
-  //   longitude: number,
-  //   timestamp: Date
-  // }],
+  locationHistory: [{
+    latitude: number,
+    longitude: number,
+    timestamp: Date
+  }],
 
-  // token: string,
+  token: string,
 
 
   trackingLink: string
@@ -153,35 +153,35 @@ export const LogisticsShipmentSchema = new Schema<ILogisticsShipment>({
     default: null
   },
 
-  // trackingId: {
-  //   type: String,
-  //   default: null
-  // },
+  trackingId: {
+    type: String,
+    default: null
+  },         
 
-  // currentLocation: {
-  //   latitude: Number,
-  //   longitude: Number,
-  //   updatedAt: Date
-  // },
+  currentLocation: {
+    latitude: Number,
+    longitude: Number,
+    updatedAt: Date
+  },
 
-  // lastLocationUpdate: {
-  //   type: Date,
-  //   default: null
-  // },
+  lastLocationUpdate: {
+    type: Date,
+    default: null
+  },
 
-  // eta: {
-  //   type: Number,   // ETA in minutes
-  //   default: null
-  // },
+  eta: {
+    type: Number,   // ETA in minutes
+    default: null
+  },
 
-  // locationHistory: [
-  //   {
-  //     latitude: { type: Number, },
-  //     longitude: { type: Number, },
-  //     timestamp: { type: Date, default: Date.now }
-  //   }
-  // ],
-  // token: { type: String, default: null },
+  locationHistory: [
+    {
+      latitude: { type: Number, },
+      longitude: { type: Number, },
+      timestamp: { type: Date, default: Date.now }
+    }
+  ],
+  token: { type: String, default: null },
 
   trackingLink: { type: String, default: null }
 }, { _id: true, timestamps: true });

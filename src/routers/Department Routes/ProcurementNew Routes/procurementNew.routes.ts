@@ -1,6 +1,5 @@
 // logistics.routes.ts
 import express from "express";
-import { createShipment, deleteShipment, getAllShipments, getSingleLogisticsShipment, updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import {  cancelAutomatedProcurementJob, confirmFinalShopQuote, createProcurementOrder, deleteprocurement, deleteProcurementPdf, generateProcurementPDFController, generateSecureProcurementLink, getOrderMaterialRefPdfDetails, getProcurementItemsPublic, getProcurementNewDetails, getProcurementNewSingleItem, sendProcurementToPayment, syncLogisticsDept, updateProcurementDeliveryLocationDetails, updateProcurementItemRate, updateProcurementShopDetails, updateProcurementSingleItemRate, updateProcurementSingleItemRatev1, updateProcurementTotalCost } from "../../../controllers/Department controllers/ProcurementNew Controllers/procurementNew.controller";
 
@@ -37,7 +36,7 @@ procurementNewRoutes.post('/cancelautomation/:procurementId', multiRoleAuthMiddl
 
 procurementNewRoutes.post('/create', multiRoleAuthMiddleware("owner", "staff", "CTO",), createProcurementOrder)
 procurementNewRoutes.get('/getordermaterial/fromdeptnumbers/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO",), getOrderMaterialRefPdfDetails)
-// procurementNewRoutes.post('/synclogistics/:id', multiRoleAuthMiddleware("owner", "staff", "CTO",), syncLogisticsDept)
+procurementNewRoutes.post('/synclogistics/:id', multiRoleAuthMiddleware("owner", "staff", "CTO",), syncLogisticsDept)
 // procurementNewRoutes.post(
 //   "/syncaccounting/:organizationId/:projectId",
 //   multiRoleAuthMiddleware("owner", "staff", "CTO"),
