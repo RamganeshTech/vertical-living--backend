@@ -132,7 +132,7 @@ export const LogisticsShipmentSchema = new Schema<ILogisticsShipment>({
 
 
   procurementDeptNumber: {
-    type: String,   // used to store the refUniquePdf property value of the ordeing material's pdf
+    type: String,   // used to store the refUniquePdf or the unique number we are generating property value of the ordeing material's pdf
     default: null
   },
 

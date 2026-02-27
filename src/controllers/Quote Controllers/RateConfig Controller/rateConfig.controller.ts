@@ -194,7 +194,7 @@ export const getMaterialItemsForallCategories = async (req: Request, res: Respon
       data: items.map(item => ({
         ...item,
         // We ensure the category context is clear for the frontend
-        sourceCategory: item.categoryName || "Uncategorized" 
+        sourceCategory: item.categoryName || "Uncategorized"
       })),
     });
 
@@ -216,7 +216,7 @@ export const getMaterialItemsForallCategories = async (req: Request, res: Respon
 // Controller to create a new material category
 export const createMaterialCategory = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { organizationId, name, fields } = req.body;
+    const { organizationId, name, fields, isProductSpecific } = req.body;
 
     if (!organizationId || !name || !Array.isArray(fields)) {
       return res.status(400).json({
@@ -246,10 +246,18 @@ export const createMaterialCategory = async (req: Request, res: Response): Promi
       }
     }
 
+    if (isProductSpecific !== undefined && typeof isProductSpecific !== "boolean") {
+      return res.status(400).json({
+        ok: false,
+        message: "isProductSpecific must be a boolean (true or false)"
+      });
+    }
+
     const newCategory = new CategoryModel({
       organizationId,
       name,
       fields,
+      isProductSpecific: isProductSpecific || false
     });
 
     await newCategory.save();
@@ -273,7 +281,7 @@ export const createMaterialCategory = async (req: Request, res: Response): Promi
 export const updateMaterialCategoryAndSyncItems = async (req: Request, res: Response): Promise<any> => {
   try {
     const { categoryId, organizationId } = req.params;
-    const { name, fields } = req.body;
+    const { name, fields, isProductSpecific } = req.body;
 
     // 1. Fetch the existing category
     const existingCategory = await CategoryModel.findById(categoryId);
@@ -292,6 +300,8 @@ export const updateMaterialCategoryAndSyncItems = async (req: Request, res: Resp
     // 3. Update Category Model
     // existingCategory.name = name || existingCategory.name;
     existingCategory.fields = fields;
+
+    if (isProductSpecific !== undefined) existingCategory.isProductSpecific = isProductSpecific
     await existingCategory.save();
 
     // 4. SYNC WITH ITEM MODEL
@@ -353,6 +363,7 @@ export const createMaterialItems = async (req: Request, res: Response): Promise<
     // const items = JSON.parse(req.body.items);
 
     const items = typeof req.body.items === 'string' ? JSON.parse(req.body.items) : req.body.items;
+    const materialType = req.body?.materialType || null
 
     // console.log("items", items)
     // console.log("req.body", req.body)
@@ -433,7 +444,8 @@ export const createMaterialItems = async (req: Request, res: Response): Promise<
         organizationId,
         categoryId,
         categoryName: category.name,
-        data: itemData
+        data: itemData,
+        materialType
       };
     });
 

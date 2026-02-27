@@ -18,7 +18,15 @@ export const createShipmentUtil = async ({ organizationId, projectId,
     notes,
     actualDeliveryTime,
     actualPickupTime,
-    trackingLink
+    trackingLink,
+
+    paymentDeptNumber,
+    paymentRefId,
+    procurementDeptNumber,
+    procurementRefId,
+    orderMaterialDeptNumber,
+    orderMaterialRefId,
+isCreatedAuto,
 
 }: {
     organizationId: string | Types.ObjectId;
@@ -34,6 +42,15 @@ export const createShipmentUtil = async ({ organizationId, projectId,
     actualDeliveryTime?: Date;
     actualPickupTime?: Date;
     trackingLink?: string
+
+
+    paymentDeptNumber?: string | null,
+    paymentRefId?: Types.ObjectId | null,
+    procurementDeptNumber?: string | null,
+    procurementRefId?: Types.ObjectId | null,
+    orderMaterialDeptNumber?: string | null,
+    orderMaterialRefId?: Types.ObjectId | null,
+    isCreatedAuto:boolean
 }) => {
     const prefix = projectName.substring(0, 3).toLowerCase();
 
@@ -109,6 +126,14 @@ export const createShipmentUtil = async ({ organizationId, projectId,
         // trackingId: null,
         token: null,
         trackingLink: trackingLink || null,
+
+        paymentDeptNumber: paymentDeptNumber || null,
+        paymentRefId: paymentRefId || null,
+        procurementDeptNumber: procurementDeptNumber || null,
+        procurementRefId: procurementRefId || null,
+        orderMaterialDeptNumber: orderMaterialDeptNumber || null,
+        orderMaterialRefId: orderMaterialRefId || null,
+        isCreatedAuto: isCreatedAuto
     });
 
     return shipment
@@ -159,6 +184,7 @@ export const createShipment = async (req: Request, res: Response): Promise<any> 
             actualDeliveryTime,
             actualPickupTime,
             trackingLink: trackingLink || null,
+            isCreatedAuto:false
 
         })
 
@@ -728,7 +754,7 @@ export const SyncAccountingFromLogistics = async (req: Request, res: Response): 
         // });
 
 
-         const shipment = await LogisticsShipmentModel.findById(shipmentId)
+        const shipment = await LogisticsShipmentModel.findById(shipmentId)
 
         if (!shipment) {
             return res.status(404).json({ message: "Shipment not found", ok: false });

@@ -47,6 +47,7 @@ export interface IPaymentMainAcc extends Document {
     // images: IBillUploads[],
     // pdfData: IBillUploads | null,
     isSyncedWithAccounting?: boolean
+    isSyncedWithLogistics?: boolean
     generalStatus: string
 }
 
@@ -213,6 +214,10 @@ const PaymentMainAccountSchema = new Schema<IPaymentMainAcc>(
         // images: { type: [BillUploadSchema], default: [] },
         // pdfData: { type: BillUploadSchema, default: null },
         isSyncedWithAccounting: {
+            type: Boolean,
+            default: false
+        },
+        isSyncedWithLogistics: {
             type: Boolean,
             default: false
         },
