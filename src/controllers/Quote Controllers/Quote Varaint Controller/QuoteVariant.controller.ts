@@ -210,8 +210,6 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
 
     const clientRaw: any = requirementDoc?.clientData || {};
 
-
-
     console.log("clientRaw", clientRaw)
     // 2. Format Client Details String
     const clientDetailsString = `Name: ${clientRaw?.clientName || 'Not Entered Yet'}
@@ -376,6 +374,14 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
 
 
 
+    // Initialize the base global strings from your existing hardcoded templates
+    let finalWhatsIncluded = whatsIncluded; // Your existing multi-line template
+    let finalWhatsNotIncluded = whatsNotIncluded; // Your existing template
+    let finalDisclaimer = disclaimer; // Your existing template
+
+
+
+
 
 
 
@@ -478,6 +484,10 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
         try {
           // 1. Build a clean dataset of ONLY existing Brands and Dimensions
           const technicalData = [];
+
+         
+
+         
 
 
           // 1. Pre-process Facts for both AI and Fallback

@@ -7,7 +7,8 @@ import { createMaterialCategory,   createMaterialItems,
   getMaterialItemsByCategory,
   getMaterialItemsForFittings,
   updateMaterialCategoryAndSyncItems,
-  getMaterialItemsForallCategories, } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
+  getMaterialItemsForallCategories,
+  updateCategoryDescriptions, } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
 
@@ -20,6 +21,8 @@ RateConfigRoutes.get("/categories/all/:organizationId",  multiRoleAuthMiddleware
 
 RateConfigRoutes.get("/categories/:organizationId",  multiRoleAuthMiddleware("owner","CTO", "staff"), getMaterialCategories);
 RateConfigRoutes.get("/categories/:categoryId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),  getMaterialItemsByCategory);
+
+RateConfigRoutes.put("/categories/:categoryId/description", multiRoleAuthMiddleware("owner","CTO", "staff"),  updateCategoryDescriptions);
 
 /**
  * CATEGORY ROUTES

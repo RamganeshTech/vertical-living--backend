@@ -2,6 +2,15 @@ import { Request, Response } from "express";
 // import { PreSalesQuoteModel } from "../models/PreSalesQuote.model";
 import mongoose from "mongoose";
 import { PreSalesQuoteModel } from "../../../models/preSalesQuote_model/preSalesQuote.model";
+import { CategoryModel } from "../../../models/Quote Model/RateConfigAdmin Model/rateConfigAdmin.model";
+import { GoogleGenAI } from "@google/genai";
+import dotenv from 'dotenv';
+
+
+dotenv.config()
+
+// Initialize Gemini (Ensure your API Key is in .env)
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 /**
  * CREATE: Initialize a new quote
@@ -184,7 +193,8 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
             totalAmount,
             status,
             globalDimType,
-            globalProfitPercentage
+            globalProfitPercentage,
+            organizationId
         } = req.body;
 
 
@@ -197,53 +207,270 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
         const outerLamBrands = new Set<string>();
         const fittingBrands = new Set<string>();
 
-        // --- 2. ITERATE TECHNICAL TREE TO EXTRACT DATA & BRANDS ---
+        const materialCategories = await CategoryModel.find({ organizationId }).lean();
+        const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+        //  START OF OLD VERSION
+        // // --- 2. ITERATE TECHNICAL TREE TO EXTRACT DATA & BRANDS ---
+        // Object.entries(processedConfig).forEach(([roomId, roomInsts]: any) => {
+        //     Object.entries(roomInsts).forEach(([rIdx, products]: any) => {
+        //         Object.entries(products).forEach(([prodId, instances]: any) => {
+        //             Object.entries(instances).forEach(([pIdx, details]: any) => {
+
+        //                 // Collect Brands for the Global Brandlist
+        //                 if (details.plywoodName) plywoodBrands.add(details.plywoodName);
+        //                 if (details.innerName) innerLamBrands.add(details.innerName);
+        //                 if (details.outerName) outerLamBrands.add(details.outerName);
+
+        //                 // Collect Fitting Brands from nested array
+        //                 (details.fittingsAndAccessories || []).forEach((f: any) => {
+        //                     if (f.brandName) fittingBrands.add(f.brandName);
+        //                 });
+
+        //                 // --- RECALCULATE PRICE & SCOPE (As per your current logic) ---
+        //                 const unitArea = Number(details.h || 0) * Number(details.w || 0);
+        //                 const totalMaterialRate = Number(details.plywoodCost || 0) +
+        //                     Number(details.innerCost || 0) +
+        //                     Number(details.outerCost || 0);
+        //                 const calculatedPrice = unitArea * totalMaterialRate;
+
+        //                 // Generate Scope Sentences...
+        //                 let sentences = [];
+        //                 sentences.push(details.plywoodName ? `Primary structural fabrication utilizes ${details.plywoodName}.` : "...");
+        //                 // ... (Include your full sentence logic here)
+
+        //                 // Update specific unit in processedConfig
+        //                 processedConfig[roomId][rIdx][prodId][pIdx].scopeOfWork = sentences.join(" ");
+        //                 processedConfig[roomId][rIdx][prodId][pIdx].totals = {
+        //                     furnitureTotal: calculatedPrice,
+        //                     core: calculatedPrice,
+        //                     fittings: 0, glues: 0, nbms: 0
+        //                 };
+        //                 processedConfig[roomId][rIdx][prodId][pIdx].productTotal = calculatedPrice;
+        //             });
+        //         });
+        //     });
+        // });
+
+        //  END OF OLD VERSION
+
+
+
+
+
+        // // Find the category that matches this furniture (case-insensitive)
+        // const matchingCategory = materialCategories?.find(cat =>
+        //     cat.name.toLowerCase() === furniture.furnitureName?.toLowerCase()
+        // );
+
+
+        // let productsWhatsIncluded = "";
+        // let productsWhatsNotIncluded = "";
+        // let productsDisclaimer = "";
+
+        // if (matchingCategory) {
+        //     if (matchingCategory.whatsIncluded) productsWhatsIncluded = matchingCategory.whatsIncluded;
+        //     if (matchingCategory.whatsNotIncluded) productsWhatsNotIncluded = matchingCategory.whatsNotIncluded;
+        //     if (matchingCategory.disclaimer) productsDisclaimer = matchingCategory.disclaimer;
+        // }
+
+
+        const unitsToProcess: any[] = [];
+
         Object.entries(processedConfig).forEach(([roomId, roomInsts]: any) => {
             Object.entries(roomInsts).forEach(([rIdx, products]: any) => {
                 Object.entries(products).forEach(([prodId, instances]: any) => {
                     Object.entries(instances).forEach(([pIdx, details]: any) => {
-
-                        // Collect Brands for the Global Brandlist
-                        if (details.plywoodName) plywoodBrands.add(details.plywoodName);
-                        if (details.innerName) innerLamBrands.add(details.innerName);
-                        if (details.outerName) outerLamBrands.add(details.outerName);
-
-                        // Collect Fitting Brands from nested array
-                        (details.fittingsAndAccessories || []).forEach((f: any) => {
-                            if (f.brandName) fittingBrands.add(f.brandName);
-                        });
-
-                        // --- RECALCULATE PRICE & SCOPE (As per your current logic) ---
-                        const unitArea = Number(details.h || 0) * Number(details.w || 0);
-                        const totalMaterialRate = Number(details.plywoodCost || 0) +
-                            Number(details.innerCost || 0) +
-                            Number(details.outerCost || 0);
-                        const calculatedPrice = unitArea * totalMaterialRate;
-
-                        // Generate Scope Sentences...
-                        let sentences = [];
-                        sentences.push(details.plywoodName ? `Primary structural fabrication utilizes ${details.plywoodName}.` : "...");
-                        // ... (Include your full sentence logic here)
-
-                        // Update specific unit in processedConfig
-                        processedConfig[roomId][rIdx][prodId][pIdx].scopeOfWork = sentences.join(" ");
-                        processedConfig[roomId][rIdx][prodId][pIdx].totals = {
-                            furnitureTotal: calculatedPrice,
-                            core: calculatedPrice,
-                            fittings: 0, glues: 0, nbms: 0
-                        };
-                        processedConfig[roomId][rIdx][prodId][pIdx].productTotal = calculatedPrice;
+                        unitsToProcess.push({ roomId, rIdx, prodId, pIdx, details });
                     });
                 });
             });
         });
 
+        console.log("unitprocess", JSON.stringify(unitsToProcess))
 
-        //         // --- 4. CONSTRUCT THE BRANDLIST STRING ---
-        //         const brandlistString = `Plywood: ${Array.from(plywoodBrands).join(", ") || 'Standard'}
-        // Inner Laminate: ${Array.from(innerLamBrands).join(", ") || 'Standard'}
-        // Outer Laminate: ${Array.from(outerLamBrands).join(", ") || 'Standard'}
-        // Fittings: ${Array.from(fittingBrands).join(", ") || 'N/A'}`
+        console.log("===================================")
+        console.log("===================================")
+        console.log("===================================")
+
+        console.dir(unitsToProcess, { depth: null, colors: true });
+        console.log("===================================")
+        console.log("===================================")
+        console.log("===================================")
+
+        // --- 3. EXECUTE AI SCOPE GENERATION ---
+        for (let i = 0; i < unitsToProcess.length; i++) {
+            const { roomId, rIdx, prodId, pIdx, details } = unitsToProcess[i];
+
+            // Add small delay to prevent 429 rate limit errors
+            if (i > 0) await delay(600);
+
+            try {
+                // Find matching category for inclusions/disclaimers
+                const furnitureName = details.furnitureName || prodId;
+                const matchingCategory = materialCategories.find(cat =>
+                    cat.name.toLowerCase() === furnitureName.toLowerCase()
+                );
+
+
+                // Collect technical facts
+                const technicalData = [];
+                if (details.plywoodName) technicalData.push(`Plywood Brand: ${details.plywoodName}`);
+                if (details.innerName) technicalData.push(`Inner Mica: ${details.innerName}`);
+                if (details.outerName) technicalData.push(`Outer Mica: ${details.outerName}`);
+                if (details.h && details.w) technicalData.push(`Dimensions: ${details.h}ft (H) x ${details.w}ft (W)`);
+
+                // Add Category Specifics
+                // if (matchingCategory?.whatsIncluded) technicalData.push(`Inclusions: ${matchingCategory.whatsIncluded}`);
+                // if (matchingCategory?.whatsNotIncluded) technicalData.push(`Exclusions: ${matchingCategory.whatsNotIncluded}`);
+                // if (matchingCategory?.disclaimer) technicalData.push(`Disclaimer: ${matchingCategory.disclaimer}`);
+
+                // ✅ Only add if they actually have content
+                if (matchingCategory?.whatsIncluded) technicalData.push(`Inclusions to redefine: ${matchingCategory.whatsIncluded}`);
+                if (matchingCategory?.whatsNotIncluded) technicalData.push(`Exclusions to redefine: ${matchingCategory.whatsNotIncluded}`);
+                if (matchingCategory?.disclaimer) technicalData.push(`Disclaimers to redefine: ${matchingCategory.disclaimer}`);
+
+
+
+                console.log("getting into the gemini configuration matching category is", matchingCategory)
+                // Construct the Strict Engineering Prompt
+                const promptText = `
+            Act as a Lead Production Engineer. 
+            Write a professional "Execution Scope of Work" based ONLY on:
+            ${technicalData.join("\n")}
+
+            Strict Constraints:
+            1. ANTI-HALLUCINATION: Use ONLY the provided brands, dimensions, and inclusions.
+            2. STRUCTURE: Write 4-5 professional sentences weaving materials and category-specific inclusions/exclusions together.
+            3. VOICE: Use formal engineering passive voice (e.g., "Fabrication is executed," "Surface cladding is applied").
+            4. FORBIDDEN: No "CNC", no commercials (price/profit), and do not use the furniture item name.
+            5. TONE: The description must sound like an industrial engineering manual, not a sales pitch.
+
+            6. NO LABELS: Do not start sentences with "Plywood:" or "Dimensions:". Integrate them into the flow.
+            7. REDEFINE TEXT: Do not copy the "Inclusions", "Exclusions", or "Disclaimers" text verbatim. Professionally redefine them into engineering language. 
+       - Example: Change "2mm edge banding included" to "Standardized 2mm edge-sealing protocol is implemented on all exposed substrate perimeters."
+       - Example: Change "Civil work not included" to "Structural civil modifications and masonry adjustments are explicitly outside the technical scope of this execution."
+    8. NO HEADERS: Do not mention the words "Inclusion", "Exclusion", or "Disclaimer" in the final text.
+            `;
+
+                // 7. REDEFINE TEXT: Do not copy the "Inclusions" or "Exclusions" and "Disclaimers text verbatim. but dont mention the label like inclusion, exclusions, disclaimer, you have to Professionally redefine them into engineering language (e.g., instead of "2mm edge banding included," use "Fabrication includes a standardized 2mm edge-sealing protocol on all exposed substrate perimeters").
+
+                const aiResult = await genAI.models.generateContent({
+                    model: "gemini-2.0-flash-lite",
+                    contents: [{ role: 'user', parts: [{ text: promptText }] }],
+                    config: { temperature: 0.5, maxOutputTokens: 400 },
+                });
+
+                const rawText = aiResult.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+                const cleanText = rawText.replace(/\b(N\/A|undefined|unknown|null|price|profit|cost|INR|Rs|CNC)\b/gi, "").replace(/\s+/g, ' ').trim();
+
+                console.log("===================================")
+                console.log("===================================")
+
+                console.log(details.furnitureName, "details.furnitureName scope of work", cleanText)
+
+                // Update the Config
+
+                console.log("===================================")
+
+                console.log("proudduct room", processedConfig[roomId])
+
+                console.log("-----------------------------------------------")
+                console.log("proudduct room index", processedConfig[roomId][rIdx])
+
+                console.log("-----------------------------------------------")
+                console.log("proudduct room production id", processedConfig[roomId][rIdx][prodId])
+
+
+                console.log("-----------------------------------------------")
+                console.log("proudduct room production id product index", processedConfig[roomId][rIdx][prodId][pIdx])
+
+                processedConfig[roomId][rIdx][prodId][pIdx].scopeOfWork = cleanText || "Technical fabrication executed to precision standards.";
+
+            } catch (err) {
+                //     console.error("AI Scope failed for unit:", prodId, err);
+                //     // Fallback to basic sentence if AI fails
+                //     processedConfig[roomId][rIdx][prodId][pIdx].scopeOfWork = `Technical execution using ${details.plywoodName || 'specified substrate'} as per approved engineering standards.`;
+                // }
+
+                console.error("AI Scope failed for unit:", prodId, err);
+
+                const furnitureName = details.furnitureName || prodId;
+
+                const matchingCategory = materialCategories.find(cat =>
+                    cat.name.toLowerCase() === furnitureName.toLowerCase()
+                );
+
+                // --- MANUAL FALLBACK LOGIC ---
+                const plyBrand = details.plywoodName;
+                const outerBrand = details.outerName;
+                const innerBrand = details.innerName;
+
+                // 1. Build dimensions string
+                const dimParts = [];
+                if (Number(details.h) > 0) dimParts.push(`${details.h} ft (Height)`);
+                if (Number(details.w) > 0) dimParts.push(`${details.w} ft (Width)`);
+                const dimensionText = dimParts.length > 0 ? ` with specifications of ${dimParts.join(" x ")}` : "";
+
+                // 2. Identify unique fittings
+                const uniqueFittings = Array.from(new Set(
+                    (details.fittingsAndAccessories || [])
+                        .map((f: any) => f.brandName)
+                        .filter(Boolean)
+                )).join(", ");
+
+                // 3. Build sentences manually
+                let fallbackSentences = [];
+
+                // Substrate
+                fallbackSentences.push(
+                    plyBrand
+                        ? `Primary structural fabrication utilizes ${plyBrand} substrate to ensure core dimensional stability.${dimensionText}.`
+                        : `Structural fabrication is executed using specified core substrates to maintain architectural integrity${dimensionText}.`
+                );
+
+                // Exterior & Interior
+                const innerPart = innerBrand ? ` with ${innerBrand} internal lining` : "";
+                fallbackSentences.push(
+                    outerBrand
+                        ? `Exterior surfaces are finished with ${outerBrand} cladding${innerPart}, applied with industrial-grade bonding for high-wear resistance.`
+                        : `Surfaces involve technical cladding and lining applied to ensure durability and environmental protection.`
+                );
+
+                // Hardware
+                if (uniqueFittings) {
+                    fallbackSentences.push(`Mechanical integration is completed using ${uniqueFittings} hardware systems, selected for operational longevity.`);
+                }else {
+                    fallbackSentences.push(`The unit integrates standardized mechanical hardware systems to support essential structural load distribution.`);
+
+                }
+
+                // Inclusions/Exclusions (Optional: Add if matchingCategory exists)
+                // if (matchingCategory?.whatsIncluded) {
+                //     fallbackSentences.push(`The execution includes standard protocols such as ${matchingCategory.whatsIncluded.toLowerCase()}.`);
+                // }
+
+                // Final Protocol
+                fallbackSentences.push(`Final assembly follows a modular installation protocol focusing on precision edge-sealing to meet professional standards.`);
+
+                // Join and assign
+                processedConfig[roomId][rIdx][prodId][pIdx].scopeOfWork = fallbackSentences.join(" ");
+            }
+
+            // --- RECALCULATE PRICE ---
+            const unitArea = Number(details.h || 0) * Number(details.w || 0);
+            const totalMaterialRate = Number(details.plywoodCost || 0) + Number(details.innerCost || 0) + Number(details.outerCost || 0);
+            const calculatedPrice = unitArea * totalMaterialRate;
+
+            processedConfig[roomId][rIdx][prodId][pIdx].productTotal = calculatedPrice;
+            processedConfig[roomId][rIdx][prodId][pIdx].totals = {
+                furnitureTotal: calculatedPrice,
+                core: calculatedPrice,
+                fittings: 0, glues: 0, nbms: 0
+            };
+        }
+
+
 
 
         const brandlistParts = [];
@@ -399,7 +626,7 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
 
 `
 
-
+        console.log()
 
         const updatedQuote = await PreSalesQuoteModel.findByIdAndUpdate(
             quoteId,
@@ -410,7 +637,7 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
                     carpetArea,
                     bhk,
                     finishTier,
-                    config,
+                    config: processedConfig,
                     totalAmount,
                     status,
 

@@ -3,10 +3,14 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface MaterialCategoryDoc extends Document {
   organizationId: mongoose.Types.ObjectId;
   name: string; // e.g., "Plywood", "Adhesive"
+  whatsIncluded: string | null
+  whatsNotIncluded: string | null
+  disclaimer: string | null
+
   isProductSpecific: boolean; // e.g., "Plywood", "Adhesive"
   fields: {
     key: string;   // e.g., "brand", "thickness", "rate", "notes"
-    type: "string" | "number" | "boolean"; 
+    type: "string" | "number" | "boolean";
     required?: boolean;
     visibleIn?: string[];
   }[];
@@ -15,13 +19,18 @@ export interface MaterialCategoryDoc extends Document {
 const MaterialCategorySchema = new Schema<MaterialCategoryDoc>({
   organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel", },
   name: { type: String, },
-  isProductSpecific: {type:Boolean, default:false},
+
+  whatsIncluded: { type: String, default: null },
+  whatsNotIncluded: { type: String, default: null },
+  disclaimer: { type: String, default: null },
+
+  isProductSpecific: { type: Boolean, default: false },
   fields: [
     {
-      key: { type: String,  },
-      type: { type: String,  default: "string" },
+      key: { type: String, },
+      type: { type: String, default: "string" },
       required: { type: Boolean, default: false },
-      visibleIn: {type: [String], default: [] },
+      visibleIn: { type: [String], default: [] },
     },
   ],
 }, { timestamps: true });
@@ -33,17 +42,17 @@ export const CategoryModel = mongoose.model<MaterialCategoryDoc>("MaterialCatego
 export interface MaterialItemDoc extends Document {
   organizationId: mongoose.Types.ObjectId;
   categoryId: mongoose.Types.ObjectId;
-  materialType?:string
+  materialType?: string
   categoryName: string | null;
   data: Record<string, any>; // flexible to match fields defined in category
 }
 
 const MaterialItemSchema = new Schema<MaterialItemDoc>({
-  organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel",  },
-  categoryId: { type: Schema.Types.ObjectId, ref: "MaterialCategoryModel",  },
-  materialType: {type:String},
-  categoryName:{type: String, default:null},
-  data: { type: Schema.Types.Mixed,  }, // { brand: "Sharon GOLD-BWP", thickness: "19mm", rate: 159.75, notes: "Waterproof" }
+  organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel", },
+  categoryId: { type: Schema.Types.ObjectId, ref: "MaterialCategoryModel", },
+  materialType: { type: String },
+  categoryName: { type: String, default: null },
+  data: { type: Schema.Types.Mixed, }, // { brand: "Sharon GOLD-BWP", thickness: "19mm", rate: 159.75, notes: "Waterproof" }
 }, { timestamps: true });
 
 export const ItemModel = mongoose.model<MaterialItemDoc>("MaterialItemModel", MaterialItemSchema);

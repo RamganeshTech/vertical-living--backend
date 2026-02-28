@@ -634,3 +634,48 @@ export const deleteMaterialCategory = async (req: Request, res: Response): Promi
   }
 };
 
+
+
+
+
+
+// Controller to update scope-related fields (whatsIncluded, whatsNotIncluded, disclaimer)
+export const updateCategoryDescriptions = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { categoryId } = req.params;
+    const { field, content } = req.body; // 'field' will be 'whatsIncluded', etc.
+
+    // 1. Validation
+    const allowedFields = ["whatsIncluded", "whatsNotIncluded", "disclaimer"];
+    if (!allowedFields.includes(field)) {
+      return res.status(400).json({
+        ok: false,
+        message: `Invalid field. Allowed fields are: ${allowedFields.join(", ")}`,
+      });
+    }
+
+    // 2. Update the specific category
+    const updatedCategory = await CategoryModel.findByIdAndUpdate(
+      categoryId,
+      { [field]: content }, // Dynamic key update
+      { new: true }
+    );
+
+    if (!updatedCategory) {
+      return res.status(404).json({ ok: false, message: "Category not found" });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: `${field} updated successfully`,
+      data: updatedCategory,
+    });
+  } catch (error: any) {
+    console.error("Error updating category scope:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
