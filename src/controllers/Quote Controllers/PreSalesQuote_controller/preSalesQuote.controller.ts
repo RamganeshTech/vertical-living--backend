@@ -364,26 +364,26 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
                 const rawText = aiResult.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
                 const cleanText = rawText.replace(/\b(N\/A|undefined|unknown|null|price|profit|cost|INR|Rs|CNC)\b/gi, "").replace(/\s+/g, ' ').trim();
 
-                console.log("===================================")
-                console.log("===================================")
+                // console.log("===================================")
+                // console.log("===================================")
 
-                console.log(details.furnitureName, "details.furnitureName scope of work", cleanText)
+                // console.log(details.furnitureName, "details.furnitureName scope of work", cleanText)
 
-                // Update the Config
+                // // Update the Config
 
-                console.log("===================================")
+                // console.log("===================================")
 
-                console.log("proudduct room", processedConfig[roomId])
+                // console.log("proudduct room", processedConfig[roomId])
 
-                console.log("-----------------------------------------------")
-                console.log("proudduct room index", processedConfig[roomId][rIdx])
+                // console.log("-----------------------------------------------")
+                // console.log("proudduct room index", processedConfig[roomId][rIdx])
 
-                console.log("-----------------------------------------------")
-                console.log("proudduct room production id", processedConfig[roomId][rIdx][prodId])
+                // console.log("-----------------------------------------------")
+                // console.log("proudduct room production id", processedConfig[roomId][rIdx][prodId])
 
 
-                console.log("-----------------------------------------------")
-                console.log("proudduct room production id product index", processedConfig[roomId][rIdx][prodId][pIdx])
+                // console.log("-----------------------------------------------")
+                // console.log("proudduct room production id product index", processedConfig[roomId][rIdx][prodId][pIdx])
 
                 processedConfig[roomId][rIdx][prodId][pIdx].scopeOfWork = cleanText || "Technical fabrication executed to precision standards.";
 

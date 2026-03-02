@@ -129,6 +129,8 @@ import PreSalesRoutes from './routers/preSalesQuote_routes/preSalesQuote.route';
 import PreSalesMaterialRateConfigRoutes from './routers/Quote Routes/RateConfig Routes/preSalesRateConfig.routes';
 import MaterialShopRoutes from './routers/shopMaterialDocument_routes/shopMaterialDocument.routes';
 import PublicPaymentTransactionRoutes from './routers/publicPaymentTransaction_routes/publicPaymentTransaction.routes';
+import publiCostCalculatorRoutes from './routers/publicCostCalculator_routes/publicCostCalculator.routes';
+import publicLeadCollectionRoutes from './routers/publicLeadCollection_routes/publicLeadCollection.routes';
 
 
 // Extend Socket interface for custom properties
@@ -151,7 +153,7 @@ const server = http.createServer(app);
 
 // Socket.IO setup with CORS
 const io = new Server(server, {
-  cors: {
+  cors: {   
     origin: process.env.FRONTEND_URL || "http://localhost:5173", // Your React app URL
     methods: ["GET", "POST", "PUT", "PATCH", "PUT"],
     credentials: true
@@ -423,6 +425,8 @@ app.use("/api/toolroom", toolRoomRoutes)
 app.use("/api/tool", toolIssueRoutes)
 
 app.use("/api/v1/public/transaction", PublicPaymentTransactionRoutes)
+app.use("/api/v1/public/costcalculation", publiCostCalculatorRoutes)
+app.use("/api/v1/public/leadcollection", publicLeadCollectionRoutes)
 
 
 
