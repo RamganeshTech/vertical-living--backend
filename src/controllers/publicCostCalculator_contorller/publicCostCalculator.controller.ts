@@ -42,9 +42,11 @@ export const createPublicQuote = async (req: Request, res: Response):Promise<any
     try {
         const { name, phone, location, carpetArea, homeType, finish, estimate , config, quotationPdf} = req.body;
 
+        console.log("quotationpdf", quotationPdf)
+
 
         console.log("req.body from the cost calculator", req.body)
-
+      
         // // 1. Create PDF via pdf-lib
         // const pdfDoc = await PDFDocument.create();
         // const page = pdfDoc.addPage([612, 792]); // US Letter size
