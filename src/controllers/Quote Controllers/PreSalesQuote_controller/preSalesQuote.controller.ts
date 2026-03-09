@@ -306,6 +306,8 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
             if (i > 0) await delay(600);
 
             try {
+                // throw new Error("intentional")
+
                 // Find matching category for inclusions/disclaimers
                 const furnitureName = details.furnitureName || prodId;
                 const matchingCategory = materialCategories.find(cat =>

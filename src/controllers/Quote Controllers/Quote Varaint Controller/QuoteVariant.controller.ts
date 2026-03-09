@@ -75,7 +75,7 @@ export const getMaterialItemsByCategoryForQuote = async (req: Request, res: Resp
       }
     });
     // console.log("item", items)
-
+  
     return res.status(200).json({
       ok: true,
       message: "Brands items fetched",

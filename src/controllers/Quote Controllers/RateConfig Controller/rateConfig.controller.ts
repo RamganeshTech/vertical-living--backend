@@ -225,6 +225,22 @@ export const createMaterialCategory = async (req: Request, res: Response): Promi
       });
     }
 
+    const trimmedName = name?.trim();
+
+
+    // 🔴 Check duplicate category name (case insensitive)
+    const existingCategory = await CategoryModel.findOne({
+      organizationId,
+      name: { $regex: new RegExp(`^${trimmedName}$`, "i") }
+    });
+
+    if (existingCategory) {
+      return res.status(400).json({
+        ok: false,
+        message: "Category with this name already exists",
+      });
+    }
+
     // validate fields structure
     for (const field of fields) {
       if (!field.key) {
