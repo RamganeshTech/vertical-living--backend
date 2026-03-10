@@ -3,7 +3,7 @@ import mongoose, { Types } from "mongoose";
 import { RoleBasedRequest } from "../../../../types/types";
 import redisClient from "../../../../config/redisClient";
 import { BillAccountModel } from "../../../../models/Department Models/Accounting Model/billAccount.model";
-import { COMPANY_LOGO, uploadToS3 } from "../../../stage controllers/ordering material controller/pdfOrderHistory.controller";
+import { COMPANY_LOGO, COMPANY_NAME, uploadToS3 } from "../../../stage controllers/ordering material controller/pdfOrderHistory.controller";
 import { generateBillAccBillPdf } from "./pdfBillAcc";
 import { AccountingModel } from "../../../../models/Department Models/Accounting Model/accountingMain.model";
 import { syncAccountingRecord } from "../accounting.controller";
@@ -123,7 +123,7 @@ const validateBillData = (data: any): { isValid: boolean; errors: string[] } => 
 
 
 // Helper function to invalidate cache
-const invalidateBillCache = async (organizationId?: string, vendorId?: string, billId?: string) => {
+const invalidateBillCache = async (organizationId?: string, vendorId?: string | null, billId?: string) => {
     try {
         const keysToDelete: string[] = [];
 
@@ -193,6 +193,7 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
             // discountAmount,
             taxPercentage,
             // grandTotal,
+            settlementSource,
             notes } = bodyData;
 
         // Validate bill data
@@ -255,6 +256,7 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
             discountPercentage,
             discountAmount: totals.discountAmount,
             taxPercentage,
+            settlementSource,
             taxAmount: totals.taxAmount,
             grandTotal: totals.grandTotal,
             notes: notes || null,
@@ -336,6 +338,311 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
             message: "Error creating bill",
             error: error.message
         });
+    }
+};
+
+
+
+export const createBillUtil = async ({
+
+    vendorId,
+organizationId,
+projectId,
+vendorName,
+accountsPayable,
+subject,
+billDate,
+dueDate,
+items,
+totalAmount,
+discountPercentage,
+advancedAmount,
+paymentType,
+//,
+//,
+taxPercentage,
+settlementSource,
+//
+notes,
+ mappedBillFiles,
+    mappedPaymentProofs,
+    orderMaterialDeptNumber,
+    orderMaterialRefId
+
+}: {
+    vendorId: string | null
+    organizationId: string
+    projectId: string | null
+    vendorName: string
+    accountsPayable: string | null
+    subject: string
+    billDate: string
+    dueDate: string | null
+    items: any[]
+    totalAmount: number
+    discountPercentage: number
+    advancedAmount: number
+    paymentType: string
+    //:string
+    //
+    taxPercentage: number
+    settlementSource: string
+    //
+    notes: string
+    mappedBillFiles: any[]
+    mappedPaymentProofs: any[]
+    orderMaterialDeptNumber?: string 
+    orderMaterialRefId?:string | Types.ObjectId
+}) => {
+
+    try {
+
+        // const bodyData = parseBodyData(req.body);
+
+
+        // const {
+        //     vendorId = null,
+        //     organizationId,
+        //     projectId,
+        //     vendorName,
+        //     accountsPayable,
+        //     subject,
+        //     billDate,
+        //     dueDate,
+        //     items,
+        //     totalAmount,
+        //     discountPercentage,
+        //     advancedAmount,
+        //     paymentType,
+        //     // taxAmount,
+        //     // discountAmount,
+        //     taxPercentage,
+        //     settlementSource,
+        //     // grandTotal,
+        //     notes } = bodyData;
+
+      
+
+        // Calculate item totals
+        const processedItems = (items || []).map((item: any) => ({
+            ...item,
+            totalCost: (Number(item.quantity) || 0) * (Number(item.rate) || 0)
+        }));
+
+
+        // Calculate bill totals
+        const totals = calculateBillTotals(
+            processedItems,
+            discountPercentage || 0,
+            taxPercentage || 0,
+        );
+
+
+
+
+
+        // Create bill object
+        const newBill = await BillAccountModel.create({
+            organizationId,
+            projectId: projectId || null,
+            vendorId: vendorId || null,
+            vendorName: vendorName?.trim(),
+            accountsPayable,
+            subject: subject || null,
+            billDate,
+            dueDate,
+            items: processedItems,
+            totalAmount: totals.totalAmount,
+            paymentType,
+            advancedAmount,
+            discountPercentage,
+            discountAmount: totals.discountAmount,
+            taxPercentage,
+            taxAmount: totals.taxAmount,
+            grandTotal: totals.grandTotal,
+            notes: notes || null,
+            settlementSource,
+            // images: mappedFiles || [],
+            images: mappedBillFiles || [],
+            paymentProof: mappedPaymentProofs || [], // Make sure your Schema has this field
+            isSyncedWithAccounting: true,
+            pdfData: null,
+            orderMaterialDeptNumber:orderMaterialDeptNumber || null,
+            orderMaterialRefId: orderMaterialRefId || null
+        });
+
+        // Save to database
+        // const savedBill = await newBill.save();
+
+
+        const pdfData: any = {
+            ...newBill.toObject(),
+            companyLogo: COMPANY_LOGO,
+            companyName: 'Vertical Living'
+        };
+
+        const pdfBytes = await generateBillAccBillPdf(pdfData);
+
+        const fileName = `bill-${newBill.billNumber}-${Date.now()}.pdf`;
+
+        const uploadResult = await uploadToS3(pdfBytes, fileName);
+
+        // Update bill with PDF data
+        newBill.pdfData = {
+            type: "pdf",
+            url: uploadResult.Location,
+            originalName: fileName,
+            uploadedAt: new Date(),
+        };
+
+        await newBill.save();
+
+
+
+        // We use the utility here because it handles Generating the Unique Record ID
+        await syncAccountingRecord({
+            organizationId: newBill.organizationId,
+            projectId: newBill?.projectId || null,
+
+            // Reference Links
+            referenceId: newBill._id,
+            referenceModel: "BillAccountModel", // Must match Schema
+
+            deptGeneratedDate: newBill?.billDate || null,
+            deptNumber: newBill?.billNumber || null,
+            deptDueDate: newBill?.dueDate || null,
+
+            // Categorization
+            deptRecordFrom: "Bill",
+
+            // Person Details
+            assoicatedPersonName: newBill.vendorName,
+            assoicatedPersonId: newBill?.vendorId || null,
+            assoicatedPersonModel: "VendorAccountModel", // Assuming this is your Vendor Model
+
+            // Financials
+            amount: newBill?.grandTotal || 0, // Utility takes care of grandTotal logic if passed
+            notes: newBill?.notes || "",
+
+            // Defaults for Creation
+            status: "pending",
+            paymentId: null
+        });
+
+        
+        await invalidateBillCache(organizationId, vendorId);
+        return { ok: true, data: newBill }
+    } catch (error: any) {
+        throw error
+    }
+
+}
+export const createBillV1 = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+
+        const bodyData = parseBodyData(req.body);
+
+
+        const {
+            vendorId = null,
+            organizationId,
+            projectId,
+            vendorName,
+            accountsPayable,
+            subject,
+            billDate,
+            dueDate,
+            items,
+            totalAmount,
+            discountPercentage,
+            advancedAmount,
+            paymentType,
+            // taxAmount,
+            // discountAmount,
+            taxPercentage,
+            settlementSource,
+            // grandTotal,
+            notes } = bodyData;
+
+              // Validate bill data
+        const validation = validateBillData({
+            vendorId, organizationId, vendorName, accountsPayable,
+            subject, dueDate, billDate, items, totalAmount, discountPercentage,
+            taxPercentage, notes,
+        });
+
+        if (!validation.isValid) {
+            res.status(400).json({
+                ok: false,
+                message: "Validation failed",
+                errors: validation.errors
+            });
+            return;
+        }
+
+        // Since we used .fields(), req.files is an object: { files?: [], paymentProof?: [] }
+        const allFiles = req.files as { [fieldname: string]: (Express.Multer.File & { location: string })[] };
+
+
+
+
+        // 1. Map Bill Images
+        const mappedBillFiles = (allFiles['files'] || []).map(file => ({
+            type: file.mimetype.startsWith("image") ? "image" : "pdf",
+            url: file.location,
+            originalName: file.originalname,
+            uploadedAt: new Date()
+        }));
+
+        // 2. Map Payment Proofs
+        const mappedPaymentProofs = (allFiles['paymentProof'] || []).map(file => ({
+            type: file.mimetype.startsWith("image") ? "image" : "pdf",
+            url: file.location,
+            originalName: file.originalname,
+            uploadedAt: new Date()
+        }));
+
+        const data = await createBillUtil({
+            vendorId,
+            organizationId,
+            projectId,
+            vendorName,
+            accountsPayable,
+            subject,
+            billDate,
+            dueDate,
+            items,
+            totalAmount,
+            discountPercentage,
+            advancedAmount,
+            paymentType,
+
+
+            taxPercentage,
+            settlementSource,
+            notes,
+            mappedBillFiles: mappedBillFiles,
+            mappedPaymentProofs: mappedPaymentProofs
+
+        })
+
+
+
+        return res.status(201).json({
+            ok: true,
+            message: "Bill created successfully",
+            data: data.data
+        });
+
+    }
+    catch (error: any) {
+        console.error("Error creating bill:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Error creating bill",
+            error: error.message
+        });
+
     }
 };
 
@@ -839,6 +1146,66 @@ export const uploadBillImagesOnly = async (req: Request, res: Response): Promise
 };
 
 
+export const uploadBillPaymentProofOnly = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { id } = req.params;
+
+        const files = req.files as (Express.Multer.File & { location: string })[];
+        if (!files || files.length === 0) {
+            return res.status(400).json({ ok: false, message: "No files uploaded" });
+        }
+
+        const mappedFiles = files.map(file => ({
+            _id: new mongoose.Types.ObjectId(),
+            type: file.mimetype.startsWith("image") ? "image" : "pdf",
+            url: file.location,
+            originalName: file.originalname,
+            uploadedAt: new Date()
+        }));
+
+        const updatedBill = await BillAccountModel.findByIdAndUpdate(
+            id,
+            { $push: { paymentProof: { $each: mappedFiles } } }, // $push appends specifically
+            { new: true }
+        );
+
+        if (!updatedBill) {
+            return res.status(404).json({ message: "bill not found", ok: false })
+        }
+
+
+        // const pdfData: any = {
+        //     ...updatedBill.toObject(),
+        //     companyLogo: COMPANY_LOGO,
+        //     companyName: COMPANY_NAME
+        // };
+
+        // const pdfBytes = await generateBillAccBillPdf(pdfData);
+
+        // const fileName = `bill-${updatedBill.billNumber}-${Date.now()}.pdf`;
+
+        // const uploadResult = await uploadToS3(pdfBytes, fileName);
+
+        // // Update bill with PDF data
+        // updatedBill.pdfData = {
+        //     type: "pdf",
+        //     url: uploadResult.Location,
+        //     originalName: fileName,
+        //     uploadedAt: new Date(),
+        // };
+
+        // await updatedBill.save();
+
+        await invalidateBillCache((updatedBill as any).organizationId, (updatedBill as any).vendorId, id);
+
+
+        res.status(200).json({ ok: true, message: "Images added successfully", data: updatedBill });
+    } catch (error: any) {
+        res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+
 
 
 
@@ -915,6 +1282,59 @@ export const deleteBillImages = async (req: RoleBasedRequest, res: Response): Pr
 
         }
         bill.images = bill.images.filter(
+            (image: any) => image._id.toString() !== imageId
+        );
+
+        await bill.save();
+
+
+        // Invalidate related caches
+        await invalidateBillCache(
+            bill.organizationId?.toString(),
+            bill.vendorId?.toString(),
+            id
+        );
+
+        return res.status(200).json({
+            ok: true,
+            message: "bill image deleted successfully",
+            data: bill
+        });
+    } catch (error: any) {
+        console.error("Error deleting bill:", error);
+        res.status(500).json({
+            ok: false,
+            message: "Error deleting bill",
+            error: error.message
+        });
+    }
+};
+
+
+
+
+export const deleteBillPaymentProofs = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { id, imageId } = req.params;
+
+        // Validate ID format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                ok: false,
+                message: "Invalid bill ID format"
+            });
+        }
+
+        const bill = await BillAccountModel.findById(id);
+
+        if (!bill) {
+            return res.status(404).json({
+                ok: false,
+                message: "bill not found"
+            });
+
+        }
+        bill.paymentProof = bill?.paymentProof?.filter(
             (image: any) => image._id.toString() !== imageId
         );
 
@@ -1071,9 +1491,7 @@ export const sendBillToPayment = async (req: Request, res: Response): Promise<an
         }
 
 
-        if (bill?.isSyncWithPaymentsSection) {
-            return res.status(400).json({ message: "Bill Already sent to the payment section", ok: false })
-        }
+
 
 
         const paymentItems = bill.items.map((item: any, index: number) => {
@@ -1134,6 +1552,8 @@ export const sendBillToPayment = async (req: Request, res: Response): Promise<an
                 fees: null,
                 tax: null,
             },
+            settlementSource: bill?.settlementSource,
+            paymentProof: bill?.paymentProof || [],
             amountRemaining: {
                 totalAmount: Math.max(
                     (bill?.grandTotal || 0) - (bill?.advancedAmount || 0),

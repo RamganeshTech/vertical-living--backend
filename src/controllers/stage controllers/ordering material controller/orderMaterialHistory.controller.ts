@@ -27,6 +27,7 @@ import crypto from "crypto";
 import { OrderShopDetailsLibModel } from "../../../models/Stage Models/Ordering Material Model/OrderShopLibrary.model";
 import VendorAccountModel from "../../../models/Department Models/Accounting Model/vendor.model";
 import { sendWhatsAppNotification } from "../../../utils/Whatsapp/sendWhatsAppNotification";
+import { createBillUtil } from "../../Department controllers/Accounting Controller/Bill Accounts Controller/billAccounts.controller";
 
 
 export const restoreInventoryQuantities = async ({
@@ -1636,6 +1637,7 @@ export const submitOrderMaterial = async (req: Request, res: Response): Promise<
             createdAt: new Date(),
             priority: null,
             isSyncWithProcurement: false,
+            isSyncWithBill: false,
             isPublicOrder: false
         };
 
@@ -1758,14 +1760,14 @@ export const addSubItemToSpecificOrder = async (req: Request, res: Response): Pr
 
         // 1. Procurement Check
         if (targetOrder.isSyncWithProcurement) {
-            return res.status(400).json({ 
-                ok: false, 
-                message: "This order is already synced with procurement and cannot be modified." 
+            return res.status(400).json({
+                ok: false,
+                message: "This order is already synced with procurement and cannot be modified."
             });
         }
 
         // 2. Duplicate Check
-        const isExists = targetOrder.subItems.find((item: any) => 
+        const isExists = targetOrder.subItems.find((item: any) =>
             item.subItemName?.toLowerCase()?.trim() === subItemName?.toLowerCase()?.trim()
         );
         if (isExists) return res.status(400).json({ ok: false, message: "Item already exists in this order" });
@@ -1795,14 +1797,14 @@ export const addSubItemToSpecificOrder = async (req: Request, res: Response): Pr
         }
 
         await orderDoc.save();
-        
+
         // 5. Update Redis
         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc });
 
-        res.json({ ok: true, message: "Item added at specific position", data:targetOrder, subItems: targetOrder.subItems });
+        res.json({ ok: true, message: "Item added at specific position", data: targetOrder, subItems: targetOrder.subItems });
 
         // 6. Update Inventory
-        if(subItemName){
+        if (subItemName) {
             updateInventoryRemainingQuantity({ itemName: subItemName, orderedQuantity: quantity });
         }
     } catch (error: any) {
@@ -1834,9 +1836,9 @@ export const updateSubItemInSpecificOrder = async (req: Request, res: Response):
 
 
         // Only update if the value is actually provided (not undefined)
-if (subItemName !== undefined) subItemObj.subItemName = subItemName.trim();
-if (quantity !== undefined) subItemObj.quantity = quantity;
-if (unit !== undefined) subItemObj.unit = unit;
+        if (subItemName !== undefined) subItemObj.subItemName = subItemName.trim();
+        if (quantity !== undefined) subItemObj.quantity = quantity;
+        if (unit !== undefined) subItemObj.unit = unit;
 
 
         // // Update values
@@ -1847,7 +1849,7 @@ if (unit !== undefined) subItemObj.unit = unit;
         await orderDoc.save();
         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: orderDoc });
 
-        res.json({ ok: true, message: "Material updated", subItem: subItemObj , data:targetOrder});
+        res.json({ ok: true, message: "Material updated", subItem: subItemObj, data: targetOrder });
 
         // Inventory adjustment logic
         const diff = quantity - oldQuantity;
@@ -1897,9 +1899,9 @@ export const deleteSubItemFromSpecificOrder = async (req: Request, res: Response
 
         // 2. 🛡️ Procurement Sync Check
         if (targetOrder.isSyncWithProcurement) {
-            return res.status(400).json({ 
-                ok: false, 
-                message: "This order is already synced with procurement. Items cannot be deleted." 
+            return res.status(400).json({
+                ok: false,
+                message: "This order is already synced with procurement. Items cannot be deleted."
             });
         }
 
@@ -1914,15 +1916,15 @@ export const deleteSubItemFromSpecificOrder = async (req: Request, res: Response
         (targetOrder.subItems as any).pull(subItemId);
 
         await orderDoc.save();
-        
+
         // 5. Update Redis Cache
-        await populateWithAssignedToField({ 
-            stageModel: OrderMaterialHistoryModel, 
-            projectId, 
-            dataToCache: orderDoc 
+        await populateWithAssignedToField({
+            stageModel: OrderMaterialHistoryModel,
+            projectId,
+            dataToCache: orderDoc
         });
 
-        res.json({ ok: true, data:targetOrder, message: "Material item deleted and inventory restored" });
+        res.json({ ok: true, data: targetOrder, message: "Material item deleted and inventory restored" });
 
         // 6. 🔄 Restore Inventory (Background)
         if (quantityToRestore > 0) {
@@ -2380,7 +2382,7 @@ export const placeOrderToProcurementv2 = async (req: Request, res: Response): Pr
         const ProcurementNewItems = Object.values(subItemMap);
 
         // 2. Find Matching Shops based on Priority
-        const matchingShops = await VendorAccountModel.find({_id: vendorId}).lean();
+        const matchingShops = await VendorAccountModel.find({ _id: vendorId }).lean();
 
         const firstVendor = matchingShops[0] || null;
 
@@ -2402,7 +2404,7 @@ export const placeOrderToProcurementv2 = async (req: Request, res: Response): Pr
         // shopQuoteData.shopId = firstVendor?._id
         // shopQuoteData.generatedLink = generatedLink
         // shopQuoteData.selectedUnits = ProcurementNewItems?.map(item => ({ ...item, _id: new mongoose.Types.ObjectId() }))
-        
+
 
 
         // 3. Prepare Shop Quotes with unique tokens/IDs
@@ -2551,6 +2553,99 @@ export const placeOrderToProcurementv2 = async (req: Request, res: Response): Pr
     }
 }
 
+export const syncOrderToBillsModule = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { organizationId, orderItemId, projectId } = req.params;
+
+        // 1. Fetch the Order History Record
+        const orderHistory = await OrderMaterialHistoryModel.findOne({ projectId })
+            .populate("projectId", "_id projectName")
+            .lean();
+
+        if (!orderHistory) {
+            return res.status(404).json({ ok: false, message: "Order Material history not found" });
+        }
+
+
+
+        // 2. Find the specific ordered item inside the array
+        const targetOrder = orderHistory.orderedItems.find(
+            (item: any) => item._id.toString() === orderItemId
+        );
+
+        if (!targetOrder) {
+            return res.status(404).json({ ok: false, message: "Specific ordered item not found in history" });
+        }
+
+        if (targetOrder?.isSyncWithBill) {
+            return res.status(404).json({ ok: false, message: "Bill has already creted for this Specific order" });
+        }
+
+        // 3. Map Sub-Items to Bill Items format
+        // createBillUtil expects: { itemName, rate, unit, quantity, totalCost }
+        const billItems = targetOrder?.subItems?.map((sub: any) => ({
+            itemName: sub.subItemName,
+            quantity: sub.quantity || 1,
+            unit: sub.unit || "nos",
+            rate: 0, // Defaulting to 0 as rate is usually finalized in Accounting
+            totalCost: 0
+        }));
+
+        // 4. Prepare data for createBillUtil
+        // We use empty arrays for files as this is an automated sync from internal data
+        const billPayload = {
+            organizationId,
+            projectId: orderHistory?.projectId?._id?.toString() || orderHistory.projectId?.toString(),
+            vendorId: null, // Assuming vendorId exists in shopDetails
+            vendorName: targetOrder.shopDetails?.shopName || "Unknown Vendor",
+            accountsPayable: null, // Default categorization
+            subject: `Bill for Order: ${targetOrder.orderMaterialNumber || 'Manual Sync'}`,
+            billDate: new Date().toISOString(),
+            dueDate: null, // 7 days default
+            items: billItems,
+            totalAmount: 0,
+            discountPercentage: 0,
+            advancedAmount: 0,
+            paymentType: "full payment",
+            taxPercentage: 0,
+            settlementSource: "DIRECT_COMPANY_PAY",
+            notes: `Automatically synced from Order Material: ${targetOrder.orderMaterialNumber}`,
+            mappedBillFiles: [], // Empty as per your requirement
+            mappedPaymentProofs: [], // Empty as per your requirement
+            orderMaterialDeptNumber: targetOrder.orderMaterialNumber,
+            orderMaterialRefId: orderHistory._id
+        };
+
+        // 5. Call the Utility
+        const result = await createBillUtil(billPayload);
+
+        // 6. Optional: Mark the original order as "Synced" so it's not billed twice
+        const updatedOrderDoc = await OrderMaterialHistoryModel.findOneAndUpdate(
+            { _id: orderHistory._id, "orderedItems._id": orderItemId },
+            { $set: { "orderedItems.$.isSyncWithBill": true } },
+            { new: true }
+        );
+
+        if (updatedOrderDoc) {
+            // throw new Error("Failed to retrieve updated order for caching");
+            await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: updatedOrderDoc })
+        }
+
+        return res.status(201).json({
+            ok: true,
+            message: "Order successfully synced to Billing",
+            billData: result.data
+        });
+
+    } catch (error: any) {
+        console.error("Sync Error:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Internal server error during sync",
+            error: error.message
+        });
+    }
+};
 
 
 

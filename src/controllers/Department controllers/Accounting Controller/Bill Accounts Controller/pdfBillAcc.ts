@@ -615,7 +615,7 @@ async function drawBillImagesSection(
     let currentPage = page;
 
     // Images title in bold
-    currentPage.drawText('Attached Images:', {
+    currentPage.drawText('Bill Image:', {
         x: 50,
         y: currentY,
         size: 12,

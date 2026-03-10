@@ -622,7 +622,6 @@ import mongoose, { FilterQuery, Types } from "mongoose"
 import Razorpay from "razorpay";
 import crypto from 'crypto';
 import { getDecryptedRazorpayConfig } from "../../RazoryPay_controllers/razorpay.controllers";
-import { BillAccountModel } from "../../../models/Department Models/Accounting Model/billAccount.model";
 import { IVendorPaymentItems } from "../../../models/Department Models/Accounting Model/vendorPaymentAcc.model";
 
 

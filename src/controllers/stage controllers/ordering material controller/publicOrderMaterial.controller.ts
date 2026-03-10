@@ -376,6 +376,7 @@ export const submitPublicOrders = async (req: Request, res: Response): Promise<a
                 pdfLink: [],
                 orderMaterialNumber: orderNumber,
                 isSyncWithProcurement: false,
+                isSyncWithBill: false,
                 createdAt: new Date(),
                 isPublicOrder: true
             })
@@ -390,6 +391,7 @@ export const submitPublicOrders = async (req: Request, res: Response): Promise<a
                 priority: null,
                 orderMaterialNumber: orderNumber,
                 isSyncWithProcurement: false,
+                isSyncWithBill: false,
                 createdAt: new Date(),
                 isPublicOrder: true
 

@@ -1289,6 +1289,7 @@ export const extractQuoteToOrderMaterial = async (req: Request, res: Response): 
       createdAt: new Date(),
       priority: "High",
       isSyncWithProcurement: false,
+      isSyncWithBill: false,
       isPublicOrder: false
     };
 

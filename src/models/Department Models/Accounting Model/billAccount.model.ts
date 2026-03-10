@@ -27,12 +27,16 @@ export interface IBillAccount extends Document {
 
     advancedAmount: number
     paymentType: string
+    settlementSource: string
 
     notes: string | null;
     images: IBillUploads[],
+    paymentProof: IBillUploads[],
     pdfData: IBillUploads | null,
     isSyncedWithAccounting?: boolean
     isSyncWithPaymentsSection?: boolean
+    orderMaterialDeptNumber?: string
+    orderMaterialRefId?:string | Types.ObjectId
 }
 
 
@@ -108,6 +112,8 @@ const BillAccountSchema = new Schema<IBillAccount>(
         grandTotal: { type: Number, default: 0 },
         notes: { type: String, default: null },
         images: { type: [BillUploadSchema], default: [] },
+        paymentProof: { type: [BillUploadSchema], default: [] },
+        settlementSource: { type: String, default: null },
         pdfData: { type: BillUploadSchema, default: null },
 
         advancedAmount: { type: Number, default: 0 },
@@ -120,8 +126,13 @@ const BillAccountSchema = new Schema<IBillAccount>(
         isSyncWithPaymentsSection: {
             type: Boolean,
             default: false
+        },
+        orderMaterialDeptNumber: { type: String, default: null },
+        orderMaterialRefId: {
+            type: Schema.Types.ObjectId,
+            ref: "OrderMaterialHistoryModel",
+            default: null
         }
-
     },
     { timestamps: true }
 );
@@ -130,11 +141,11 @@ const BillAccountSchema = new Schema<IBillAccount>(
 // ✅ Pre-save hook to auto-generate unique invoice number
 BillAccountSchema.pre("save", async function (next) {
     if (this.isNew && !this.billNumber) {
-          const currentYear = new Date().getFullYear();
-          
+        const currentYear = new Date().getFullYear();
+
         const lastDoc = await mongoose
             .model("BillAccountModel")
-            .findOne({organizationId: this.organizationId}, { billNumber: 1 })
+            .findOne({ organizationId: this.organizationId }, { billNumber: 1 })
             .sort({ createdAt: -1 });
 
         let nextNumber = 1;

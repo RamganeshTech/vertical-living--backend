@@ -14,7 +14,8 @@ import {
     placeOrderToProcurementv2,
     addSubItemToSpecificOrder,
     updateSubItemInSpecificOrder,
-    deleteSubItemFromSpecificOrder} from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
+    deleteSubItemFromSpecificOrder,
+    syncOrderToBillsModule} from '../../../controllers/stage controllers/ordering material controller/orderMaterialHistory.controller';
 import { imageUploadToS3, processUploadFiles } from '../../../utils/s3Uploads/s3upload';
 // import { generateOrderHistoryPDFController } from '../../../controllers/stage controllers/ordering material controller/pdfOrderHistory.controller';
 
@@ -66,6 +67,7 @@ orderMaterialHistoryRoutes.put("/:projectId/:orderItemId/:organizationId/senttop
 
 orderMaterialHistoryRoutes.put("/v1/:projectId/:orderItemId/:organizationId/senttoprocurement", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), placeOrderToProcurementv1);
 orderMaterialHistoryRoutes.put("/v2/:projectId/:orderItemId/:organizationId/senttoprocurement", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), placeOrderToProcurementv2);
+orderMaterialHistoryRoutes.put("/v2/:projectId/:orderItemId/:organizationId/senttobills", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), syncOrderToBillsModule);
 
 orderMaterialHistoryRoutes.get("/:projectId/:orderItemId/getsingleorderedItem", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), getSingleOrderedItem);
 

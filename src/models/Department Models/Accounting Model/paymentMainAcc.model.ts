@@ -44,6 +44,8 @@ export interface IPaymentMainAcc extends Document {
     amountRemaining: IGrandTotal
 
     notes: string | null;
+    settlementSource: string | null
+    paymentProof: IBillUploads[]
     // images: IBillUploads[],
     // pdfData: IBillUploads | null,
     isSyncedWithAccounting?: boolean
@@ -119,12 +121,19 @@ tax: { type: Number, default: null }
 
 
 
-// const BillUploadSchema = new Schema<IUploadPdf>({
-//     type: { type: String, enum: ["image", "pdf"] },
-//     url: { type: String, },
-//     originalName: String,
-//     uploadedAt: { type: Date, default: new Date() }
-// }, { _id: true });
+
+export interface IBillUploads extends IUploadPdf { }
+
+
+
+
+
+const BillUploadSchema = new Schema<IUploadPdf>({
+    type: { type: String, enum: ["image", "pdf"] },
+    url: { type: String, },
+    originalName: String,
+    uploadedAt: { type: Date, default: new Date() }
+}, { _id: true });
 
 
 const PaymentMainAccountSchema = new Schema<IPaymentMainAcc>(
@@ -211,6 +220,8 @@ const PaymentMainAccountSchema = new Schema<IPaymentMainAcc>(
 
         amountRemaining: { type: grandTotalSchema, default: {} },
         notes: { type: String, default: null },
+        settlementSource: {type:String, default:null},
+        paymentProof: {type: [BillUploadSchema] , default: []},
         // images: { type: [BillUploadSchema], default: [] },
         // pdfData: { type: BillUploadSchema, default: null },
         isSyncedWithAccounting: {
