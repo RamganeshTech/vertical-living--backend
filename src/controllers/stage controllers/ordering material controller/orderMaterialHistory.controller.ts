@@ -2071,7 +2071,8 @@ export const placeOrderToProcurement = async (req: Request, res: Response): Prom
             fromDeptName: "Order Material",
             fromDeptModel: "OrderMaterialHistoryModel",
             fromDeptRefId: orderDoc._id as Types.ObjectId,
-            totalCost: 0
+            totalCost: 0,
+            sourceStatus: "CREATED_FROM_ORDER_MATERIAL"
         });
 
         await syncAccountingRecord({
@@ -2245,7 +2246,9 @@ export const placeOrderToProcurementv1 = async (req: Request, res: Response): Pr
             fromDeptName: "Order Material",
             fromDeptModel: "OrderMaterialHistoryModel",
             fromDeptRefId: orderDoc._id,
-            totalCost: 0
+            totalCost: 0,
+            sourceStatus: "CREATED_FROM_ORDER_MATERIAL"
+
         });
 
         // console.log("newProcurement", newProcurement)
@@ -2449,7 +2452,8 @@ export const placeOrderToProcurementv2 = async (req: Request, res: Response): Pr
             fromDeptName: "Order Material",
             fromDeptModel: "OrderMaterialHistoryModel",
             fromDeptRefId: orderDoc._id,
-            totalCost: 0
+            totalCost: 0,
+            sourceStatus: "CREATED_FROM_ORDER_MATERIAL"
         });
 
         // console.log("newProcurement", newProcurement)
@@ -2509,7 +2513,8 @@ export const placeOrderToProcurementv2 = async (req: Request, res: Response): Pr
 
             // Defaults for Creation
             status: "pending",
-            paymentId: null
+            paymentId: null,
+
         });
 
         // Clear subItems from each selectedUnit
@@ -2613,7 +2618,8 @@ export const syncOrderToBillsModule = async (req: Request, res: Response): Promi
             mappedBillFiles: [], // Empty as per your requirement
             mappedPaymentProofs: [], // Empty as per your requirement
             orderMaterialDeptNumber: targetOrder.orderMaterialNumber,
-            orderMaterialRefId: orderHistory._id
+            orderMaterialRefId: orderHistory._id,
+            sourceStatus: "CREATED_FROM_ORDER_MATERIAL"
         };
 
         // 5. Call the Utility

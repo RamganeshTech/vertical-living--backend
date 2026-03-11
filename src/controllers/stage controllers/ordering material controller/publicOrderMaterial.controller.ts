@@ -398,8 +398,6 @@ export const submitPublicOrders = async (req: Request, res: Response): Promise<a
             }]
         }
 
-
-
         orderDoc.publicUnits.subItems = []
         await orderDoc.save()
 

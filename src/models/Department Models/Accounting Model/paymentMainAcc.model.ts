@@ -51,6 +51,14 @@ export interface IPaymentMainAcc extends Document {
     isSyncedWithAccounting?: boolean
     isSyncedWithLogistics?: boolean
     generalStatus: string
+    paymentMode: string
+    cashCollectionDetail: {
+        recipientName: string | null
+        phoneNo: string | null
+        otp: string | null
+        otpExpiresAt: Date
+    },
+    sourceStatus:string
 }
 
 
@@ -101,22 +109,22 @@ const grandTotalSchema = new Schema<IGrandTotal>({
 
 
 const PaymentAccItemSchema = new Schema<IPaymentItem>(
-{
-itemName: { type: String, },
-quantity: { type: Number, default: 0 },
-rate: { type: Number, },
-unit: { type: String, default: "" },
-totalCost: { type: Number, }, // quantity * rate
-status: { type: String, default: null },
-orderId: { type: String, default: null }, // Razorpay order/fund_account_id
-paymentId: { type: String, default: null }, // Razorpay payout_id
-transactionId: { type: String, default: null }, // UTR number
-paidAt: { type: Date, default: null },
-failureReason: { type: String, default: null },
-fees: { type: Number, default: null },
-tax: { type: Number, default: null }
-},
-{ _id: true }
+    {
+        itemName: { type: String, },
+        quantity: { type: Number, default: 0 },
+        rate: { type: Number, },
+        unit: { type: String, default: "" },
+        totalCost: { type: Number, }, // quantity * rate
+        status: { type: String, default: null },
+        orderId: { type: String, default: null }, // Razorpay order/fund_account_id
+        paymentId: { type: String, default: null }, // Razorpay payout_id
+        transactionId: { type: String, default: null }, // UTR number
+        paidAt: { type: Date, default: null },
+        failureReason: { type: String, default: null },
+        fees: { type: Number, default: null },
+        tax: { type: Number, default: null }
+    },
+    { _id: true }
 );
 
 
@@ -220,8 +228,15 @@ const PaymentMainAccountSchema = new Schema<IPaymentMainAcc>(
 
         amountRemaining: { type: grandTotalSchema, default: {} },
         notes: { type: String, default: null },
-        settlementSource: {type:String, default:null},
-        paymentProof: {type: [BillUploadSchema] , default: []},
+        settlementSource: { type: String, default: null },
+        paymentProof: { type: [BillUploadSchema], default: [] },
+        paymentMode: { type: String, default: null },
+        cashCollectionDetail: {
+            recipientName: { type: String, default: null },
+            phoneNo: { type: String, default: null },
+            otp: { type: String, default: null },
+            otpExpiresAt: { type: Date, default: null }
+        },
         // images: { type: [BillUploadSchema], default: [] },
         // pdfData: { type: BillUploadSchema, default: null },
         isSyncedWithAccounting: {
@@ -232,7 +247,9 @@ const PaymentMainAccountSchema = new Schema<IPaymentMainAcc>(
             type: Boolean,
             default: false
         },
-        generalStatus: { type: String, default: "pending" }
+        generalStatus: { type: String, default: "pending" },
+        sourceStatus: { type: String, default: "CREATED_WITHOUT_ORDER_MATERIAL" }
+
     },
     { timestamps: true }
 );

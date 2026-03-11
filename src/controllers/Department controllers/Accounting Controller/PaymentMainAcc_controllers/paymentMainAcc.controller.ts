@@ -2,6 +2,7 @@ import mongoose, { ClientSession, FilterQuery } from "mongoose";
 import { Request, Response } from "express";
 import { IPaymentMainAcc, PaymentMainAccountModel } from "../../../../models/Department Models/Accounting Model/paymentMainAcc.model";
 import { AccountingModel } from "../../../../models/Department Models/Accounting Model/accountingMain.model";
+import { BillAccountModel } from "../../../../models/Department Models/Accounting Model/billAccount.model";
 
 
 /**
@@ -37,6 +38,186 @@ export const createPaymentMainAccUtil = async (
 
 
 
+export const uploadCashPaymentProofOnly = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { id } = req.params;
+
+        const files = req.files as (Express.Multer.File & { location: string })[];
+        if (!files || files.length === 0) {
+            return res.status(400).json({ ok: false, message: "No files uploaded" });
+        }
+
+        const mappedFiles = files.map(file => ({
+            _id: new mongoose.Types.ObjectId(),
+            type: file.mimetype.startsWith("image") ? "image" : "pdf",
+            url: file.location,
+            originalName: file.originalname,
+            uploadedAt: new Date()
+        }));
+
+        const updatedPayment = await PaymentMainAccountModel.findByIdAndUpdate(
+            id,
+            { $push: { paymentProof: { $each: mappedFiles } } }, // $push appends specifically
+            { new: true }
+        );
+
+        if (!updatedPayment) {
+            return res.status(404).json({ message: "payment order not found", ok: false })
+        }
+
+        // await invalidateBillCache((updatedBill as any).organizationId, (updatedBill as any).vendorId, id);
+
+
+        res.status(200).json({ ok: true, message: "uploaded successfully", data: updatedPayment });
+    } catch (error: any) {
+        res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+
+/**
+ * Controller to verify OTP and finalize Cash Payment
+ */
+export const verifyAndProcessCashPayment = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { id } = req.params;
+        const {  recipientName, phoneNo } = req.body;
+
+        // 1. Find the payment record
+        const payment = await PaymentMainAccountModel.findById(id);
+
+        if (!payment) {
+            return res.status(404).json({ ok: false, message: "Payment record not found" });
+        }
+
+        // // 2. Security Check: Verify OTP 
+        // // (In a real app, compare with the OTP stored in the DB during the 'Generate' step)
+        // if (payment.cashCollectionDetail.otp !== otp) {
+        //     return res.status(400).json({ ok: false, message: "Invalid OTP authorization" });
+        // }
+
+        // 3. Update the record to Cash Mode and Paid status
+        payment.paymentMode = "cash";
+        // payment.generalStatus = "paid"; // Mark as paid
+        
+        // Ensure recipient details are stored exactly as they were at time of payment
+        payment.cashCollectionDetail = {
+            recipientName: recipientName || payment.cashCollectionDetail.recipientName,
+            phoneNo: phoneNo || payment.cashCollectionDetail.phoneNo,
+            otp: null, // Clear OTP after successful use
+            otpExpiresAt: new Date()
+        };
+
+        await payment.save();
+
+        return res.status(200).json({
+            ok: true,
+            message: "Cash payment processed and recorded successfully",
+            data: payment
+        });
+
+    } catch (error: any) {
+        return res.status(500).json({
+            ok: false,
+            message: error.message,
+            error: "Error occured in the verifying the cash method"
+        });
+    }
+};
+
+
+export const getAllPaymentsAccWihtoutPaginationForExport = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const {
+            organizationId,
+            projectId,
+            personName,
+            minAmount,
+            maxAmount,
+            startDate,
+            endDate,
+            fromSection,
+            sourceStatus
+            // Pagination params (defaults: page 1, limit 10)
+          
+        } = req.query;
+
+
+
+        console.log("req.query", req.query)
+      
+        // --- 2. Initialize Query Object ---
+        const filter: FilterQuery<IPaymentMainAcc> = {};
+
+        // --- 3. Apply Filters ---
+        if (organizationId) {
+            filter.organizationId = new mongoose.Types.ObjectId(organizationId as string);
+        }
+
+        if (projectId && mongoose.Types.ObjectId.isValid(projectId as string)) {
+            filter.projectId = new mongoose.Types.ObjectId(projectId as string);
+        }
+
+        if (personName) {
+            filter.paymentPersonName = { $regex: personName as string, $options: "i" };
+        }
+
+        if (fromSection) {
+            filter.fromSection = fromSection as string;
+        }
+
+        if (minAmount || maxAmount) {
+            filter.grandTotal = {};
+            if (minAmount) filter.grandTotal.$gte = Number(minAmount);
+            if (maxAmount) filter.grandTotal.$lte = Number(maxAmount);
+        }
+
+        //  if (minAmount || maxAmount) {
+        //     filter["grandTotal.totalAmount"] = {};
+
+        //     if (minAmount) filter["grandTotal.totalAmount"].$gte = Number(minAmount);
+        //     if (maxAmount) filter["grandTotal.totalAmount"].$lte = Number(maxAmount);
+        // }
+
+        if (startDate || endDate) {
+            filter.createdAt = {};
+            if (startDate) filter.createdAt.$gte = new Date(startDate as string);
+            if (endDate) filter.createdAt.$lte = new Date(endDate as string);
+        }
+
+
+        if(sourceStatus){
+            filter.sourceStatus = sourceStatus
+        }
+
+        // --- 4. Execute Query (With Pagination) ---
+
+        // Get Total Count for metadata
+
+        // Get Actual Data
+        const payments = await PaymentMainAccountModel.find(filter)
+            .sort({ createdAt: -1 }) // Latest first
+            .populate("projectId", "projectName _id")
+            // Ensure the fields here exist in your Vendor/Customer schemas
+            .populate("paymentPersonId", "vendorName customerName companyName");
+
+       
+        return res.status(200).json({
+            ok: true,
+            data: payments
+        });
+
+    } catch (error: any) {
+        console.error("Error in getAllPayments:", error);
+        return res.status(500).json({
+            success: false,
+            ok: false,
+            message: "Server Error",
+            error: error.message
+        });
+    }
+};
+
 export const getAllPaymentsAcc = async (req: Request, res: Response): Promise<any> => {
     try {
         const {
@@ -48,6 +229,7 @@ export const getAllPaymentsAcc = async (req: Request, res: Response): Promise<an
             startDate,
             endDate,
             fromSection,
+            sourceStatus,
             // Pagination params (defaults: page 1, limit 10)
             page = 1,
             limit = 10
@@ -95,9 +277,13 @@ export const getAllPaymentsAcc = async (req: Request, res: Response): Promise<an
         // }
 
         if (startDate || endDate) {
-            filter.dueDate = {};
-            if (startDate) filter.dueDate.$gte = new Date(startDate as string);
-            if (endDate) filter.dueDate.$lte = new Date(endDate as string);
+            filter.createdAt = {};
+            if (startDate) filter.createdAt.$gte = new Date(startDate as string);
+            if (endDate) filter.createdAt.$lte = new Date(endDate as string);
+        }
+
+         if(sourceStatus){
+            filter.sourceStatus = sourceStatus
         }
 
         // --- 4. Execute Query (With Pagination) ---
@@ -166,6 +352,7 @@ export const getSinglePaymentAcc = async (req: Request, res: Response): Promise<
 
         return res.status(200).json({
             success: true,
+            ok: true,
             data: payment
         });
 
@@ -173,6 +360,7 @@ export const getSinglePaymentAcc = async (req: Request, res: Response): Promise<
         console.error("Error in getSinglePayment:", error);
         return res.status(500).json({
             success: false,
+            ok:false,
             message: "Server Error",
             error: error.message
         });
@@ -267,3 +455,32 @@ export const deletePaymentAcc = async (req: Request, res: Response): Promise<any
         });
     }
 };
+
+
+// const runOneTimeAccountingMigration = async () => {
+//     try {
+//         console.log("🚀 Starting Source Status Migration...");
+
+//         // Use an empty filter {} to target EVERY document in the collection
+//         // even if the field is missing or already has a different value.
+//         const paymentUpdate = await PaymentMainAccountModel.updateMany(
+//             {}, 
+//             { $set: { sourceStatus: "CREATED_WITHOUT_ORDER_MATERIAL" } }
+//         );
+
+//         const billUpdate = await BillAccountModel.updateMany(
+//             {}, 
+//             { $set: { sourceStatus: "CREATED_WITHOUT_ORDER_MATERIAL" } }
+//         );
+
+//         console.log("✅ Migration Successful!");
+//         console.log(`📊 Payments Updated: ${paymentUpdate.modifiedCount}`);
+//         console.log(`📊 Bills Updated: ${billUpdate.modifiedCount}`);
+
+//     } catch (error) {
+//         console.error("❌ Migration Failed:", error);
+//     }
+// };
+
+// Call it immediately (Ensure this happens AFTER your DB connection is established)
+// runOneTimeAccountingMigration();

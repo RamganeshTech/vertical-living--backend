@@ -33,6 +33,7 @@ export interface IProcurementNew {
   procurementPdfs: IPdfGenerator[]
   generatedLink?: string
   isSyncWithPaymentsSection: boolean,
+  sourceStatus:string
 }
 
 const ShopSchemaProcurement = new Schema<ProcurementOrderDetaisl>({
@@ -115,7 +116,9 @@ const procurementPurchaseOrderSchema = new Schema<IProcurementNew>({
   isSyncWithPaymentsSection: {
     type: Boolean,
     // default: false
-  }
+  },
+  sourceStatus: { type: String, default: "CREATED_WITHOUT_ORDER_MATERIAL" }
+
 }, {
   timestamps: true
 });

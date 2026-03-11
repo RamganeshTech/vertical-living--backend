@@ -283,7 +283,8 @@ export const createProcurementOrder = async (req: Request, res: Response): Promi
             procurementPdfs: [],
             generatedLink: null,
             isConfirmedRate: false,
-            isSyncWithPaymentsSection: false
+            isSyncWithPaymentsSection: false,
+            sourceStatus: "CREATED_WITHOUT_ORDER_MATERIAL"
         });
 
 
@@ -1327,7 +1328,8 @@ export const sendProcurementToPayment = async (req: Request, res: Response): Pro
 
             notes: null,
             isSyncedWithAccounting: false,
-            generalStatus: "pending"
+            generalStatus: "pending",
+            sourceStatus: procurement?.sourceStatus || "CREATED_FROM_ORDER_MATERIAL"
         })
 
         procurement.isConfirmedRate = true;

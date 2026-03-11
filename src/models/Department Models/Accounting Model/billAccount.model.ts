@@ -36,7 +36,8 @@ export interface IBillAccount extends Document {
     isSyncedWithAccounting?: boolean
     isSyncWithPaymentsSection?: boolean
     orderMaterialDeptNumber?: string
-    orderMaterialRefId?:string | Types.ObjectId
+    orderMaterialRefId?: string | Types.ObjectId
+    sourceStatus: string
 }
 
 
@@ -132,7 +133,8 @@ const BillAccountSchema = new Schema<IBillAccount>(
             type: Schema.Types.ObjectId,
             ref: "OrderMaterialHistoryModel",
             default: null
-        }
+        },
+        sourceStatus: { type: String, default: "CREATED_WITHOUT_ORDER_MATERIAL" }
     },
     { timestamps: true }
 );

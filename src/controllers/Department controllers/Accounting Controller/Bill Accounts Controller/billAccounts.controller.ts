@@ -263,6 +263,7 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
             images: mappedFiles || [],
             isSyncedWithAccounting: true,
             pdfData: null,
+            sourceStatus: "CREATED_WITHOUT_ORDER_MATERIAL"
         });
 
         // Save to database
@@ -346,28 +347,29 @@ export const createBill = async (req: RoleBasedRequest, res: Response): Promise<
 export const createBillUtil = async ({
 
     vendorId,
-organizationId,
-projectId,
-vendorName,
-accountsPayable,
-subject,
-billDate,
-dueDate,
-items,
-totalAmount,
-discountPercentage,
-advancedAmount,
-paymentType,
-//,
-//,
-taxPercentage,
-settlementSource,
-//
-notes,
- mappedBillFiles,
+    organizationId,
+    projectId,
+    vendorName,
+    accountsPayable,
+    subject,
+    billDate,
+    dueDate,
+    items,
+    totalAmount,
+    discountPercentage,
+    advancedAmount,
+    paymentType,
+    //,
+    //,
+    taxPercentage,
+    settlementSource,
+    //
+    notes,
+    mappedBillFiles,
     mappedPaymentProofs,
     orderMaterialDeptNumber,
-    orderMaterialRefId
+    orderMaterialRefId,
+    sourceStatus,
 
 }: {
     vendorId: string | null
@@ -391,8 +393,9 @@ notes,
     notes: string
     mappedBillFiles: any[]
     mappedPaymentProofs: any[]
-    orderMaterialDeptNumber?: string 
-    orderMaterialRefId?:string | Types.ObjectId
+    orderMaterialDeptNumber?: string
+    orderMaterialRefId?: string | Types.ObjectId
+    sourceStatus?: string
 }) => {
 
     try {
@@ -421,7 +424,7 @@ notes,
         //     // grandTotal,
         //     notes } = bodyData;
 
-      
+
 
         // Calculate item totals
         const processedItems = (items || []).map((item: any) => ({
@@ -467,8 +470,9 @@ notes,
             paymentProof: mappedPaymentProofs || [], // Make sure your Schema has this field
             isSyncedWithAccounting: true,
             pdfData: null,
-            orderMaterialDeptNumber:orderMaterialDeptNumber || null,
-            orderMaterialRefId: orderMaterialRefId || null
+            orderMaterialDeptNumber: orderMaterialDeptNumber || null,
+            orderMaterialRefId: orderMaterialRefId || null,
+            sourceStatus: sourceStatus || null
         });
 
         // Save to database
@@ -529,7 +533,7 @@ notes,
             paymentId: null
         });
 
-        
+
         await invalidateBillCache(organizationId, vendorId);
         return { ok: true, data: newBill }
     } catch (error: any) {
@@ -564,7 +568,7 @@ export const createBillV1 = async (req: RoleBasedRequest, res: Response): Promis
             // grandTotal,
             notes } = bodyData;
 
-              // Validate bill data
+        // Validate bill data
         const validation = validateBillData({
             vendorId, organizationId, vendorName, accountsPayable,
             subject, dueDate, billDate, items, totalAmount, discountPercentage,
@@ -622,8 +626,8 @@ export const createBillV1 = async (req: RoleBasedRequest, res: Response): Promis
             settlementSource,
             notes,
             mappedBillFiles: mappedBillFiles,
-            mappedPaymentProofs: mappedPaymentProofs
-
+            mappedPaymentProofs: mappedPaymentProofs,
+            sourceStatus: "CREATED_WITHOUT_ORDER_MATERIAL"
         })
 
 
@@ -1571,7 +1575,8 @@ export const sendBillToPayment = async (req: Request, res: Response): Promise<an
 
             notes: bill.notes || null,
             isSyncedWithAccounting: false,
-            generalStatus: "pending"
+            generalStatus: "pending",
+            sourceStatus: bill?.sourceStatus
         })
 
         bill.isSyncWithPaymentsSection = true;
