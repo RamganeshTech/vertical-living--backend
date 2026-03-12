@@ -210,6 +210,8 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
         const materialCategories = await CategoryModel.find({ organizationId }).lean();
         const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
+        const QUOTE_PROMPT = " Speak to our designer to get a quote.";
+
         //  START OF OLD VERSION
         // // --- 2. ITERATE TECHNICAL TREE TO EXTRACT DATA & BRANDS ---
         // Object.entries(processedConfig).forEach(([roomId, roomInsts]: any) => {
@@ -442,7 +444,7 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
                 // Hardware
                 if (uniqueFittings) {
                     fallbackSentences.push(`Mechanical integration is completed using ${uniqueFittings} hardware systems, selected for operational longevity.`);
-                }else {
+                } else {
                     fallbackSentences.push(`The unit integrates standardized mechanical hardware systems to support essential structural load distribution.`);
 
                 }

@@ -131,6 +131,8 @@ import MaterialShopRoutes from './routers/shopMaterialDocument_routes/shopMateri
 import PublicPaymentTransactionRoutes from './routers/publicPaymentTransaction_routes/publicPaymentTransaction.routes';
 import publiCostCalculatorRoutes from './routers/publicCostCalculator_routes/publicCostCalculator.routes';
 import publicLeadCollectionRoutes from './routers/publicLeadCollection_routes/publicLeadCollection.routes';
+import pincodeMasterRoutes from './routers/pincode_routes/pincodeMaster.routes';
+import pincodeVendorMappingRoutes from './routers/pincode_routes/pincodeVendorMapping.routes';
 
 
 // Extend Socket interface for custom properties
@@ -400,6 +402,7 @@ app.use('/api/materialshop/document', MaterialShopRoutes)
 
 
 
+
 // app.use('/api/subcontract', SubContractRoutes)
 app.use('/api/subcontract', SubContractRoutesNew)
 // STAFF TASKS API
@@ -428,7 +431,8 @@ app.use("/api/v1/public/transaction", PublicPaymentTransactionRoutes)
 app.use("/api/v1/public/costcalculation", publiCostCalculatorRoutes)
 app.use("/api/v1/public/leadcollection", publicLeadCollectionRoutes)
 
-
+app.use("/api/pincode", pincodeMasterRoutes)
+app.use("/api/pincode/mapping", pincodeVendorMappingRoutes)
 
 
 // SHORTLIST API
