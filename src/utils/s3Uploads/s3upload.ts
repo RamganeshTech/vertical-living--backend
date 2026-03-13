@@ -43,14 +43,16 @@ export const imageUploadToS3 = multer({
   fileFilter: (_req, file, cb) => {
     const allowed = [
       "image/jpeg", "image/png",
-       "application/pdf",
-       "video/mp4",       // Add video types
+      "model/gltf-binary",
+      "application/octet-stream", // Add this as GLB often shows up as this
+      "application/pdf",
+      "video/mp4",       // Add video types
       "video/quicktime", // .mov
       "video/x-msvideo", // .avi
       "video/x-ms-wmv",  // .wmv
       "video/webm"       // .webm
-      ];
-    if ( file.mimetype.startsWith("image/") || allowed.includes(file.mimetype)) {
+    ];
+    if (file.mimetype.startsWith("image/") || allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error("Invalid file type."));
@@ -69,7 +71,7 @@ export const processUploadFiles = async (req: Request, res: Response, next: Next
       files.push(...req.files);
     } else if (req.file) {
       files.push(req.file);
-    }else if (req.files && typeof req.files === "object") {
+    } else if (req.files && typeof req.files === "object") {
       // req.files is an object from multer.fields
       Object.values(req.files).forEach((fieldFiles: any) => {
         files.push(...fieldFiles);
@@ -100,16 +102,16 @@ export const processUploadFiles = async (req: Request, res: Response, next: Next
         const { Location } = await s3.upload(params).promise();
         (file as any).location = Location;
       } else if (file.mimetype.startsWith("image/")) {
-        
+
         let optimized: Buffer;
 
-        try{
-        optimized = await sharp(file.buffer)
-          .resize({ width: 800 })
-          .jpeg({ quality: 80 })
-          .toBuffer();
+        try {
+          optimized = await sharp(file.buffer)
+            .resize({ width: 800 })
+            .jpeg({ quality: 80 })
+            .toBuffer();
         }
-        catch(e){
+        catch (e) {
           console.log(e)
           optimized = file.buffer;
         }
@@ -124,14 +126,14 @@ export const processUploadFiles = async (req: Request, res: Response, next: Next
 
         const { Location } = await s3.upload(params).promise();
         (file as any).location = Location;
-      }else if (file.mimetype.startsWith("video/")) {
+      } else if (file.mimetype.startsWith("video/")) {
         // Set a larger size limit for videos
         // if (file.size > 100 * 1024 * 1024) {
         //   return res
         //     .status(400)
         //     .json({ message: `Video ${file.originalname} exceeds 100MB limit.` });
         // }
-        
+
         const s3Key = `videos/${generateS3Key(file.originalname)}`;
         const params = {
           Bucket: S3_BUCKET,
@@ -141,6 +143,24 @@ export const processUploadFiles = async (req: Request, res: Response, next: Next
         };
 
         const { Location } = await s3.upload(params).promise();
+        (file as any).location = Location;
+      }
+      else if (file.mimetype === "model/gltf-binary" ||  file.mimetype === "application/octet-stream" || file.originalname.endsWith(".glb")) {
+
+        // 1. Generate a specific key for 3D models
+        const s3Key = `models/${generateS3Key(file.originalname)}`;
+
+        const params = {
+          Bucket: S3_BUCKET,
+          Key: s3Key,
+          Body: file.buffer,
+          // CRITICAL: Three.js needs this exact content type to parse the binary data
+          ContentType: "model/gltf-binary",
+        };
+
+        const { Location } = await s3.upload(params).promise();
+
+        // Attach the S3 URL to the file object so your controller can save it to MongoDB
         (file as any).location = Location;
       }
     }

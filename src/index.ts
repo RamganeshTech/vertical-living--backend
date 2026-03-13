@@ -133,6 +133,7 @@ import publiCostCalculatorRoutes from './routers/publicCostCalculator_routes/pub
 import publicLeadCollectionRoutes from './routers/publicLeadCollection_routes/publicLeadCollection.routes';
 import pincodeMasterRoutes from './routers/pincode_routes/pincodeMaster.routes';
 import pincodeVendorMappingRoutes from './routers/pincode_routes/pincodeVendorMapping.routes';
+import pincodeVendorProjectAssignmentRoutes from './routers/pincode_routes/pincodeVendorProjectAssignment.routes';
 
 
 // Extend Socket interface for custom properties
@@ -433,6 +434,7 @@ app.use("/api/v1/public/leadcollection", publicLeadCollectionRoutes)
 
 app.use("/api/pincode", pincodeMasterRoutes)
 app.use("/api/pincode/mapping", pincodeVendorMappingRoutes)
+app.use("/api/pincode/project-assignment", pincodeVendorProjectAssignmentRoutes)
 
 
 // SHORTLIST API

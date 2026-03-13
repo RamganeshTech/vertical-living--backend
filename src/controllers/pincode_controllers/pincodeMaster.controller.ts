@@ -28,7 +28,8 @@ export const createPincode = async (req: any, res: Response): Promise<any> => {
             serviceFactor,
             complexityFactor,
             riskLevel,
-            notes
+            notes,
+            vendors
         } = req.body;
 
         // Basic validation for required fields
@@ -60,7 +61,8 @@ export const createPincode = async (req: any, res: Response): Promise<any> => {
             complexityFactor: complexityFactor || 1.0,
             riskLevel: riskLevel || "Low",
             notes: notes || null,
-            lastReviewedAt: new Date()
+            lastReviewedAt: new Date(),
+            vendors: vendors || [],
         });
 
         return res.status(201).json({
@@ -144,7 +146,12 @@ export const getSinglePincode = async (req: any, res: Response): Promise<any> =>
     try {
         const { id } = req.params;
 
+        // const pincode = await PincodeMasterModel.findById(id)
         const pincode = await PincodeMasterModel.findById(id)
+            .populate({
+                path: 'vendors.vendorId', // Path to the field inside the array
+                select: 'companyName firstName vendorName email phone vendorGrade' // Fields you want to show
+            })
         // .populate("districtId zoneId reviewedBy");
 
         if (!pincode) {
@@ -188,7 +195,8 @@ export const updatePincode = async (req: any, res: Response): Promise<any> => {
             complexityFactor,
             riskLevel,
             notes,
-            reviewedBy
+            reviewedBy,
+            vendors: vendors,
         } = req.body;
 
         const updatedPincode = await PincodeMasterModel.findByIdAndUpdate(
@@ -219,7 +227,8 @@ export const updatePincode = async (req: any, res: Response): Promise<any> => {
                     riskLevel,
                     notes,
                     reviewedBy,
-                    lastReviewedAt: new Date() // 
+                    lastReviewedAt: new Date(), // 
+                    vendors: vendors,
                 }
             },
             { new: true, runValidators: true }

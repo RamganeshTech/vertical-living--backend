@@ -850,7 +850,7 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
         const cacheKey = `vendors:dropdown:organizationId:${organizationId || 'all'}:pri:${priority || 'all'}`;
 
         // Check cache
-        // await redisClient.del(cacheKey);
+        await redisClient.del(cacheKey);
         const cachedData = await redisClient.get(cacheKey);
 
         if (cachedData) {
@@ -863,17 +863,22 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
 
 
         // Fetch vendors with pagination
-        const vendors = await VendorAccountModel.find(filter).select('_id firstName lastName email shopDisplayName shopFullAddress phone priority') // Only select needed fields
+        const vendors = await VendorAccountModel.find(filter)
+        .select('_id firstName lastName companyName email shopDisplayName shopFullAddress phone priority') // Only select needed fields
             .lean();
 
         let modifiedvendor = vendors.map(vendor => {
             return {
                 _id: vendor._id,
                 vendorName: `${vendor.firstName}`,
+                firstName: vendor?.firstName,
+                companyName: vendor?.companyName || "",
                 email: vendor.email || "",
                 shopName: vendor.shopDisplayName || "",
                 address: vendor.shopFullAddress || "",
                 phoneNo: vendor.phone?.work || vendor.phone?.mobile || "",
+                work: vendor.phone?.work  || "",
+                mobile:vendor.phone?.mobile || "",
                 priority: vendor?.priority || []
             }
         })
