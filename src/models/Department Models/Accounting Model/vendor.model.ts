@@ -63,23 +63,25 @@ export interface IVendor extends Document {
 
 
     // Capability Fields (Merged from Table 5)
-    workType: string[];          // e.g., ["Carpentry", "Civil", "Painting"] [cite: 163-172]
-    workSubtype: string[];       // e.g., ["Modular Kitchen", "Wardrobes", "TV Unit"] [cite: 179-181]
-    skillLevel: string;          // e.g., "Intermediate", "Expert"
-    premiumCapable: boolean;     // [cite: 206]
-    luxuryCapable: boolean;      // [cite: 207]
-    inhouseManufacturing: boolean; // Does the vendor have their own factory? [cite: 205]
-    installationTeamAvailable: boolean; // [cite: 211]
-    serviceTeamAvailable: boolean; // For after-sales/repairs [cite: 177]
+    // workType: string[];          // e.g., ["Carpentry", "Civil", "Painting"] [cite: 163-172]
+    // workSubtype: string[];       // e.g., ["Modular Kitchen", "Wardrobes", "TV Unit"] [cite: 179-181]
+    // skillLevel: string;          // e.g., "Intermediate", "Expert"
+    // premiumCapable: boolean;     // [cite: 206]
+    // luxuryCapable: boolean;      // [cite: 207]
+    // inhouseManufacturing: boolean; // Does the vendor have their own factory? [cite: 205]
+    // installationTeamAvailable: boolean; // [cite: 211]
+    // serviceTeamAvailable: boolean; // For after-sales/repairs [cite: 177]
 
-    // Capacity & Performance
-    maxProjectValue: number;     // Highest ticket size they can handle [cite: 299]
-    maxMonthlyCapacity: number;  // Number of projects per month [cite: 212]
-    avgTurnaroundDays: number;   // SLA: how many days for typical execution [cite: 292]
+    // // Capacity & Performance
+    // maxProjectValue: number;     // Highest ticket size they can handle [cite: 299]
+    // maxMonthlyCapacity: number;  // Number of projects per month [cite: 212]
+    // avgTurnaroundDays: number;   // SLA: how many days for typical execution [cite: 292]
 
-    // Management/Decision fields
-    vendorGrade: string;         // e.g., "A+", "A", "B", "C" [cite: 509-513]
-    qualityCheckScore: number;
+    // // Management/Decision fields
+    // vendorGrade: string;         // e.g., "A+", "A", "B", "C" [cite: 509-513]
+    // qualityCheckScore: number;
+
+    
     notes: string | null;
 
 
@@ -147,38 +149,38 @@ const VendorSchema = new Schema<IVendor>(
 
 
 
-        // --- NEW: Capability & Work Type Details ---
-        workType: { 
-            type: [String], 
-            default: [], 
-            enum: ["Carpentry", "Modular Factory", "Civil", "Painting", "Electrical", "Plumbing", "False Ceiling", "Aluminium/Glass", "Turnkey"] 
-        }, // [cite: 163-176]
+        // // --- NEW: Capability & Work Type Details ---
+        // workType: { 
+        //     type: [String], 
+        //     default: [], 
+        //     enum: ["Carpentry", "Modular Factory", "Civil", "Painting", "Electrical", "Plumbing", "False Ceiling", "Aluminium/Glass", "Turnkey"] 
+        // }, // [cite: 163-176]
         
-        workSubtype: { 
-            type: [String], 
-            default: [], 
-            enum: ["Kitchen", "Wardrobe", "TV Unit", "Crockery", "Pooja", "Study Units", "Loose Furniture"] 
-        }, // [cite: 179-186]
+        // workSubtype: { 
+        //     type: [String], 
+        //     default: [], 
+        //     enum: ["Kitchen", "Wardrobe", "TV Unit", "Crockery", "Pooja", "Study Units", "Loose Furniture"] 
+        // }, // [cite: 179-186]
 
-        skillLevel: { type: String, enum: ["Basic", "Intermediate", "Expert"], default: "Basic" },
-        premiumCapable: { type: Boolean, default: false }, // [cite: 206]
-        luxuryCapable: { type: Boolean, default: false }, // [cite: 207]
-        inhouseManufacturing: { type: Boolean, default: false }, // [cite: 205]
-        installationTeamAvailable: { type: Boolean, default: true }, // [cite: 211]
-        serviceTeamAvailable: { type: Boolean, default: false }, // [cite: 177]
+        // skillLevel: { type: String, enum: ["Basic", "Intermediate", "Expert"], default: "Basic" },
+        // premiumCapable: { type: Boolean, default: false }, // [cite: 206]
+        // luxuryCapable: { type: Boolean, default: false }, // [cite: 207]
+        // inhouseManufacturing: { type: Boolean, default: false }, // [cite: 205]
+        // installationTeamAvailable: { type: Boolean, default: true }, // [cite: 211]
+        // serviceTeamAvailable: { type: Boolean, default: false }, // [cite: 177]
 
-        // --- NEW: Capacity & Performance Metrics ---
-        maxProjectValue: { type: Number, default: 0 }, // For budget filtering [cite: 299]
-        maxMonthlyCapacity: { type: Number, default: 0 }, // Monthly project limit [cite: 212]
-        avgTurnaroundDays: { type: Number, default: 0 }, // Estimated SLA for delivery [cite: 292]
+        // // --- NEW: Capacity & Performance Metrics ---
+        // maxProjectValue: { type: Number, default: 0 }, // For budget filtering [cite: 299]
+        // maxMonthlyCapacity: { type: Number, default: 0 }, // Monthly project limit [cite: 212]
+        // avgTurnaroundDays: { type: Number, default: 0 }, // Estimated SLA for delivery [cite: 292]
         
-        // --- NEW: Grading & Scoring ---
-        vendorGrade: { 
-            type: String, 
-            enum: ["A+", "A", "B", "C", "Trial", "Suspended"], 
-            default: "Trial" 
-        }, // [cite: 509-515]
-        qualityCheckScore: { type: Number, min: 0, max: 100, default: 0 }, // Out of 100 [cite: 239, 496]
+        // // --- NEW: Grading & Scoring ---
+        // vendorGrade: { 
+        //     type: String, 
+        //     enum: ["A+", "A", "B", "C", "Trial", "Suspended"], 
+        //     default: "Trial" 
+        // }, // [cite: 509-515]
+        // qualityCheckScore: { type: Number, min: 0, max: 100, default: 0 }, // Out of 100 [cite: 239, 496]
         
         notes: { type: String, default: null }, // [cite: 138]
 

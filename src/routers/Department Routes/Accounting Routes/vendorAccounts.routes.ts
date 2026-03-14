@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
-import { createVendor, deleteVendor, getAllvendorDropDown, getAllvendors, getvendor, updateVendor, updateVendorDoc, updateVendorMainImage, updateVendorShopImages } from "../../../controllers/Department controllers/Accounting Controller/Vendor Accounts Controller/vendorAcc.controller";
+import { createVendor, deleteVendor, getAllvendorDropDown, getAllvendors, getvendor, quickVendorCreate, updateVendor, updateVendorDoc, updateVendorMainImage, updateVendorShopImages } from "../../../controllers/Department controllers/Accounting Controller/Vendor Accounts Controller/vendorAcc.controller";
 
 const vendorAccountingRoutes = Router();
 
@@ -16,7 +16,8 @@ vendorAccountingRoutes
         ]),
         processUploadFiles,
         createVendor)
-        // not use update-main-image
+    .post('/quick/createvendor', multiRoleAuthMiddleware("owner", "staff", "CTO"), quickVendorCreate)
+    // not use update-main-image
     .put(
         "/update-main-image/:vendorId",
         multiRoleAuthMiddleware("owner", "staff", "CTO"),
@@ -25,7 +26,7 @@ vendorAccountingRoutes
         updateVendorMainImage
     )
     .put("/updatevendor/:id/document", multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("files"), processUploadFiles, updateVendorDoc)
-   .put("/updatevendor/:id/shopimages", multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("shopImages"), processUploadFiles, updateVendorShopImages)
+    .put("/updatevendor/:id/shopimages", multiRoleAuthMiddleware("owner", "staff", "CTO"), imageUploadToS3.array("shopImages"), processUploadFiles, updateVendorShopImages)
     .put("/updatevendor/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), updateVendor)
     .delete("/deletevendor/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), deleteVendor)
     .get("/singlevendor/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), getvendor)

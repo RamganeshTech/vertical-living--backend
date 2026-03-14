@@ -27,7 +27,7 @@ export const createAssignment = async (req: Request, res: Response): Promise<any
             
             1. Scope: The vendor agrees to execute Project ID: ${projectId}.
             2. Payment: Based on terms: ${vendor.paymentTerms || "Standard"}.
-            3. Warranty: Vendor must provide service support as per Grade ${vendor.vendorGrade}.
+            3. Warranty: Vendor must provide service support.
             4. Timeline: Work must commence within 48 hours of digital acceptance.
         `;
 
@@ -92,6 +92,8 @@ export const getAllAssignments = async (req: Request, res: Response): Promise<an
             search,
             status,
             startDate,
+            projectId,
+            vendorId,
             endDate
         } = req.query;
 
@@ -104,6 +106,12 @@ export const getAllAssignments = async (req: Request, res: Response): Promise<an
         //     if (startDate) filter.createdAt.$gte = new Date(startDate as string);
         //     if (endDate) filter.createdAt.$lte = new Date(endDate as string);
         // }
+
+
+        if (projectId) filter.projectId = projectId;
+        if (vendorId) filter.vendorId = vendorId;
+
+        
 
         // 2. Date Range Filtering (createdAt)
         if (startDate || endDate) {

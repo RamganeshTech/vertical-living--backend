@@ -6,7 +6,7 @@ import redisClient from '../../../../config/redisClient';
 import { RoleBasedRequest } from '../../../../types/types';
 import { validateCreateVendor, validateUpdateVendor } from './vendorAccountsValidation';
 import VendorAccountModel from '../../../../models/Department Models/Accounting Model/vendor.model';
-import { validateMongoId } from '../Customer Accounts Controllers/customerAccoutsValidation';
+import { validateEmail, validateMongoId, validatePhone } from '../Customer Accounts Controllers/customerAccoutsValidation';
 import { getCoordinatesFromGoogleMapUrl } from '../../../../utils/common features/utils';
 
 export const createVendor = async (req: RoleBasedRequest, res: Response): Promise<any> => {
@@ -165,6 +165,119 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
     }
 };
 
+
+export const quickVendorCreate = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+
+        const { organizationId, firstName,
+            companyName,
+            shopDisplayName,
+            vendorCategory, email, phone, shopFullAddress } = req.body
+
+
+        // Validate request body
+        // const validationResult = validateCreateVendor(req.body);
+
+        if (!organizationId) {
+            return res.status(400).json({ ok: false, message: 'organizationId is required' });
+        }
+
+        if (!firstName || firstName.trim() === '') {
+            return res.status(400).json({ ok: false, message: 'First name is required' });
+        }
+
+
+        // Email validation (optional but must be valid if provided)
+        if (email && email.trim() !== '') {
+            if (!validateEmail(email)) {
+                return res.status(400).json({ ok: false, message: 'Invalid email format' });
+            }
+        }
+
+        // Phone validation (optional but must be valid if provided)
+        if (phone) {
+            if (phone.work && phone.work.trim() !== '') {
+                const workPhone = phone.work.trim();
+                const isOnlyDigits = /^\d+$/.test(workPhone);
+                const isValidLength = workPhone.length >= 10 && workPhone.length <= 11;
+                if ( !isOnlyDigits || !isValidLength ) {
+                    // errors.push({ field: 'phone.work', message: 'Invalid work phone format' });
+                    return res.status(400).json({ ok: false, message: 'Invalid work phone format. Must be 10 to 11 digits.' });
+
+                }
+            }
+
+            if (phone.mobile && phone.mobile.trim() !== '') {
+                if (!validatePhone(phone.mobile)) {
+                    // errors.push({ field: 'phone.mobile', message: 'Invalid mobile phone format' });
+                    return res.status(400).json({ ok: false, message: 'Invalid mobile phone format' });
+
+                }
+            }
+
+            if (phone.whatsappNumber && phone.whatsappNumber.trim() !== '') {
+                if (!validatePhone(phone.whatsappNumber)) {
+                    // errors.push({ field: 'phone.mobile', message: 'Invalid whatsappNumber phone format' });
+                    return res.status(400).json({ ok: false, message: 'Invalid whatsappNumber phone format' });
+
+                }
+            }
+        }
+
+
+        // Check if customer with same email already exists for this project
+        if (email) {
+            const existingCustomer = await VendorAccountModel.findOne({
+                email: email,
+                // projectId: req.body.projectId
+            });
+
+            if (existingCustomer) {
+                return res.status(409).json({
+                    ok: false,
+                    message: 'Vendor with this email already exists'
+                });
+            }
+        }
+
+        // Create customer
+        const vendor = new VendorAccountModel({
+            organizationId,
+            firstName: firstName,
+            email,
+            vendorCategory,
+            phone,
+            companyName,
+            shopDisplayName,
+            shopFullAddress
+        });
+
+        await vendor.save();
+
+        const globalOrgPattern = `vendors:*organizationId:${organizationId}*`;
+
+        const keys = await redisClient.keys(globalOrgPattern);
+
+        if (keys.length > 0) {
+            await redisClient.del(keys);
+        }
+
+        return res.status(201).json({
+            ok: true,
+            message: 'vendor created ok fully from quick create',
+            data: vendor
+        });
+
+    } catch (error: any) {
+        console.error('Error creating vendor from quick create:', error);
+        return res.status(500).json({
+            ok: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+};
+
 export const updateVendor = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
@@ -223,7 +336,7 @@ export const updateVendor = async (req: RoleBasedRequest, res: Response): Promis
             if (duplicateEmail) {
                 return res.status(409).json({
                     ok: false,
-                    message: 'Vendor with this email already exists in this project'
+                    message: 'Vendor with this email already exists'
                 });
             }
         }
@@ -808,9 +921,9 @@ export const getAllvendors = async (req: RoleBasedRequest, res: Response): Promi
 export const getAllvendorDropDown = async (req: Request, res: Response): Promise<any> => {
     try {
 
-        const {organizationId} = req.params
+        const { organizationId } = req.params
         const {
-             priority
+            priority
         } = req.query;
 
 
@@ -850,7 +963,7 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
         const cacheKey = `vendors:dropdown:organizationId:${organizationId || 'all'}:pri:${priority || 'all'}`;
 
         // Check cache
-        await redisClient.del(cacheKey);
+        // await redisClient.del(cacheKey);
         const cachedData = await redisClient.get(cacheKey);
 
         if (cachedData) {
@@ -864,7 +977,7 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
 
         // Fetch vendors with pagination
         const vendors = await VendorAccountModel.find(filter)
-        .select('_id firstName lastName companyName email shopDisplayName shopFullAddress phone priority') // Only select needed fields
+            .select('_id firstName lastName companyName email shopDisplayName shopFullAddress phone priority') // Only select needed fields
             .lean();
 
         let modifiedvendor = vendors.map(vendor => {
@@ -877,8 +990,8 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
                 shopName: vendor.shopDisplayName || "",
                 address: vendor.shopFullAddress || "",
                 phoneNo: vendor.phone?.work || vendor.phone?.mobile || "",
-                work: vendor.phone?.work  || "",
-                mobile:vendor.phone?.mobile || "",
+                work: vendor.phone?.work || "",
+                mobile: vendor.phone?.mobile || "",
                 priority: vendor?.priority || []
             }
         })
