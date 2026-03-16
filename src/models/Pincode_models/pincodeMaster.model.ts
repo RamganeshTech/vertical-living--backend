@@ -32,7 +32,7 @@ export interface IPincodeMaster extends Document {
     notes: string | null;
     lastReviewedAt: Date | null;
     reviewedBy: Types.ObjectId | null;
-    vendors: {vendorId: Types.ObjectId}[];
+    partners: {partnerId: Types.ObjectId}[];
 }
 
 const PincodeMasterSchema = new Schema<IPincodeMaster>(
@@ -76,8 +76,8 @@ const PincodeMasterSchema = new Schema<IPincodeMaster>(
         lastReviewedAt: { type: Date, default: null }, // [cite: 139]
         reviewedBy: { type: Schema.Types.ObjectId, ref: "StaffModel", default: null }, // [cite: 140]
 
-        vendors: [{
-            vendorId: { type: Schema.Types.ObjectId, ref: "VendorAccountModel" },
+        partners: [{
+            partnerId: { type: Schema.Types.ObjectId, ref: "ExecutionPartnerModel" },
         }],
     },
     { timestamps: true }

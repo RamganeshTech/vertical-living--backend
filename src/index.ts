@@ -97,7 +97,6 @@ import salesAccountsRoutes from './routers/Department Routes/Accounting Routes/s
 import publicOrderMaterialRoutes from './routers/Stage routes/order Material routes/publicOrderMaterial.routes';
 import shopLibRoutes from './routers/Stage routes/order Material routes/shopLibDetails.routes';
 import vendorAccountingRoutes from './routers/Department Routes/Accounting Routes/vendorAccounts.routes';
-import ExpenseRoutes from './routers/Department Routes/Accounting Routes/expense.routes';
 import ExpenseAccountingRoutes from './routers/Department Routes/Accounting Routes/expense.routes';
 import BillAccountRoutes from './routers/Department Routes/Accounting Routes/billAccounts.routes';
 import PurchaseAccRoutes from './routers/Department Routes/Accounting Routes/purchaseAcc.routes';
@@ -134,6 +133,7 @@ import publicLeadCollectionRoutes from './routers/publicLeadCollection_routes/pu
 import pincodeMasterRoutes from './routers/pincode_routes/pincodeMaster.routes';
 import pincodeVendorMappingRoutes from './routers/pincode_routes/pincodeVendorMapping.routes';
 import pincodeVendorProjectAssignmentRoutes from './routers/pincode_routes/pincodeVendorProjectAssignment.routes';
+import ExecutionPartnerAccountingRoutes from './routers/Department Routes/Accounting Routes/executionPartner.routes';
 
 
 // Extend Socket interface for custom properties
@@ -387,6 +387,7 @@ app.use('/api/department/accounting/bill', BillAccountRoutes)
 app.use('/api/department/accounting/billpdf', BillNewAccountRoutes)
 app.use('/api/department/accounting/purchase', PurchaseAccRoutes)
 app.use('/api/department/accounting/vendorpayment', VendorPaymentRoutes)
+app.use('/api/department/accounting/execution-partner', ExecutionPartnerAccountingRoutes)
 
 
 // QUOTES API

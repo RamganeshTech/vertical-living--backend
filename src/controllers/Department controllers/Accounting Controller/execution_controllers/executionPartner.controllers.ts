@@ -4,18 +4,29 @@ import { Request, Response } from 'express';
 
 import redisClient from '../../../../config/redisClient';
 import { RoleBasedRequest } from '../../../../types/types';
-import { validateCreateVendor, validateUpdateVendor } from './vendorAccountsValidation';
-import VendorAccountModel from '../../../../models/Department Models/Accounting Model/vendor.model';
 import { validateEmail, validateMongoId, validatePhone } from '../Customer Accounts Controllers/customerAccoutsValidation';
 import { getCoordinatesFromGoogleMapUrl } from '../../../../utils/common features/utils';
+import ExecutionPartnerModel from '../../../../models/Department Models/Accounting Model/executionPartner.model';
 
-export const createVendor = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const createExecutionPartner = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
 
 
 
 
-       
+        // organizationId validation
+        if (!req.body.organizationId || !validateMongoId(req.body.organizationId)) {
+            res.status(400).json({ ok: false, message: 'Invalid organization Id format' });
+        }
+
+        // Email validation (if provided)
+        if (req.body.email && req.body.email.trim() !== '' && req.body.email !== null) {
+            if (!validateEmail(req.body.email)) {
+                res.status(400).json({ ok: false, message: 'Invalid email format' });
+            }
+        }
+
+
         if (req.body.phone && typeof req.body.phone === 'string') {
             req.body.phone = JSON.parse(req.body.phone);
         }
@@ -36,6 +47,21 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
         }
 
 
+        // Phone validation (if provided)
+        if (req.body.phone) {
+            // if (data.phone.work && data.phone.work.trim() !== '' && data.phone.work !== null) {
+            //     if (!validatePhone(data.phone.work)) {
+            //         errors.push({ field: 'phone.work', message: 'Invalid work phone format' });
+            //     }
+            // }
+            if (req.body.phone.mobile && req.body.phone.mobile.trim() !== '' && req.body.phone.mobile !== null) {
+                if (!validatePhone(req.body.phone.mobile)) {
+                    res.status(400).json({ ok: false, message: 'Invalid mobile phone format' });
+                }
+            }
+        }
+
+
 
         // // Convert string boolean to actual boolean
         // if (req.body.enablePortal !== undefined && typeof req.body.enablePortal === 'string') {
@@ -43,19 +69,19 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
         // }
 
         // Validate request body
-        const validationResult = validateCreateVendor(req.body);
+        // const validationResult = validateCreateVendor(req.body);
 
-        if (!validationResult.isValid) {
-            return res.status(400).json({
-                ok: false,
-                message: 'Validation failed',
-                errors: validationResult.errors
-            });
-        }
+        // if (!validationResult.isValid) {
+        //     return res.status(400).json({
+        //         ok: false,
+        //         message: 'Validation failed',
+        //         errors: validationResult.errors
+        //     });
+        // }
 
         // Check if customer with same email already exists for this project
         if (req.body.email) {
-            const existingCustomer = await VendorAccountModel.findOne({
+            const existingCustomer = await ExecutionPartnerModel.findOne({
                 email: req.body.email,
                 // projectId: req.body.projectId
             });
@@ -63,7 +89,7 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
             if (existingCustomer) {
                 return res.status(409).json({
                     ok: false,
-                    message: 'Vendor with this email already exists in this project'
+                    message: 'Partner with this email already exists in this project'
                 });
             }
         }
@@ -144,12 +170,12 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
         }
 
         // Create customer
-        const vendor = new VendorAccountModel({ ...req.body, documents, shopImages });
+        const vendor = new ExecutionPartnerModel({ ...req.body, documents, shopImages });
         await vendor.save();
 
         // Invalidate cache for the organiziaotns's customer list
         // const cachePattern = `customers:organizationId:${req.body.organizationId}:*`;
-        const cachePattern = `vendors:organizationId:${req.body.organizationId}*`;
+        const cachePattern = `executionpartner:organizationId:${req.body.organizationId}*`;
         const keys = await redisClient.keys(cachePattern);
         if (keys.length > 0) {
             await redisClient.del(keys);
@@ -157,12 +183,12 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
 
         return res.status(201).json({
             ok: true,
-            message: 'vendor created okfully',
+            message: 'Partner created okfully',
             data: vendor
         });
 
     } catch (error: any) {
-        console.error('Error creating vendor:', error);
+        console.error('Error creating executionpartner:', error);
         return res.status(500).json({
             ok: false,
             message: 'Internal server error',
@@ -172,13 +198,12 @@ export const createVendor = async (req: RoleBasedRequest, res: Response): Promis
 };
 
 
-export const quickVendorCreate = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const quickExecutionPartnerCreate = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
 
         const { organizationId, firstName,
             companyName,
-            shopDisplayName,
-            vendorCategory, email, phone, shopFullAddress } = req.body
+            category, email, phone, address } = req.body
 
 
         // Validate request body
@@ -233,7 +258,7 @@ export const quickVendorCreate = async (req: RoleBasedRequest, res: Response): P
 
         // Check if customer with same email already exists for this project
         if (email) {
-            const existingCustomer = await VendorAccountModel.findOne({
+            const existingCustomer = await ExecutionPartnerModel.findOne({
                 email: email,
                 // projectId: req.body.projectId
             });
@@ -241,26 +266,25 @@ export const quickVendorCreate = async (req: RoleBasedRequest, res: Response): P
             if (existingCustomer) {
                 return res.status(409).json({
                     ok: false,
-                    message: 'Vendor with this email already exists'
+                    message: 'Partner with this email already exists'
                 });
             }
         }
 
         // Create customer
-        const vendor = new VendorAccountModel({
+        const vendor = new ExecutionPartnerModel({
             organizationId,
             firstName: firstName,
             email,
-            vendorCategory,
+            category,
             phone,
             companyName,
-            shopDisplayName,
-            shopFullAddress
+            address
         });
 
         await vendor.save();
 
-        const globalOrgPattern = `vendors:*organizationId:${organizationId}*`;
+        const globalOrgPattern = `executionpartner:*organizationId:${organizationId}*`;
 
         const keys = await redisClient.keys(globalOrgPattern);
 
@@ -270,12 +294,12 @@ export const quickVendorCreate = async (req: RoleBasedRequest, res: Response): P
 
         return res.status(201).json({
             ok: true,
-            message: 'vendor created ok fully from quick create',
+            message: 'partners created ok fully from quick create',
             data: vendor
         });
 
     } catch (error: any) {
-        console.error('Error creating vendor from quick create:', error);
+        console.error('Error creating partners from quick create:', error);
         return res.status(500).json({
             ok: false,
             message: 'Internal server error',
@@ -284,7 +308,7 @@ export const quickVendorCreate = async (req: RoleBasedRequest, res: Response): P
     }
 };
 
-export const updateVendor = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const updateExecutionPartner = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
 
@@ -292,7 +316,7 @@ export const updateVendor = async (req: RoleBasedRequest, res: Response): Promis
         if (!validateMongoId(id)) {
             return res.status(400).json({
                 ok: false,
-                message: 'Invalid vendor ID format'
+                message: 'Invalid partners ID format'
             });
         }
 
@@ -311,29 +335,45 @@ export const updateVendor = async (req: RoleBasedRequest, res: Response): Promis
             });
         }
 
-        // Validate request body
-        const validationResult = validateUpdateVendor(req.body);
-
-        if (!validationResult.isValid) {
-            return res.status(400).json({
-                ok: false,
-                message: 'Validation failed',
-                errors: validationResult.errors
-            });
+        
+        // Phone validation (if provided)
+        if (req.body.phone) {
+            // if (data.phone.work && data.phone.work.trim() !== '' && data.phone.work !== null) {
+            //     if (!validatePhone(data.phone.work)) {
+            //         errors.push({ field: 'phone.work', message: 'Invalid work phone format' });
+            //     }
+            // }
+            if (req.body.phone.mobile && req.body.phone.mobile.trim() !== '' && req.body.phone.mobile !== null) {
+                if (!validatePhone(req.body.phone.mobile)) {
+                    res.status(400).json({ ok: false, message: 'Invalid mobile phone format' });
+                }
+            }
         }
 
+
+        // Validate request body
+        // const validationResult = validateUpdateVendor(req.body);
+
+        // if (!validationResult.isValid) {
+        //     return res.status(400).json({
+        //         ok: false,
+        //         message: 'Validation failed',
+        //         errors: validationResult.errors
+        //     });
+        // }
+
         // Check if customer exists
-        const existingVendor = await VendorAccountModel.findById(id);
+        const existingVendor = await ExecutionPartnerModel.findById(id);
         if (!existingVendor) {
             return res.status(404).json({
                 ok: false,
-                message: 'Vendor not found'
+                message: 'partners not found'
             });
         }
 
         // Check if email is being updated and if it's unique
         if (req.body.email && req.body.email !== existingVendor.email) {
-            const duplicateEmail = await VendorAccountModel.findOne({
+            const duplicateEmail = await ExecutionPartnerModel.findOne({
                 email: req.body.email,
                 // projectId: existingVendor.projectId,
                 _id: { $ne: id }
@@ -342,7 +382,7 @@ export const updateVendor = async (req: RoleBasedRequest, res: Response): Promis
             if (duplicateEmail) {
                 return res.status(409).json({
                     ok: false,
-                    message: 'Vendor with this email already exists'
+                    message: 'partners with this email already exists'
                 });
             }
         }
@@ -363,18 +403,18 @@ export const updateVendor = async (req: RoleBasedRequest, res: Response): Promis
 
 
         // Update customer
-        const updatedVendor = await VendorAccountModel.findByIdAndUpdate(
+        const updatedVendor = await ExecutionPartnerModel.findByIdAndUpdate(
             id,
             { $set: req.body },
             { new: true, runValidators: true }
         );
 
         // Invalidate cache
-        const cacheKey = `vendor:${id}`;
+        const cacheKey = `executionpartner:${id}`;
         await redisClient.del(cacheKey);
 
         // const cachePattern = `customers:organizationId:${existingVendor.organizationId}:*`;
-        const cachePattern = `vendors:organizationId:${req.body.organizationId}*`;
+        const cachePattern = `executionpartner:organizationId:${req.body.organizationId}*`;
 
         const keys = await redisClient.keys(cachePattern);
         if (keys.length > 0) {
@@ -383,12 +423,12 @@ export const updateVendor = async (req: RoleBasedRequest, res: Response): Promis
 
         return res.status(200).json({
             ok: true,
-            message: 'Vendor updated okfully',
+            message: 'partners updated okfully',
             data: updatedVendor
         });
 
     } catch (error: any) {
-        console.error('Error updating vendor:', error);
+        console.error('Error updating executionpartner:', error);
         return res.status(500).json({
             ok: false,
             message: 'Internal server error',
@@ -399,9 +439,9 @@ export const updateVendor = async (req: RoleBasedRequest, res: Response): Promis
 
 
 
-export const updateVendorMainImage = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const updateExecutionPartnerMainImage = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { vendorId } = req.params;
+        const { executionvendorId } = req.params;
 
         // 1. Check if file exists
         // Note: Since we use imageUploadToS3.single('mainImage'), the file is in req.file (not req.files)
@@ -425,8 +465,8 @@ export const updateVendorMainImage = async (req: RoleBasedRequest, res: Response
 
 
         // 2. Update Database
-        const updatedVendor = await VendorAccountModel.findByIdAndUpdate(
-            vendorId,
+        const updatedVendor = await ExecutionPartnerModel.findByIdAndUpdate(
+            executionvendorId,
             { mainImage: mainImageObject },
             { new: true } // Return updated doc
         );
@@ -434,15 +474,15 @@ export const updateVendorMainImage = async (req: RoleBasedRequest, res: Response
         if (!updatedVendor) {
             return res.status(404).json({
                 ok: false,
-                message: 'Vendor not found'
+                message: 'partners not found'
             });
         }
 
-        const cacheKey = `vendor:${updatedVendor._id}`;
+        const cacheKey = `executionpartner:${updatedVendor._id}`;
         await redisClient.del(cacheKey);
 
         // const cachePattern = `customers:organizationId:${existingVendor.organizationId}:*`;
-        const cachePattern = `vendors:organizationId:${req.body.organizationId}*`;
+        const cachePattern = `executionpartner:organizationId:${req.body.organizationId}*`;
 
         const keys = await redisClient.keys(cachePattern);
         if (keys.length > 0) {
@@ -470,7 +510,7 @@ export const updateVendorMainImage = async (req: RoleBasedRequest, res: Response
 
 
 
-export const updateVendorDoc = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const updateExecutionPartnerDoc = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
 
         const { id } = req.params;
@@ -479,7 +519,7 @@ export const updateVendorDoc = async (req: RoleBasedRequest, res: Response): Pro
         if (!validateMongoId(id)) {
             return res.status(400).json({
                 ok: false,
-                message: 'Invalid vendor ID format'
+                message: 'Invalid partners ID format'
             });
         }
 
@@ -504,7 +544,7 @@ export const updateVendorDoc = async (req: RoleBasedRequest, res: Response): Pro
         }
 
         // Update Vendor - push documents to array
-        const updatedVendor = await VendorAccountModel.findByIdAndUpdate(
+        const updatedVendor = await ExecutionPartnerModel.findByIdAndUpdate(
             id,
             { $push: { documents: { $each: documents } } }, // Use $each to push multiple documents
             { new: true, runValidators: true }
@@ -513,14 +553,14 @@ export const updateVendorDoc = async (req: RoleBasedRequest, res: Response): Pro
         if (!updatedVendor) {
             return res.status(400).json({
                 ok: false,
-                message: 'Vendor not found',
+                message: 'partners not found',
             });
         }
         // Invalidate cache
-        const cacheKey = `vendor:${id}`;
+        const cacheKey = `executionpartner:${id}`;
         await redisClient.del(cacheKey);
 
-        const cachePattern = `vendors:organizationId:${updatedVendor.organizationId}:*`;
+        const cachePattern = `executionpartner:organizationId:${updatedVendor.organizationId}:*`;
         const keys = await redisClient.keys(cachePattern);
         if (keys.length > 0) {
             await redisClient.del(keys);
@@ -528,11 +568,11 @@ export const updateVendorDoc = async (req: RoleBasedRequest, res: Response): Pro
 
         return res.status(200).json({
             ok: true,
-            message: 'Vendor updated okfully',
+            message: 'partners updated okfully',
             data: updatedVendor
         });
     } catch (error: any) {
-        console.error('Error updating Vendor:', error);
+        console.error('Error updating partners:', error);
         return res.status(500).json({
             ok: false,
             message: 'Internal server error',
@@ -542,7 +582,7 @@ export const updateVendorDoc = async (req: RoleBasedRequest, res: Response): Pro
 }
 
 
-export const updateVendorShopImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const updateExecutionPartnerShopImages = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
 
         const { id } = req.params;
@@ -551,7 +591,7 @@ export const updateVendorShopImages = async (req: RoleBasedRequest, res: Respons
         if (!validateMongoId(id)) {
             return res.status(400).json({
                 ok: false,
-                message: 'Invalid vendor ID format'
+                message: 'Invalid partners ID format'
             });
         }
 
@@ -576,7 +616,7 @@ export const updateVendorShopImages = async (req: RoleBasedRequest, res: Respons
         }
 
         // Update Vendor - push documents to array
-        const updatedVendor = await VendorAccountModel.findByIdAndUpdate(
+        const updatedVendor = await ExecutionPartnerModel.findByIdAndUpdate(
             id,
             { $push: { shopImages: { $each: shopImages } } }, // Use $each to push multiple documents
             { new: true, runValidators: true }
@@ -585,14 +625,14 @@ export const updateVendorShopImages = async (req: RoleBasedRequest, res: Respons
         if (!updatedVendor) {
             return res.status(400).json({
                 ok: false,
-                message: 'Vendor not found',
+                message: 'partners not found',
             });
         }
         // Invalidate cache
-        const cacheKey = `vendor:${id}`;
+        const cacheKey = `executionpartner:${id}`;
         await redisClient.del(cacheKey);
 
-        const cachePattern = `vendors:organizationId:${updatedVendor.organizationId}:*`;
+        const cachePattern = `executionpartner:organizationId:${updatedVendor.organizationId}:*`;
         const keys = await redisClient.keys(cachePattern);
         if (keys.length > 0) {
             await redisClient.del(keys);
@@ -600,7 +640,7 @@ export const updateVendorShopImages = async (req: RoleBasedRequest, res: Respons
 
         return res.status(200).json({
             ok: true,
-            message: 'vendo rshop images updated',
+            message: 'partners shop images updated',
             data: updatedVendor
         });
     } catch (error: any) {
@@ -617,7 +657,7 @@ export const updateVendorShopImages = async (req: RoleBasedRequest, res: Respons
  * Delete a customer
  * DELETE /api/customers/:id
  */
-export const deleteVendor = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const deleteExecutionPartner = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
 
@@ -630,7 +670,7 @@ export const deleteVendor = async (req: RoleBasedRequest, res: Response): Promis
         }
 
         // Delete vendor
-        const vendor = await VendorAccountModel.findByIdAndDelete(id);
+        const vendor = await ExecutionPartnerModel.findByIdAndDelete(id);
         if (!vendor) {
             return res.status(404).json({
                 ok: false,
@@ -639,11 +679,11 @@ export const deleteVendor = async (req: RoleBasedRequest, res: Response): Promis
         }
 
         // Invalidate cache
-        const cacheKey = `vendor:${id}`;
+        const cacheKey = `executionpartner:${id}`;
         await redisClient.del(cacheKey);
 
-        // const cachePattern = `vendors:organizationId:${vendor.organizationId}:*`;
-        const cachePattern = `vendors:organizationId:${vendor?.organizationId?.toString()}*`;
+        // const cachePattern = `executionpartner:organizationId:${vendor.organizationId}:*`;
+        const cachePattern = `executionpartner:organizationId:${vendor?.organizationId?.toString()}*`;
 
         const keys = await redisClient.keys(cachePattern);
         if (keys.length > 0) {
@@ -652,11 +692,11 @@ export const deleteVendor = async (req: RoleBasedRequest, res: Response): Promis
 
         return res.status(200).json({
             ok: true,
-            message: 'vendor deleted okfully'
+            message: 'partners deleted okfully'
         });
 
     } catch (error: any) {
-        console.error('Error deleting vendor:', error);
+        console.error('Error deleting executionpartner:', error);
         return res.status(500).json({
             ok: false,
             message: 'Internal server error',
@@ -668,7 +708,7 @@ export const deleteVendor = async (req: RoleBasedRequest, res: Response): Promis
  * Get single vendor with Redis caching
  * GET /api/vendors/:id
  */
-export const getvendor = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const getExecutionPartner = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
 
@@ -681,26 +721,26 @@ export const getvendor = async (req: RoleBasedRequest, res: Response): Promise<a
         }
 
         // Check cache
-        const cacheKey = `vendor:${id}`;
+        const cacheKey = `executionpartner:${id}`;
         const cachedData = await redisClient.get(cacheKey);
 
         if (cachedData) {
             return res.status(200).json({
                 ok: true,
-                message: 'vendor fetched okfully (from cache)',
+                message: 'partners fetched okfully (from cache)',
                 data: JSON.parse(cachedData),
             });
         }
 
         // Fetch from database
-        const vendor = await VendorAccountModel.findById(id)
+        const vendor = await ExecutionPartnerModel.findById(id)
         // .populate('projectId', 'name')
         // .populate('clientId', 'name');
 
         if (!vendor) {
             return res.status(404).json({
                 ok: false,
-                message: 'vendor not found'
+                message: 'partners not found'
             });
         }
 
@@ -709,13 +749,13 @@ export const getvendor = async (req: RoleBasedRequest, res: Response): Promise<a
 
         return res.status(200).json({
             ok: true,
-            message: 'vendor fetched okfully',
+            message: 'partners fetched okfully',
             data: vendor,
 
         });
 
     } catch (error: any) {
-        console.error('Error fetching vendor:', error);
+        console.error('Error fetching executionpartner:', error);
         return res.status(500).json({
             ok: false,
             message: 'Internal server error',
@@ -729,7 +769,7 @@ export const getvendor = async (req: RoleBasedRequest, res: Response): Promise<a
  * GET /api/vendors
  * Query params: page, limit, projectId, firstName, lastName, vendorType, search
  */
-export const getAllvendors = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+export const getAllExecutionPartner = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const {
             page = '1',
@@ -843,7 +883,7 @@ export const getAllvendors = async (req: RoleBasedRequest, res: Response): Promi
         }
 
         // Create cache key based on filters
-        const cacheKey = `vendors:organizationId:${organizationId || 'all'}:page:${pageNum}:limit:${limitNum}:search:${search || 'none'}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:sort:${sortBy}:${sortOrder}`;
+        const cacheKey = `executionpartner:organizationId:${organizationId || 'all'}:page:${pageNum}:limit:${limitNum}:search:${search || 'none'}:createdFromDate:${createdFromDate || "all"}:createdToDate:${createdToDate || "all"}:sort:${sortBy}:${sortOrder}`;
 
         // Check cache
         const cachedData = await redisClient.get(cacheKey);
@@ -852,7 +892,7 @@ export const getAllvendors = async (req: RoleBasedRequest, res: Response): Promi
         if (cachedData) {
             return res.status(200).json({
                 ok: true,
-                message: 'vendors fetched okfully (from cache)',
+                message: 'partners fetched okfully (from cache)',
                 ...JSON.parse(cachedData),
 
             });
@@ -867,14 +907,14 @@ export const getAllvendors = async (req: RoleBasedRequest, res: Response): Promi
 
         // Fetch vendors with pagination
         const [vendors, totalCount] = await Promise.all([
-            VendorAccountModel.find(filter)
+            ExecutionPartnerModel.find(filter)
                 .sort(sort)
                 .skip(skip)
                 .limit(limitNum)
                 // .populate('projectId', 'ProjectNAme')
                 // .populate('clientId', 'clientName')
                 .lean(),
-            VendorAccountModel.countDocuments(filter)
+            ExecutionPartnerModel.countDocuments(filter)
         ]);
 
         // Calculate pagination metadata
@@ -906,13 +946,13 @@ export const getAllvendors = async (req: RoleBasedRequest, res: Response): Promi
 
         return res.status(200).json({
             ok: true,
-            message: 'vendors fetched okfully',
+            message: 'partners fetched okfully',
             ...response,
 
         });
 
     } catch (error: any) {
-        console.error('Error fetching vendors:', error);
+        console.error('Error fetching executionpartner:', error);
         return res.status(500).json({
             ok: false,
             message: 'Internal server error',
@@ -924,7 +964,7 @@ export const getAllvendors = async (req: RoleBasedRequest, res: Response): Promi
 
 
 
-export const getAllvendorDropDown = async (req: Request, res: Response): Promise<any> => {
+export const getAllExecutionPartnerDropDown = async (req: Request, res: Response): Promise<any> => {
     try {
 
         const { organizationId } = req.params
@@ -966,7 +1006,7 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
 
 
         // Create cache key based on filters
-        const cacheKey = `vendors:dropdown:organizationId:${organizationId || 'all'}:pri:${priority || 'all'}`;
+        const cacheKey = `executionpartner:dropdown:organizationId:${organizationId || 'all'}:pri:${priority || 'all'}`;
 
         // Check cache
         // await redisClient.del(cacheKey);
@@ -975,26 +1015,25 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
         if (cachedData) {
             return res.status(200).json({
                 ok: true,
-                message: 'vendors fetched okfully (from cache)',
+                message: 'partners fetched okfully (from cache)',
                 data: JSON.parse(cachedData),
             });
         }
 
 
         // Fetch vendors with pagination
-        const vendors = await VendorAccountModel.find(filter)
-            .select('_id firstName lastName companyName email shopDisplayName shopFullAddress phone priority') // Only select needed fields
+        const vendors = await ExecutionPartnerModel.find(filter)
+            .select('_id firstName companyName email address phone priority') // Only select needed fields
             .lean();
 
         let modifiedvendor = vendors.map(vendor => {
             return {
                 _id: vendor._id,
-                vendorName: `${vendor.firstName}`,
+                partnerName: `${vendor.firstName}`,
                 firstName: vendor?.firstName,
                 companyName: vendor?.companyName || "",
                 email: vendor.email || "",
-                shopName: vendor.shopDisplayName || "",
-                address: vendor.shopFullAddress || "",
+                address: vendor.address || "",
                 phoneNo: vendor.phone?.work || vendor.phone?.mobile || "",
                 work: vendor.phone?.work || "",
                 mobile: vendor.phone?.mobile || "",
@@ -1009,12 +1048,12 @@ export const getAllvendorDropDown = async (req: Request, res: Response): Promise
 
         return res.status(200).json({
             ok: true,
-            message: 'vendors fetched okfully',
+            message: 'partners fetched okfully',
             data: modifiedvendor
         });
 
     } catch (error: any) {
-        console.error('Error fetching vendors:', error);
+        console.error('Error fetching executionpartner:', error);
         return res.status(500).json({
             ok: false,
             message: 'Internal server error',

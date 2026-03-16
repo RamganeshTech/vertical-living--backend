@@ -2,7 +2,7 @@ import mongoose, {Schema, Types} from "mongoose"
 
 export interface IProjectAssignment extends Document {
     projectId: Types.ObjectId;
-    vendorId: Types.ObjectId;
+    partnerId: Types.ObjectId;
     organizationId: Types.ObjectId;
     
     // Legal & Acknowledgement
@@ -13,15 +13,15 @@ export interface IProjectAssignment extends Document {
     acknowledgedAt: Date | null;
     acknowledgeStatus:string
     ipAddress: string | null; // For legal proof
-    vendorNote?: string;
+    notes?: string;
 }
 
 const ProjectAssignmentSchema = new Schema<IProjectAssignment>({
     organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel", required: true },
     projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", required: true },
-    vendorId: { type: Schema.Types.ObjectId, ref: "VendorAccountModel", required: true },
+    partnerId: { type: Schema.Types.ObjectId, ref: "ExecutionPartnerModel",},
     
-    termsAndConditions: { type: String, required: true },
+    termsAndConditions: { type: String,  },
     status: { 
         type: String, 
         enum: ["pending", "accepted", "rejected", "in-progress", "completed"], 
@@ -31,7 +31,7 @@ const ProjectAssignmentSchema = new Schema<IProjectAssignment>({
     acknowledgedAt: { type: Date, default: null },
     acknowledgeStatus: { type: String, enum:["pending", "accepted"], default: "pending" },
     ipAddress: { type: String, default: null },
-    vendorNote: String
+    notes: String
 }, { timestamps: true });
 
 export const PincodeVendorProjectAssignment = mongoose.model<IProjectAssignment>("PincodeVendorProjectAssignmentModel", ProjectAssignmentSchema);

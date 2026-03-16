@@ -6,7 +6,7 @@
 import { PDFDocument, rgb, PDFFont, RGB, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import axios from 'axios';
-import { IBillNew, ITemplateBill, IBillStyle } from '../../../../models/Department Models/Accounting Model/Bill_New_Accounts_controllers/billNewAccounting.model';
+import { IBillNew, ITemplateBill, IBillStyle } from '../../../../models/Department Models/Accounting Model/Bill_New_Accounts_model/billNewAccounting.model';
 
 // --- CONSTANTS ---
 const PAGE_WIDTH = 794;
@@ -17,7 +17,7 @@ const PAGE_HEIGHT = 1123;
 // Helper to convert Hex to PDF RGB (0-1 range)
 const hexToRgb = (hex: string): RGB => {
     if (!hex || hex === 'transparent') return rgb(0, 0, 0);
-    
+
     // Handle short hex #fff
     let fullHex = hex;
     if (hex.length === 4) {
@@ -69,14 +69,14 @@ const splitTextToLines = (text: string, maxWidth: number, font: PDFFont, size: n
 };
 
 export const generateBillPdf = async (docData: IBillNew | ITemplateBill): Promise<Uint8Array> => {
-    
+
     const pdfDoc = await PDFDocument.create();
     pdfDoc.registerFontkit(fontkit);
 
     // --- 1. LOAD BOTH REGULAR AND BOLD FONTS ---
     let fontRegular: PDFFont;
     let fontBold: PDFFont;
-    
+
     try {
         // Using Google Fonts CDN for stability
         const [regRes, boldRes] = await Promise.all([
@@ -120,7 +120,7 @@ export const generateBillPdf = async (docData: IBillNew | ITemplateBill): Promis
             const isBold = comp.style.fontWeight === 'bold';
             const fontToUse = isBold ? fontBold : fontRegular;
             const color = hexToRgb(comp.style.color || '#000000');
-            
+
             const hasBg = comp.style.backgroundColor && comp.style.backgroundColor !== 'transparent';
             const bgColor = hasBg ? hexToRgb(comp.style.backgroundColor) : undefined;
 
@@ -147,8 +147,8 @@ export const generateBillPdf = async (docData: IBillNew | ITemplateBill): Promis
             lines.forEach((line, i) => {
                 const lineWidth = fontToUse.widthOfTextAtSize(line, fontSize);
                 let xOffset = 0;
-                if(comp.style.textAlign === 'center') xOffset = (width - lineWidth) / 2;
-                if(comp.style.textAlign === 'right') xOffset = (width - lineWidth);
+                if (comp.style.textAlign === 'center') xOffset = (width - lineWidth) / 2;
+                if (comp.style.textAlign === 'right') xOffset = (width - lineWidth);
 
                 page.drawText(line, {
                     x: pdfX + xOffset,
@@ -189,7 +189,7 @@ export const generateBillPdf = async (docData: IBillNew | ITemplateBill): Promis
             const tableWidth = comp.style.width || 600;
             const colPercents = comp.columnWidths || new Array(comp.value[0]?.length || 1).fill(100);
             const rowHeights = comp.rowHeights || new Array(comp.value.length).fill(30);
-            
+
             let currentY = PAGE_HEIGHT - comp.y;
 
             comp.value.forEach((row: any[], rIndex: number) => {
@@ -214,7 +214,7 @@ export const generateBillPdf = async (docData: IBillNew | ITemplateBill): Promis
                     const fontSize = cellStyle.fontSize || comp.style.fontSize || 10;
                     const isBold = (cellStyle.fontWeight === 'bold') || (comp.style.fontWeight === 'bold');
                     const fontToUse = isBold ? fontBold : fontRegular;
-                    
+
                     const textColorHex = cellStyle.color || comp.style.color || '#000000';
                     const textColor = hexToRgb(textColorHex);
 
@@ -250,9 +250,9 @@ export const generateBillPdf = async (docData: IBillNew | ITemplateBill): Promis
                     const lines = splitTextToLines(content, colWidth - 6, fontToUse, fontSize);
                     const lineHeight = fontSize * 1.15;
                     // const textBlockHeight = lines.length * lineHeight;
-                    
+
                     // Padding top: 4px
-                    const textStartY = currentY - 4 - fontSize; 
+                    const textStartY = currentY - 4 - fontSize;
 
                     lines.forEach((line, lineIdx) => {
                         const textWidth = fontToUse.widthOfTextAtSize(line, fontSize);

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BillNewModel, IBillComponent, IBillSection, TemplateBillModel } from '../../../../models/Department Models/Accounting Model/Bill_New_Accounts_controllers/billNewAccounting.model';
+import { BillNewModel, IBillComponent, IBillSection, TemplateBillModel } from '../../../../models/Department Models/Accounting Model/Bill_New_Accounts_model/billNewAccounting.model';
 import mongoose from 'mongoose';
 import { uploadToS3 } from '../../../stage controllers/ordering material controller/pdfOrderHistory.controller';
 import { generateBillPdf } from './pdfGeneratorBillNewAccounts';

@@ -1,28 +1,26 @@
 import { Request, Response } from "express";
-// import { PincodeVendorProjectAssignment } from "../models/ProjectAssignmentModel"; // Adjust path
-// import VendorAccountModel from "../models/VendorModel"; // Adjust path
 import { COMPANY_NAME } from "../stage controllers/ordering material controller/pdfOrderHistory.controller";
-import VendorAccountModel from "../../models/Department Models/Accounting Model/vendor.model";
 import { PincodeVendorProjectAssignment } from "../../models/Pincode_models/PincodeVendorProjectAssign.model";
 import ProjectModel from "../../models/project model/project.model";
+import ExecutionPartnerModel from "../../models/Department Models/Accounting Model/executionPartner.model";
 
 // 1. CREATE Assignment (With T&C Generation)
 export const createAssignment = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { organizationId, projectId, vendorId, customTerms, vendorNote } = req.body;
+        const { organizationId, projectId, partnerId, customTerms, notes } = req.body;
 
-        if (!organizationId || !projectId || !vendorId) {
+        if (!organizationId || !projectId || !partnerId) {
             return res.status(400).json({ ok: false, message: "Missing required fields" });
         }
 
         // Fetch vendor details to personalize the T&C
-        const vendor = await VendorAccountModel.findById(vendorId);
-        if (!vendor) return res.status(404).json({ ok: false, message: "Vendor not found" });
+        const vendor = await ExecutionPartnerModel.findById(partnerId);
+        if (!vendor) return res.status(404).json({ ok: false, message: "partner not found" });
 
         // Dynamic T&C Generation Logic
         const generatedTerms = customTerms || `
             LEGAL AGREEMENT - ${COMPANY_NAME}
-            Vendor: ${vendor.companyName}
+            Partner: ${vendor.companyName}
             Date: ${new Date().toLocaleDateString()}
             
             1. Scope: The vendor agrees to execute Project ID: ${projectId}.
@@ -34,10 +32,10 @@ export const createAssignment = async (req: Request, res: Response): Promise<any
         const newAssignment = new PincodeVendorProjectAssignment({
             organizationId,
             projectId,
-            vendorId,
+            partnerId,
             termsAndConditions: generatedTerms,
             status: "pending",
-            vendorNote
+            notes
         });
 
         await newAssignment.save()
@@ -56,12 +54,12 @@ export const createAssignment = async (req: Request, res: Response): Promise<any
 export const updateAssignmentStatus = async (req: Request, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
-        const { status, vendorNote } = req.body;
+        const { status, notes, partnerId, projectId } = req.body;
 
         // Capture security data for legal proof
         const ipAddress = req.ip || req.headers['x-forwarded-for'] || "0.0.0.0";
 
-        const updateData: any = { status, vendorNote };
+        const updateData: any = { status, notes , projectId, partnerId};
 
         // If vendor is accepting, record the digital signature
         if (status === "accepted") {
@@ -93,7 +91,7 @@ export const getAllAssignments = async (req: Request, res: Response): Promise<an
             status,
             startDate,
             projectId,
-            vendorId,
+            partnerId,
             endDate
         } = req.query;
 
@@ -109,7 +107,7 @@ export const getAllAssignments = async (req: Request, res: Response): Promise<an
 
 
         if (projectId) filter.projectId = projectId;
-        if (vendorId) filter.vendorId = vendorId;
+        if (partnerId) filter.partnerId = partnerId;
 
         
 
@@ -160,21 +158,21 @@ export const getAllAssignments = async (req: Request, res: Response): Promise<an
 
             // Find Vendors or Projects that match the search string
             const [matchingVendors, matchingProjects] = await Promise.all([
-                VendorAccountModel.find({
+                ExecutionPartnerModel.find({
                     $or: [
                         { companyName: searchRegex },
                         { firstName: searchRegex }
                     ]
-                }).select('_id firstName'),
+                }).select('_id firstName companyName'),
                 ProjectModel.find({ projectName: searchRegex }).select('_id projectName')
             ]);
 
-            const vendorIds = matchingVendors.map(v => v._id);
+            const partnerIds = matchingVendors.map(v => v._id);
             const projectIds = matchingProjects.map(p => p._id);
 
             // Filter assignments that belong to either matching vendors or matching projects
             filter.$or = [
-                { vendorId: { $in: vendorIds } },
+                { partnerId: { $in: partnerIds } },
                 { projectId: { $in: projectIds } }
             ];
         }
@@ -182,7 +180,7 @@ export const getAllAssignments = async (req: Request, res: Response): Promise<an
         // 5. Execute Query
         const [data, total] = await Promise.all([
             PincodeVendorProjectAssignment.find(filter)
-                .populate("vendorId", "_id companyName firstName email phone")
+                .populate("partnerId", "_id companyName firstName email phone")
                 .populate("projectId", "_id projectName")
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -211,7 +209,7 @@ export const getSingleAssignment = async (req: Request, res: Response): Promise<
     try {
         const { id } = req.params;
         const data = await PincodeVendorProjectAssignment.findById(id)
-            .populate("vendorId")
+            .populate("partnerId")
             .populate("projectId");
 
         if (!data) return res.status(404).json({ ok: false, message: "Record not found" });
@@ -245,7 +243,7 @@ export const getPublicAssignment = async (req: Request, res: Response): Promise<
     try {
         const { id } = req.params;
         const data = await PincodeVendorProjectAssignment.findById(id)
-            .populate("vendorId", "companyName firstName")
+            .populate("partnerId", "companyName firstName")
             .populate("projectId", "projectName");
 
         if (!data) return res.status(404).json({ ok: false, message: "Link invalid or expired" });
