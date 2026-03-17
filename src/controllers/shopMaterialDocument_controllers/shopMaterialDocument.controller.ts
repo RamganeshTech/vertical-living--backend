@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 import mongoose from 'mongoose';
 import { CategoryModel, ItemModel } from '../../models/Quote Model/RateConfigAdmin Model/rateConfigAdmin.model';
+import { PDFDocument } from 'pdf-lib';
 dotenv.config()
 
 
@@ -768,6 +769,25 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
       return acc;
     }, {} as Record<string, any>);
 
+
+    async function splitPdfIntoPages(pdfBuffer: ArrayBuffer): Promise<string[]> {
+      const mainPdf = await PDFDocument.load(pdfBuffer);
+      const pageCount = mainPdf.getPageCount();
+      const base64Pages: string[] = [];
+
+      for (let i = 0; i < pageCount; i++) {
+        const newDoc = await PDFDocument.create();
+        const [copiedPage] = await newDoc.copyPages(mainPdf, [i]);
+        newDoc.addPage(copiedPage);
+
+        const pdfBytes = await newDoc.save();
+        // Convert to Base64 for Gemini inlineData
+        base64Pages.push(Buffer.from(pdfBytes).toString('base64'));
+      }
+      return base64Pages;
+    }
+
+
     // 3. Prepare File for AI
     const fileResponse = await axios.get(targetFile.url, { responseType: 'arraybuffer' });
     const base64Data = Buffer.from(fileResponse.data).toString('base64');
@@ -777,7 +797,11 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
     // 2. Identify keys to extract
     const extractionKeys = extractionFields.map(f => f.key);
 
-    // 4. Construct the Dynamic Reasoning Prompt
+    const base64Pages = await splitPdfIntoPages(fileResponse.data);
+
+let aiExtractedItems: any[] = [];
+
+ // 4. Construct the Dynamic Reasoning Prompt
     const promptText = `
         ACT AS AN EXPERT DATA EXTRACTOR FOR INTERIOR DESIGN CATALOGUES.
         
@@ -804,40 +828,79 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
         [{"${extractionKeys[0]}": "value", "${extractionKeys[1]}": "value", ...}]
     `;
 
-    // 5. Call Gemini
-    const result = await genAI.models.generateContent({
-      model: "gemini-2.0-flash-lite",
-      // model: "gemini-1.5-flash",
-      contents: [{
-        role: 'user',
-        parts: [
-          { text: promptText },
-          { inlineData: { data: base64Data, mimeType: mimeType } }
-        ]
-      }],
-      config: { temperature: 0.1, maxOutputTokens: 8192 }
-    });
+   // Loop through each page Base64 chunk
+        for (let i = 0; i < base64Pages.length; i++) {
+            const pageData = base64Pages[i];
 
-    const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "[]";
-    const cleanText = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+            const result = await genAI.models.generateContent({
+                model: "gemini-2.0-flash-lite",
+                contents: [{
+                    role: 'user',
+                    parts: [
+                        { text: promptText },
+                        { inlineData: { data: pageData, mimeType: "application/pdf" } }
+                    ]
+                }],
+                config: { temperature: 0.1, maxOutputTokens: 8192 }
+            });
+
+            const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "[]";
+            const cleanText = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+
+            try {
+                // Your exact parsing logic
+                const start = cleanText.indexOf("[");
+                const end = cleanText.lastIndexOf("]");
+                const pageItems = JSON.parse(cleanText.substring(start, end + 1));
+                aiExtractedItems = [...aiExtractedItems, ...pageItems];
+            } catch (e) {
+                console.error(`--- AI Parsing Error on Page ${i + 1} ---`);
+            }
+
+            // Rate Limit protection: Wait 2 seconds between chunks
+            if (base64Pages.length > 1 && i < base64Pages.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
+
+   
+
+    // // 5. Call Gemini
+    // const result = await genAI.models.generateContent({
+    //   model: "gemini-2.0-flash-lite",
+    //   // model: "gemini-1.5-flash",
+    //   contents: [{
+    //     role: 'user',
+    //     parts: [
+    //       { text: promptText },
+    //       { inlineData: { data: base64Data, mimeType: mimeType } }
+    //     ]
+    //   }],
+    //   config: { temperature: 0.1, maxOutputTokens: 8192 }
+    // });
+
+    // const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "[]";
+    // const cleanText = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
 
 
 
-    // 🔹 DEBUG LOGS
-    console.log("--- AI RAW RESPONSE START ---");
-    console.log(responseText);
-    console.log("--- AI RAW RESPONSE END ---");
+    // // 🔹 DEBUG LOGS
+    // console.log("--- AI RAW RESPONSE START ---");
+    // console.log(responseText);
+    // console.log("--- AI RAW RESPONSE END ---");
 
 
 
-    let aiExtractedItems = [];
-    try {
-      const start = cleanText.indexOf("[");
-      const end = cleanText.lastIndexOf("]");
-      aiExtractedItems = JSON.parse(cleanText.substring(start, end + 1));
-    } catch (e) {
-      return res.status(500).json({ message: "AI Parsing Error", ok: false });
-    }
+    // let aiExtractedItems = [];
+    // try {
+    //   const start = cleanText.indexOf("[");
+    //   const end = cleanText.lastIndexOf("]");
+    //   aiExtractedItems = JSON.parse(cleanText.substring(start, end + 1));
+    // } catch (e) {
+    //   return res.status(500).json({ message: "AI Parsing Error", ok: false });
+    // }
+
+    // console.log("aiExtractedItems", aiExtractedItems)
 
     // 6. Map to ItemModel and Append to Database (OLD VERSION)
     // const itemsToSave = aiExtractedItems.map((item: any) => ({
@@ -873,7 +936,10 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
     // });
 
 
+
+
     // 6. 🛡️ STRICT VALIDATION & MAPPING
+   
     const itemsToSave = aiExtractedItems.map((aiItem: any) => {
       const validatedData: Record<string, any> = {};
 
@@ -897,14 +963,18 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
         }
       });
 
+
+
       return {
         organizationId: organizationId,
         categoryId: category._id,
         categoryName: category.name,
-        data: validatedData
+        data: validatedData,
+        isExtractedByGemini: true // 👈 Added this flag here
       };
     });
 
+    console.log("items to save", itemsToSave)
 
     // 7. Bulk insert and capture the created documents
     let createdItems: any[] = [];
@@ -968,3 +1038,5 @@ export const extractShopMaterialDocDetailsv1 = async (req: Request, res: Respons
     });
   }
 };
+
+

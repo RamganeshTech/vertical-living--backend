@@ -4,7 +4,7 @@ import { InvoiceAccountModel } from "../../../../models/Department Models/Accoun
 import { RoleBasedRequest } from "../../../../types/types";
 import redisClient from "../../../../config/redisClient";
 import { generateInvoiceAccBillPdf, PdfInvoiceData } from "./pdfInvoiceAcc";
-import { COMPANY_LOGO, uploadToS3 } from "../../../stage controllers/ordering material controller/pdfOrderHistory.controller";
+import { COMPANY_LOGO, COMPANY_NAME, uploadToS3 } from "../../../stage controllers/ordering material controller/pdfOrderHistory.controller";
 import { syncAccountingRecord } from "../accounting.controller";
 import { AccountingModel } from "../../../../models/Department Models/Accounting Model/accountingMain.model";
 
@@ -243,7 +243,7 @@ export const createInvoice = async (req: RoleBasedRequest, res: Response): Promi
         const pdfData = {
             ...newInvoice.toObject(),
             companyLogo: COMPANY_LOGO, // Add your company logo URL
-            companyName: 'Vertical Living' // Add your company name
+            companyName: COMPANY_NAME // Add your company name
         };
 
         const pdfBytes = await generateInvoiceAccBillPdf(pdfData);
@@ -662,7 +662,7 @@ export const updateInvoice = async (req: Request, res: Response): Promise<any> =
         const pdfData: any = {
             ...updatedInvoice.toObject(),
             companyLogo: COMPANY_LOGO, // Add your company logo URL
-            companyName: 'Vertical Living' // Add your company name
+            companyName: COMPANY_NAME // Add your company name
         };
 
         const pdfBytes = await generateInvoiceAccBillPdf(pdfData);

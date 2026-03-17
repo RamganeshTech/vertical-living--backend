@@ -2,12 +2,13 @@ import { PDFDocument, rgb, PDFFont, PDFImage, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { Types } from 'mongoose';
 import { formatDate } from '../../../stage controllers/workReport Controller/imageWorkReport';
+import { COMPANY_NAME } from '../../../stage controllers/ordering material controller/pdfOrderHistory.controller';
 
 // Types for invoice data
 interface InvoiceItem {
     itemName: string;
     quantity: number;
-        unit: string; // Add this line
+    unit: string; // Add this line
     rate: number;
     totalCost: number;
 }
@@ -62,10 +63,17 @@ export async function generateInvoiceAccBillPdf(invoiceData: PdfInvoiceData): Pr
     const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
     // Add a page
-    const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
+    let page = pdfDoc.addPage([595.28, 841.89]); // A4 size
     const { width, height } = page.getSize();
 
     let yPosition = height - 50;
+
+
+    // Helper to add new page and reset Y
+    const addNewPage = () => {
+        page = pdfDoc.addPage([595.28, 841.89]);
+        return 841.89 - 50;
+    };
 
     // Draw header with logo and company name
     yPosition = await drawHeader(page, invoiceData, yPosition, width, helveticaBoldFont, helveticaFont);
@@ -74,18 +82,29 @@ export async function generateInvoiceAccBillPdf(invoiceData: PdfInvoiceData): Pr
     yPosition = drawInvoiceInfoSection(page, invoiceData, yPosition, width, helveticaBoldFont, helveticaFont);
 
     // Draw items table
-    yPosition = drawItemsTable(page, invoiceData, yPosition, width, helveticaBoldFont, helveticaFont);
+    const tableResult = drawItemsTable(page, pdfDoc, invoiceData, yPosition, width, helveticaBoldFont, helveticaFont);
+    yPosition = tableResult.y;
+    page = tableResult.page;
 
+    // Ensure we have at least 150 units of space for the totals
+    if (yPosition < 150) {
+        page = pdfDoc.addPage([595.28, 841.89]);
+        yPosition = 841.89 - 50;
+    } else {
+        yPosition -= 30; // Move down 30 units from the last table row/border
+    }
     // Draw totals section
     yPosition = drawTotalsSection(page, invoiceData, yPosition, width, helveticaBoldFont, helveticaFont);
 
     // Draw remarks section if remarks exist
     if (invoiceData.subject) {
+        if (yPosition < 100) yPosition = addNewPage();
         yPosition = drawRemarksSection(page, invoiceData, yPosition, width, helveticaBoldFont, helveticaFont);
     }
 
     // Draw notes and terms if they exist
     if (invoiceData.customerNotes || invoiceData.termsAndConditions) {
+        if (yPosition < 100) yPosition = addNewPage();
         yPosition = drawNotesAndTerms(page, invoiceData, yPosition, width, helveticaBoldFont, helveticaFont);
     }
 
@@ -109,7 +128,7 @@ function splitTextIntoLines(text: string, font: PDFFont, fontSize: number, maxWi
         const word = words[i];
         const testLine = currentLine ? `${currentLine} ${word}` : word;
         const width = font.widthOfTextAtSize(testLine, fontSize);
-        
+
         if (width <= maxWidth) {
             currentLine = testLine;
         } else {
@@ -119,11 +138,11 @@ function splitTextIntoLines(text: string, font: PDFFont, fontSize: number, maxWi
             currentLine = word;
         }
     }
-    
+
     if (currentLine) {
         lines.push(currentLine);
     }
-    
+
     return lines;
 }
 
@@ -139,7 +158,7 @@ async function drawHeader(
     regularFont: PDFFont
 ): Promise<number> {
     const companyLogo = invoiceData.companyLogo || 'https://via.placeholder.com/150x50/1a3a6d/ffffff?text=Vertical+Living';
-    const companyName = invoiceData.companyName || 'Vertical Living';
+    const companyName = invoiceData.companyName || COMPANY_NAME;
 
     try {
         // Fetch and embed logo
@@ -258,8 +277,8 @@ function drawInvoiceInfoSection(
     // Right column - Invoice details
     const details = [
         { label: 'Invoice Number', value: invoiceData.invoiceNumber },
-        { label: 'Invoice Date', value: formatDate(invoiceData.invoiceDate)},
-        { label: 'Due Date', value: formatDate(invoiceData.dueDate)},
+        { label: 'Invoice Date', value: formatDate(invoiceData.invoiceDate) },
+        { label: 'Due Date', value: formatDate(invoiceData.dueDate) },
         { label: 'Order Number', value: invoiceData.orderNumber },
         { label: 'Sales Person', value: invoiceData.salesPerson },
         // { label: 'Remaks', value: invoiceData.subject },
@@ -297,12 +316,13 @@ function drawInvoiceInfoSection(
  */
 function drawItemsTable(
     page: any,
+    pdfDoc: PDFDocument,
     invoiceData: PdfInvoiceData,
     yPosition: number,
     width: number,
     boldFont: PDFFont,
     regularFont: PDFFont
-): number {
+): any {
     const tableTop = yPosition;
     const tableLeft = 50;
     const tableWidth = width - 100;
@@ -339,130 +359,252 @@ function drawItemsTable(
     let currentY = tableTop - headerHeight - 5;
 
     // Draw items
-    invoiceData.items.forEach((item, index) => {
+    // invoiceData.items.forEach((item, index) => {
+    //     const isEvenRow = index % 2 === 0;
+
+
+    //     // Item Name with multi-line support
+    //     const itemName = item.itemName || 'No item name';
+    //     const maxItemNameWidth = columnWidths[1] - 10;
+
+    //     // Split text into multiple lines if needed
+    //     const lines = splitTextIntoLines(itemName, regularFont, 9, maxItemNameWidth);
+    //     const itemRowHeight = Math.max(rowHeight, lines.length * 12 + 5);
+
+
+    //     // 2. CHECK SPACE BEFORE DRAWING
+    //     if (currentY - itemRowHeight < 80) { // If less than 80 units left, jump page
+    //         // page = pdfDoc.addPage([595.28, 841.89]);
+    //         const newPage = pdfDoc.addPage([595.28, 841.89]);
+    //         // 2. Update the local 'page' variable used by the REST of the loop
+    //         page = newPage;
+    //         currentY = 841.89 - 50;
+
+    //         // REDRAW HEADER BACKGROUND
+    //         page.drawRectangle({
+    //             x: tableLeft,
+    //             y: currentY - headerHeight,
+    //             width: tableWidth,
+    //             height: headerHeight,
+    //             color: COLORS.PRIMARY,
+    //         });
+
+    //         // REDRAW HEADER TEXT
+    //         let headerX = tableLeft;
+    //         headers.forEach((header, idx) => {
+    //             page.drawText(header, {
+    //                 x: headerX + 5,
+    //                 y: currentY - headerHeight + 10,
+    //                 size: 10,
+    //                 font: boldFont,
+    //                 color: rgb(1, 1, 1),
+    //             });
+    //             headerX += columnWidths[idx];
+    //         });
+    //         currentY -= (headerHeight + 10);
+    //     }
+
+
+    //     if (isEvenRow) {
+    //         page.drawRectangle({
+    //             x: tableLeft,
+    //             y: currentY - rowHeight,
+    //             width: tableWidth,
+    //             height: rowHeight,
+    //             color: COLORS.BACKGROUND,
+    //         });
+    //     }
+
+    //     currentX = tableLeft;
+
+    //     // Serial Number
+    //     page.drawText((index + 1).toString(), {
+    //         x: currentX + 8,
+    //         y: currentY - 20,
+    //         size: 9,
+    //         font: regularFont,
+    //         color: COLORS.TEXT,
+    //     });
+    //     currentX += columnWidths[0];
+
+
+
+    //     lines.forEach((line, lineIndex) => {
+    //         page.drawText(line, {
+    //             x: currentX + 5,
+    //             y: currentY - 20 - (lineIndex * 12),
+    //             size: 9,
+    //             font: regularFont,
+    //             color: COLORS.TEXT,
+    //         });
+    //     });
+
+    //     // Adjust row height based on number of lines
+    //     // const itemRowHeight = Math.max(rowHeight, lines.length * 12);
+    //     currentX += columnWidths[1];
+
+    //     // Quantity
+    //     page.drawText((item.quantity || 0).toString(), {
+    //         x: currentX + 5,
+    //         y: currentY - 20,
+    //         size: 9,
+    //         font: regularFont,
+    //         color: COLORS.TEXT,
+    //     });
+    //     currentX += columnWidths[2];
+
+    //     // Unit
+    //     page.drawText(item.unit || '-', {
+    //         x: currentX + 5,
+    //         y: currentY - 20,
+    //         size: 9,
+    //         font: regularFont,
+    //         color: COLORS.TEXT,
+    //     });
+    //     currentX += columnWidths[3];
+
+    //     // Rate (without INR prefix)
+    //     page.drawText((item.rate || 0).toLocaleString('en-IN', {
+    //         minimumFractionDigits: 2,
+    //         maximumFractionDigits: 2
+    //     }), {
+    //         x: currentX + 5,
+    //         y: currentY - 20,
+    //         size: 9,
+    //         font: regularFont,
+    //         color: COLORS.TEXT,
+    //     });
+    //     currentX += columnWidths[4];
+
+    //     // Total (without INR prefix)
+    //     page.drawText((item.totalCost || 0).toLocaleString('en-IN', {
+    //         minimumFractionDigits: 2,
+    //         maximumFractionDigits: 2
+    //     }), {
+    //         x: currentX + 5,
+    //         y: currentY - 20,
+    //         size: 9,
+    //         font: regularFont,
+    //         color: COLORS.TEXT,
+    //     });
+
+    //     currentY -= itemRowHeight;
+
+    //     // Check if we need a new page
+    //     // if (currentY < 100) {
+    //     //     page = page.doc.addPage([595.28, 841.89]);
+    //     //     currentY = 841.89 - 50;
+
+    //     //     // Redraw table headers on new page
+    //     //     currentX = tableLeft;
+    //     //     headers.forEach((header, idx) => {
+    //     //         page.drawText(header, {
+    //     //             x: currentX + 5,
+    //     //             y: currentY - 10,
+    //     //             size: 10,
+    //     //             font: boldFont,
+    //     //             color: rgb(1, 1, 1),
+    //     //         });
+    //     //         currentX += columnWidths[idx];
+    //     //     });
+    //     //     currentY -= 30;
+    //     // }
+    // });
+
+
+    for (const [index, item] of invoiceData.items.entries()) {
         const isEvenRow = index % 2 === 0;
 
+        const itemName = item.itemName || 'No item name';
+        const maxItemNameWidth = columnWidths[1] - 10;
+        const lines = splitTextIntoLines(itemName, regularFont, 9, maxItemNameWidth);
+        const itemRowHeight = Math.max(rowHeight, lines.length * 12 + 5);
+
+        // 2. CHECK SPACE BEFORE DRAWING
+        if (currentY - itemRowHeight < 80) {
+            // This assignment will now persist for the rest of the loop
+            page = pdfDoc.addPage([595.28, 841.89]);
+            currentY = 841.89 - 50;
+
+            // REDRAW HEADER BACKGROUND
+            page.drawRectangle({
+                x: tableLeft,
+                y: currentY - headerHeight,
+                width: tableWidth,
+                height: headerHeight,
+                color: COLORS.PRIMARY,
+            });
+
+            // REDRAW HEADER TEXT
+            let headerX = tableLeft;
+            headers.forEach((header, idx) => {
+                page.drawText(header, {
+                    x: headerX + 5,
+                    y: currentY - headerHeight + 10,
+                    size: 10,
+                    font: boldFont,
+                    color: rgb(1, 1, 1),
+                });
+                headerX += columnWidths[idx];
+            });
+            currentY -= (headerHeight + 10);
+        }
+
+        // 3. DRAW CONTENT
+        // Every command below now strictly uses the updated 'page' variable
         if (isEvenRow) {
             page.drawRectangle({
                 x: tableLeft,
-                y: currentY - rowHeight,
+                y: currentY - itemRowHeight,
                 width: tableWidth,
-                height: rowHeight,
+                height: itemRowHeight,
                 color: COLORS.BACKGROUND,
             });
         }
 
         currentX = tableLeft;
-
-        // Serial Number
-        page.drawText((index + 1).toString(), {
-            x: currentX + 8,
-            y: currentY - 20,
-            size: 9,
-            font: regularFont,
-            color: COLORS.TEXT,
-        });
+        page.drawText((index + 1).toString(), { x: currentX + 8, y: currentY - 20, size: 9, font: regularFont, color: COLORS.TEXT });
         currentX += columnWidths[0];
 
-        // Item Name with multi-line support
-        const itemName = item.itemName || 'No item name';
-        const maxItemNameWidth = columnWidths[1] - 10;
-        
-        // Split text into multiple lines if needed
-        const lines = splitTextIntoLines(itemName, regularFont, 9, maxItemNameWidth);
         lines.forEach((line, lineIndex) => {
-            page.drawText(line, {
-                x: currentX + 5,
-                y: currentY - 20 - (lineIndex * 12),
-                size: 9,
-                font: regularFont,
-                color: COLORS.TEXT,
-            });
+            page.drawText(line, { x: currentX + 5, y: currentY - 20 - (lineIndex * 12), size: 9, font: regularFont, color: COLORS.TEXT });
         });
-        
-        // Adjust row height based on number of lines
-        const itemRowHeight = Math.max(rowHeight, lines.length * 12);
         currentX += columnWidths[1];
 
-        // Quantity
-        page.drawText((item.quantity || 0).toString(), {
-            x: currentX + 5,
-            y: currentY - 20,
-            size: 9,
-            font: regularFont,
-            color: COLORS.TEXT,
-        });
+        page.drawText((item.quantity || 0).toString(), { x: currentX + 5, y: currentY - 20, size: 9, font: regularFont, color: COLORS.TEXT });
         currentX += columnWidths[2];
 
-        // Unit
-        page.drawText(item.unit || '-', {
-            x: currentX + 5,
-            y: currentY - 20,
-            size: 9,
-            font: regularFont,
-            color: COLORS.TEXT,
-        });
+        page.drawText(item.unit || '-', { x: currentX + 5, y: currentY - 20, size: 9, font: regularFont, color: COLORS.TEXT });
         currentX += columnWidths[3];
 
-        // Rate (without INR prefix)
-        page.drawText((item.rate || 0).toLocaleString('en-IN', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
-        }), {
-            x: currentX + 5,
-            y: currentY - 20,
-            size: 9,
-            font: regularFont,
-            color: COLORS.TEXT,
-        });
+        page.drawText((item.rate || 0).toLocaleString('en-IN'), { x: currentX + 5, y: currentY - 20, size: 9, font: regularFont, color: COLORS.TEXT });
         currentX += columnWidths[4];
 
-        // Total (without INR prefix)
-        page.drawText((item.totalCost || 0).toLocaleString('en-IN', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
-        }), {
-            x: currentX + 5,
-            y: currentY - 20,
-            size: 9,
-            font: regularFont,
-            color: COLORS.TEXT,
-        });
+        page.drawText((item.totalCost || 0).toLocaleString('en-IN'), { x: currentX + 5, y: currentY - 20, size: 9, font: regularFont, color: COLORS.TEXT });
 
         currentY -= itemRowHeight;
-
-        // Check if we need a new page
-        if (currentY < 100) {
-            const newPage = page.doc.addPage([595.28, 841.89]);
-            currentY = 841.89 - 50;
-            
-            // Redraw table headers on new page
-            currentX = tableLeft;
-            headers.forEach((header, idx) => {
-                newPage.drawText(header, {
-                    x: currentX + 5,
-                    y: currentY - 10,
-                    size: 10,
-                    font: boldFont,
-                    color: rgb(1, 1, 1),
-                });
-                currentX += columnWidths[idx];
-            });
-            currentY -= 30;
-        }
-    });
+    } // End of for...of loop
 
     // Draw table borders
-    page.drawRectangle({
-        x: tableLeft,
-        y: currentY,
-        width: tableWidth,
-        height: tableTop - currentY - headerHeight,
-        borderColor: COLORS.BORDER,
-        borderWidth: 1,
+    // page.drawRectangle({
+    //     x: tableLeft,
+    //     y: currentY,
+    //     width: tableWidth,
+    //     height: tableTop - currentY - headerHeight,
+    //     borderColor: COLORS.BORDER,
+    //     borderWidth: 1,
+    // });
+
+    page.drawLine({
+        start: { x: tableLeft, y: currentY },
+        end: { x: tableLeft + tableWidth, y: currentY },
+        thickness: 1,
+        color: COLORS.BORDER,
     });
 
-    return currentY - 20;
+    // return currentY - 20;
+
+    return { y: currentY, page: page };
 }
 
 /**
@@ -476,13 +618,13 @@ function drawTotalsSection(
     boldFont: PDFFont,
     regularFont: PDFFont
 ): number {
-    const totalsLeft = width - 200;
+    const totalsLeft = width - 250;
     let currentY = yPosition;
 
     // Subtotal in bold
-    drawTotalLine(page, 'Subtotal', invoiceData.totalAmount.toLocaleString('en-IN', { 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
+    drawTotalLine(page, 'Subtotal', invoiceData.totalAmount.toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
     }), totalsLeft, currentY, boldFont);
     currentY -= 25;
 
@@ -491,9 +633,9 @@ function drawTotalsSection(
         const discountText = invoiceData.discountPercentage
             ? `Discount (${invoiceData.discountPercentage}%)`
             : 'Discount';
-        drawTotalLine(page, discountText, `-${invoiceData.discountAmount.toLocaleString('en-IN', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
+        drawTotalLine(page, discountText, `-${invoiceData.discountAmount.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         })}`, totalsLeft, currentY, boldFont);
         currentY -= 25;
     }
@@ -503,9 +645,9 @@ function drawTotalsSection(
         const taxText = invoiceData.taxPercentage
             ? `Tax (${invoiceData.taxPercentage}%)`
             : 'Tax';
-        drawTotalLine(page, taxText, invoiceData.taxAmount.toLocaleString('en-IN', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
+        drawTotalLine(page, taxText, invoiceData.taxAmount.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         }), totalsLeft, currentY, boldFont);
         currentY -= 25;
     }
@@ -519,9 +661,9 @@ function drawTotalsSection(
         color: COLORS.PRIMARY,
     });
 
-    page.drawText(`INR ${invoiceData.grandTotal.toLocaleString('en-IN', { 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
+    page.drawText(`INR ${invoiceData.grandTotal.toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
     })}`, {
         x: totalsLeft + 100,
         y: currentY - 15,
@@ -581,9 +723,9 @@ function drawRemarksSection(
     regularFont: PDFFont
 ): number {
     if (!invoiceData.subject) return yPosition;
-    
+
     let currentY = yPosition;
-    
+
     // Remarks title in bold
     page.drawText('Remarks:', {
         x: 50,
@@ -598,17 +740,17 @@ function drawRemarksSection(
     // Remarks content with multi-line support
     const remarks = invoiceData.subject;
     const maxRemarksWidth = width - 100;
-    
+
     // Split remarks into multiple lines
     const lines = splitTextIntoLines(remarks, regularFont, 10, maxRemarksWidth);
-    
+
     lines.forEach((line, index) => {
         // Check if we need a new page
         if (currentY < 100) {
             const newPage = page.doc.addPage([595.28, 841.89]);
             currentY = 841.89 - 50;
         }
-        
+
         page.drawText(line, {
             x: 50,
             y: currentY,
@@ -616,7 +758,7 @@ function drawRemarksSection(
             font: regularFont,
             color: COLORS.LIGHT_TEXT,
         });
-        
+
         currentY -= 15;
     });
 

@@ -45,6 +45,7 @@ export interface MaterialItemDoc extends Document {
   materialType?: string
   categoryName: string | null;
   data: Record<string, any>; // flexible to match fields defined in category
+  isExtractedByGemini?: boolean
 }
 
 const MaterialItemSchema = new Schema<MaterialItemDoc>({
@@ -53,6 +54,7 @@ const MaterialItemSchema = new Schema<MaterialItemDoc>({
   materialType: { type: String },
   categoryName: { type: String, default: null },
   data: { type: Schema.Types.Mixed, }, // { brand: "Sharon GOLD-BWP", thickness: "19mm", rate: 159.75, notes: "Waterproof" }
+  isExtractedByGemini: { type: Boolean, default: false }
 }, { timestamps: true });
 
 export const ItemModel = mongoose.model<MaterialItemDoc>("MaterialItemModel", MaterialItemSchema);
