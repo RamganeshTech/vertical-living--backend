@@ -2239,6 +2239,7 @@ export const getAllPincodes = async (req: any, res: Response): Promise<any> => {
             const searchRegex = new RegExp(search as string, 'i');
             query.$or = [
                 { pincode: searchRegex },
+                { district: searchRegex },
                 { areaName: searchRegex },
                 { localityName: searchRegex },
                 { taluk: searchRegex },
