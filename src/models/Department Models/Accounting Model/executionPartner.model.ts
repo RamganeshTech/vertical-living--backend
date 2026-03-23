@@ -40,6 +40,12 @@ export interface IExecutionPartner extends Document {
     msmeNo?: string | null;
     cin?: string | null;
     businessStructure: string | null
+    nextAvailableDate: Date
+    maxSimultaneousSites: number
+    averageDelayDays: number
+    crewSize: number
+    escalationLoad: number
+    repeatDefectRate: number
 
     bankAccNo: string | null
     accHolderName: string | null,
@@ -57,8 +63,8 @@ export interface IExecutionPartner extends Document {
     // customerOwner?: mongoose.Types.ObjectId;
 
     mainImage?: IUpload
-    priority: string[]
-    
+    works: string[]
+
     notes: string | null;
 }
 
@@ -93,7 +99,12 @@ const ExecutionPartnerSchema = new Schema<IExecutionPartner>(
             latitude: { type: Number, default: null },
             longitude: { type: Number, default: null }
         },
-
+        nextAvailableDate: { type: Date, default: null },
+        maxSimultaneousSites: { type: Number, default: 1 },
+        averageDelayDays: { type: Number, default: 0 },
+        crewSize: { type: Number, default: 0 },
+        escalationLoad: { type: Number, default: 0, comment: "Number of active tickets/complaints requiring management intervention" },
+        repeatDefectRate: { type: Number, default: 0, comment: "Number Defects the partner is making" },
         // Statutory Details (Added)
         pan: { type: String, default: null },
         tan: { type: String, default: null },
@@ -118,7 +129,7 @@ const ExecutionPartnerSchema = new Schema<IExecutionPartner>(
         shopImages: { type: [fileSchema], default: [] }, // Added
         documents: { type: [fileSchema], default: [] },
         mainImage: { type: fileSchema, default: null },
-        priority: { type: [String], default: [] },
+        works: { type: [String], default: [] },
         notes: { type: String, default: null }, // [cite: 138]
 
     },

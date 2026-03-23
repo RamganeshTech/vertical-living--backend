@@ -41,9 +41,34 @@ export const createExecutionPartner = async (req: RoleBasedRequest, res: Respons
         }
 
 
-        if (req.body.priority && typeof req.body.priority === 'string') {
-            req.body.priority = parseFloat(req.body.priority);
+        if (req.body.works && typeof req.body.works === 'string') {
+            req.body.works = parseFloat(req.body.works);
 
+        }
+
+
+        // 1. Convert numeric capacity/tracking fields from strings
+        const numericFields = [
+            'maxSimultaneousSites',
+            'averageDelayDays',
+            'crewSize',
+            'escalationLoad',
+            'repeatDefectRate'
+        ];
+
+        numericFields.forEach(field => {
+            if (req.body[field] && typeof req.body[field] === 'string') {
+                req.body[field] = parseFloat(req.body[field]) || 0;
+            }
+        });
+
+        // 2. Parse nextAvailableDate if it's sent as a string
+        if (req.body.nextAvailableDate && typeof req.body.nextAvailableDate === 'string') {
+            const date = new Date(req.body.nextAvailableDate);
+            // Only assign if it's a valid date
+            if (!isNaN(date.getTime())) {
+                req.body.nextAvailableDate = date;
+            }
         }
 
 
@@ -335,7 +360,7 @@ export const updateExecutionPartner = async (req: RoleBasedRequest, res: Respons
             });
         }
 
-        
+
         // Phone validation (if provided)
         if (req.body.phone) {
             // if (data.phone.work && data.phone.work.trim() !== '' && data.phone.work !== null) {
@@ -400,6 +425,7 @@ export const updateExecutionPartner = async (req: RoleBasedRequest, res: Respons
             };
             // req.body.mapUrl is already at the root, so it will update automatically via $set
         }
+
 
 
         // Update customer
@@ -969,7 +995,7 @@ export const getAllExecutionPartnerDropDown = async (req: Request, res: Response
 
         const { organizationId } = req.params
         const {
-            priority
+            works
         } = req.query;
 
 
@@ -991,22 +1017,22 @@ export const getAllExecutionPartnerDropDown = async (req: Request, res: Response
             filter.organizationId = organizationId;
         }
 
-        // Filter by Priority if provided in query
-        // if (priority) {
-        //     // This checks if the string priority exists inside the priority array in DB
-        //     filter.priority = { $in: [priority] };
+        // Filter by works if provided in query
+        // if (works) {
+        //     // This checks if the string works exists inside the works array in DB
+        //     filter.works = { $in: [works] };
         // }
 
         // To this (Case-insensitive fuzzy match):
-        if (priority) {
-            filter.priority = {
-                $elemMatch: { $regex: new RegExp(`^${priority}$`, 'i') }
+        if (works) {
+            filter.works = {
+                $elemMatch: { $regex: new RegExp(`^${works}$`, 'i') }
             };
         }
 
 
         // Create cache key based on filters
-        const cacheKey = `executionpartner:dropdown:organizationId:${organizationId || 'all'}:pri:${priority || 'all'}`;
+        const cacheKey = `executionpartner:dropdown:organizationId:${organizationId || 'all'}:works:${works || 'all'}`;
 
         // Check cache
         // await redisClient.del(cacheKey);
@@ -1023,7 +1049,7 @@ export const getAllExecutionPartnerDropDown = async (req: Request, res: Response
 
         // Fetch vendors with pagination
         const vendors = await ExecutionPartnerModel.find(filter)
-            .select('_id firstName companyName email address phone priority') // Only select needed fields
+            .select('_id firstName companyName email address phone works') // Only select needed fields
             .lean();
 
         let modifiedvendor = vendors.map(vendor => {
@@ -1037,7 +1063,7 @@ export const getAllExecutionPartnerDropDown = async (req: Request, res: Response
                 phoneNo: vendor.phone?.work || vendor.phone?.mobile || "",
                 work: vendor.phone?.work || "",
                 mobile: vendor.phone?.mobile || "",
-                priority: vendor?.priority || []
+                works: vendor?.works || []
             }
         })
 
