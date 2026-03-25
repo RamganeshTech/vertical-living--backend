@@ -63,15 +63,16 @@ orderMaterialHistoryRoutes.delete("/:projectId/history/deletesubitem/:orderItemI
 
 //  used to submit the order
 orderMaterialHistoryRoutes.put("/:projectId/submitorder", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), submitOrderMaterial);
+//  not used but might used in the mobile
 orderMaterialHistoryRoutes.put("/:projectId/:orderItemId/:organizationId/senttoprocurement", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), placeOrderToProcurement);
 
+//  not used curently
 orderMaterialHistoryRoutes.put("/v1/:projectId/:orderItemId/:organizationId/senttoprocurement", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), placeOrderToProcurementv1);
+
 orderMaterialHistoryRoutes.put("/v2/:projectId/:orderItemId/:organizationId/senttoprocurement", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), placeOrderToProcurementv2);
 orderMaterialHistoryRoutes.put("/v2/:projectId/:orderItemId/:organizationId/senttobills", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), syncOrderToBillsModule);
 
 orderMaterialHistoryRoutes.get("/:projectId/:orderItemId/getsingleorderedItem", multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), getSingleOrderedItem);
-
-
 
 
 orderMaterialHistoryRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO","worker",), checkIfStaffIsAssignedToStage(OrderMaterialHistoryModel), orderMaterialHistoryCompletionStatus)

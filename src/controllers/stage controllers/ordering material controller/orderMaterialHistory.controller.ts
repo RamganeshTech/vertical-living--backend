@@ -928,8 +928,6 @@ export const syncOrderingMaterialsHistory = async (projectId: string) => {
 
 
 // end old vrsion of updatig he items
-
-
 export const updateDeliveryLocationDetails = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;

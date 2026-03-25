@@ -13,6 +13,7 @@ import { EmployeeModel } from "../../models/Department Models/HR Model/HRMain.mo
 import { WorkerModel } from "../../models/worker model/worker.model";
 import bcrypt from "bcrypt"
 import mongoose, { Model } from "mongoose";
+import { IFileItem } from "../../models/Stage Models/sampleDesing model/sampleDesign.model";
 
 const createOrganziation = async (req: RoleBasedRequest, res: Response) => {
     try {
@@ -171,7 +172,7 @@ const updateOrganizationDetails = async (req: RoleBasedRequest, res: Response) =
         const user = req.user;
         const updatedData = req.body;
         const { orgId } = req.params;
-        console.log("im getting calledm updateOrganizationDetails")
+        // console.log("im getting calledm updateOrganizationDetails")
 
         if (!user || !user._id) {
             return res.status(404).json({ message: "User not associated with this organization", ok: false });
@@ -214,6 +215,50 @@ const updateOrganizationDetails = async (req: RoleBasedRequest, res: Response) =
         }
     }
 };
+
+export const updateOrgLogo = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { orgId } = req.params;
+        
+        // Since you are using .single("logo"), use req.file (singular)
+        // 'location' comes from the Multer-S3 storage engine
+        const file = req.file as Express.Multer.File & { location: string };
+
+        if (!file) {
+            return res.status(400).json({ 
+                ok: false, 
+                message: "No logo image found in the request." 
+            });
+        }
+
+        // The S3 URL is stored in file.location
+        const logoUrl = file.location;
+
+        const updatedOrg = await OrganizationModel.findByIdAndUpdate(
+            orgId,
+            { $set: { logoUrl: logoUrl } },
+            { new: true }
+        );
+
+        if (!updatedOrg) {
+            return res.status(404).json({ ok: false, message: "Organization not found" });
+        }
+
+        return res.status(200).json({ 
+            ok: true, 
+            message: "Logo updated successfully", 
+            data: updatedOrg 
+        });
+
+    } catch (error: any) {
+        console.error("Logo Upload Error:", error);
+        return res.status(500).json({ 
+            ok: false, 
+            message: error.message || "Server error during logo upload" 
+        });
+    }
+};
+
 
 const deleteOrganization = async (req: RoleBasedRequest, res: Response) => {
     try {

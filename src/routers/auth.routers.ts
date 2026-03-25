@@ -4,7 +4,7 @@ import { loginStaff, refreshTokenStaff, registerStaff, staffforgotPassword, staf
 import { loginWorker, refreshTokenWorker, registerWorker, workerforgotPassword, workerIsAuthenticated, workerLogout, workerResetForgotPassword } from '../controllers/auth controllers/workerAuth.controller';
 import { CTOforgotPassword, CTOIsAuthenticated, CTOLogout, CTOResetForgotPassword, loginCTO, refreshTokenCTO, registerCTO, } from '../controllers/auth controllers/CTOAuth.controller';
 import { multiRoleAuthMiddleware } from '../middlewares/multiRoleAuthMiddleware';
-import { registerUserWithoutLink } from '../controllers/organization controllers/organiziation.controllers';
+import { registerUserWithoutLink } from '../controllers/organization controllers/organization.controllers';
 
 
 const authRoutes = express.Router()

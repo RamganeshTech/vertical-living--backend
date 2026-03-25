@@ -368,6 +368,117 @@ export const updateMaterialCategoryAndSyncItems = async (req: Request, res: Resp
 };
 
 
+export const updateMaterialCategoryAndSyncItemsV2 = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { categoryId, organizationId } = req.params;
+    const { name, fields, isProductSpecific } = req.body;
+
+
+    if (!fields || !Array.isArray(fields)) {
+      return res.status(400).json({ ok: false, message: "fields is required and must be an array" });
+    }
+
+    const existingCategory = await CategoryModel.findById(categoryId);
+    if (!existingCategory) {
+      return res.status(404).json({ ok: false, message: "Category not found" });
+    }
+
+    const oldFieldKeys = existingCategory.fields.map(f => f.key);
+
+    // --- Pass 1: Identify renames ---
+    const renames: { oldKey: string; newKey: string }[] = [];
+    fields.forEach((field: any) => {
+      if (
+        field.oldKey &&
+        field.oldKey !== field.key &&
+        oldFieldKeys.includes(field.oldKey)
+      ) {
+        renames.push({ oldKey: field.oldKey, newKey: field.key });
+      }
+    });
+
+    const renamedNewKeys = renames.map(r => r.newKey);
+    const renamedOldKeys = renames.map(r => r.oldKey);
+
+    // --- Pass 2: Identify true additions (excluding rename targets) ---
+    const fieldsToAdd: string[] = [];
+    fields.forEach((field: any) => {
+      const isNewKey = !oldFieldKeys.includes(field.key);
+      const isRenameTarget = renamedNewKeys.includes(field.key);
+
+      // FIX: Only add if it's actually new and NOT a renamed field
+      if (isNewKey && !isRenameTarget) {
+        fieldsToAdd.push(field.key);
+      }
+    });
+
+    // --- Pass 3: Identify true removals (excluding keys that were renamed away) ---
+    const incomingKeys = fields.map((f: any) => f.key);
+    const fieldsToRemove = oldFieldKeys.filter(
+      key => !incomingKeys.includes(key) && !renamedOldKeys.includes(key)
+    );
+
+    // --- Update Category Meta ---
+    existingCategory.name = name || existingCategory.name;
+    existingCategory.fields = fields.map((f: any) => ({
+      key: f.key,
+      type: f.type,
+      required: f.required ?? false,
+      visibleIn: f.visibleIn ?? [],
+    }));
+
+    if (isProductSpecific !== undefined) {
+      existingCategory.isProductSpecific = isProductSpecific;
+    }
+    await existingCategory.save();
+
+    // --- Sync Item Documents ---
+    const itemFilter = { categoryId, organizationId };
+
+    // A. Renames First: This preserves data by moving it to the new key
+    if (renames.length > 0) {
+      const renameObj: Record<string, string> = {};
+      renames.forEach(r => {
+        renameObj[`data.${r.oldKey}`] = `data.${r.newKey}`;
+      });
+      await ItemModel.updateMany(itemFilter, { $rename: renameObj });
+    }
+
+    // B. Removals: Clean up old keys no longer used
+    if (fieldsToRemove.length > 0) {
+      const unsetObj: Record<string, string> = {};
+      fieldsToRemove.forEach(key => {
+        unsetObj[`data.${key}`] = "";
+      });
+      await ItemModel.updateMany(itemFilter, { $unset: unsetObj });
+    }
+
+    // C. Additions: Only initialize brand-new fields
+    if (fieldsToAdd.length > 0) {
+      const setObj: Record<string, any> = {};
+      fieldsToAdd.forEach((key: string) => {
+        const fieldConfig = fields.find((f: any) => f.key === key);
+        let defaultValue: any = "";
+        if (fieldConfig?.type === "number") defaultValue = 0;
+        if (fieldConfig?.type === "boolean") defaultValue = false;
+        setObj[`data.${key}`] = defaultValue;
+      });
+      await ItemModel.updateMany(itemFilter, { $set: setObj });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: "Sync complete",
+      syncDetails: { renamed: renames, added: fieldsToAdd, removed: fieldsToRemove },
+      data: existingCategory,
+    });
+
+  } catch (error: any) {
+    console.error("Sync Update Error:", error);
+    return res.status(500).json({ ok: false, message: error.message });
+  }
+};
+
 // Controller to create material items
 export const createMaterialItems = async (req: Request, res: Response): Promise<any> => {
   try {

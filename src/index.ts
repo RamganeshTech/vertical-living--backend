@@ -134,6 +134,7 @@ import pincodeMasterRoutes from './routers/pincode_routes/pincodeMaster.routes';
 import pincodeVendorMappingRoutes from './routers/pincode_routes/pincodeVendorMapping.routes';
 import pincodeVendorProjectAssignmentRoutes from './routers/pincode_routes/pincodeVendorProjectAssignment.routes';
 import ExecutionPartnerAccountingRoutes from './routers/Department Routes/Accounting Routes/executionPartner.routes';
+import organizationReportRoutes from './routers/organization routes/organizationReports.routes';
 
 
 // Extend Socket interface for custom properties
@@ -272,6 +273,7 @@ app.use('/api/material', materailRoutes)
 app.use('/api/labour', labourRoutes)
 
 app.use('/api/orgs/', orgsRouter)
+app.use('/api/orgs/reports', organizationReportRoutes)
 app.use('/api/razorpay', razorpayRoutes)
 
 app.use('/api/staff', staffRoutes)
