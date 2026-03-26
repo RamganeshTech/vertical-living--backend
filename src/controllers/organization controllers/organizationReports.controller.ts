@@ -3,6 +3,7 @@ import { OrderMaterialHistoryModel } from "../../models/Stage Models/Ordering Ma
 import ProjectModel from "../../models/project model/project.model";
 import MaterialArrivalModel from "../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
 import mongoose from "mongoose";
+import { PaymentMainAccountModel } from "../../models/Department Models/Accounting Model/paymentMainAcc.model";
 // import { ProjectModel } from "../models/ProjectModel"; // Adjust paths as needed
 // import { OrderMaterialHistoryModel } from "../models/OrderMaterialHistoryModel";
 
@@ -252,4 +253,74 @@ export const getOrgProjectsReport = async (req: Request, res: Response): Promise
     console.error("Project Report Error:", error);
     return res.status(500).json({ ok: false, message: error.message });
   }
+};
+
+
+
+export const getOrgPaymentReport = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { organizationId } = req.params;
+
+        // 1. Get all projects belonging to this organization
+        const projectIds = await ProjectModel.find({ organizationId }).distinct("_id");
+
+        if (projectIds.length === 0) {
+            return res.status(200).json({
+                ok: true,
+                data: {
+                    summary: { totalGrandTotal: 0, totalTax: 0, totalDiscount: 0, settlementRate: 0 },
+                    statusBreakdown: []
+                }
+            });
+        }
+
+        // 2. Aggregate Payment Data
+        const report = await PaymentMainAccountModel.aggregate([
+            { $match: { projectId: { $in: projectIds } } },
+            {
+                $group: {
+                    _id: null,
+                    totalGrandTotal: { $sum: "$grandTotal" },
+                    totalTax: { $sum: "$taxAmount" },
+                    totalDiscount: { $sum: "$discountAmount" },
+                    // Count by status
+                    completedPayments: { 
+                        $sum: { $cond: [{ $eq: ["$generalStatus", "completed"] }, 1, 0] } 
+                    },
+                    pendingPayments: { 
+                        $sum: { $cond: [{ $eq: ["$generalStatus", "pending"] }, 1, 0] } 
+                    },
+                    totalRecords: { $sum: 1 }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    totalGrandTotal: 1,
+                    totalTax: 1,
+                    totalDiscount: 1,
+                    totalRecords: 1,
+                    completedPayments: 1,
+                    pendingPayments: 1,
+                    settlementRate: {
+                        $cond: [
+                            { $gt: ["$totalRecords", 0] },
+                            { $multiply: [{ $divide: ["$completedPayments", "$totalRecords"] }, 100] },
+                            0
+                        ]
+                    }
+                }
+            }
+        ]);
+
+        const stats = report[0] || { totalGrandTotal: 0, totalTax: 0, totalDiscount: 0, settlementRate: 0 };
+
+        return res.status(200).json({
+            ok: true,
+            data: stats
+        });
+    } catch (error: any) {
+        console.error("Payment Report Error:", error);
+        return res.status(500).json({ ok: false, message: error.message });
+    }
 };

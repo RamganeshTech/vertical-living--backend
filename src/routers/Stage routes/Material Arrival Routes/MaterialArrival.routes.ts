@@ -35,7 +35,7 @@ materialArrivalRoutes.put('/updateverification/:projectId/:orderNumber/:subItemI
 materialArrivalRoutes.put('/updateImage/:projectId/:orderNumber/:subItemId',   imageUploadToS3.single("upload"), processUploadFiles, updateMaterialArrivalItem)
 
 materialArrivalRoutes.put(
-  '/updateImage/v1/:projectId/:orderNumber/:subItemId', imageUploadToS3.array("upload", 10), processUploadFiles, updateMaterialArrivalItemV1
+  '/updateImage/v1/:projectId/:orderNumber/:subItemId', imageUploadToS3.array("upload"), processUploadFiles, updateMaterialArrivalItemV1
 );
 
 // Public delete route (No role restriction middleware)

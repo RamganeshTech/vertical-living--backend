@@ -210,9 +210,6 @@ export const getMaterialItemsForallCategories = async (req: Request, res: Respon
 
 
 
-
-
-
 // Controller to create a new material category
 export const createMaterialCategory = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -293,7 +290,7 @@ export const createMaterialCategory = async (req: Request, res: Response): Promi
   }
 };
 
-
+//  not used currently in web , but used in mobile
 export const updateMaterialCategoryAndSyncItems = async (req: Request, res: Response): Promise<any> => {
   try {
     const { categoryId, organizationId } = req.params;
@@ -594,6 +591,155 @@ export const createMaterialItems = async (req: Request, res: Response): Promise<
 };
 
 
+
+
+const DIMENSION_CATEGORIES = [
+  "wardrobe",
+  "kitchen wall units",
+  "kitchen base units",
+  "kitchen tall units",
+  "loft",
+  "tv unit",
+  "shoe rack",
+  "pooja unit",
+  "vanity storage",
+  "study cabin",
+  "dressing unit",
+  "crockery unit",
+];
+
+/**
+ * Parses a dimension key like "7h x 7w" or "8h x 10w" → returns sqft (height × width)
+ * Returns null if the key doesn't match the dimension pattern.
+ */
+// export function parseDimensionSqft(key: string): number | null {
+//   // Matches patterns like:   , "8h x 10w", "7h x 12w"
+//   const match = key.trim().match(/^(\d+(?:\.\d+)?)h\s*x\s*(\d+(?:\.\d+)?)w$/i);
+//   if (!match) return null;
+//   const height = parseFloat(match[1]);
+//   const width = parseFloat(match[2]);
+//   return height * width;
+// }
+
+// export function parseDimensionSqft(key: string): number | null {
+//   // Handles all these patterns:
+//   // "7 x 6", "7h x 6w", "7hx 6w", "7h x6w", "7h x 6ft w"
+//   // Rule: first number = height, number after 'x' = width
+
+
+//   // **Test all your cases:**
+//   // ```
+//   // "7 x 6"     → 7 × 6 = 42  ✅
+//   // "7h x 7w"   → 7 × 7 = 49  ✅
+//   // "7hx 6w"    → 7 × 6 = 42  ✅
+//   // "7h x6w"    → 7 × 6 = 42  ✅
+//   // "7h x 6ft w"→ 7 × 6 = 42  ✅
+//   // "8h x 10w"  → 8 × 10 = 80 ✅
+
+//   const match = key
+//     .trim()
+//     .match(/^(\d+(?:\.\d+)?)\s*(?:h|ft)?\s*x\s*(\d+(?:\.\d+)?)\s*(?:ft\s*)?(?:w)?$/i);
+
+//   if (!match) return null;
+//   const height = parseFloat(match[1]);
+//   const width = parseFloat(match[2]);
+//   return height * width;
+// }
+
+
+export function parseDimensionSqft(key: string): number | null {
+  // We removed the anchors ^ and $ and the strict 'h/w' requirements.
+  // This version simply finds: [Number] -> [Anything but a number] -> [x] -> [Anything but a number] -> [Number]
+  const match = key.trim().match(/(\d+(?:\.\d+)?)[^\d]*x[^\d]*(\d+(?:\.\d+)?)/i);
+
+  if (!match) return null;
+
+  const height = parseFloat(match[1]);
+  const width = parseFloat(match[2]);
+  
+  return height * width;
+}
+
+/**
+ * After a Plywood item's Rs is updated, find all matching dimension items
+ * (same brand case-insensitive + same thickness) across the dimension categories,
+ * and update every dimension key using:
+ *
+ *   new_value = old_value + (new_Rs - old_Rs) × sqft_of_dimension
+ *
+ * @param organizationId  - org scope
+ * @param brand           - e.g. "Sharon Gold MR"
+ * @param thickness       - e.g. 16
+ * @param oldRs           - previous Rs value
+ * @param newRs           - updated Rs value
+ * @returns summary of updated items
+ */
+export async function propagatePlywoodRsChange(
+  organizationId: string | mongoose.Types.ObjectId,
+  brand: string,
+  thickness: number,
+  oldRs: number,
+  newRs: number
+): Promise<{ updatedCount: number; itemIds: string[] }> {
+  const rsDiff = newRs - oldRs;
+
+  // No change — nothing to do
+  if (rsDiff === 0) return { updatedCount: 0, itemIds: [] };
+
+  // Find all dimension items for this org whose categoryName is one of the target categories
+  // and whose Brand (case-insensitive) + thickness match
+  const candidateItems = await ItemModel.find({
+    organizationId,
+    materialType: "plywood", // dimension items are tagged with materialType: "plywood"
+    categoryName: {
+      $in: DIMENSION_CATEGORIES.map(
+        (c) => new RegExp(`^${c}$`, "i") // case-insensitive match on categoryName
+      ),
+    },
+  });
+
+  const updatedItemIds: string[] = [];
+
+  for (const item of candidateItems) {
+    const itemBrand: string = item.data?.Brand ?? item.data?.brand ?? "";
+    // const itemThickness: number = item.data?.thickness;
+    const itemThickness: number = item.data?.["thickness (mm)"] ?? item.data?.thickness;
+
+    // Case-insensitive brand match + exact thickness match
+    const brandMatches =
+      itemBrand.trim().toLowerCase() === brand.trim().toLowerCase();
+    const thicknessMatches = itemThickness === thickness;
+    // const thicknessMatches = Number(itemThickness) === Number(thickness);
+
+    if (!brandMatches || !thicknessMatches) continue;
+
+    // Now update every dimension key in this item's data
+    const updatedData = { ...(item.data?.toObject?.() ?? item.data) };
+    let hasChanges = false;
+
+    for (const [key, value] of Object.entries(updatedData)) {
+      const sqft = parseDimensionSqft(key);
+      if (sqft === null) continue; // not a dimension key — skip
+
+      if (typeof value !== "number") continue; // safety check
+
+      const newValue = parseFloat((value + rsDiff * sqft).toFixed(2));
+      updatedData[key] = newValue;
+      hasChanges = true;
+    }
+
+    if (hasChanges) {
+      item.data = updatedData;
+      item.markModified("data");
+      await item.save();
+      updatedItemIds.push(String(item._id));
+    }
+  }
+
+  return { updatedCount: updatedItemIds.length, itemIds: updatedItemIds };
+}
+
+
 export const updateMaterialItem = async (req: Request, res: Response): Promise<any> => {
   try {
     const { itemId } = req.params;
@@ -671,6 +817,64 @@ export const updateMaterialItem = async (req: Request, res: Response): Promise<a
     }
 
 
+    //  NEW VERSION
+
+    // ─────────────────────────────────────────────────────────────────
+    // 5. PLYWOOD PROPAGATION
+    //    If this item is a Plywood category item AND Rs is being updated,
+    //    propagate the Rs delta to all matching dimension category items.
+    // ─────────────────────────────────────────────────────────────────
+    let propagationResult = null;
+
+    const isPlywoodItem =
+      item.categoryName?.trim().toLowerCase() === "plywood";
+    // Check for Rs or rs in updates vs existing data
+    const incomingRs = updates["Rs"] ?? updates["rs"];
+    const existingRs = item.data["Rs"] ?? item.data["rs"];
+    const rsIsUpdated = incomingRs !== undefined && Number(incomingRs) !== Number(existingRs);
+    // const rsIsUpdated =
+    //   updates["Rs"] !== undefined && updates["Rs"] !== item.data["Rs"];
+
+    if (isPlywoodItem && rsIsUpdated) {
+      // const oldRs: number = Number(item.data["Rs"] ?? item.data["rs"] ?? 0);
+      // const newRs: number = Number(updates["Rs"] ?? updates["rs"]);
+      const oldRs = Number(existingRs ?? 0);
+      const newRs = Number(incomingRs);
+
+      // Brand and thickness come from the existing item data
+      // (they may or may not also be in updates — we use the resolved value)
+      const brand: string =
+        String(updates["Brand"] ?? updates["brand"] ?? item.data["Brand"] ?? item.data["brand"] ?? "");
+      // const thickness: number = Number(
+      //   updates["thickness"] ?? item.data["thickness"] ?? item.data["thickness (mm)"] ?? 0
+      // );
+
+      const thickness: number = Number(
+        updates["thickness (mm)"] ??
+        item.data["thickness (mm)"] ??
+        updates["thickness"] ??
+        item.data["thickness"] ??
+        0
+      );
+
+
+
+      if (brand && thickness && oldRs !== newRs) {
+        propagationResult = await propagatePlywoodRsChange(
+          item.organizationId,
+          brand,
+          thickness,
+          oldRs,
+          newRs
+        );
+      }
+      else {
+        console.log(`Propagation skipped: Brand="${brand}", Thickness=${thickness}, Delta=${newRs - oldRs}`);
+      }
+    }
+
+    //  END OF NEW VERSION
+
     // Merge updates into item.data
     item.data = { ...item.data.toObject?.() ?? item.data, ...updates };
     item.markModified('data');
@@ -680,6 +884,12 @@ export const updateMaterialItem = async (req: Request, res: Response): Promise<a
       ok: true,
       message: "Material item updated successfully",
       data: item,
+      propagation: propagationResult
+        ? {
+          message: `Auto-updated ${propagationResult.updatedCount} dimension item(s) due to Rs change`,
+          updatedItemIds: propagationResult.itemIds,
+        }
+        : null
     });
   } catch (error: any) {
     console.error("Error updating material item:", error);
