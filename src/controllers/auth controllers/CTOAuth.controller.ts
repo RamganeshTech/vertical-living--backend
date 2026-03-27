@@ -323,7 +323,9 @@ const CTOIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             isauthenticated: true,
             permission: isExist?.permission || {},
             isGuideRequired: isExist.isGuideRequired,
-            ownerId: isExist?.ownerId
+            ownerId: isExist?.ownerId,
+            organizationId: isExist?.organizationId?.[0]
+
         }
 
         await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })

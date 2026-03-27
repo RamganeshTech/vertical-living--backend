@@ -235,7 +235,7 @@ const isAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             })
         }
 
-
+ 
         const isExist = await UserModel.findById(user?._id)
 
         if (!isExist) {
@@ -251,7 +251,8 @@ const isAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             isauthenticated: true,
             permission: isExist?.permission || {},
             isGuideRequired:isExist?.isGuideRequired,
-            ownerId: isExist?._id
+            ownerId: isExist?._id,
+            organizationId: isExist?.organizationId?.[0]
         }
 
         await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })

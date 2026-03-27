@@ -1,6 +1,4 @@
 import { Request, Response } from 'express';
-// import InternalQuoteEntryModel from '../models/MaterialQuote'; // Adjust path
-import mongoose from 'mongoose';
 import InternalQuoteEntryModel, { ISubLettingData } from '../../../models/Quote Model/QuoteGenerate Model/InternalQuote.model';
 import { generateNextQuoteNumber } from '../Quote Varaint Controller/QuoteVariant.controller';
 

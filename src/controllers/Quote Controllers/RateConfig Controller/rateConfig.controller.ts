@@ -901,7 +901,36 @@ export const updateMaterialItem = async (req: Request, res: Response): Promise<a
   }
 };
 
+export const migrateCrockeryMaterialType = async () => {
+  try {
+    const targetOrgId = "684a57015e439b678e8f6918";
+    const targetCategory = "POOJA UNIT";
 
+    // Update only the materialType field for matching documents
+    const result = await ItemModel.updateMany(
+      {
+        organizationId: targetOrgId,
+        categoryName: targetCategory,
+        materialType: "All" // Target only those that need the change
+      },
+      {
+        $set: { materialType: "plywood" }
+      }
+    );
+
+    console.log({
+      message: "Migration completed successfully",
+      matchedCount: result.matchedCount,
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error("Migration Error:", error);
+    console.log({
+      message: "Internal Server Error during migration",
+      error: error instanceof Error ? error.message : error,
+    });
+  }
+};
 
 
 
@@ -922,6 +951,8 @@ export const deleteMaterialItem = async (req: Request, res: Response): Promise<a
         message: "Material item not found",
       });
     }
+
+    await migrateCrockeryMaterialType()
 
     return res.status(200).json({
       ok: true,

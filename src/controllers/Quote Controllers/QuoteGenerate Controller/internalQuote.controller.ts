@@ -530,16 +530,47 @@ export const getMaterialQuoteEntries = async (req: Request, res: Response): Prom
       };
     }
 
+    // old version
+    // const quotes = await InternalQuoteEntryModel.find(filters)
+    //   .sort({ createdAt: -1 })
+    //   .populate("projectId", "_id projectName");
 
-    const quotes = await InternalQuoteEntryModel.find(filters)
+    // return res.status(200).json({
+    //   ok: true,
+    //   message: "quotes fetched successfully",
+    //   data: quotes,
+    // });
+
+
+    //  NEW VERSION
+    // ✅ Optimization: Use Projection to exclude large arrays 
+    // and include only their lengths
+    const quotes = await InternalQuoteEntryModel.find(filters, {
+      furnitures: 0,        // Exclude full array
+      commonMaterials: 0,  // Exclude full array
+      sqftRateWork: 0,     // Exclude full array
+    })
       .sort({ createdAt: -1 })
-      .populate("projectId", "_id projectName");
+      .populate("projectId", "_id projectName")
+      .lean(); // Use .lean() for faster, read-only performance
+
+    // ✅ Calculate lengths manually for the response
+    // Since we used .find({ ... }, { array: 0 }), we can't use $size easily in .find() 
+    // without aggregation. This manual map is very fast for a list of quotes.
+    const optimizedQuotes = quotes.map(quote => ({
+      ...quote,
+      furnituresCount: quote?.furnitures?.length || 0,
+      commonMaterialsCount: quote?.commonMaterials?.length || 0,
+      sqftRateWorkCount: quote?.sqftRateWork?.length || 0,
+    }));
 
     return res.status(200).json({
       ok: true,
       message: "quotes fetched successfully",
-      data: quotes,
+      data: optimizedQuotes,
     });
+
+
 
   } catch (error: any) {
     console.error("Error fetching quotes", error);

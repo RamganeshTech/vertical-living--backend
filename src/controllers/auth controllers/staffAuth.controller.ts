@@ -339,7 +339,9 @@ const staffIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             isauthenticated: true,
             permission: isExist?.permission || {},
             isGuideRequired:isExist?.isGuideRequired,
-            ownerId: isExist?.ownerId
+            ownerId: isExist?.ownerId,
+            organizationId: isExist?.organizationId?.[0]
+
 
         }
 

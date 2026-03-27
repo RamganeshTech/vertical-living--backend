@@ -10,7 +10,7 @@ import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail"
 import { syncEmployee } from "../Department controllers/HRMain controller/HrMain.controllers";
 
 // Helper: Token generator
-const generateWorkerTokens = (workerId: string, ownerId: string, role: string, workerName: string, projectId: string[], isGuideRequired:boolean) => {
+const generateWorkerTokens = (workerId: string, ownerId: string, role: string, workerName: string, projectId: string[], isGuideRequired: boolean) => {
   const workeraccesstoken = jwt.sign({ _id: workerId, role, workerName, projectId, ownerId, isGuideRequired }, process.env.JWT_WORKER_ACCESS_SECRET!, { expiresIn: "1d" });
   const workerrefreshtoken = jwt.sign({ _id: workerId, role, workerName, projectId, ownerId, isGuideRequired }, process.env.JWT_WORKER_REFRESH_SECRET!, { expiresIn: "7d" });
   return { workeraccesstoken, workerrefreshtoken };
@@ -123,7 +123,7 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
         isauthenticated: true,
         permission: newWorker?.permission || {},
         isGuideRequired: newWorker?.isGuideRequired,
-        
+
       },
       ok: true
     });
@@ -218,8 +218,8 @@ const loginWorker = async (req: Request, res: Response): Promise<void> => {
         workerName: worker.workerName,
         isauthenticated: true,
         permission: worker?.permission || {},
-        isGuideRequired: worker.isGuideRequired
-
+        isGuideRequired: worker.isGuideRequired,
+        organizationId: worker.organizationId?.[0]
       },
       ok: true
     });
@@ -351,7 +351,9 @@ const workerIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
       isauthenticated: true,
       permission: isExist?.permission || {},
       isGuideRequired: isExist.isGuideRequired,
-      ownerId: isExist?.ownerId
+      ownerId: isExist?.ownerId,
+      organizationId: isExist?.organizationId?.[0]
+
     }
 
     await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })

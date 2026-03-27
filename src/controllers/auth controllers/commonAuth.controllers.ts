@@ -612,6 +612,7 @@ export const unifiedIsAuthenticated = async (req: RoleBasedRequest, res: Respons
             permission: isExist?.permission || {},
             isGuideRequired: isExist.isGuideRequired,
             isauthenticated: true,
+
         };
 
         // Dynamically assign ID and Name keys based on role
