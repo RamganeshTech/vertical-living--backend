@@ -10,6 +10,7 @@ import { PaymentMainAccountModel } from "../../models/Department Models/Accounti
 export const getOrgOrderingReport = async (req: Request, res: Response): Promise<any> => {
     try {
         const { organizationId } = req.params;
+        const { startDate, endDate } = req.query;
 
         // 1. Get all project IDs belonging to this organization
         const projects = await ProjectModel.find({ organizationId }).select("_id");
@@ -25,9 +26,20 @@ export const getOrgOrderingReport = async (req: Request, res: Response): Promise
             });
         }
 
+        // 2. Build the Match Query dynamically
+        const matchStage: any = { projectId: { $in: projectIds } };
+        
+        // Apply date filtering if provided
+        if (startDate && endDate) {
+            matchStage.createdAt = {
+                $gte: new Date(startDate as string),
+                $lte: new Date(endDate as string)
+            };
+        }
+
         // 2. Aggregate Data with double grouping to prevent project inflation
         const report = await OrderMaterialHistoryModel.aggregate([
-            { $match: { projectId: { $in: projectIds } } },
+            { $match: matchStage },
             {
                 $project: {
                     projectId: 1,
@@ -116,14 +128,127 @@ export const getOrgOrderingReport = async (req: Request, res: Response): Promise
 };
 
 
+export const getOrgOrderingLineChartReport = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { organizationId } = req.params;
+        const { startDate, endDate } = req.query;
+
+        // 1. Get project IDs
+        const projects = await ProjectModel.find({ organizationId }).select("_id");
+        const projectIds = projects.map((p) => p._id);
+
+        if (projectIds.length === 0) {
+            return res.status(200).json({ ok: true, data: [] });
+        }
+
+        // 2. Generate the "Skeleton" for the last 12 months (e.g., Apr 2025 to Mar 2026)
+        // This ensures the graph ALWAYS stretches horizontally, even with zero data.
+        const trendData: any[] = [];
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(1); // Set to 1st to avoid end-of-month skipping bugs
+            d.setMonth(d.getMonth() - i);
+            const monthString = d.toISOString().substring(0, 7); // Format: "2025-04"
+            
+            trendData.push({
+                date: monthString,
+                drafts: 0,
+                sent: 0,
+                pending: 0
+            });
+        }
+
+        // 3. Match Stage (Filter by Date & Projects)
+        const matchStage: any = { projectId: { $in: projectIds } };
+        if (startDate && endDate) {
+            matchStage.createdAt = {
+                $gte: new Date(startDate as string),
+                $lte: new Date(endDate as string)
+            };
+        } else {
+            // If no custom date, default to fetching the last 12 months from DB
+            const oneYearAgo = new Date();
+            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+            matchStage.createdAt = { $gte: oneYearAgo };
+        }
+
+        // 4. Aggregate and Group BY MONTH ("%Y-%m")
+        const report = await OrderMaterialHistoryModel.aggregate([
+            { $match: matchStage },
+            {
+                $group: {
+                    // Group by Month instead of Day
+                    _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+                    draftsCount: {
+                        $sum: {
+                            $cond: [
+                                { $gt: [{ $size: { $ifNull: ["$currentOrder.subItems", []] } }, 0] },
+                                1, 0
+                            ]
+                        }
+                    },
+                    dailyOrderedItems: { $push: "$orderedItems" }
+                }
+            }
+        ]);
+
+        // 5. Process DB data and inject it into our 12-Month Skeleton
+        report.forEach(monthData => {
+            let sent = 0;
+            let pending = 0;
+
+            monthData.dailyOrderedItems.forEach((docOrders: any[]) => {
+                if (docOrders && docOrders.length > 0) {
+                    docOrders.forEach((order: any) => {
+                        if (order.isSyncWithProcurement === true) {
+                            sent++;
+                        } else {
+                            pending++;
+                        }
+                    });
+                }
+            });
+
+            // Find the matching month in our skeleton and update the zeroes with real data
+            const targetMonth = trendData.find(t => t.date === monthData._id);
+            if (targetMonth) {
+                targetMonth.drafts = monthData.draftsCount;
+                targetMonth.sent = sent;
+                targetMonth.pending = pending;
+            }
+        });
+
+        return res.status(200).json({
+            ok: true,
+            data: trendData
+        });
+
+    } catch (error: any) {
+        console.error("Org Ordering Trend Report Error:", error);
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+};
 
 export const getOrgArrivalReport = async (req: Request, res: Response): Promise<any> => {
     try {
         const { organizationId } = req.params;
+        const { startDate, endDate } = req.query;
+
         const projectIds = await ProjectModel.find({ organizationId }).distinct("_id");
 
+        // 2. Build the Match Query dynamically
+        const matchStage: any = { projectId: { $in: projectIds } };
+        
+        // Apply date filtering if provided in query params
+        if (startDate && endDate) {
+            matchStage.createdAt = {
+                $gte: new Date(startDate as string),
+                $lte: new Date(endDate as string)
+            };
+        }
+
         const arrivalData = await MaterialArrivalModel.aggregate([
-            { $match: { projectId: { $in: projectIds } } },
+            { $match: matchStage },
             { $unwind: "$materialArrivalList" },
             { $unwind: "$materialArrivalList.subItems" },
             {
@@ -139,7 +264,12 @@ export const getOrgArrivalReport = async (req: Request, res: Response): Promise<
             }
         ]);
 
-        const data = arrivalData[0] || { totalSubItems: 0 };
+        const data = arrivalData[0] || { 
+            totalSubItems: 0, 
+            fullyVerified: 0, 
+            totalOrderedQty: 0, 
+            totalArrivedQty: 0 
+        };
 
         return res.status(200).json({
             ok: true,
@@ -154,6 +284,61 @@ export const getOrgArrivalReport = async (req: Request, res: Response): Promise<
     }
 };
 
+export const getOrgArrivalLineChartReport = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { organizationId } = req.params;
+        const { startDate, endDate } = req.query;
+
+        const projectIds = await ProjectModel.find({ organizationId }).distinct("_id");
+
+        // 1. Skeleton for 12 months (Apr '25 - Mar '26)
+        const trendData: any[] = [];
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(1);
+            d.setMonth(d.getMonth() - i);
+            trendData.push({
+                date: d.toISOString().substring(0, 7),
+                arrived: 0,
+                verified: 0
+            });
+        }
+
+        const matchStage: any = { projectId: { $in: projectIds } };
+        if (startDate && endDate) {
+            matchStage.createdAt = { $gte: new Date(startDate as string), $lte: new Date(endDate as string) };
+        }
+
+        // 2. Aggregate by Month
+        const report = await MaterialArrivalModel.aggregate([
+            { $match: matchStage },
+            { $unwind: "$materialArrivalList" },
+            { $unwind: "$materialArrivalList.subItems" },
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+                    totalArrived: { $sum: "$materialArrivalList.subItems.arrivedQuantity" },
+                    totalVerified: { 
+                        $sum: { $cond: [{ $eq: ["$materialArrivalList.subItems.isVerified", true] }, 1, 0] } 
+                    }
+                }
+            }
+        ]);
+
+        // 3. Merge with Skeleton
+        report.forEach(item => {
+            const target = trendData.find(t => t.date === item._id);
+            if (target) {
+                target.arrived = item.totalArrived;
+                target.verified = item.totalVerified;
+            }
+        });
+
+        return res.status(200).json({ ok: true, data: trendData });
+    } catch (error: any) {
+        return res.status(500).json({ ok: false, message: error.message });
+    }
+};
 
 export const getOrgProjectsReport = async (req: Request, res: Response): Promise<any> => {
   try {

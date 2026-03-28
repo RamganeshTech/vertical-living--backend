@@ -123,7 +123,7 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
         isauthenticated: true,
         permission: newWorker?.permission || {},
         isGuideRequired: newWorker?.isGuideRequired,
-
+        organizationId: newWorker?.organizationId?.[0]
       },
       ok: true
     });

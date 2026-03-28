@@ -1,5 +1,5 @@
 import express, { RequestHandler } from 'express';
-import { unifiedForgotPassword, unifiedLogin, unifiedRegister, unifiedResetForgotPassword } from '../../controllers/auth controllers/commonAuth.controllers';
+import { registerOrganizationAndOwner, unifiedForgotPassword, unifiedLogin, unifiedRegister, unifiedResetForgotPassword } from '../../controllers/auth controllers/commonAuth.controllers';
 
 
 const CommonAuthRoutes = express.Router()
@@ -9,5 +9,7 @@ CommonAuthRoutes.post('/login', unifiedLogin)
 CommonAuthRoutes.post('/registeruser', unifiedRegister)
 CommonAuthRoutes.post('/forgotpassword', unifiedForgotPassword as RequestHandler)
 CommonAuthRoutes.post('/resetpassword', unifiedResetForgotPassword as RequestHandler)
+
+CommonAuthRoutes.post('/register/org-and-owner', registerOrganizationAndOwner)
 
 export default CommonAuthRoutes;

@@ -101,7 +101,8 @@ const registerCTO = async (req: Request, res: Response) => {
                 CTOName: CTO.CTOName,
                 email: CTO.email,
                 phoneNo: CTO.phoneNo,
-                organizationId: CTO.organizationId,
+                organizationId: CTO?.organizationId?.[0],
+                // organizationId: CTO.organizationId,
                 role: CTO.role,
                 permission: CTO?.permission || {},
                 isGuideRequired: CTO.isGuideRequired

@@ -133,6 +133,54 @@ const getMyOrganizations = async (req: RoleBasedRequest, res: Response) => {
 };
 
 
+export const getAllOrganizations = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        // 1. Get the authorized organization IDs from the user's decoded token
+        // Assuming your multiRoleAuthMiddleware attaches the decoded JWT to req.user
+        const isCorrectOwnerId = req.user?.ownerId === "6842f77542bd27c37c234c6e" || [];
+
+
+        if (!isCorrectOwnerId) {
+            return res.status(400).json({ message: "sorry you cannot access this end point", ok: false })
+        }
+
+        // 2. Extract optional filters from the query string
+        const { search, type, planType, planStatus } = req.query;
+
+        // 3. Build the MongoDB Query Object
+        // Base query: Only fetch organizations this user belongs to
+        const query: any = {};
+
+        // Apply filters if they exist
+        if (type) query.type = type;
+        if (planType) query.planType = planType;
+        if (planStatus) query.planStatus = planStatus;
+
+        // Apply search filter (case-insensitive regex on organizationName)
+        if (search) {
+            query.organizationName = { $regex: search, $options: "i" };
+        }
+
+        // 4. Fetch the data (No pagination)
+        const organizations = await OrganizationModel.find(query).sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            ok: true,
+            message: "Organizations fetched successfully.",
+            data: organizations
+        });
+
+    } catch (error: any) {
+        console.error("Fetch Organizations Error:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Failed to fetch organizations.",
+            error: error.message
+        });
+    }
+};
+
+
 const getOrganizationById = async (req: RoleBasedRequest, res: Response) => {
     try {
         // const user = req.user;
@@ -219,15 +267,15 @@ const updateOrganizationDetails = async (req: RoleBasedRequest, res: Response) =
 export const updateOrgLogo = async (req: Request, res: Response): Promise<any> => {
     try {
         const { orgId } = req.params;
-        
+
         // Since you are using .single("logo"), use req.file (singular)
         // 'location' comes from the Multer-S3 storage engine
         const file = req.file as Express.Multer.File & { location: string };
 
         if (!file) {
-            return res.status(400).json({ 
-                ok: false, 
-                message: "No logo image found in the request." 
+            return res.status(400).json({
+                ok: false,
+                message: "No logo image found in the request."
             });
         }
 
@@ -244,17 +292,17 @@ export const updateOrgLogo = async (req: Request, res: Response): Promise<any> =
             return res.status(404).json({ ok: false, message: "Organization not found" });
         }
 
-        return res.status(200).json({ 
-            ok: true, 
-            message: "Logo updated successfully", 
-            data: updatedOrg 
+        return res.status(200).json({
+            ok: true,
+            message: "Logo updated successfully",
+            data: updatedOrg
         });
 
     } catch (error: any) {
         console.error("Logo Upload Error:", error);
-        return res.status(500).json({ 
-            ok: false, 
-            message: error.message || "Server error during logo upload" 
+        return res.status(500).json({
+            ok: false,
+            message: error.message || "Server error during logo upload"
         });
     }
 };

@@ -1,5 +1,5 @@
 import express, { RequestHandler } from 'express';
-import { createOrganziation, deleteOrganization, deleteUserById, getAllUsersByOrganization, getClientByProject, getCTOByOrganization, getMyOrganizations, getOrganizationById, getSingleUserById, getStaffsByOrganization, getWorkersByProject, inviteClient, inviteCTO, inviteStaff, inviteWorkerByStaff, registerUserWithoutLink, removeCTOFromOrganization, removeStaffFromOrganization, removeWorkerFromProject, updateOrganizationDetails, updateOrgLogo, updateUserPermissions } from '../../controllers/organization controllers/organization.controllers';
+import { createOrganziation, deleteOrganization, deleteUserById, getAllOrganizations, getAllUsersByOrganization, getClientByProject, getCTOByOrganization, getMyOrganizations, getOrganizationById, getSingleUserById, getStaffsByOrganization, getWorkersByProject, inviteClient, inviteCTO, inviteStaff, inviteWorkerByStaff, registerUserWithoutLink, removeCTOFromOrganization, removeStaffFromOrganization, removeWorkerFromProject, updateOrganizationDetails, updateOrgLogo, updateUserPermissions } from '../../controllers/organization controllers/organization.controllers';
 import userAuthenticatedMiddleware from '../../middlewares/userAuthMiddleware';
 import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
 import { imageUploadToS3, processUploadFiles } from '../../utils/s3Uploads/s3upload';
@@ -10,6 +10,11 @@ const orgsRouter = express.Router()
 // PORDUCT OWNER OR ORGANIZATION OWNER ROUTES
 orgsRouter.post('/createorganziation', multiRoleAuthMiddleware("owner"), createOrganziation as RequestHandler)
 orgsRouter.get('/getorganizations', multiRoleAuthMiddleware("owner", "CTO", "staff", "client", "worker"), getMyOrganizations as RequestHandler)
+orgsRouter.get(
+    '/getallorganizations',
+    multiRoleAuthMiddleware("owner", "staff", "CTO", "client", "worker"),
+    getAllOrganizations
+);
 orgsRouter.get('/getsingleorganization/:orgs', multiRoleAuthMiddleware("owner", "CTO", "staff", "client", "worker"), getOrganizationById as RequestHandler)
 
 orgsRouter.put('/updateorganization/:orgId', multiRoleAuthMiddleware("owner"), updateOrganizationDetails as RequestHandler)

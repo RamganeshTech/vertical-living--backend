@@ -265,9 +265,9 @@ const registerClient = async (req: Request, res: Response) => {
 
         })
 
-                
-        let token = jwt.sign({ _id: client._id, clientName: client.clientName, role: client.role, ownerId: client.ownerId ,isGuideRequired: client.isGuideRequired }, process.env.JWT_CLIENT_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: client._id, clientName: client.clientName, role: client.role, ownerId: client.ownerId , isGuideRequired: client.isGuideRequired}, process.env.JWT_CLIENT_REFRESH_SECRET as string, { expiresIn: "7d" })
+
+        let token = jwt.sign({ _id: client._id, clientName: client.clientName, role: client.role, ownerId: client.ownerId, isGuideRequired: client.isGuideRequired }, process.env.JWT_CLIENT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: client._id, clientName: client.clientName, role: client.role, ownerId: client.ownerId, isGuideRequired: client.isGuideRequired }, process.env.JWT_CLIENT_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("clientaccesstoken", token, {
             httpOnly: true,
@@ -296,7 +296,9 @@ const registerClient = async (req: Request, res: Response) => {
                 phoneNo: client.phoneNo,
                 role: "client",
                 permission: client?.permission || {},
-                isGuideRequired: client.isGuideRequired
+                isGuideRequired: client.isGuideRequired,
+            organizationId: client?.organizationId?.[0]
+
 
             }
         })

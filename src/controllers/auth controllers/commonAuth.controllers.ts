@@ -13,6 +13,8 @@ import crypto from 'crypto';
 import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail";
 import { syncEmployee } from "../Department controllers/HRMain controller/HrMain.controllers";
 import { getModelNameByRole } from "../../utils/common features/utils";
+import OrganizationModel from "../../models/organization models/organization.model";
+
 
 export const unifiedLogin = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -489,7 +491,172 @@ export const unifiedRegister = async (req: Request, res: Response): Promise<any>
     }
 };
 
+export const registerOrganizationAndOwner = async (req: Request, res: Response): Promise<any> => {
+    // Start a Mongoose session for the transaction
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
+    try {
+        // 1. Destructure User details explicitly from req.body
+        const {
+            email,
+            password,
+            username,
+            phoneNo
+        } = req.body;
+
+        // 2. Destructure Organization details explicitly from req.body
+        const {
+            organizationName,
+            type,
+            address,
+            logoUrl,
+            organizationPhoneNo,
+            registeredEntity,
+            email: orgEmail, // Renamed to avoid conflict with user email
+            secondaryPhoneNo,
+            website,
+            gstin
+        } = req.body;
+
+        // Basic Validation
+        if (!email || !password || !organizationName) {
+            return res.status(400).json({
+                ok: false,
+                message: "Email, password, and organization name are required."
+            });
+        }
+
+        // --- STEP B: CONFLICT CHECKS (Email, Phone, Org Name) ---
+        // Check if User Email or Phone already exists
+        const existingUser = await UserModel.findOne({
+            $or: [{ email }, { phoneNo }]
+        });
+
+        if (existingUser) {
+            const conflict = existingUser.email === email ? "Email" : "Phone number";
+            return res.status(409).json({
+                ok: false,
+                message: `${conflict} is already registered to another account.`
+            });
+        }
+
+        // Check if Organization Name already exists
+        const existingOrg = await OrganizationModel.findOne({ organizationName });
+        if (existingOrg) {
+            return res.status(409).json({
+                ok: false,
+                message: "This organization name is already taken."
+            });
+        }
+
+        // 3. Hash the Password using bcrypt
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        // 4. Create the User (The Owner)
+        const newUser = new UserModel({
+            email,
+            password: hashedPassword, // Store the hashed version
+            username,
+            phoneNo,
+            role: "owner",            // Explicitly set as owner
+            permission: {},           // Set as empty object per your request
+            isGuideRequired: true,
+        });
+
+        // Save user within the session
+        const savedUser = await newUser.save({ session });
+
+
+
+
+        // 5. Create the Organization
+        const newOrganization = new OrganizationModel({
+            organizationName,
+            type,
+            address,
+            logoUrl,
+            organizationPhoneNo,
+            registeredEntity,
+            email: orgEmail,
+            secondaryPhoneNo,
+            website,
+            gstin,
+            userId: savedUser._id,    // Link the owner to the organization
+            planType: "basic",        // Defaulting to basic
+            planStatus: "active",   // Defaulting to inactive
+            mode: "manual"
+        });
+
+        const savedOrg = await newOrganization.save({ session });
+
+        // 6. Update the User's organizationId array
+        // This creates the bidirectional link you requested
+        const user = await UserModel.findByIdAndUpdate(
+            savedUser._id,
+            { $push: { organizationId: savedOrg._id } },
+            { session, new: true }
+        );
+
+        // If everything is successful, commit the transaction
+        await session.commitTransaction();
+        session.endSession();
+
+
+        if (!user) {
+            return res.status(400).json({ message: "user is not created, please create as a new user", ok: false })
+        };
+
+        let token = jwt.sign({ _id: user._id, username: user.username, role: user.role, organization: user.organizationId, isGuideRequired: user.isGuideRequired }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: user._id, username: user.username, role: user.role, organization: user.organizationId, isGuideRequired: user.isGuideRequired }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: "7d" })
+
+        res.cookie("useraccesstoken", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            maxAge: 1000 * 60 * 60 * 24
+        }
+        )
+
+        res.cookie("userrefreshtoken", refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            maxAge: 1000 * 60 * 60 * 24 * 7
+        }
+        )
+
+
+        return res.status(201).json({
+            ok: true,
+            message: "Organization and Owner registered successfully.",
+            data: {
+                userId: user._id,
+                userName: user.username,
+                email: user.email,
+                phoneNo: user.phoneNo,
+                role: user.role,
+                permission: user.permission,
+                isGuideRequired: user.isGuideRequired,
+                organizationId: savedOrg._id,
+                ownerId: user._id // Since this is the owner registration
+            }
+        });
+
+    } catch (error: any) {
+        // If any step fails, undo all database changes made during this session
+        await session.abortTransaction();
+        session.endSession();
+
+        console.error("Registration Error:", error);
+        return res.status(500).json({
+            ok: false,
+            message: "Registration failed. Please try again.",
+            error: error.message
+        });
+    }
+};
 
 export const unifiedLogout = async (req: Request, res: Response) => {
     try {

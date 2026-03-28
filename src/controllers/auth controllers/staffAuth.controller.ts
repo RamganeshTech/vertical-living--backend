@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import StaffModel from "../../models/staff model/staff.model";
-import { Types } from "mongoose"
+// import { Types } from "mongoose"
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { RoleBasedRequest } from "../../types/types";
@@ -8,7 +8,7 @@ import redisClient from "../../config/redisClient";
 import crypto from 'crypto';
 import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail";
 import { syncEmployee } from "../Department controllers/HRMain controller/HrMain.controllers";
-import { EmployeeModel } from "../../models/Department Models/HR Model/HRMain.model";
+// import { EmployeeModel } from "../../models/Department Models/HR Model/HRMain.model";
 
 // POST /api/staff/register
 const registerStaff = async (req: Request, res: Response) => {
@@ -80,8 +80,8 @@ const registerStaff = async (req: Request, res: Response) => {
             isGuideRequired: true,
         });
 
-        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role, permission: staff.permission ,isGuideRequired:staff.isGuideRequired}, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role, permission: staff.permission ,isGuideRequired:staff.isGuideRequired }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role, permission: staff.permission, isGuideRequired: staff.isGuideRequired }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, ownerId: staff.ownerId, organizationId: staff.organizationId, role: staff.role, permission: staff.permission, isGuideRequired: staff.isGuideRequired }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("staffaccesstoken", token, {
             httpOnly: true,
@@ -110,10 +110,13 @@ const registerStaff = async (req: Request, res: Response) => {
                 staffName: staff.staffName,
                 email: staff.email,
                 phoneNo: staff.phoneNo,
-                organizationId: staff.organizationId,
+                // organizationId: staff.organizationId,
+                
                 role: staff.role,
                 permission: staff?.permission || {},
-                isGuideRequired:staff.isGuideRequired
+                isGuideRequired: staff.isGuideRequired,
+                organizationId: staff?.organizationId?.[0]
+
 
             }, ok: true
         });
@@ -178,8 +181,8 @@ const loginStaff = async (req: Request, res: Response) => {
         }
 
         // Generate JWT Token
-        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, role: staff.role, ownerId: staff.ownerId, organizationId: staff.organizationId ,isGuideRequired:staff.isGuideRequired }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role: staff.role, ownerId: staff.ownerId, organizationId: staff.organizationId ,isGuideRequired:staff.isGuideRequired }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({ _id: staff._id, staffName: staff.staffName, role: staff.role, ownerId: staff.ownerId, organizationId: staff.organizationId, isGuideRequired: staff.isGuideRequired }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role: staff.role, ownerId: staff.ownerId, organizationId: staff.organizationId, isGuideRequired: staff.isGuideRequired }, process.env.JWT_STAFF_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("staffaccesstoken", token, {
             httpOnly: true,
@@ -209,7 +212,7 @@ const loginStaff = async (req: Request, res: Response) => {
                 organizationId: staff.organizationId,
                 role: staff.role,
                 permission: staff?.permission || {},
-                isGuideRequired:staff.isGuideRequired
+                isGuideRequired: staff.isGuideRequired
 
             },
             ok: true
@@ -275,7 +278,7 @@ const refreshTokenStaff = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        let staffaccesstoken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role: staff.role, organizationId: staff.organizationId, isGuideRequired:staff.isGuideRequired }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let staffaccesstoken = jwt.sign({ _id: staff._id, staffName: staff.staffName, role: staff.role, organizationId: staff.organizationId, isGuideRequired: staff.isGuideRequired }, process.env.JWT_STAFF_ACCESS_SECRET as string, { expiresIn: "1d" })
 
 
         res.cookie("staffaccesstoken", staffaccesstoken, {
@@ -338,7 +341,7 @@ const staffIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             staffName: isExist.staffName,
             isauthenticated: true,
             permission: isExist?.permission || {},
-            isGuideRequired:isExist?.isGuideRequired,
+            isGuideRequired: isExist?.isGuideRequired,
             ownerId: isExist?.ownerId,
             organizationId: isExist?.organizationId?.[0]
 
