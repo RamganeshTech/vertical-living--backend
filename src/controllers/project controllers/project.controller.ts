@@ -18,6 +18,7 @@ import { PreRequiretiesModel } from "../../models/PreRequisites/preRequireties.m
 import { StageDocumentationModel } from "../../models/Documentation Model/documentation.model";
 import { ShortlistedDesignModel } from "../../models/Stage Models/sampleDesing model/shortListed.model";
 import { syncRequirmentForm } from "../stage controllers/requirement controllers/mainRequirementNew.controller";
+import { getProjectUtil, getProjectUtilWithPagination } from "./projectUtils";
 
 const createProject = async (req: RoleBasedRequest, res: Response) => {
     try {
@@ -196,8 +197,17 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
         }
 
 
-        const cacheKey = `projects:${organizationId}`;
-        await redisClient.del(cacheKey);
+        // const cacheKey = `projects:${organizationId}`;
+        // await redisClient.del(cacheKey);
+
+
+        // 1. Find ALL cache keys matching this organization's projects (including all filters/pages)
+        const keysToDelete = await redisClient.keys(`projects:${organizationId}*`);
+
+        // 2. If any keys are found, delete them all at once
+        if (keysToDelete.length > 0) {
+            await redisClient.del(keysToDelete); // redisClient.del accepts an array of keys
+        }
 
         res.status(200).json({ message: "Projects created successfully", data: project, ok: true });
     }
@@ -216,32 +226,6 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
 
 
 
-export const getProjectUtil = async (organizationId: string) => {
-    try {
-
-        const cacheKey = `projects:${organizationId}`;
-
-        // await redisClient.del(`projects:${organizationId}`);
-        let cachedData = await redisClient.get(cacheKey);
-
-
-        if (cachedData) {
-            const parsedData = JSON.parse(cachedData);
-            // return res.status(200).json({ message: "Projects retrieved from cache", data: parsedData, ok: true });
-            return { message: "Projects retrieved from cache", data: parsedData, ok: true }
-        }
-
-        const projects = await ProjectModel.find({ organizationId })
-
-        await redisClient.set(cacheKey, JSON.stringify(projects), { EX: 300 }); // expires in 5 mins (put in secondsj)
-        return { message: "Projects retrived successfully", data: projects, ok: true }
-    }
-    catch (error: any) {
-        console.log("error form getProjects", error)
-        throw error
-    }
-
-}
 
 const getProjects = async (req: RoleBasedRequest, res: Response) => {
     try {
@@ -267,6 +251,25 @@ const getProjects = async (req: RoleBasedRequest, res: Response) => {
         return res.status(500).json({ message: 'Server error. Please try again later.', errorMessage: error, error: true, ok: false });
     }
 }
+
+
+export const getProjectsWithPagination = async (req: RoleBasedRequest, res: Response) => {
+    try {
+        const { organizationId } = req.params;
+        const query = req.query
+        if (!organizationId) {
+            return res.status(400).json({ message: "Organization ID is required", ok: false });
+        }
+
+
+
+        // Pass req.query to handle page, limit, status, etc.
+        const data = await getProjectUtilWithPagination(organizationId, query);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: true, ok: false });
+    }
+};
 
 
 const deleteProject = async (req: RoleBasedRequest, res: Response): Promise<void> => {
@@ -333,9 +336,15 @@ const deleteProject = async (req: RoleBasedRequest, res: Response): Promise<void
             await model.deleteMany({ projectId }); // Efficient and deletes all matching
         }
 
-        const cacheKey = `projects:${data.organizationId}`;
+        // const cacheKey = `projects:${data.organizationId}`;
 
-        await redisClient.del(cacheKey);
+        // await redisClient.del(cacheKey);
+
+        // --- FIXED CACHE DELETION LOGIC ---
+        const keysToDelete = await redisClient.keys(`projects:${data.organizationId}*`);
+        if (keysToDelete.length > 0) {
+            await redisClient.del(keysToDelete);
+        }
 
         res.status(200).json({ message: "project deleted successfully", data, ok: true })
 
@@ -370,8 +379,13 @@ const assignClient = async (req: RoleBasedRequest, res: Response): Promise<void>
             return
         }
 
-        const cacheKey = `projects:${project.organizationId}`;
-        await redisClient.del(cacheKey);
+        // const cacheKey = `projects:${project.organizationId}`;
+        // await redisClient.del(cacheKey);
+
+        const keysToDelete = await redisClient.keys(`projects:${project.organizationId}*`);
+        if (keysToDelete.length > 0) {
+            await redisClient.del(keysToDelete);
+        }
 
 
         res.status(200).json({ message: `client ${client.clientName} has been assigned to the ${project.projectName} project`, ok: true });
@@ -478,10 +492,16 @@ const updateProject = async (req: RoleBasedRequest, res: Response): Promise<void
         if (!data) {
             res.status(404).json({ message: "project not found" })
             return;
-        }
+        } 
 
-        const cacheKey = `projects:${data.organizationId}`;
-        await redisClient.del(cacheKey);
+        // const cacheKey = `projects:${data.organizationId}`;
+        // await redisClient.del(cacheKey);
+
+        // --- FIXED CACHE DELETION LOGIC ---
+        const keysToDelete = await redisClient.keys(`projects:${data.organizationId}*`);
+        if (keysToDelete.length > 0) {
+            await redisClient.del(keysToDelete);
+        }
 
 
         res.status(200).json({ message: "project information updated", data, ok: true })

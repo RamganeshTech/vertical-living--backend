@@ -7,7 +7,8 @@ import { generatePublicOrderHistoryPdf } from "./pdfOrderHistory.controller";
 import redisClient from "../../../config/redisClient";
 import ProjectModel from "../../../models/project model/project.model";
 import { getProjectDetailsUtil } from "../../Util Controller/utilProject.controller";
-import { getProjectUtil } from "../../project controllers/project.controller";
+import { getProjectUtil } from "../../project controllers/projectUtils";
+// import { getProjectUtil } from "../../project controllers/project.controller";
 
 export const publicaddSubItemToUnit = async (req: Request, res: Response): Promise<any> => {
     try {
