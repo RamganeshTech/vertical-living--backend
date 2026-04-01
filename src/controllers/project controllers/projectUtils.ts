@@ -50,12 +50,12 @@ export const getProjectUtilWithPagination = async (
         // 1. Create a Unique Cache Key based on all parameters
         // This ensures filters and pages are cached separately
         const filterString = JSON.stringify(queryParams);
-        const cacheKey = `projects:${organizationId}:${filterString}`;
+        // const cacheKey = `projects:${organizationId}:${filterString}`;
 
-        let cachedData = await redisClient.get(cacheKey);
-        if (cachedData) {
-            return { message: "Projects retrieved from cache", data: JSON.parse(cachedData), ok: true };
-        }
+        // let cachedData = await redisClient.get(cacheKey);
+        // if (cachedData) {
+        //     return { message: "Projects retrieved from cache", data: JSON.parse(cachedData), ok: true };
+        // }
 
         // 2. Build Dynamic Query Filter
         const query: any = { organizationId };
@@ -97,7 +97,7 @@ export const getProjectUtilWithPagination = async (
         };
 
         // 4. Set Cache (Expire in 5 mins)
-        await redisClient.set(cacheKey, JSON.stringify(result), { EX: 300 });
+        // await redisClient.set(cacheKey, JSON.stringify(result), { EX: 300 });
 
         return { message: "Projects retrieved successfully", data: result, ok: true };
     } catch (error: any) {
