@@ -92,13 +92,13 @@ export const updatePreSalesQuoteName = async (req: Request, res: Response): Prom
 
 
 
-/**
- * GET ALL: Retrieve list with search, status filter, and pagination
- */
-export const getAllPreSalesQuotes = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { organizationId } = req.query; // Ensure this is passed from frontend
-        const { search, status, page = 1, limit = 20, startDate, endDate } = req.query;
+    /**
+     * GET ALL: Retrieve list with search, status filter, and pagination
+     */
+    export const getAllPreSalesQuotes = async (req: Request, res: Response): Promise<any> => {
+        try {
+            const { organizationId } = req.query; // Ensure this is passed from frontend
+            const { search, status, page = 1, limit = 20, startDate, endDate } = req.query;
 
         if (!organizationId) {
             return res.status(400).json({ ok: false, message: "Organization ID is required" });

@@ -184,19 +184,19 @@ export const getAllOrganizations = async (req: RoleBasedRequest, res: Response):
 const getOrganizationById = async (req: RoleBasedRequest, res: Response) => {
     try {
         // const user = req.user;
-        const { orgs } = req.params
+        const { orgId } = req.params
 
         // if (!user) {
         //     res.status(404).json({ message: "No organization linked", ok: false });
         //     return
         // }
 
-        if (!orgs) {
+        if (!orgId) {
             res.status(404).json({ message: "No organization id provided", ok: false });
             return
         }
 
-        const organization = await OrganizationModel.findById(orgs);
+        const organization = await OrganizationModel.findById(orgId);
 
         if (!organization) {
             res.status(200).json({ message: "No organization  found", ok: false, data: {} });

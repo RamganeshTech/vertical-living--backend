@@ -20,7 +20,7 @@ pincodeVendorProjectAssignmentRoutes.post(
 // ✅ UPDATE: Handle Vendor acknowledgement (Accept/Reject) and status changes
 // Note: You can also allow 'vendor' role here if you have one for the Vendor Portal
 pincodeVendorProjectAssignmentRoutes.patch(
-    "/update-status/:id", 
+    "/update/:id", 
     multiRoleAuthMiddleware("owner", "staff", "CTO"), 
     updateAssignmentStatus
 );

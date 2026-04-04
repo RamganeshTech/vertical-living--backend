@@ -46,7 +46,7 @@ QuoteRouter.put(
   editQuoteMaterial  
 );
 
-
+//  used in btoh intenal quote and in the quote variant
 QuoteRouter.get(
   "/getquotes/:organizationId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
@@ -161,7 +161,7 @@ QuoteRouter.get(
 );
 
 
-
+// for updating the changes int eh type 4 quote in the quotes for clients
 
 QuoteRouter.put(
   "/:quoteId/update",

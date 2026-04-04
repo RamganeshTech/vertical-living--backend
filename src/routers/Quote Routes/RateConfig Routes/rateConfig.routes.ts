@@ -16,18 +16,19 @@ import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3
 const RateConfigRoutes = Router();
 
 
-
+//  not used
 RateConfigRoutes.get("/categories/fittings/:organizationId",  multiRoleAuthMiddleware("owner","CTO", "staff"), getMaterialItemsForFittings);
+//  not used
 RateConfigRoutes.get("/categories/all/:organizationId",  multiRoleAuthMiddleware("owner","CTO", "staff"), getMaterialItemsForallCategories);
-
-RateConfigRoutes.get("/categories/:organizationId",  multiRoleAuthMiddleware("owner","CTO", "staff"), getMaterialCategories);
-RateConfigRoutes.get("/categories/:categoryId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),  getMaterialItemsByCategory);
 
 RateConfigRoutes.put("/categories/:categoryId/description", multiRoleAuthMiddleware("owner","CTO", "staff"),  updateCategoryDescriptions);
 
+
+
 /**
  * CATEGORY ROUTES
- */
+*/
+RateConfigRoutes.get("/categories/:organizationId",  multiRoleAuthMiddleware("owner","CTO", "staff"), getMaterialCategories);
 // Create category (e.g., Plywood, Adhesive, etc.)
 RateConfigRoutes.post("/categories", multiRoleAuthMiddleware("owner","CTO", "staff"), createMaterialCategory);
 RateConfigRoutes.put("/categories/update/:organizationId/:categoryId", multiRoleAuthMiddleware("owner","CTO", "staff"), updateMaterialCategoryAndSyncItemsV2);
@@ -39,6 +40,8 @@ RateConfigRoutes.delete("/categories/:categoryId",multiRoleAuthMiddleware("owner
  * ITEM ROUTES
  */
 // Create items under a category
+RateConfigRoutes.get("/categories/:categoryId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),  getMaterialItemsByCategory);
+
 RateConfigRoutes.post("/categories/:organizationId/:categoryId/items", multiRoleAuthMiddleware("owner","CTO", "staff"),
 imageUploadToS3.any(), processUploadFiles,
 createMaterialItems);

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { CategoryModel, ItemModel } from "../../../models/Quote Model/RateConfigAdmin Model/rateConfigAdmin.model";
 import mongoose from "mongoose";
+import { createItemVersionSnapshot } from "./rateConfigVersion.controller";
 
 
 
@@ -699,6 +700,7 @@ export async function propagatePlywoodRsChange(
   });
 
   const updatedItemIds: string[] = [];
+const failedItemIds: string[] = []; // Track failures
 
   for (const item of candidateItems) {
     const itemBrand: string = item.data?.Brand ?? item.data?.brand ?? "";
@@ -729,10 +731,26 @@ export async function propagatePlywoodRsChange(
     }
 
     if (hasChanges) {
-      item.data = updatedData;
-      item.markModified("data");
-      await item.save();
-      updatedItemIds.push(String(item._id));
+      // await createItemVersionSnapshot(item);
+
+      // item.data = updatedData;
+      // item.markModified("data");
+      // await item.save();
+      // updatedItemIds.push(String(item._id));
+
+      try {
+        await createItemVersionSnapshot(item);
+        
+        item.data = updatedData;
+        item.markModified("data");
+        await item.save();
+        
+        updatedItemIds.push(String(item._id));
+      } catch (err: any) {
+        console.error(`Failed to update dimension item ${item._id}:`, err.message);
+        failedItemIds.push(String(item._id));
+        // The loop will now safely continue to the next item
+      }
     }
   }
 
@@ -872,6 +890,8 @@ export const updateMaterialItem = async (req: Request, res: Response): Promise<a
         console.log(`Propagation skipped: Brand="${brand}", Thickness=${thickness}, Delta=${newRs - oldRs}`);
       }
     }
+
+    await createItemVersionSnapshot(item);
 
     //  END OF NEW VERSION
 

@@ -124,7 +124,7 @@ import InternalQuoteRoutes from './routers/Quote Routes/QuoteGenerate Routes/int
 import MateroialWithLabourRateConfigRoutes from './routers/Quote Routes/RateConfig Routes/materialWithLabourRateConfig.routes';
 import CutlistRoutes from './routers/cutlist_routes/cutlist.routes';
 import CommonAuthRoutes from './routers/commonAuth_routes/commonAuth.routes';
-import PreSalesRoutes from './routers/preSalesQuote_routes/preSalesQuote.route';
+import PreSalesRoutes from './routers/Quote Routes/preSalesQuote_routes/preSalesQuote.route';
 import PreSalesMaterialRateConfigRoutes from './routers/Quote Routes/RateConfig Routes/preSalesRateConfig.routes';
 import MaterialShopRoutes from './routers/shopMaterialDocument_routes/shopMaterialDocument.routes';
 import PublicPaymentTransactionRoutes from './routers/publicPaymentTransaction_routes/publicPaymentTransaction.routes';
@@ -135,6 +135,7 @@ import pincodeVendorMappingRoutes from './routers/pincode_routes/pincodeVendorMa
 import pincodeVendorProjectAssignmentRoutes from './routers/pincode_routes/pincodeVendorProjectAssignment.routes';
 import ExecutionPartnerAccountingRoutes from './routers/Department Routes/Accounting Routes/executionPartner.routes';
 import organizationReportRoutes from './routers/organization routes/organizationReports.routes';
+import RateConfigVersionRoutes from './routers/Quote Routes/RateConfig Routes/rateConfigVersion.routes';
 
 
 // Extend Socket interface for custom properties
@@ -157,7 +158,7 @@ const server = http.createServer(app);
 
 // Socket.IO setup with CORS
 const io = new Server(server, {
-  cors: {   
+  cors: {
     origin: process.env.FRONTEND_URL || "http://localhost:5173", // Your React app URL
     methods: ["GET", "POST", "PUT", "PATCH", "PUT"],
     credentials: true
@@ -239,7 +240,7 @@ global.socketIO = io;
 
 // console.log("env file", process.env.FRONTEND_URL)
 
-const allowedOrigins:string[] = [
+const allowedOrigins: string[] = [
   'https://theverticalliving.com',
   'https://www.theverticalliving.com',
   process.env.FRONTEND_URL!
@@ -400,6 +401,7 @@ app.use('/api/quote/presales/rateconfig', PreSalesMaterialRateConfigRoutes)
 app.use('/api/quote/quotegenerate', QuoteRouter)
 app.use('/api/quote/quotegenerate', InternalQuoteRoutes)
 app.use('/api/quote/presales', PreSalesRoutes)
+app.use('/api/quote/rateconfig/version', RateConfigVersionRoutes)
 
 app.use('/api/cutlist', CutlistRoutes)
 app.use('/api/materialshop/document', MaterialShopRoutes)

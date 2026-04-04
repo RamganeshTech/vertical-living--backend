@@ -8,14 +8,16 @@ import { imageUploadToS3, processUploadFiles } from '../../utils/s3Uploads/s3upl
 const orgsRouter = express.Router()
 
 // PORDUCT OWNER OR ORGANIZATION OWNER ROUTES
+//  below one is not in use
 orgsRouter.post('/createorganziation', multiRoleAuthMiddleware("owner"), createOrganziation as RequestHandler)
+
 orgsRouter.get('/getorganizations', multiRoleAuthMiddleware("owner", "CTO", "staff", "client", "worker"), getMyOrganizations as RequestHandler)
 orgsRouter.get(
     '/getallorganizations',
     multiRoleAuthMiddleware("owner", "staff", "CTO", "client", "worker"),
     getAllOrganizations
 );
-orgsRouter.get('/getsingleorganization/:orgs', multiRoleAuthMiddleware("owner", "CTO", "staff", "client", "worker"), getOrganizationById as RequestHandler)
+orgsRouter.get('/getsingleorganization/:orgId', multiRoleAuthMiddleware("owner", "CTO", "staff", "client", "worker"), getOrganizationById as RequestHandler)
 
 orgsRouter.put('/updateorganization/:orgId', multiRoleAuthMiddleware("owner"), updateOrganizationDetails as RequestHandler)
 orgsRouter.put('/updatelogo/:orgId', multiRoleAuthMiddleware("owner"), imageUploadToS3.single("logo"), processUploadFiles, updateOrgLogo as RequestHandler)

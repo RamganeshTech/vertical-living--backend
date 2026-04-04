@@ -1,7 +1,7 @@
 import express from 'express';
-import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
-import { clonePreSalesQuote, createPreSalesQuote, deletePreSalesQuote, getAllPreSalesQuotes, getSinglePreSalesQuote, updatePreSalesQuote, updatePreSalesQuote4, updatePreSalesQuoteName } from '../../controllers/Quote Controllers/PreSalesQuote_controller/preSalesQuote.controller';
-import { imageUploadToS3, processUploadFiles } from '../../utils/s3Uploads/s3upload';
+import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware';
+import { clonePreSalesQuote, createPreSalesQuote, deletePreSalesQuote, getAllPreSalesQuotes, getSinglePreSalesQuote, updatePreSalesQuote, updatePreSalesQuote4, updatePreSalesQuoteName } from '../../../controllers/Quote Controllers/PreSalesQuote_controller/preSalesQuote.controller';
+import { imageUploadToS3, processUploadFiles } from '../../../utils/s3Uploads/s3upload';
 
 const PreSalesRoutes = express.Router();
 

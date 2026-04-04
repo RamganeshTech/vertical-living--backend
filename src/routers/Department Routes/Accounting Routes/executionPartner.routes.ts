@@ -30,7 +30,7 @@ import { createExecutionPartner, deleteExecutionPartner, getAllExecutionPartner,
         .put("/updateexecutionpartner/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), updateExecutionPartner)
         .delete("/deleteexecutionpartner/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), deleteExecutionPartner)
         .get("/singleexecutionpartner/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), getExecutionPartner)
-        .get("/getallexecutionpartnername/:organizationId", multiRoleAuthMiddleware("owner", "staff", "CTO"), getAllExecutionPartnerDropDown);
+        .get("/getallexecutionpartner-drop-down/:organizationId", multiRoleAuthMiddleware("owner", "staff", "CTO"), getAllExecutionPartnerDropDown);
 
 
 
