@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import { CategoryModel, ItemModel } from "../../../models/Quote Model/RateConfigAdmin Model/rateConfigAdmin.model";
 import mongoose from "mongoose";
 import { createItemVersionSnapshot } from "./rateConfigVersion.controller";
+import { RoleBasedRequest } from "../../../types/types";
+import { getModelNameByRole } from "../../../utils/common features/utils";
+import { RateConfigBackupModel } from "../../../models/Quote Model/RateConfigBackup_model/rateConfigBackup.model";
 
 
 
@@ -657,7 +660,7 @@ export function parseDimensionSqft(key: string): number | null {
 
   const height = parseFloat(match[1]);
   const width = parseFloat(match[2]);
-  
+
   return height * width;
 }
 
@@ -700,7 +703,7 @@ export async function propagatePlywoodRsChange(
   });
 
   const updatedItemIds: string[] = [];
-const failedItemIds: string[] = []; // Track failures
+  const failedItemIds: string[] = []; // Track failures
 
   for (const item of candidateItems) {
     const itemBrand: string = item.data?.Brand ?? item.data?.brand ?? "";
@@ -740,11 +743,11 @@ const failedItemIds: string[] = []; // Track failures
 
       try {
         await createItemVersionSnapshot(item);
-        
+
         item.data = updatedData;
         item.markModified("data");
         await item.save();
-        
+
         updatedItemIds.push(String(item._id));
       } catch (err: any) {
         console.error(`Failed to update dimension item ${item._id}:`, err.message);
@@ -959,9 +962,40 @@ export const migrateCrockeryMaterialType = async () => {
 
 
 
-export const deleteMaterialItem = async (req: Request, res: Response): Promise<any> => {
+export const deleteMaterialItem = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { itemId } = req.params;
+
+    const role = req.user?.role || ""
+    const deletedById = req.user?._id || ""
+
+    // 1. Find the item first (Don't delete yet!)
+    const item = await ItemModel.findOne({ _id: itemId });
+    if (!item) {
+      return res.status(404).json({ ok: false, message: "Material item not found" });
+    }
+
+    // 2. Prepare the Backup metadata
+    const userModelName = getModelNameByRole(role);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 360); // 360-day retention
+
+    const displayName = `${item.categoryName || "Item"}: ${item.data?.Brand || item.data?.brand || "Unnamed"}`;
+
+    // 3. Save the Backup Bundle
+    await RateConfigBackupModel.create({
+      organizationId: item.organizationId,
+      backupType: "SINGLE_ITEM",
+      displayName,
+      originalId: item._id,
+      snapshotData: {
+        singleItem: item.toObject(), // Deep copy of the document
+      },
+      itemCount: 1,
+      deletedBy: deletedById,
+      deletedUserModel: userModelName,
+      expiresAt,
+    });
 
     const deletedItem = await ItemModel.findByIdAndDelete(itemId);
 
@@ -972,7 +1006,6 @@ export const deleteMaterialItem = async (req: Request, res: Response): Promise<a
       });
     }
 
-    await migrateCrockeryMaterialType()
 
     return res.status(200).json({
       ok: true,
@@ -991,13 +1024,47 @@ export const deleteMaterialItem = async (req: Request, res: Response): Promise<a
 
 
 
-export const deleteMaterialCategory = async (req: Request, res: Response): Promise<any> => {
+export const deleteMaterialCategory = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const { categoryId } = req.params;
 
-    const category = await CategoryModel.findByIdAndDelete(categoryId);
+    const role = req.user?.role || ""
+    const deletedById = req.user?._id || ""
 
+
+    // 1. Find the Category and its related Items
+    const category = await CategoryModel.findOne({ _id: categoryId });
     if (!category) {
+      return res.status(404).json({ ok: false, message: "Category not found" });
+    }
+
+    const items = await ItemModel.find({ categoryId });
+
+    // 2. Prepare the Backup metadata
+    const userModelName = getModelNameByRole(role);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 360);
+
+    // 3. Save the "Category + Items" Bundle
+    await RateConfigBackupModel.create({
+      organizationId: category.organizationId,
+      backupType: "CATEGORY_BUNDLE",
+      displayName: category.name,
+      originalId: category._id,
+      snapshotData: {
+        category: category.toObject(),
+        items: items.map(item => item.toObject()), // Snapshot all related items
+      },
+      itemCount: items.length,
+      deletedBy: deletedById,
+      deletedUserModel: userModelName,
+      expiresAt,
+    });
+
+
+    const isDeleted = await CategoryModel.findByIdAndDelete(categoryId);
+
+    if (!isDeleted) {
       return res.status(404).json({
         ok: false,
         message: "Category not found",
