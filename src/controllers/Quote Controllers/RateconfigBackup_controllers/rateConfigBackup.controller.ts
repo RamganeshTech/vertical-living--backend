@@ -6,7 +6,7 @@ import { RateConfigBackupModel } from "../../../models/Quote Model/RateConfigBac
 import { RoleBasedRequest } from "../../../types/types";
 import { getModelNameByRole } from "../../../utils/common features/utils";
 
-
+ 
 export const getRateConfigBackups = async (req: RoleBasedRequest, res: Response): Promise<any> => {
   try {
     const organizationId = req.query.organizationId

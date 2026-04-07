@@ -131,7 +131,7 @@ import PublicPaymentTransactionRoutes from './routers/publicPaymentTransaction_r
 import publiCostCalculatorRoutes from './routers/publicCostCalculator_routes/publicCostCalculator.routes';
 import publicLeadCollectionRoutes from './routers/publicLeadCollection_routes/publicLeadCollection.routes';
 import pincodeMasterRoutes from './routers/pincode_routes/pincodeMaster.routes';
-import pincodeVendorMappingRoutes from './routers/pincode_routes/pincodeVendorMapping.routes';
+// import pincodeVendorMappingRoutes from './routers/pincode_routes/pincodeVendorMapping.routes';
 import pincodeVendorProjectAssignmentRoutes from './routers/pincode_routes/pincodeVendorProjectAssignment.routes';
 import ExecutionPartnerAccountingRoutes from './routers/Department Routes/Accounting Routes/executionPartner.routes';
 import organizationReportRoutes from './routers/organization routes/organizationReports.routes';
@@ -440,7 +440,7 @@ app.use("/api/v1/public/costcalculation", publiCostCalculatorRoutes)
 app.use("/api/v1/public/leadcollection", publicLeadCollectionRoutes)
 
 app.use("/api/pincode", pincodeMasterRoutes)
-app.use("/api/pincode/mapping", pincodeVendorMappingRoutes)
+// app.use("/api/pincode/mapping", pincodeVendorMappingRoutes)
 app.use("/api/pincode/project-assignment", pincodeVendorProjectAssignmentRoutes)
 
 
