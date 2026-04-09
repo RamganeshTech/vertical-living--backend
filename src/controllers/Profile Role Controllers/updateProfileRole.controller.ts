@@ -13,6 +13,12 @@ export const updateProfile = async (req: RoleBasedRequest, res: Response): Promi
         const user = req.user; // your auth middleware must attach user { _id, role }
         const { email, phoneNo, name } = req.body;
 
+
+        const file = req.file as (Express.Multer.File & { location: string })
+
+
+        console.log("file", file)
+
         if (!user || !user.role) {
             return res.status(401).json({ ok: false, message: "Unauthorized" });
         }
@@ -36,20 +42,20 @@ export const updateProfile = async (req: RoleBasedRequest, res: Response): Promi
         // 1. GLOBAL UNIQUE CHECK (Email & Phone)
         // Ensure the new email or phone isn't used by ANYONE ELSE in ANY table
         if (email || phoneNo) {
-            const allModels:Model<any>[] = [UserModel, StaffModel, WorkerModel, CTOModel, ClientModel];
-            
+            const allModels: Model<any>[] = [UserModel, StaffModel, WorkerModel, CTOModel, ClientModel];
+
             for (const model of allModels) {
                 const query: any = {
                     $or: [],
                     // Critically: if it's the same model as the current user, 
                     // exclude the current user's ID from the search
-                    _id: { $ne: user._id } 
+                    _id: { $ne: user._id }
                 };
 
                 if (email) query.$or.push({ email });
                 if (phoneNo) query.$or.push({ phoneNo });
 
-                const existingUser:any = await model.findOne(query).lean();
+                const existingUser: any = await model.findOne(query).lean();
 
                 if (existingUser) {
                     const conflictField = existingUser.email === email ? "Email" : "Phone Number";
@@ -67,6 +73,17 @@ export const updateProfile = async (req: RoleBasedRequest, res: Response): Promi
         const updateFields: Record<string, any> = {};
         if (email) updateFields.email = email;
         if (phoneNo) updateFields.phoneNo = phoneNo;
+        // 2. Add the profile picture to the update payload if it exists
+        // Handle File Upload
+        if (file) {
+            const file = req.file as Express.Multer.File & { location: string };
+            updateFields.profileImage = {
+                type: file.mimetype.startsWith("image") ? "image" : "pdf",
+                url: file.location,
+                originalName: file.originalname,
+                uploadedAt: new Date() // Changed from updatedAt to match your schema
+            };
+        }
 
         // each model uses different name field
         if (name) {
@@ -134,6 +151,7 @@ export const updateProfile = async (req: RoleBasedRequest, res: Response): Promi
                     email: updatedUser.email,
                     phoneNo: updatedUser.phoneNo,
                     userName: updatedUser.username,
+                    profileImage: updatedUser.profileImage, // <-- Add this
                     isauthenticated: true,
                 }
                 break;
@@ -144,6 +162,7 @@ export const updateProfile = async (req: RoleBasedRequest, res: Response): Promi
                     email: updatedUser.email,
                     phoneNo: updatedUser.phoneNo,
                     clientName: updatedUser.clientName,
+                    profileImage: updatedUser.profileImage, // <-- Add this
                     isauthenticated: true,
                 }
                 break;
@@ -154,6 +173,7 @@ export const updateProfile = async (req: RoleBasedRequest, res: Response): Promi
                     email: updatedUser.email,
                     phoneNo: updatedUser.phoneNo,
                     staffName: updatedUser.staffName,
+                    profileImage: updatedUser.profileImage, // <-- Add this
                     isauthenticated: true,
                 }
                 break;
@@ -164,6 +184,7 @@ export const updateProfile = async (req: RoleBasedRequest, res: Response): Promi
                     email: updatedUser.email,
                     phoneNo: updatedUser.phoneNo,
                     CTOName: updatedUser.CTOName,
+                    profileImage: updatedUser.profileImage, // <-- Add this
                     isauthenticated: true,
                 }
                 break;
@@ -174,6 +195,7 @@ export const updateProfile = async (req: RoleBasedRequest, res: Response): Promi
                     email: updatedUser.email,
                     phoneNo: updatedUser.phoneNo,
                     workerName: updatedUser.workerName,
+                    profileImage: updatedUser.profileImage, // <-- Add this
                     isauthenticated: true,
                 }
                 break;

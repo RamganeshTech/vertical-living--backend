@@ -21,11 +21,30 @@ export interface IStaff extends Document {
     permission: {
         [department: string]: DepartmentPermission;
     };
+        profileImage: IFile | null,
+    
     organizationId?: [Types.ObjectId];
     ownerId: Types.ObjectId | null
     resetPasswordToken?: string;
     resetPasswordExpire?: number;
 }
+
+
+export interface IFile {
+    type: "image" | "pdf";
+    url: string;
+    originalName?: string;
+    uploadedAt?: Date;
+}
+
+
+const fileSchema = new Schema<IFile>({
+    type: { type: String, enum: ["image", "pdf"] },
+    url: { type: String, },
+    originalName: String,
+    uploadedAt: { type: Date, default: new Date() }
+}, { _id: true });
+
 
 
 const StaffSchema: Schema<IStaff> = new Schema({
@@ -51,6 +70,9 @@ const StaffSchema: Schema<IStaff> = new Schema({
         type: String,
         enum: ["staff", null],
         default: null
+    },
+     profileImage: {
+        type: fileSchema, default: null
     },
    permission:{
     type:Object,

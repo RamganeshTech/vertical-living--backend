@@ -68,14 +68,18 @@ const registerCTO = async (req: Request, res: Response) => {
             role,
             organizationId: [organizationId],
             ownerId,
-            permission:{},
+            permission: {},
             isGuideRequired: true
         });
 
-        let token = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, organizationId: CTO.organizationId,
-             ownerId: CTO.ownerId, role: CTO.role , isGuideRequired: CTO.isGuideRequired}, process.env.JWT_CTO_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, 
-            organizationId: CTO.organizationId, ownerId: CTO.ownerId, role: CTO.role, isGuideRequired: CTO.isGuideRequired }, process.env.JWT_CTO_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({
+            _id: CTO._id, CTOName: CTO.CTOName, organizationId: CTO.organizationId,
+            ownerId: CTO.ownerId, role: CTO.role, isGuideRequired: CTO.isGuideRequired
+        }, process.env.JWT_CTO_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({
+            _id: CTO._id, CTOName: CTO.CTOName,
+            organizationId: CTO.organizationId, ownerId: CTO.ownerId, role: CTO.role, isGuideRequired: CTO.isGuideRequired
+        }, process.env.JWT_CTO_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("ctoaccesstoken", token, {
             httpOnly: true,
@@ -105,7 +109,8 @@ const registerCTO = async (req: Request, res: Response) => {
                 // organizationId: CTO.organizationId,
                 role: CTO.role,
                 permission: CTO?.permission || {},
-                isGuideRequired: CTO.isGuideRequired
+                isGuideRequired: CTO.isGuideRequired,
+                profileImage: CTO?.profileImage
 
             }, ok: true
         });
@@ -162,10 +167,14 @@ const loginCTO = async (req: Request, res: Response) => {
         }
 
         // Generate JWT Token
-        let token = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, role: CTO.role, 
-            ownerId: CTO.ownerId, organizationId: CTO.organizationId , isGuideRequired: CTO.isGuideRequired}, process.env.JWT_CTO_ACCESS_SECRET as string, { expiresIn: "1d" })
-        let refreshToken = jwt.sign({ _id: CTO._id, CTOName: CTO.CTOName, role: CTO.role, 
-            ownerId: CTO.ownerId, organizationId: CTO.organizationId, isGuideRequired: CTO.isGuideRequired }, process.env.JWT_CTO_REFRESH_SECRET as string, { expiresIn: "7d" })
+        let token = jwt.sign({
+            _id: CTO._id, CTOName: CTO.CTOName, role: CTO.role,
+            ownerId: CTO.ownerId, organizationId: CTO.organizationId, isGuideRequired: CTO.isGuideRequired
+        }, process.env.JWT_CTO_ACCESS_SECRET as string, { expiresIn: "1d" })
+        let refreshToken = jwt.sign({
+            _id: CTO._id, CTOName: CTO.CTOName, role: CTO.role,
+            ownerId: CTO.ownerId, organizationId: CTO.organizationId, isGuideRequired: CTO.isGuideRequired
+        }, process.env.JWT_CTO_REFRESH_SECRET as string, { expiresIn: "7d" })
 
         res.cookie("ctoaccesstoken", token, {
             httpOnly: true,
@@ -195,7 +204,9 @@ const loginCTO = async (req: Request, res: Response) => {
                 organizationId: CTO.organizationId,
                 role: CTO.role,
                 permission: CTO?.permission || {},
-                isGuideRequired: CTO.isGuideRequired
+                isGuideRequired: CTO.isGuideRequired,
+                profileImage: CTO?.profileImage
+
 
             },
             ok: true
@@ -325,7 +336,9 @@ const CTOIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             permission: isExist?.permission || {},
             isGuideRequired: isExist.isGuideRequired,
             ownerId: isExist?.ownerId,
-            organizationId: isExist?.organizationId?.[0]
+            organizationId: isExist?.organizationId?.[0],
+            profileImage: isExist?.profileImage
+
 
         }
 

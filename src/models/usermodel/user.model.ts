@@ -11,6 +11,7 @@ interface IUser extends Document {
         [department: string]: DepartmentPermission;
     };
     isGuideRequired: boolean,
+    profileImage: IFile | null,
 
     organizationId?: [Types.ObjectId];
     projectId?: [Types.ObjectId];
@@ -18,6 +19,21 @@ interface IUser extends Document {
     resetPasswordExpire?: number;
 }
 
+
+export interface IFile {
+    type: "image" | "pdf";
+    url: string;
+    originalName?: string;
+    uploadedAt?: Date;
+}
+
+
+const fileSchema = new Schema<IFile>({
+    type: { type: String, enum: ["image", "pdf"] },
+    url: { type: String, },
+    originalName: String,
+    uploadedAt: { type: Date, default: new Date() }
+}, { _id: true });
 
 const UserSchema: Schema<IUser> = new Schema({
     email: {
@@ -42,6 +58,9 @@ const UserSchema: Schema<IUser> = new Schema({
         type: String,
         enum: ["owner", null],
         default: null
+    },
+    profileImage: {
+        type: fileSchema, default: null
     },
     permission: {
         type: Object,

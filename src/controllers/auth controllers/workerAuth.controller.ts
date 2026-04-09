@@ -123,7 +123,9 @@ const registerWorker = async (req: Request, res: Response): Promise<void> => {
         isauthenticated: true,
         permission: newWorker?.permission || {},
         isGuideRequired: newWorker?.isGuideRequired,
-        organizationId: newWorker?.organizationId?.[0]
+        organizationId: newWorker?.organizationId?.[0],
+        profileImage: newWorker?.profileImage
+
       },
       ok: true
     });
@@ -219,7 +221,9 @@ const loginWorker = async (req: Request, res: Response): Promise<void> => {
         isauthenticated: true,
         permission: worker?.permission || {},
         isGuideRequired: worker.isGuideRequired,
-        organizationId: worker.organizationId?.[0]
+        organizationId: worker.organizationId?.[0],
+        profileImage: worker?.profileImage
+
       },
       ok: true
     });
@@ -352,7 +356,9 @@ const workerIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
       permission: isExist?.permission || {},
       isGuideRequired: isExist.isGuideRequired,
       ownerId: isExist?.ownerId,
-      organizationId: isExist?.organizationId?.[0]
+      organizationId: isExist?.organizationId?.[0],
+      profileImage: isExist?.profileImage
+
 
     }
 

@@ -62,7 +62,9 @@ const userlogin = async (req: Request, res: Response) => {
                 userId: user._id, role: "owner", userName: user.username, email: user.email, phoneNo: user.phoneNo,
 
                 permission: user?.permission || {},
-                isGuideRequired: user.isGuideRequired
+                isGuideRequired: user.isGuideRequired,
+                profileImage: user?.profileImage
+
 
             },
             ok: true,
@@ -259,7 +261,8 @@ const isAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             permission: isExist?.permission || {},
             isGuideRequired: isExist?.isGuideRequired,
             ownerId: isExist?._id,
-            organizationId: isExist?.organizationId?.[0]
+            organizationId: isExist?.organizationId?.[0],
+            profileImage: isExist?.profileImage
         }
 
         await redisClient.set(redisUserKey, JSON.stringify(data), { EX: 60 * 10 })

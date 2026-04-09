@@ -143,6 +143,7 @@ export const unifiedLogin = async (req: Request, res: Response): Promise<any> =>
             permission: foundUser.permission || {},
             isGuideRequired: foundUser.isGuideRequired,
             ownerId: foundUser?.ownerId || "",
+            profileImage: foundUser.profileImage,
             ok: true
         };
 
@@ -640,7 +641,9 @@ export const registerOrganizationAndOwner = async (req: Request, res: Response):
                 permission: user.permission,
                 isGuideRequired: user.isGuideRequired,
                 organizationId: savedOrg._id,
-                ownerId: user._id // Since this is the owner registration
+                ownerId: user._id,// Since this is the owner registration
+                profileImage: user.profileImage,
+
             }
         });
 
@@ -779,7 +782,7 @@ export const unifiedIsAuthenticated = async (req: RoleBasedRequest, res: Respons
             permission: isExist?.permission || {},
             isGuideRequired: isExist.isGuideRequired,
             isauthenticated: true,
-
+            profileImage: isExist.profileImage,
         };
 
         // Dynamically assign ID and Name keys based on role

@@ -12,6 +12,7 @@ export interface IClient extends Document {
         [department: string]: DepartmentPermission;
     };
     isGuideRequired: boolean,
+    profileImage: IFile | null,
     // company?: (string | null);
     password: string; // optional if you want login
     resetPasswordToken?: string,
@@ -20,6 +21,23 @@ export interface IClient extends Document {
     organizationId: Types.ObjectId[]
     ownerId: Types.ObjectId
 }
+
+
+export interface IFile {
+    type: "image" | "pdf";
+    url: string;
+    originalName?: string;
+    uploadedAt?: Date;
+}
+
+
+const fileSchema = new Schema<IFile>({
+    type: { type: String, enum: ["image", "pdf"] },
+    url: { type: String, },
+    originalName: String,
+    uploadedAt: { type: Date, default: new Date() }
+}, { _id: true });
+
 
 const ClientSchema: Schema<IClient> = new Schema({
     clientName: { type: String, required: true },
@@ -31,11 +49,14 @@ const ClientSchema: Schema<IClient> = new Schema({
         type: Object,
         default: {}
     },
-        isGuideRequired: { type: Boolean, default: true },
+    profileImage: {
+        type: fileSchema, default: null
+    },
+    isGuideRequired: { type: Boolean, default: true },
 
     // company: { type: String, default: null, maxlength: [50, "comapny name should not be more than 50 digits"] },
     password: { type: String, required: true },
-    projectId: { type: Schema.Types.ObjectId,  ref: "ProjectModel", },
+    projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", },
     ownerId: { type: Schema.Types.ObjectId, required: true, ref: "UserModel" },
     organizationId: { type: [Schema.Types.ObjectId], ref: "OrganizationModel", required: true, default: [] },
     resetPasswordToken: { type: String },  // Token for password reset

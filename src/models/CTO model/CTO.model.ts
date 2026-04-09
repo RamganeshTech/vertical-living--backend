@@ -12,12 +12,30 @@ interface ICTO extends Document {
     };
     isGuideRequired: boolean,
 
+            profileImage: IFile | null,
+    
     organizationId?: [Types.ObjectId];
     projectId?: [Types.ObjectId];
     ownerId: Types.ObjectId | null
     resetPasswordToken?: string;
     resetPasswordExpire?: number;
 }
+
+
+export interface IFile {
+    type: "image" | "pdf";
+    url: string;
+    originalName?: string;
+    uploadedAt?: Date;
+}
+
+
+const fileSchema = new Schema<IFile>({
+    type: { type: String, enum: ["image", "pdf"] },
+    url: { type: String, },
+    originalName: String,
+    uploadedAt: { type: Date, default: new Date() }
+}, { _id: true });
 
 
 const CTOSchema: Schema<ICTO> = new Schema({
@@ -48,7 +66,9 @@ const CTOSchema: Schema<ICTO> = new Schema({
         type: Object,
         default: {}
     },
-
+     profileImage: {
+        type: fileSchema, default: null
+    },
     organizationId: {
         type: [Schema.Types.ObjectId],
         ref: "OrganizationModel",

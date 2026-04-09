@@ -64,7 +64,9 @@ const clientLogin = async (req: Request, res: Response) => {
                 phoneNo: client.phoneNo,
                 role: "client",
                 permission: client?.permission || {},
-                isGuideRequired: client.isGuideRequired
+                isGuideRequired: client.isGuideRequired,
+                profileImage: client?.profileImage
+
 
             },
             ok: true, error: false
@@ -297,7 +299,8 @@ const registerClient = async (req: Request, res: Response) => {
                 role: "client",
                 permission: client?.permission || {},
                 isGuideRequired: client.isGuideRequired,
-            organizationId: client?.organizationId?.[0]
+                organizationId: client?.organizationId?.[0],
+                profileImage: client?.profileImage
 
 
             }
@@ -390,8 +393,9 @@ const isClientAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             permission: isExist?.permission || {},
             isGuideRequired: isExist.isGuideRequired,
             ownerId: isExist?.ownerId,
-            organizationId: isExist?.organizationId?.[0]
+            organizationId: isExist?.organizationId?.[0],
 
+            profileImage: isExist?.profileImage
 
 
         }

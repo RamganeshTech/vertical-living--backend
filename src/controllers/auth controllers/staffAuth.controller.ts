@@ -115,7 +115,8 @@ const registerStaff = async (req: Request, res: Response) => {
                 role: staff.role,
                 permission: staff?.permission || {},
                 isGuideRequired: staff.isGuideRequired,
-                organizationId: staff?.organizationId?.[0]
+                organizationId: staff?.organizationId?.[0],
+                profileImage: staff?.profileImage
 
 
             }, ok: true
@@ -212,7 +213,9 @@ const loginStaff = async (req: Request, res: Response) => {
                 organizationId: staff.organizationId,
                 role: staff.role,
                 permission: staff?.permission || {},
-                isGuideRequired: staff.isGuideRequired
+                isGuideRequired: staff.isGuideRequired,
+                profileImage: staff?.profileImage
+
 
             },
             ok: true
@@ -343,7 +346,8 @@ const staffIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
             permission: isExist?.permission || {},
             isGuideRequired: isExist?.isGuideRequired,
             ownerId: isExist?.ownerId,
-            organizationId: isExist?.organizationId?.[0]
+            organizationId: isExist?.organizationId?.[0],
+            profileImage: isExist.profileImage
 
 
         }

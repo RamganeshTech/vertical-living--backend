@@ -12,7 +12,8 @@ export interface IWorker extends Document {
     permission: {
         [department: string]: DepartmentPermission;
     };
-    isGuideRequired:boolean,
+    profileImage: IFile | null,
+    isGuideRequired: boolean,
     ownerId: Types.ObjectId;
     projectId: Types.ObjectId[];
     organizationId: Types.ObjectId[];
@@ -22,6 +23,24 @@ export interface IWorker extends Document {
     resetPasswordToken?: string;
     resetPasswordExpire?: number;
 }
+
+
+export interface IFile {
+    type: "image" | "pdf";
+    url: string;
+    originalName?: string;
+    uploadedAt?: Date;
+}
+
+
+const fileSchema = new Schema<IFile>({
+    type: { type: String, enum: ["image", "pdf"] },
+    url: { type: String, },
+    originalName: String,
+    uploadedAt: { type: Date, default: new Date() }
+}, { _id: true });
+
+
 
 const workerSchema = new Schema<IWorker>({
     workerName: { type: String },
@@ -35,6 +54,10 @@ const workerSchema = new Schema<IWorker>({
         default: {}
     },
     isGuideRequired: { type: Boolean, default: true },
+
+    profileImage: {
+        type: fileSchema, default: null
+    },
 
     projectId: { type: [Schema.Types.ObjectId], ref: "ProjectModel", default: [] },
     organizationId: { type: [Schema.Types.ObjectId], ref: "OrganizationModel", required: true, default: [] },
