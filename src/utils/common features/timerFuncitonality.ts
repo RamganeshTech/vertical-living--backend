@@ -25,10 +25,12 @@ export const handleSetStageDeadline = async (req: Request, res: Response, { mode
       return res.status(400).json({ ok: false, message: "Form Id required" });
     }
 
-    // If the input has no time, add "T00:00:00"
-    if (deadLine && deadLine.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(deadLine)) {
-      deadLine = `${deadLine}T00:00:00`;
-    }
+
+
+    // // If the input has no time, add "T00:00:00"
+    // if (deadLine && deadLine.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(deadLine)) {
+    //   deadLine = `${deadLine}T00:00:00`;
+    // }
 
     const deadlineDate = new Date(deadLine);
 
