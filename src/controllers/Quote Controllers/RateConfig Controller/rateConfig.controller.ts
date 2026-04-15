@@ -838,61 +838,63 @@ export const updateMaterialItem = async (req: Request, res: Response): Promise<a
     }
 
 
-    //  NEW VERSION
+    // //  NEW VERSION
 
-    // ─────────────────────────────────────────────────────────────────
-    // 5. PLYWOOD PROPAGATION
-    //    If this item is a Plywood category item AND Rs is being updated,
-    //    propagate the Rs delta to all matching dimension category items.
-    // ─────────────────────────────────────────────────────────────────
-    let propagationResult = null;
+    // // ─────────────────────────────────────────────────────────────────
+    // // 5. PLYWOOD PROPAGATION
+    // //    If this item is a Plywood category item AND Rs is being updated,
+    // //    propagate the Rs delta to all matching dimension category items.
+    // // ─────────────────────────────────────────────────────────────────
+    // let propagationResult = null;
 
-    const isPlywoodItem =
-      item.categoryName?.trim().toLowerCase() === "plywood";
-    // Check for Rs or rs in updates vs existing data
-    const incomingRs = updates["Rs"] ?? updates["rs"];
-    const existingRs = item.data["Rs"] ?? item.data["rs"];
-    const rsIsUpdated = incomingRs !== undefined && Number(incomingRs) !== Number(existingRs);
-    // const rsIsUpdated =
-    //   updates["Rs"] !== undefined && updates["Rs"] !== item.data["Rs"];
+    // const isPlywoodItem =
+    //   item.categoryName?.trim().toLowerCase() === "plywood";
+    // // Check for Rs or rs in updates vs existing data
+    // const incomingRs = updates["Rs"] ?? updates["rs"];
+    // const existingRs = item.data["Rs"] ?? item.data["rs"];
+    // const rsIsUpdated = incomingRs !== undefined && Number(incomingRs) !== Number(existingRs);
+    // // const rsIsUpdated =
+    // //   updates["Rs"] !== undefined && updates["Rs"] !== item.data["Rs"];
 
-    if (isPlywoodItem && rsIsUpdated) {
-      // const oldRs: number = Number(item.data["Rs"] ?? item.data["rs"] ?? 0);
-      // const newRs: number = Number(updates["Rs"] ?? updates["rs"]);
-      const oldRs = Number(existingRs ?? 0);
-      const newRs = Number(incomingRs);
+    // if (isPlywoodItem && rsIsUpdated) {
+    //   // const oldRs: number = Number(item.data["Rs"] ?? item.data["rs"] ?? 0);
+    //   // const newRs: number = Number(updates["Rs"] ?? updates["rs"]);
+    //   const oldRs = Number(existingRs ?? 0);
+    //   const newRs = Number(incomingRs);
 
-      // Brand and thickness come from the existing item data
-      // (they may or may not also be in updates — we use the resolved value)
-      const brand: string =
-        String(updates["Brand"] ?? updates["brand"] ?? item.data["Brand"] ?? item.data["brand"] ?? "");
-      // const thickness: number = Number(
-      //   updates["thickness"] ?? item.data["thickness"] ?? item.data["thickness (mm)"] ?? 0
-      // );
+    //   // Brand and thickness come from the existing item data
+    //   // (they may or may not also be in updates — we use the resolved value)
+    //   const brand: string =
+    //     String(updates["Brand"] ?? updates["brand"] ?? item.data["Brand"] ?? item.data["brand"] ?? "");
+    //   // const thickness: number = Number(
+    //   //   updates["thickness"] ?? item.data["thickness"] ?? item.data["thickness (mm)"] ?? 0
+    //   // );
 
-      const thickness: number = Number(
-        updates["thickness (mm)"] ??
-        item.data["thickness (mm)"] ??
-        updates["thickness"] ??
-        item.data["thickness"] ??
-        0
-      );
+    //   const thickness: number = Number(
+    //     updates["thickness (mm)"] ??
+    //     item.data["thickness (mm)"] ??
+    //     updates["thickness"] ??
+    //     item.data["thickness"] ??
+    //     0
+    //   );
 
 
 
-      if (brand && thickness && oldRs !== newRs) {
-        propagationResult = await propagatePlywoodRsChange(
-          item.organizationId,
-          brand,
-          thickness,
-          oldRs,
-          newRs
-        );
-      }
-      else {
-        console.log(`Propagation skipped: Brand="${brand}", Thickness=${thickness}, Delta=${newRs - oldRs}`);
-      }
-    }
+    //   if (brand && thickness && oldRs !== newRs) {
+    //     propagationResult = await propagatePlywoodRsChange(
+    //       item.organizationId,
+    //       brand,
+    //       thickness,
+    //       oldRs,
+    //       newRs
+    //     );
+    //   }
+    //   else {
+    //     console.log(`Propagation skipped: Brand="${brand}", Thickness=${thickness}, Delta=${newRs - oldRs}`);
+    //   }
+    // }
+
+    // end of propagation
 
     await createItemVersionSnapshot(item);
 
@@ -907,12 +909,12 @@ export const updateMaterialItem = async (req: Request, res: Response): Promise<a
       ok: true,
       message: "Material item updated successfully",
       data: item,
-      propagation: propagationResult
-        ? {
-          message: `Auto-updated ${propagationResult.updatedCount} dimension item(s) due to Rs change`,
-          updatedItemIds: propagationResult.itemIds,
-        }
-        : null
+      // propagation: propagationResult
+      //   ? {
+      //     message: `Auto-updated ${propagationResult.updatedCount} dimension item(s) due to Rs change`,
+      //     updatedItemIds: propagationResult.itemIds,
+      //   }
+      //   : null
     });
   } catch (error: any) {
     console.error("Error updating material item:", error);
