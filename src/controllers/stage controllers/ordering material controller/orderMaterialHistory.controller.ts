@@ -2674,6 +2674,16 @@ export const generateOrderHistoryPDFController = async (req: Request, res: Respo
             });
         }
 
+
+        if (!organizationId) {
+            // throw new Error('Organization not found , check whethere youre passing the organizationId or not');
+            return res.status(400).json({
+                ok: false,
+                message: 'organizationId is required'
+            });
+        }
+
+
         const result = await generateOrderHistoryPDF(projectId, organizationId, orderItemId);
 
         await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: result?.data?.orderHistory })

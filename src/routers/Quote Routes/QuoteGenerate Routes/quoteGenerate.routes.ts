@@ -107,7 +107,7 @@ QuoteRouter.get(
   getMaterialQuoteSingle
 );
 
-
+// this route is used to get all the items of a particular cateogry items of the rate configuration category
 QuoteRouter.get(
   "/getmaterials/:organizationId/:categoryName",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),

@@ -1464,6 +1464,13 @@ export const generateCommonOrderHistoryPDFController = async (req: Request, res:
             });
         }
 
+         if (!organizationId) {
+            return res.status(400).json({
+                ok: false,
+                message: 'organizationId is required'
+            });
+        }
+
         const result = await generateCommonOrderHistoryPDF(id, organizationId, orderItemId);
 
         // await populateWithAssignedToField({ stageModel: OrderMaterialHistoryModel, projectId, dataToCache: result?.data?.orderHistory })

@@ -35,17 +35,17 @@ dotenv.config()
 
 // export const COMPANY_LOGO = "https://th.bing.com/th/id/OIP.Uparc9uI63RDb82OupdPvwAAAA?w=80&h=80&c=1&bgcl=c77779&r=0&o=6&dpr=1.3&pid=ImgRC";
 // export const COMPANY_NAME = "Vertical Living";
-
+    
 const VERTICAL_LIVING_ORG_ID = process.env.VERTICAL_LIVING_ORG_ID;
 
 export const createPublicQuote = async (req: Request, res: Response):Promise<any> => {
     try {
-        const { name, phone, location, carpetArea, homeType, finish, estimate , config, quotationPdf} = req.body;
+        const { name, phone, location, carpetArea, homeType, finish, estimate , config, quotationPdf, consent} = req.body;
 
-        console.log("quotationpdf", quotationPdf)
+        // console.log("quotationpdf", quotationPdf)
 
 
-        console.log("req.body from the cost calculator", req.body)
+        // console.log("req.body from the cost calculator", req.body)
       
         // // 1. Create PDF via pdf-lib
         // const pdfDoc = await PDFDocument.create();
@@ -482,10 +482,16 @@ export const createPublicQuote = async (req: Request, res: Response):Promise<any
         // const quotationData = await uploadFileToS3New(fakeFile);
 
         // 3. Save to MongoDB
+        
+        if (!consent) {
+            return res.status(400).json({ message: "consent should be true or accepted", ok: false })
+        }
+
+        
         const newQuote = new PublicQuoteCostCalculatorModel({
             organizationId: VERTICAL_LIVING_ORG_ID,
             name, phone, location, carpetArea, homeType, finish, estimate,
-            quotationPdf, config
+            quotationPdf, config, consent
         });
 
         await newQuote.save();

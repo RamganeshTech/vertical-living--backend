@@ -63,7 +63,7 @@ export const getMaterialItemsByCategoryForQuote = async (req: Request, res: Resp
       return res.status(400).json({ ok: false, message: "Category (e.g., plywood) is required" });
     }
     //     console.log("im gettni called")
-    console.log("categoryName", categoryName)
+    // console.log("categoryName", categoryName)
     const items = await ItemModel.find({
       organizationId,
       $expr: {
