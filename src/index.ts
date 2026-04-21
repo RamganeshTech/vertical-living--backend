@@ -137,6 +137,7 @@ import ExecutionPartnerAccountingRoutes from './routers/Department Routes/Accoun
 import organizationReportRoutes from './routers/organization routes/organizationReports.routes';
 import RateConfigVersionRoutes from './routers/Quote Routes/RateConfig Routes/rateConfigVersion.routes';
 import RateConfigBackupRoutes from './routers/Quote Routes/RateconfigBackup_routes/rateConfigBackup.routes';
+import InstantCostCalculatorProductRoute from './routers/Quote Routes/RateConfig Routes/instantCostCalculatorProduct.routes';
 
 
 // Extend Socket interface for custom properties
@@ -404,6 +405,7 @@ app.use('/api/quote/quotegenerate', InternalQuoteRoutes)
 app.use('/api/quote/presales', PreSalesRoutes)
 app.use('/api/quote/rateconfig/version', RateConfigVersionRoutes)
 app.use('/api/quote/rateconfig/backup', RateConfigBackupRoutes)
+app.use('/api/quote/instantcostcalculator', InstantCostCalculatorProductRoute)
 
 app.use('/api/cutlist', CutlistRoutes)
 app.use('/api/materialshop/document', MaterialShopRoutes)
