@@ -67,7 +67,6 @@ import InventoryRoutes from './routers/Stage routes/Inventory Routes/inventory.r
 import recycleMaterialRoutes from './routers/Stage routes/Inventory Routes/RecycleMaterial routes/recycle.routes';
 import http from 'http';
 import { Server, Socket } from 'socket.io';
-import ProjectModel from './models/project model/project.model';
 import jwt from 'jsonwebtoken';
 import { RoleUserPayload } from './types/types';
 import { SocketService } from './config/socketService';
@@ -138,6 +137,7 @@ import organizationReportRoutes from './routers/organization routes/organization
 import RateConfigVersionRoutes from './routers/Quote Routes/RateConfig Routes/rateConfigVersion.routes';
 import RateConfigBackupRoutes from './routers/Quote Routes/RateconfigBackup_routes/rateConfigBackup.routes';
 import InstantCostCalculatorProductRoute from './routers/Quote Routes/RateConfig Routes/instantCostCalculatorProduct.routes';
+import projectConfigRoutes from './routers/projectConfig.routes';
 
 
 // Extend Socket interface for custom properties
@@ -270,6 +270,7 @@ app.use('/api/auth/clientapproval', clientApprovalRoutes)
 app.use('/api/task', task)
 app.use('/api/comment', taskComment)
 app.use('/api/project', projectRouter)
+app.use('/api/project-config', projectConfigRoutes)
 app.use('/api/tasklist', taskListRouter)
 app.use('/api/phase', phaseRoutes)
 app.use('/api/material', materailRoutes)

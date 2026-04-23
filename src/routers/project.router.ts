@@ -1,6 +1,6 @@
 
 import express, { RequestHandler }  from 'express';
-import { assignClient, createProject, deleteProject, getProjects, getProjectsWithPagination, updateProject } from '../controllers/project controllers/project.controller';
+import { assignClient, createProject, deleteProject, getProjects, getProjectsWithPagination, toggleProjectArchive, updateProject } from '../controllers/project controllers/project.controller';
 import userAuthenticatedMiddleware from '../middlewares/userAuthMiddleware';
 import { multiRoleAuthMiddleware } from '../middlewares/multiRoleAuthMiddleware';
 import { checkActivePlan } from './../middlewares/checkActivePlan';
@@ -16,5 +16,8 @@ router.delete('/deleteproject/:projectId', multiRoleAuthMiddleware("owner", "CTO
 router.put('/updateproject/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), updateProject as RequestHandler)
 // belwo api not used
 router.patch('/assignprojectclient/:projectId/:clientId', multiRoleAuthMiddleware("owner", "CTO", "staff"), assignClient as RequestHandler)
+router.put('/archive/:projectId', multiRoleAuthMiddleware("owner", "CTO", "staff"), toggleProjectArchive as RequestHandler)
+
+
 
 export default router;

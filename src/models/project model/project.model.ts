@@ -14,7 +14,15 @@ interface projectInformation {
     completionTime: (string | null),
     // TaskAndIssuePrefix: (string | null),
     preRequisites: Types.ObjectId,
-    category: string
+    category: string,
+
+    clientName: string,
+    email: string,
+    whatsapp: string,
+    location: string,
+    budget: string,
+    designType: string
+
 
 }
 
@@ -38,6 +46,8 @@ interface IProject extends Document {
     laboursFullyApproved: "approved" | "rejected" | "pending",
     organizationId: Types.ObjectId
     preRequiretiesCheckID: Types.ObjectId
+    isArchived: boolean
+
 }
 
 const ProjectSchema: Schema<IProject> = new Schema({
@@ -101,6 +111,33 @@ const ProjectSchema: Schema<IProject> = new Schema({
             default: null
         },
         category: {
+            type: String,
+            default: null
+        },
+
+
+        clientName: {
+            type: String,
+            default: null
+        },
+        email: {
+            type: String,
+            default: null
+        },
+        whatsapp: {
+            type: String,
+            default: null
+        },
+        location: {
+            type: String,
+            default: null
+        },
+
+        budget: {
+            type: String,
+            default: null
+        },
+        designType: {
             type: String,
             default: null
         }
@@ -167,6 +204,9 @@ const ProjectSchema: Schema<IProject> = new Schema({
         type: Schema.Types.ObjectId,
         ref: "PreRequiretiesModel",
         default: null
+    },
+    isArchived: {
+        type: Boolean, default: false
     }
 }, {
     timestamps: true

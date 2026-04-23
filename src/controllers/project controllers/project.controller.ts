@@ -19,6 +19,9 @@ import { StageDocumentationModel } from "../../models/Documentation Model/docume
 import { ShortlistedDesignModel } from "../../models/Stage Models/sampleDesing model/shortListed.model";
 import { syncRequirmentForm } from "../stage controllers/requirement controllers/mainRequirementNew.controller";
 import { getProjectUtil, getProjectUtilWithPagination } from "./projectUtils";
+import { validateEmail } from "../Department controllers/Accounting Controller/Customer Accounts Controllers/customerAccoutsValidation";
+import { validatePhoneNumber } from "../../utils/common features/utils";
+import { RequirementFormModel } from "../../models/Stage Models/requirment model/mainRequirementNew.model";
 
 const createProject = async (req: RoleBasedRequest, res: Response) => {
     try {
@@ -33,7 +36,14 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
             dueDate,
             priority,
             // category,
-            status
+            status,
+
+            clientName,
+            email,
+            whatsapp,
+            location,
+            budget,
+            designType
         } = req.body
 
 
@@ -101,6 +111,20 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
             (due.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
         );
 
+        // Email validation (optional but must be valid if provided)
+        if (email && email.trim() !== '') {
+            if (!validateEmail(email.trim())) {
+                return res.status(400).json({ ok: false, message: 'Invalid email format' });
+            }
+        }
+
+
+        if (whatsapp && whatsapp.trim() !== '') {
+            if (!validatePhoneNumber(whatsapp.trim())) {
+                return res.status(400).json({ ok: false, message: 'Invalid phone number. Must be exactly 10 digits.' });
+            }
+        }
+
         // if (endDate && startDate > endDate) {
         //     res.status(400).json({ message: "end date should be after start date" })
         //     return
@@ -117,6 +141,8 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
 
 
         // Optional: validate priority
+
+
         const allowedPriority = ["none", "low", "medium", "high"];
         if (priority && !allowedPriority.includes(priority)) {
             return res.status(400).json({ ok: false, message: `Priority must be one of ${allowedPriority.join(", ")}` });
@@ -156,6 +182,12 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
                     priority,
                     // category: category || "residential",
                     status,
+                    clientName,
+                    email,
+                    whatsapp,
+                    location,
+                    budget,
+                    designType
                 },
             })
 
@@ -181,7 +213,7 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
                     }
                 ),
 
-                syncRequirmentForm(projectNew._id),
+                syncRequirmentForm({ projectId: projectNew._id, clientName, whatsapp, location, email, }),
                 syncPreRequireties(projectNew._id),
                 // syncSelectStage(projectNew._id),
                 syncDocumentationModel(projectNew._id)
@@ -189,7 +221,7 @@ const createProject = async (req: RoleBasedRequest, res: Response) => {
         }
         else {
             return res.status(400).json({
-                message: "A project with this name already exists for this user.",
+                message: "A project with this name already exists for this organization.",
                 ok: false
             });
 
@@ -412,7 +444,16 @@ const updateProject = async (req: RoleBasedRequest, res: Response): Promise<void
             dueDate,
             category,
             priority,
-            status
+            status,
+
+
+            clientName,
+            email,
+            whatsapp,
+            location,
+            budget,
+            designType
+
         } = req.body
 
         if (!projectName) {
@@ -457,6 +498,23 @@ const updateProject = async (req: RoleBasedRequest, res: Response): Promise<void
             (new Date(dueDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)
         );
 
+        // Email validation (optional but must be valid if provided)
+        if (email && email.trim() !== '') {
+            if (!validateEmail(email.trim())) {
+                res.status(400).json({ ok: false, message: 'Invalid email format' });
+                return
+            }
+        }
+
+
+        if (whatsapp && whatsapp.trim() !== '') {
+            if (!validatePhoneNumber(whatsapp.trim())) {
+                res.status(400).json({ ok: false, message: 'Invalid phone number. Must be exactly 10 digits.' });
+                return
+            }
+        }
+
+
         // Optional: validate priority
         const allowedPriority = ["none", "low", "medium", "high"];
         if (priority && !allowedPriority.includes(priority)) {
@@ -484,6 +542,14 @@ const updateProject = async (req: RoleBasedRequest, res: Response): Promise<void
                 category: category || "residential",
                 priority,
                 status,
+
+
+                clientName,
+                email,
+                whatsapp,
+                location,
+                budget,
+                designType
             },
         }, {
             returnDocument: "after"
@@ -492,7 +558,7 @@ const updateProject = async (req: RoleBasedRequest, res: Response): Promise<void
         if (!data) {
             res.status(404).json({ message: "project not found" })
             return;
-        } 
+        }
 
         // const cacheKey = `projects:${data.organizationId}`;
         // await redisClient.del(cacheKey);
@@ -503,6 +569,20 @@ const updateProject = async (req: RoleBasedRequest, res: Response): Promise<void
             await redisClient.del(keysToDelete);
         }
 
+        const requirementUpdateData: Record<string, any> = {};
+
+        if (clientName !== undefined) requirementUpdateData.clientName = clientName;
+        if (email !== undefined) requirementUpdateData.email = email;
+        if (whatsapp !== undefined) requirementUpdateData.whatsapp = whatsapp;
+        if (location !== undefined) requirementUpdateData.location = location;
+
+        if (Object.keys(requirementUpdateData).length > 0) {
+            await RequirementFormModel.findOneAndUpdate(
+                { projectId },
+                { $set: requirementUpdateData },
+                { new: true }
+            );
+        }
 
         res.status(200).json({ message: "project information updated", data, ok: true })
 
@@ -513,6 +593,64 @@ const updateProject = async (req: RoleBasedRequest, res: Response): Promise<void
         return
     }
 }
+
+
+export const toggleProjectArchive = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params;
+        const { isArchived } = req.body;
+
+        // 🔴 Validate input
+        if (typeof isArchived !== "boolean") {
+            res.status(400).json({
+                ok: false,
+                message: "isArchived must be a boolean (true/false)",
+            });
+            return;
+        }
+
+        // 🔍 Find & update
+        const updatedProject = await ProjectModel.findByIdAndUpdate(
+            projectId,
+            { $set: { isArchived } },
+            { new: true }
+        );
+
+        if (!updatedProject) {
+            res.status(404).json({
+                ok: false,
+                message: "Project not found",
+            });
+            return;
+        }
+
+        // ✅ 🔥 CLEAR REDIS CACHE
+        const cachePattern = `projects:${updatedProject.organizationId}:*`;
+        const keys = await redisClient.keys(cachePattern);
+
+        if (keys.length > 0) {
+            await redisClient.del(keys);
+        }
+
+
+        res.status(200).json({
+            ok: true,
+            message: isArchived
+                ? "Project archived successfully"
+                : "Project unarchived successfully",
+            data: updatedProject,
+        });
+
+    } catch (error: any) {
+        console.error("Error toggling archive status:", error);
+
+        res.status(500).json({
+            ok: false,
+            message: "Server error. Please try again later.",
+            error: error?.message || error,
+        });
+    }
+};
 
 
 export {

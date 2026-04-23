@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 // import { getStageSelectionUtil } from '../Modular Units Controllers/StageSelection Controller/stageSelection.controller';
 import { stageModels } from '../../constants/BEconstants';
+import ProjectModel from '../../models/project model/project.model';
 
 
 
@@ -27,6 +28,7 @@ const allStageRoutes = [
 export const getFirstPendingStageForProject = async (req: Request, res: Response): Promise<any> => {
     const { projectId } = req.params;
 
+    const project = await ProjectModel.findById(projectId)
     // 1️⃣ Always check first 4 stages
     for (let i = 0; i < 4; i++) {
         const model = stageModels[i];
@@ -34,7 +36,7 @@ export const getFirstPendingStageForProject = async (req: Request, res: Response
         const isCompleted = doc?.status === "completed";
 
         if (!isCompleted) {
-            return res.json({ redirectTo: allStageRoutes[i] });
+            return res.json({ redirectTo: allStageRoutes[i] , percentage: project?.completionPercentage || 0});
         }
     }
 
@@ -55,7 +57,7 @@ export const getFirstPendingStageForProject = async (req: Request, res: Response
     // } else {
     //     return res.status(200).json({ redirectTo: "selectstage",  ok: true });
     // }
-    let allowedIndexes= [...Array(12).keys()].slice(5)
+    let allowedIndexes = [...Array(12).keys()].slice(5)
 
     for (const i of allowedIndexes) {
         const model = stageModels[i];
@@ -68,10 +70,10 @@ export const getFirstPendingStageForProject = async (req: Request, res: Response
         const isCompleted = doc?.status === "completed";
 
         if (!isCompleted) {
-            return res.json({ redirectTo: allStageRoutes[i], ok: true });
+            return res.json({ redirectTo: allStageRoutes[i], ok: true, percentage: project?.completionPercentage || 0 });
         }
     }
 
     // 4️⃣ got to the first stage
-    return res.json({ redirectTo: allStageRoutes.at(0)!, ok: true });
+    return res.json({ redirectTo: allStageRoutes.at(0)!, ok: true, percentage: project?.completionPercentage || 0  });
 };

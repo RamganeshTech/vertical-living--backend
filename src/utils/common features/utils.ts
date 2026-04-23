@@ -31,6 +31,10 @@ export function getModelNameByRole(role: string): string {
 }
 
 
+export const validatePhoneNumber = (phone: string): boolean => {
+    const phoneRegex = /^[0-9]{10}$/;
+    return phoneRegex.test(phone);
+};
 
 
 /**

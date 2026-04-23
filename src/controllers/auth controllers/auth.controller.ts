@@ -7,7 +7,7 @@ import UserModel from "../../models/usermodel/user.model";
 import { AuthenticatedUserRequest, RoleBasedRequest } from "../../types/types";
 import sendResetEmail from "../../utils/Common Mail Services/forgotPasswordMail";
 import redisClient from "../../config/redisClient";
-    
+        
 const userlogin = async (req: Request, res: Response) => {
     try {
         let { email, password } = req.body

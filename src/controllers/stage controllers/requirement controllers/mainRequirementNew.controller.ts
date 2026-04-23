@@ -15,7 +15,15 @@ import { syncQualityCheck } from '../QualityCheck controllers/QualityCheck.contr
 
 
 
-export const syncRequirmentForm = async (projectId: string | Types.ObjectId) => {
+export const syncRequirmentForm = async ({ projectId, clientName,
+    email,
+    whatsapp,
+    location, }: { 
+        projectId: string | Types.ObjectId, clientName?: string,
+        email?: string,
+        whatsapp?: string,
+        location?: string,
+    }) => {
     const form = await RequirementFormModel.findOne({ projectId })
 
     if (!form) {
@@ -24,10 +32,10 @@ export const syncRequirmentForm = async (projectId: string | Types.ObjectId) => 
             shareToken: null,
             assignedTo: null,
             clientData: {
-                clientName: "",
-                email: "",
-                whatsapp: "",
-                location: "",
+                clientName: clientName || "",
+                email: email || "",
+                whatsapp: whatsapp || "",
+                location: location || "",
             },
             isEditable: true, // ✅ your default
             status: "pending", // ✅ your default
@@ -122,7 +130,7 @@ export const updateClientDataRequirement = async (req: Request, res: Response,):
         const { clientData } = req.body;
 
 
-      
+
 
         // Validate required client info
         if (!clientData?.clientName) {
@@ -140,7 +148,7 @@ export const updateClientDataRequirement = async (req: Request, res: Response,):
             return;
         }
 
-       
+
 
 
         form.clientData = {
@@ -258,7 +266,7 @@ export const updateRoomItem = async (req: RoleBasedRequest, res: Response): Prom
         const { itemName, quantity, unit } = req.body;
 
         if (!projectId || !roomId || !itemId) {
-            return res.status(400).json({ message: "projectId, roomId, itemId  are required required", ok:false });
+            return res.status(400).json({ message: "projectId, roomId, itemId  are required required", ok: false });
         }
 
 
@@ -582,7 +590,7 @@ export const deleteRequirementStageFile = async (req: RoleBasedRequest, res: Res
         await populateWithAssignedToField({ stageModel: RequirementFormModel, projectId, dataToCache: doc })
 
 
-        return res.status(200).json({ data:doc,  ok: true, message: "File deleted successfully" });
+        return res.status(200).json({ data: doc, ok: true, message: "File deleted successfully" });
     } catch (err) {
         console.error("Error deleting uploaded file:", err);
         return res.status(500).json({ ok: false, message: "Internal server error" });
@@ -626,18 +634,18 @@ export const uploadRequirementSectionFilesController = async (
         for (const file of files) {
             // const fileType = file.mimetype.includes("pdf") ? "pdf" : "image";
 
-             let fileType: "image" | "pdf" | "video";
-    
-    if (file.mimetype === "application/pdf") {
-        fileType = "pdf";
-    } else if (file.mimetype.startsWith("image/")) {
-        fileType = "image";
-    } else if (file.mimetype.startsWith("video/")) {
-        fileType = "video";
-    }else{
-      fileType = "image"
-    }
-    
+            let fileType: "image" | "pdf" | "video";
+
+            if (file.mimetype === "application/pdf") {
+                fileType = "pdf";
+            } else if (file.mimetype.startsWith("image/")) {
+                fileType = "image";
+            } else if (file.mimetype.startsWith("video/")) {
+                fileType = "video";
+            } else {
+                fileType = "image"
+            }
+
             const location =
                 (file as any).transforms?.[0]?.location || (file as any).location;
 

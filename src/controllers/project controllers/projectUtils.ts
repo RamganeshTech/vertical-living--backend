@@ -18,7 +18,7 @@ export const getProjectUtil = async (organizationId: string) => {
             return { message: "Projects retrieved from cache", data: parsedData, ok: true }
         }
 
-        const projects = await ProjectModel.find({ organizationId })
+        const projects = await ProjectModel.find({ organizationId, })
 
         await redisClient.set(cacheKey, JSON.stringify(projects), { EX: 300 }); // expires in 5 mins (put in secondsj)
         return { message: "Projects retrived successfully", data: projects, ok: true }
@@ -32,19 +32,20 @@ export const getProjectUtil = async (organizationId: string) => {
 
 
 export const getProjectUtilWithPagination = async (
-    organizationId: string, 
+    organizationId: string,
     queryParams: any
 ) => {
     try {
-        const { 
-            page = 1, 
-            limit = 10, 
-            status, 
-            priority, 
-            projectName, 
-            startDate, 
-            endDate ,
-            isCompleted
+        const {
+            page = 1,
+            limit = 10,
+            status,
+            priority,
+            projectName,
+            startDate,
+            endDate,
+            isCompleted,
+            isArchived
         } = queryParams;
 
         // 1. Create a Unique Cache Key based on all parameters
@@ -53,12 +54,29 @@ export const getProjectUtilWithPagination = async (
         const cacheKey = `projects:${organizationId}:${filterString}`;
 
         let cachedData = await redisClient.get(cacheKey);
+        // await redisClient.del(cacheKey);
+
         if (cachedData) {
             return { message: "Projects retrieved from cache", data: JSON.parse(cachedData), ok: true };
         }
 
         // 2. Build Dynamic Query Filter
-        const query: any = { organizationId };
+        const query: any = { organizationId, };
+
+        if (typeof isArchived !== "undefined") {
+            const isArchivedBool = isArchived === 'true' || isArchived === true;
+
+            if (isArchivedBool) {
+                // Only archived
+                query.isArchived = true;
+            } else {
+                // Active projects = false OR field not present
+                query.$or = [
+                    { isArchived: false },
+                    { isArchived: { $exists: false } }
+                ];
+            }
+        }
 
         if (status) query["projectInformation.status"] = status;
         if (priority) query["projectInformation.priority"] = priority;
@@ -67,7 +85,7 @@ export const getProjectUtilWithPagination = async (
         if (isCompleted === 'true' || isCompleted === true) {
             query.completionPercentage = 100;
         }
-        
+
         // Date Range Filtering
         if (startDate || endDate) {
             query["projectInformation.startDate"] = {};
@@ -77,7 +95,7 @@ export const getProjectUtilWithPagination = async (
 
         // 3. Execute Paginated Query
         const skip = (Number(page) - 1) * Number(limit);
-        
+
         const [projects, totalCount] = await Promise.all([
             ProjectModel.find(query)
                 .sort({ createdAt: -1 })
