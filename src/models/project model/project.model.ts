@@ -20,7 +20,7 @@ interface projectInformation {
     email: string,
     whatsapp: string,
     location: string,
-    budget: string,
+    budget: number,
     designType: string
 
 
@@ -134,7 +134,7 @@ const ProjectSchema: Schema<IProject> = new Schema({
         },
 
         budget: {
-            type: String,
+            type: Number,
             default: null
         },
         designType: {

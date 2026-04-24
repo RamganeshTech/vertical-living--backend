@@ -548,8 +548,8 @@ export const markFormAsCompleted = async (req: RoleBasedRequest, res: Response):
 
 
         res.status(200).json({ ok: true, message: "Requirement stage marked as completed", data: form });
-        updateProjectCompletionPercentage(projectId);
-        await syncWorkerWall(projectId)
+         updateProjectCompletionPercentage(projectId);
+        await syncWorkerWall(projectId) 
         await syncAdminWall(projectId)
     } catch (err) {
         console.error(err);
