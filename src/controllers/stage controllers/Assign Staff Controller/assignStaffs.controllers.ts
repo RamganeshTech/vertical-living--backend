@@ -21,12 +21,14 @@ import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCh
 import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
 import { parse } from "path";
+import { DesignApprovalModel } from "../../../models/Stage Models/DesignApproval_model/designApproval.model";
 
 
 export const stageModelMap = new Map<string, Model<Document>>([
   ["RequirementFormModel", RequirementFormModel as unknown as Model<Document>],
   ["SiteMeasurementModel", SiteMeasurementModel as unknown as Model<Document>],
   ["SampleDesignModel", SampleDesignModel as unknown as Model<Document>],
+  ["DesignApprovalModel", DesignApprovalModel as unknown as Model<Document>],
   ["TechnicalConsultationModel", TechnicalConsultationModel as unknown as Model<Document>],
   // ["MaterialRoomConfirmationModel", MaterialRoomConfirmationModel as unknown as Model<Document>],
   // ["CostEstimation", CostEstimationModel as unknown as Model<Document>],

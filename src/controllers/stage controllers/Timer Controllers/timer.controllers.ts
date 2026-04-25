@@ -19,6 +19,7 @@ import redisClient from "../../../config/redisClient";
 import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
 import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 import { RequirementFormModel } from "../../../models/Stage Models/requirment model/mainRequirementNew.model";
+import { DesignApprovalModel } from "../../../models/Stage Models/DesignApproval_model/designApproval.model";
 
 
 const stageModelMap = new Map<string, Model<Document>>([
@@ -26,6 +27,7 @@ const stageModelMap = new Map<string, Model<Document>>([
     ["sitemeasurement", SiteMeasurementModel as unknown as Model<Document>],
     ["sampledesign", SampleDesignModel as unknown as Model<Document>],
     ["technicalconsultation", TechnicalConsultationModel as unknown as Model<Document>],
+    ["designapproval", DesignApprovalModel as unknown as Model<Document>],
     // ["materialconfirmation", MaterialRoomConfirmationModel as unknown as Model<Document>],
     // ["costestimation", CostEstimationModel as unknown as Model<Document>],
     ["paymentconfirmation", PaymentConfirmationModel as unknown as Model<Document>],

@@ -513,7 +513,7 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
         let termsString = "VERTICAL LIVING – PAYMENT TERMS\n";
         termsString += "------------------------------------------------------------\n";
         termsString += "MILESTONE | AMOUNT | WORK INCLUDED\n";
-
+ 
         milestones.forEach(item => {
             termsString += `◆ ${item.m}: ${item.a} (${item.w}) \n`;
         });

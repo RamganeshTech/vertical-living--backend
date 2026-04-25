@@ -138,6 +138,7 @@ import RateConfigVersionRoutes from './routers/Quote Routes/RateConfig Routes/ra
 import RateConfigBackupRoutes from './routers/Quote Routes/RateconfigBackup_routes/rateConfigBackup.routes';
 import InstantCostCalculatorProductRoute from './routers/Quote Routes/RateConfig Routes/instantCostCalculatorProduct.routes';
 import projectConfigRoutes from './routers/projectConfig.routes';
+import designApprovalRoutes from './routers/Stage routes/designApproval_routes/desingApproval.route';
 
 
 // Extend Socket interface for custom properties
@@ -325,6 +326,7 @@ app.use('/api/requirementform', requirementRoutes)
 app.use('/api/sitemeasurement', siteMeasurementRoutes)
 app.use('/api/sampledesign', sampleDesignRoutes)
 app.use('/api/technicalconsultation', technicalConsultRoutes)
+app.use('/api/designapproval', designApprovalRoutes)
 // app.use('/api/materialconfirmation', materialConfirmationRoutes)
 // app.use('/api/costestimation', costEstimationRoutes)
 app.use('/api/paymentconfirmation', paymentConsentRoutes)
