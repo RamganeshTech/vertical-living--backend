@@ -4,8 +4,8 @@ import { Router } from "express";
 //     getCostCalculatorProduct 
 // } from "../controllers/instantCostProductController"; // Adjust path
 // import { multiRoleAuthMiddleware } from "../middlewares/authMiddleware"; // Adjust path
-import { getCategoryDimensions, getCostCalculatorProduct, getProductSpecificCategories, upsertCostCalculatorProduct } from "../../../controllers/Quote Controllers/RateConfig Controller/instantCostCalculatorRecord.controller";
-import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
+import { getCategoryDimensions, getCostCalculatorProduct, getProductSpecificCategories, upsertCostCalculatorProduct } from "../../../../controllers/Quote Controllers/RateConfig Controller/instant_costCalculator_controller/instantCostCalculatorRecord.controller";
+import { multiRoleAuthMiddleware } from "../../../../middlewares/multiRoleAuthMiddleware";
 
 const InstantCostCalculatorProductRoute = Router();
 
