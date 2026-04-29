@@ -6,6 +6,7 @@ import { LogisticsShipmentModel } from "../../../models/Department Models/Logist
 import { SocketService } from "../../../config/socketService";
 import crypto from 'crypto';
 import { createPaymentMainAccUtil } from "../Accounting Controller/PaymentMainAcc_controllers/paymentMainAcc.controller";
+import { AccountingModel } from "../../../models/Department Models/Accounting Model/accountingMain.model";
 
 export const createShipmentUtil = async ({ organizationId, projectId,
     projectName,
@@ -26,7 +27,7 @@ export const createShipmentUtil = async ({ organizationId, projectId,
     procurementRefId,
     orderMaterialDeptNumber,
     orderMaterialRefId,
-isCreatedAuto,
+    isCreatedAuto,
 
 }: {
     organizationId: string | Types.ObjectId;
@@ -50,7 +51,7 @@ isCreatedAuto,
     procurementRefId?: Types.ObjectId | null,
     orderMaterialDeptNumber?: string | null,
     orderMaterialRefId?: Types.ObjectId | null,
-    isCreatedAuto:boolean
+    isCreatedAuto: boolean
 }) => {
     const prefix = projectName.substring(0, 3).toLowerCase();
 
@@ -184,7 +185,7 @@ export const createShipment = async (req: Request, res: Response): Promise<any> 
             actualDeliveryTime,
             actualPickupTime,
             trackingLink: trackingLink || null,
-            isCreatedAuto:false
+            isCreatedAuto: false
 
         })
 
@@ -735,7 +736,7 @@ export const getShipmentByIdPublic = async (req: Request, res: Response): Promis
 };
 
 
-
+// not used
 export const SyncAccountingFromLogistics = async (req: Request, res: Response): Promise<any> => {
     try {
         const { organizationId, projectId, shipmentId } = req.params;
@@ -791,3 +792,80 @@ export const SyncAccountingFromLogistics = async (req: Request, res: Response): 
         res.status(500).json({ ok: false, message: err.message });
     }
 }
+
+
+export const syncLogisticsToAccounts = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { shipmentId } = req.params;
+
+        if (!shipmentId) {
+            return res.status(400).json({ ok: false, message: "Shipment ID is required" });
+        }
+
+        // 1. Fetch the Logistics Shipment record
+        const shipment = await LogisticsShipmentModel.findById(shipmentId);
+
+        if (!shipment) {
+            return res.status(404).json({ ok: false, message: "Logistics Shipment not found" });
+        }
+
+
+        if (shipment.isSyncWithAccounts) {
+            return res.status(400).json({
+                ok: false,
+                message: "Already Sent to Accounts."
+            });
+
+        }
+        // 2. Ensure we have the root reference to find the correct Accounting document
+        // if (!shipment.orderMaterialRefId || !shipment.orderMaterialDeptNumber) {
+        //     return res.status(400).json({ 
+        //         ok: false, 
+        //         message: "Missing root order material references in logistics shipment. Cannot sync to accounts." 
+        //     });
+        // }
+
+        // 3. Find and Update the existing Accounting Record
+        // We find it using the root order material references, and attach the logistics details.
+        const updatedAccountingRecord = await AccountingModel.findOneAndUpdate(
+            {
+                orderMaterialRefId: shipment.orderMaterialRefId,
+                orderMaterialDeptNumber: shipment.orderMaterialDeptNumber
+            },
+            {
+                $set: {
+                    logisticsDeptNumber: shipment.shipmentNumber, // Or whatever your shipment number field is named
+                    logisticsRefId: shipment._id
+                }
+            },
+            { new: true } // Return the updated document
+        );
+
+        if (!updatedAccountingRecord) {
+            return res.status(404).json({
+                ok: false,
+                message: "Corresponding Accounting record not found to sync logistics."
+            });
+        }
+
+        shipment.isSyncWithAccounts = true
+        await shipment.save()
+
+
+        // 4. Return success response
+        return res.status(200).json({
+            ok: true,
+            message: "Successfully synced Logistics details to the Central Accounting Record",
+            // accountingId: updatedAccountingRecord._id
+            data: updatedAccountingRecord
+        });
+
+    } catch (err: any) {
+        console.error("Sync Logistics to Accounts Error:", err);
+        return res.status(500).json({
+            ok: false,
+            error: "Failed to sync logistics to accounting",
+            message: err?.message
+        });
+    }
+};

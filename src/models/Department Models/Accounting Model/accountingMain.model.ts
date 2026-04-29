@@ -188,8 +188,21 @@ export interface IAccounting extends Document {
 
 
   orderMaterialDeptNumber?: string | null;
-  orderMaterialRefId?: Types.ObjectId | null 
+  orderMaterialRefId?: Types.ObjectId | null
 
+  logisticsDeptNumber?: string | null;
+  logisticsRefId?: Types.ObjectId | null
+
+  // --- NEW: Material Arrival Tracking ---
+  materialArrivalDeptNumber?: string | null;
+  materialArrivalRefId?: Types.ObjectId | null
+
+  // --- NEW: Final Payment / Settlement Tracking ---
+  finalPaymentDeptNumber?: string | null;
+  finalPaymentRefId?: Types.ObjectId | null
+
+
+  paymentDeptNumber?: string
   paymentId: mongoose.Types.ObjectId | null;
   referenceId: mongoose.Types.ObjectId | null;
   referenceModel: string | null;
@@ -225,9 +238,27 @@ const accountingSchema = new Schema<IAccounting>({
   deptGeneratedDate: { type: Date, default: null }, // Indexed for Date Range Filter
   deptNumber: { type: String, default: null }, // Indexed for Search
   deptDueDate: { type: Date, default: null, },
-  
-  orderMaterialDeptNumber: { type: String, },
+
+  // orderMaterialDeptNumber: { type: String, },
+  // orderMaterialRefId: { type: Schema.Types.ObjectId, ref: "OrderMaterialHistoryModel", default: null },
+
+  // Add these to your Accounting Schema definition
+
+  // Existing Order Material Refs
+  orderMaterialDeptNumber: { type: String, default: null },
   orderMaterialRefId: { type: Schema.Types.ObjectId, ref: "OrderMaterialHistoryModel", default: null },
+
+  // --- NEW: Logistics Tracking ---
+  logisticsDeptNumber: { type: String, default: null },
+  logisticsRefId: { type: Schema.Types.ObjectId, ref: "LogisticsShipmentModel", default: null },
+
+  // --- NEW: Material Arrival Tracking ---
+  materialArrivalDeptNumber: { type: String, default: null },
+  materialArrivalRefId: { type: Schema.Types.ObjectId, ref: "MaterialArrivalModel", default: null },
+
+  // --- NEW: Final Payment / Settlement Tracking ---
+  finalPaymentDeptNumber: { type: String, default: null },
+  finalPaymentRefId: { type: Schema.Types.ObjectId, ref: "PaymentMainAccountsModel", default: null },
 
 
   referenceId: { type: Schema.Types.ObjectId, refPath: "referenceModel", default: null },
@@ -236,6 +267,7 @@ const accountingSchema = new Schema<IAccounting>({
     default: null,
   },
 
+  paymentDeptNumber: { type: String, default: null },
   paymentId: {
     type: Schema.Types.ObjectId,
     ref: "PaymentMainAccountsModel",

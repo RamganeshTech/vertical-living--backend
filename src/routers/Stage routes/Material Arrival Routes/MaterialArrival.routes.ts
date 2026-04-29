@@ -10,7 +10,7 @@ import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3
 import { notToUpdateIfStageCompleted } from "../../../middlewares/notToUpdateIfStageCompleted";
 import { checkIfStaffIsAssignedToStage } from "../../../middlewares/checkIfStaffIsAssignedToStage";
 import MaterialArrivalModel from "../../../models/Stage Models/MaterialArrivalCheck Model/materialArrivalCheckNew.model";
-import { bulkToggleAllVerification, deleteMaterialArrivalImagePublic, deleteMaterialArrivalImageV1, generateMaterialArrivalLink, getAllMaterialArrivalDetails, getMaterialArrivalPublicDetails, materialArrivalCompletionStatus, setMaterialArrivalStageDeadline, toggleMaterialVerification, updateMaterialArrivalImage, updateMaterialArrivalItem, updateMaterialArrivalItemV1, updateStaffMaterialArrivalQuantity, uploadMaterialArrivalImagesV1 } from "../../../controllers/stage controllers/MaterialArrival controllers/materialArrivalCheckNew.controller";
+import { bulkToggleAllVerification, deleteMaterialArrivalImagePublic, deleteMaterialArrivalImageV1, generateMaterialArrivalLink, getAllMaterialArrivalDetails, getMaterialArrivalPublicDetails, materialArrivalCompletionStatus, setMaterialArrivalStageDeadline, syncMaterialArrivalToAccounts, toggleMaterialVerification, updateMaterialArrivalImage, updateMaterialArrivalItem, updateMaterialArrivalItemV1, updateStaffMaterialArrivalQuantity, uploadMaterialArrivalImagesV1 } from "../../../controllers/stage controllers/MaterialArrival controllers/materialArrivalCheckNew.controller";
 import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 
 const materialArrivalRoutes = express.Router();
@@ -59,6 +59,7 @@ materialArrivalRoutes.get('/getalldetails/:projectId', multiRoleAuthMiddleware("
 materialArrivalRoutes.post("/:projectId/generate-link", multiRoleAuthMiddleware("owner", "staff", "CTO", "worker"), checkIfStaffIsAssignedToStage(MaterialArrivalModel), generateMaterialArrivalLink);
 materialArrivalRoutes.get("/public/:projectId/:token", getMaterialArrivalPublicDetails);
 
+materialArrivalRoutes.put('/syncmaterialarrival-with-accounts/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO"),  syncMaterialArrivalToAccounts)
 materialArrivalRoutes.put('/deadline/:projectId/:formId', multiRoleAuthMiddleware("owner", "staff", "CTO","worker"), checkIfStaffIsAssignedToStage(MaterialArrivalModel), setMaterialArrivalStageDeadline)
 materialArrivalRoutes.put('/completionstatus/:projectId', multiRoleAuthMiddleware("owner", "staff", "CTO","worker"),  checkIfStaffIsAssignedToStage(MaterialArrivalModel),materialArrivalCompletionStatus)
 

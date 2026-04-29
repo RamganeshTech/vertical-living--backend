@@ -374,7 +374,7 @@ app.use('/api/shortlist/referencedesign', shortlistReferenceDesign)
 
 // SHORTLIST API
 app.use('/api/shortlisteddesign', shortlistedDesignRoutes)
-// SHORLIST MICA API
+// SHORLIST MICA API 
 // app.use('/api/detection', micaDeletectionRoutes);
 
 app.use('/api/currentactivestage', currentActiveStage)

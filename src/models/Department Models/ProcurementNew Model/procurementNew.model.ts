@@ -90,8 +90,11 @@ const shopQuoteSchema = new Schema<IShopQuotes>({
 const procurementPurchaseOrderSchema = new Schema<IProcurementNew>({
   organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel" },
   projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", default: null },
+  procurementNumber: { type: String, default: null },
+
 
   quoteNumber: { type: Number, default: null },  //store the shop quote number if provided.
+  
   fromDeptNumber: { type: String, default: null },  //order mateiral history models pdfs unique number
   fromDeptRefId: { type: Schema.Types.ObjectId, refPath: "fromDeptModel", default: null },  //order mateiral history models pdfs unique number
   fromDeptName: { type: String, default: "Order Material" },
@@ -108,7 +111,6 @@ const procurementPurchaseOrderSchema = new Schema<IProcurementNew>({
   selectedUnits: { type: [procurementItemSchema], default: [] },
   selectedShopId: { type: mongoose.Types.ObjectId, ref: "OrderShopDetailsModel", default: null },
   totalCost: { type: Number, },
-  procurementNumber: { type: String, default: null },
   refPdfId: { type: String, default: null },
   procurementPdfs: { type: [pdfGeneratorSchema], default: [] },
   generatedLink: { type: String, default: null },

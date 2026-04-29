@@ -3,6 +3,8 @@ import { Request, Response } from "express";
 import { IPaymentMainAcc, PaymentMainAccountModel } from "../../../../models/Department Models/Accounting Model/paymentMainAcc.model";
 import { AccountingModel } from "../../../../models/Department Models/Accounting Model/accountingMain.model";
 import { BillAccountModel } from "../../../../models/Department Models/Accounting Model/billAccount.model";
+import ProcurementModelNew from "../../../../models/Department Models/ProcurementNew Model/procurementNew.model";
+import { createShipmentUtil } from "../../Logistics Controllers/logistics.controller";
 
 
 /**
@@ -81,7 +83,7 @@ export const uploadCashPaymentProofOnly = async (req: Request, res: Response): P
 export const verifyAndProcessCashPayment = async (req: Request, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
-        const {  recipientName, phoneNo } = req.body;
+        const { recipientName, phoneNo } = req.body;
 
         // 1. Find the payment record
         const payment = await PaymentMainAccountModel.findById(id);
@@ -99,7 +101,7 @@ export const verifyAndProcessCashPayment = async (req: Request, res: Response): 
         // 3. Update the record to Cash Mode and Paid status
         payment.paymentMode = "cash";
         // payment.generalStatus = "paid"; // Mark as paid
-        
+
         // Ensure recipient details are stored exactly as they were at time of payment
         payment.cashCollectionDetail = {
             recipientName: recipientName || payment.cashCollectionDetail.recipientName,
@@ -139,13 +141,13 @@ export const getAllPaymentsAccWihtoutPaginationForExport = async (req: Request, 
             fromSection,
             sourceStatus
             // Pagination params (defaults: page 1, limit 10)
-          
+
         } = req.query;
 
 
 
         console.log("req.query", req.query)
-      
+
         // --- 2. Initialize Query Object ---
         const filter: FilterQuery<IPaymentMainAcc> = {};
 
@@ -186,7 +188,7 @@ export const getAllPaymentsAccWihtoutPaginationForExport = async (req: Request, 
         }
 
 
-        if(sourceStatus){
+        if (sourceStatus) {
             filter.sourceStatus = sourceStatus
         }
 
@@ -201,7 +203,7 @@ export const getAllPaymentsAccWihtoutPaginationForExport = async (req: Request, 
             // Ensure the fields here exist in your Vendor/Customer schemas
             .populate("paymentPersonId", "vendorName customerName companyName");
 
-       
+
         return res.status(200).json({
             ok: true,
             data: payments
@@ -282,7 +284,7 @@ export const getAllPaymentsAcc = async (req: Request, res: Response): Promise<an
             if (endDate) filter.createdAt.$lte = new Date(endDate as string);
         }
 
-         if(sourceStatus){
+        if (sourceStatus) {
             filter.sourceStatus = sourceStatus
         }
 
@@ -343,7 +345,7 @@ export const getSinglePaymentAcc = async (req: Request, res: Response): Promise<
             .populate("projectId", "_id projectName")
             // .populate("accountingRef")
             .populate("paymentPersonId", "vendorName customerName companyName customerLanguage address vendorLanguage phone mainImage")
-            // .populate("fromSectionId")// Optional: Populate person details
+        // .populate("fromSectionId")// Optional: Populate person details
 
 
         if (!payment) {
@@ -360,7 +362,7 @@ export const getSinglePaymentAcc = async (req: Request, res: Response): Promise<
         console.error("Error in getSinglePayment:", error);
         return res.status(500).json({
             success: false,
-            ok:false,
+            ok: false,
             message: "Server Error",
             error: error.message
         });
@@ -383,14 +385,14 @@ export const sendPaymentToAcc = async (req: Request, res: Response): Promise<any
         if (!payment) {
             return res.status(404).json({ success: false, message: "Payment record not found" });
         }
-        
+
 
         const result = await AccountingModel.findOneAndUpdate(
             {
                 referenceId: payment.fromSectionId,
                 referenceModel: payment.fromSectionModel
             },
-            { $set: { paymentId: paymentId, } },
+            { $set: { paymentId: paymentId, paymentDeptNumber: payment?.paymentNumber } },
             { new: true }
         );
 
@@ -409,6 +411,7 @@ export const sendPaymentToAcc = async (req: Request, res: Response): Promise<any
 
         return res.status(200).json({
             success: true,
+            ok: true,
             message: "Payment successfully synced to Accounting",
             data: result
         });
@@ -416,7 +419,10 @@ export const sendPaymentToAcc = async (req: Request, res: Response): Promise<any
     } catch (error: any) {
         console.error("Error sending payment to account:", error);
         return res.status(500).json({
+
             success: false,
+            ok: false,
+
             message: "Error syncing payment",
             error: error.message
         });
@@ -457,6 +463,116 @@ export const deletePaymentAcc = async (req: Request, res: Response): Promise<any
 };
 
 
+
+export const syncPaymentDeptToLogistics = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { paymentId } = req.params; // Triggered after a payment is finalized
+
+        if (!paymentId) {
+            return res.status(400).json({ ok: false, message: "Payment ID is required" });
+        }
+
+        // 1. Fetch Payment Details and populate project
+        const payment = await PaymentMainAccountModel.findById(paymentId).populate("projectId", "_id projectName");
+
+        if (!payment) {
+            return res.status(404).json({ ok: false, message: "Payment record not found" });
+        }
+
+        if (payment?.isSyncedWithLogistics) {
+            return res.status(400).json({ ok: false, message: "Already sent to logistics department" });
+        }
+
+        // 2. Fetch the related Procurement (using the fromSectionNumber if it refers to Procurement)
+        const procurement = await ProcurementModelNew.findOne({
+            procurementNumber: payment.fromSectionNumber
+        });
+
+        // 3. Prepare notes with tracking numbers for internal reference
+        const internalNotes = `
+            Payment No: ${payment?.paymentNumber}
+            Procurement No: ${payment?.fromSectionNumber || 'N/A'}
+            Order Material No: ${payment?.orderMaterialDeptNumber || 'N/A'}
+            Subject: ${payment.subject || ''}
+            Notes: ${payment.notes || ''}
+        `.trim();
+
+        // 4. Transform Payment items to Logistics items
+        const shipmentItems = payment!?.items?.map((item) => ({
+            name: item.itemName,
+            quantity: item.quantity,
+            unit: item.unit
+        }));
+
+        // 5. Create the shipment via Utility
+        const shipment = await createShipmentUtil({
+            organizationId: payment.organizationId,
+            projectId: payment.projectId as any,
+            projectName: (payment.projectId as any).projectName || "Unknown Project",
+            items: shipmentItems,
+            vehicleDetails: {}, // Initially empty, to be filled by Logistics Dept
+            origin: {
+                address: procurement?.shopDetails?.address || "Vendor Address TBD",
+                contactPerson: procurement?.shopDetails?.contactPerson || "Vendor Contact",
+                contactPhone: procurement?.shopDetails?.phoneNumber || null
+            },
+            destination: {
+                address: procurement?.deliveryLocationDetails?.address || "Site Address TBD",
+                contactPerson: procurement?.deliveryLocationDetails?.siteSupervisor || null,
+                contactPhone: procurement?.deliveryLocationDetails?.phoneNumber || null
+            },
+            notes: internalNotes,
+            status: "pending", // Logistics Dept will update this to 'scheduled' or 'in_transit'
+
+            paymentDeptNumber: payment.paymentNumber || null,
+            paymentRefId: payment._id as any || null,
+            procurementDeptNumber: procurement?.procurementNumber || null,
+            procurementRefId: procurement?._id || null,
+            orderMaterialDeptNumber: procurement?.fromDeptNumber || null,
+            orderMaterialRefId: procurement?.fromDeptRefId || null,
+
+            isCreatedAuto: true
+        });
+
+        if (!shipment) {
+            return res.status(500).json({ ok: false, message: "Failed to create shipment entry" });
+        }
+
+
+        await AccountingModel.findOneAndUpdate(
+            {
+                referenceId: payment.fromSectionId,
+                referenceModel: payment.fromSectionModel
+            },
+            { $set: { paymentId: paymentId, paymentDeptNumber: payment?.paymentNumber } },
+            { new: true }
+        );
+
+
+        // Optional: Update payment model to show it has been synced with logistics
+        payment.isSyncedWithLogistics = true;
+        payment.isSyncedWithAccounting = true;
+        await payment.save();
+
+
+        res.status(200).json({
+            ok: true,
+            message: "Shipment created for Logistics Dept",
+            shipmentNumber: shipment.shipmentNumber
+        });
+
+    } catch (err: any) {
+        console.error("Automation Error:", err);
+        return res.status(500).json({
+            ok: false,
+            error: "Logistics Automation Failed",
+            message: err?.message
+        });
+    }
+};
+
+
+
 // const runOneTimeAccountingMigration = async () => {
 //     try {
 //         console.log("🚀 Starting Source Status Migration...");
@@ -464,12 +580,12 @@ export const deletePaymentAcc = async (req: Request, res: Response): Promise<any
 //         // Use an empty filter {} to target EVERY document in the collection
 //         // even if the field is missing or already has a different value.
 //         const paymentUpdate = await PaymentMainAccountModel.updateMany(
-//             {}, 
+//             {},
 //             { $set: { sourceStatus: "CREATED_WITHOUT_ORDER_MATERIAL" } }
 //         );
 
 //         const billUpdate = await BillAccountModel.updateMany(
-//             {}, 
+//             {},
 //             { $set: { sourceStatus: "CREATED_WITHOUT_ORDER_MATERIAL" } }
 //         );
 

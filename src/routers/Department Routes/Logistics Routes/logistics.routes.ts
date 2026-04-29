@@ -1,6 +1,6 @@
 // logistics.routes.ts
 import express from "express";
-import { createShipment,  deleteShipment,    getActiveShipmentsWithLocation,    getAllShipments, getShipmentByIdPublic, getShipmentByToken, getShipmentRouteHistory, getSingleLogisticsShipment,    startTracking,    SyncAccountingFromLogistics,    updateDriverLocation,    updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
+import { createShipment,  deleteShipment,    getActiveShipmentsWithLocation,    getAllShipments, getShipmentByIdPublic, getShipmentByToken, getShipmentRouteHistory, getSingleLogisticsShipment,    startTracking,    SyncAccountingFromLogistics,    syncLogisticsToAccounts,    updateDriverLocation,    updateShipment } from "../../../controllers/Department controllers/Logistics Controllers/logistics.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 
 const LogisticsRoutes = express.Router();
@@ -29,9 +29,9 @@ LogisticsRoutes.get('/shipment/getpublicbyId/:id', getShipmentByIdPublic);
 
 
 LogisticsRoutes.post(
-  "/syncaccounting/:organizationId/:projectId",
+  "/syncaccounting/:shipmentId",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
-  SyncAccountingFromLogistics
+  syncLogisticsToAccounts
 );
 
 export default LogisticsRoutes;

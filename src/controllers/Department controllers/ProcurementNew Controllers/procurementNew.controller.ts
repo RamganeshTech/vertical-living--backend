@@ -1085,7 +1085,6 @@ export const deleteprocurement = async (req: Request, res: Response): Promise<an
 };
 
 
-//  not used
 export const syncLogisticsDept = async (req: Request, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
@@ -1123,7 +1122,12 @@ export const syncLogisticsDept = async (req: Request, res: Response): Promise<an
                 contactPerson: procurement?.deliveryLocationDetails?.siteSupervisor || null,
                 contactPhone: procurement?.deliveryLocationDetails?.phoneNumber || null
             },
-            isCreatedAuto:true
+            isCreatedAuto: true,
+
+            procurementDeptNumber: procurement?.procurementNumber || null,
+            procurementRefId: procurement?._id || null,
+            orderMaterialDeptNumber: procurement?.fromDeptNumber || null,
+            orderMaterialRefId: procurement?.fromDeptRefId || null,
         })
 
 
@@ -1138,97 +1142,6 @@ export const syncLogisticsDept = async (req: Request, res: Response): Promise<an
     }
 }
 
-
-
-export const syncLogisticsDeptFromPayment = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { paymentId } = req.params; // Triggered after a payment is finalized
-
-        if (!paymentId) {
-            return res.status(400).json({ ok: false, message: "Payment ID is required" });
-        }
-
-        // 1. Fetch Payment Details and populate project
-        const payment = await PaymentMainAccountModel.findById(paymentId).populate("projectId", "_id projectName");
-
-        if (!payment) {
-            return res.status(404).json({ ok: false, message: "Payment record not found" });
-        }
-
-        // 2. Fetch the related Procurement (using the fromSectionNumber if it refers to Procurement)
-        const procurement = await ProcurementModelNew.findOne({
-            procurementNumber: payment.fromSectionNumber
-        });
-
-        // 3. Prepare notes with tracking numbers for internal reference
-        const internalNotes = `
-            Payment No: ${payment?.paymentNumber}
-            Procurement No: ${payment?.fromSectionNumber || 'N/A'}
-            Order Material No: ${payment?.orderMaterialDeptNumber || 'N/A'}
-            Subject: ${payment.subject || ''}
-            Notes: ${payment.notes || ''}
-        `.trim();
-
-        // 4. Transform Payment items to Logistics items
-        const shipmentItems = payment!?.items?.map((item) => ({
-            name: item.itemName,
-            quantity: item.quantity,
-            unit: item.unit
-        }));
-
-        // 5. Create the shipment via Utility
-        const shipment = await createShipmentUtil({
-            organizationId: payment.organizationId,
-            projectId: payment.projectId as any,
-            projectName: (payment.projectId as any).projectName || "Unknown Project",
-            items: shipmentItems,
-            vehicleDetails: {}, // Initially empty, to be filled by Logistics Dept
-            origin: {
-                address: procurement?.shopDetails?.address || "Vendor Address TBD",
-                contactPerson: procurement?.shopDetails?.contactPerson || "Vendor Contact",
-                contactPhone: procurement?.shopDetails?.phoneNumber || null
-            },
-            destination: {
-                address: procurement?.deliveryLocationDetails?.address || "Site Address TBD",
-                contactPerson: procurement?.deliveryLocationDetails?.siteSupervisor || null,
-                contactPhone: procurement?.deliveryLocationDetails?.phoneNumber || null
-            },
-            notes: internalNotes,
-            status: "pending", // Logistics Dept will update this to 'scheduled' or 'in_transit'
-
-            paymentDeptNumber: payment.paymentNumber || null,
-            paymentRefId: payment._id as any || null,
-            procurementDeptNumber: procurement?.procurementNumber || null,
-            procurementRefId: procurement?._id || null,
-            orderMaterialDeptNumber: procurement?.fromDeptNumber || null,
-            orderMaterialRefId: procurement?.fromDeptRefId || null,
-            
-            isCreatedAuto:true
-        });
-
-        if (!shipment) {
-            return res.status(500).json({ ok: false, message: "Failed to create shipment entry" });
-        }
-
-        // Optional: Update payment model to show it has been synced with logistics
-        // payment.isSyncedWithLogistics = true;
-        // await payment.save();
-
-        res.status(200).json({
-            ok: true,
-            message: "Automation Successful: Shipment created for Logistics Dept",
-            shipmentNumber: shipment.shipmentNumber
-        });
-
-    } catch (err: any) {
-        console.error("Automation Error:", err);
-        return res.status(500).json({
-            ok: false,
-            error: "Logistics Automation Failed",
-            message: err?.message
-        });
-    }
-};
 
 
 export const sendProcurementToPayment = async (req: Request, res: Response): Promise<any> => {

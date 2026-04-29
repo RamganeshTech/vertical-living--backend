@@ -750,6 +750,13 @@ const formatLedgerItem = (item: any) => {
   const payment = item.paymentId || {};  // Populated Payment
   const orderMaterialDoc = item.orderMaterialRefId || {}; // The populated OrderMaterialHistoryModel
 
+
+  // --- NEW LIFECYCLE DOCS ---
+  const logisticsDoc = item.logisticsRefId || null;
+  const materialArrivalDoc = item.materialArrivalRefId || null;
+  const finalPaymentDoc = item.finalPaymentRefId || null;
+
+
   // 1. NORMALIZE SOURCE FIELDS
   // We map specific fields from different models to a common standard
   let docNumber = "N/A";
@@ -776,12 +783,13 @@ const formatLedgerItem = (item: any) => {
   // If procurement has happened, it's the most accurate source of rates and vendors
   console.log("type", type)
   console.log("source", source)
+
   if (type === "Procurement" && source._id) {
     docNumber = source.procurementNumber || "N/A";
     docDate = source.createdAt;
     docTotal = source.totalCost || 0;
     docNotes = source.notes || "";
-    
+
     // Use selectedUnits from Procurement as they contain the confirmed rates
     docItems = (source?.selectedUnits || []).map((unit: any) => ({
       itemName: unit.subItemName,
@@ -791,7 +799,7 @@ const formatLedgerItem = (item: any) => {
       totalCost: unit.totalCost || 0
     }));
   }
- else if (item?.orderMaterialDeptNumber && orderMaterialDoc?.orderedItems) {
+  else if (item?.orderMaterialDeptNumber && orderMaterialDoc?.orderedItems) {
     // Search for the specific order inside the project's orderedItems array
     const specificOrder = (orderMaterialDoc?.orderedItems || [])?.find(
       (order: any) => order?.orderMaterialNumber === item?.orderMaterialDeptNumber
@@ -870,20 +878,108 @@ const formatLedgerItem = (item: any) => {
     docNotes = source.notes;
   }
 
+
+  let orderMaterialDetails = null;
+  if (orderMaterialDoc && item.orderMaterialDeptNumber && orderMaterialDoc.orderedItems) {
+    const specificOrder = orderMaterialDoc.orderedItems.find(
+      (o: any) => o.orderMaterialNumber === item.orderMaterialDeptNumber
+    );
+
+    if (specificOrder) {
+      orderMaterialDetails = {
+        id: orderMaterialDoc._id,
+        orderMaterialDeptNumber: specificOrder.orderMaterialNumber,
+        createdAt: specificOrder.createdAt,
+        priority: specificOrder.priority,
+        shopDetails: specificOrder.shopDetails,
+        deliveryLocationDetails: specificOrder.deliveryLocationDetails,
+        items: (specificOrder.subItems || []).map((sub: any) => ({
+          itemName: sub.subItemName,
+          unit: sub.unit,
+          quantity: sub.quantity
+        }))
+      };
+    }
+  }
+
+  // ==========================================
+  // 2. NORMALIZE PROCUREMENT DATA
+  // ==========================================
+  let procurementDetails = null;
+  if (type === "Procurement" && source._id) {
+    procurementDetails = {
+      id: source._id,
+      procurementDeptNumber: source.procurementNumber,
+      createdAt: source.createdAt,
+      grandTotal: source.totalCost || 0,
+      notes: source.notes,
+      shopDetails: source.shopDetails,
+      deliveryLocationDetails: source.deliveryLocationDetails,
+      items: (source.selectedUnits || []).map((unit: any) => ({
+        itemName: unit.subItemName,
+        unit: unit.unit,
+        quantity: unit.quantity,
+        rate: unit.rate || 0,
+        totalCost: unit.totalCost || 0
+      }))
+    };
+  }
+
   // 2. NORMALIZE PAYMENT DATA
   // Invoices usually represent money coming IN, so they might not have a 'paymentId' 
   // linked in the same way as Bills (money going OUT).
   // We only show payment details if it exists.
   const paymentDetails = item.paymentId ? {
     id: payment._id,
-    number: payment.paymentNumber,
-    date: payment.paymentDate,
+    paymentDeptNumber: payment.paymentNumber,
+    paymentDate: payment.paymentDate,
     status: payment.generalStatus,
     orderId: payment.orderId,
-    transactionId: payment.transactionId,
-    amountPaid: payment.grandTotal,
+    // transactionId: payment.transactionId,
+    grandTotal: payment.grandTotal,
     // We include items here so you can compare Source Items vs Payment Items
     items: payment.items || []
+  } : null;
+
+  // --- 3. NORMALIZE LOGISTICS DATA ---
+  const logisticsDetails = logisticsDoc ? {
+    id: logisticsDoc._id,
+    logisticsDeptNumber: item.logisticsDeptNumber || logisticsDoc.shipmentNumber,
+    status: logisticsDoc.status,
+    origin: logisticsDoc.origin,
+    destination: logisticsDoc.destination,
+    vehicleDetails: logisticsDoc.vehicleDetails,
+    items: logisticsDoc.items || [],
+    notes: logisticsDoc.notes
+  } : null;
+
+  // --- 4. NORMALIZE MATERIAL ARRIVAL DATA ---
+  let arrivalSpecificInfo = null;
+  if (materialArrivalDoc && item.materialArrivalDeptNumber) {
+    // Find the specific arrival batch inside the project's arrival list
+    arrivalSpecificInfo = (materialArrivalDoc.materialArrivalList || []).find(
+      (arr: any) => arr.materialArrivalDeptNumber === item.materialArrivalDeptNumber
+    );
+  }
+  const materialArrivalDetails = materialArrivalDoc ? {
+    id: materialArrivalDoc._id,
+    materialArrivalDeptNumber: item.materialArrivalDeptNumber,
+    // projectStatus: materialArrivalDoc.status,
+    // Safely extract the items and images from the specific batch if it exists
+    items: arrivalSpecificInfo ? arrivalSpecificInfo.subItems : [],
+    orderedImages: arrivalSpecificInfo ? arrivalSpecificInfo.orderedImages : [],
+  } : null;
+
+  // --- 5. NORMALIZE FINAL PAYMENT DATA ---
+  const finalPaymentDetails = finalPaymentDoc ? {
+    id: finalPaymentDoc._id,
+    paymentDeptNumber: item.finalPaymentDeptNumber || finalPaymentDoc.paymentNumber,
+    paymentDate: finalPaymentDoc.paymentDate,
+    generalStatus: finalPaymentDoc.generalStatus,
+    // transactionId: finalPaymentDoc.transactionId,
+    grandTotal: finalPaymentDoc.grandTotal,
+    amountRemaining: finalPaymentDoc.amountRemaining,
+    items: finalPaymentDoc.items || []
   } : null;
 
   // 3. DETERMINE STATUS
@@ -925,8 +1021,24 @@ const formatLedgerItem = (item: any) => {
       notes: docNotes
     },
 
-    // PAYMENT DETAILS (Nullable)
-    paymentDetails: paymentDetails
+
+
+
+    orderMaterialDetails,
+    procurementDetails,
+
+    // 2. First Payment
+    paymentDetails: paymentDetails,
+
+    // 3. Logistics Tracking
+    logisticsDetails: logisticsDetails,
+
+    // 4. Material Arrival & Quality Check
+    materialArrivalDetails: materialArrivalDetails,
+
+    // 5. Final Settlement
+    finalPaymentDetails: finalPaymentDetails,
+
   };
 };
 
@@ -987,6 +1099,8 @@ const formatLedgerItem = (item: any) => {
 // ==============================================================================
 // GET ALL (Updated with Payment Population)
 // ==============================================================================export const getAllAccountingRecords = async (req: Request, res: Response): Promise<any> => {
+
+
 export const getAllAccountingRecords = async (req: Request, res: Response): Promise<any> => {
   try {
     const {
@@ -1131,6 +1245,19 @@ export const getSingleAccountingRecord = async (req: Request, res: Response): Pr
       .populate({
         path: "orderMaterialRefId",
         select: "_id projectId orderedItems"
+      })
+      // 4. Populate Logistics Tracking
+      .populate({
+        path: "logisticsRefId",
+        select: "shipmentNumber status origin destination vehicleDetails items notes"
+      })
+      .populate({
+        path: "materialArrivalRefId",
+        select: "status materialArrivalList assignedTo timer"
+      })
+      .populate({
+        path: "finalPaymentRefId",
+        select: "paymentNumber paymentDate generalStatus transactionId items grandTotal amountRemaining"
       });
 
     if (!record) {

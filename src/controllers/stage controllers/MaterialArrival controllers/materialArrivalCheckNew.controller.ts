@@ -12,6 +12,7 @@ import { Types } from "mongoose"
 // import { getStageSelectionUtil } from "../../Modular Units Controllers/StageSelection Controller/stageSelection.controller";
 import { IRoomItemEntry } from "../../../models/Stage Models/MaterialRoom Confirmation/MaterialRoomTypes";
 import { IOrderedItems, OrderMaterialHistoryModel, OrderSubItems } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
+import { AccountingModel } from "../../../models/Department Models/Accounting Model/accountingMain.model";
 
 // export const syncMaterialArrivalNew = async (projectId: string) => {
 //     const timer: any = {
@@ -1103,7 +1104,7 @@ export const getMaterialArrivalPublicDetails = async (req: Request, res: Respons
 
 // COMMON STAGE CONTROLLERS
 
-const setMaterialArrivalStageDeadline = (req: Request, res: Response): Promise<any> => {
+export const setMaterialArrivalStageDeadline = (req: Request, res: Response): Promise<any> => {
     return handleSetStageDeadline(req, res, {
         model: MaterialArrivalModel,
         stageName: "Material Arrival"
@@ -1112,7 +1113,7 @@ const setMaterialArrivalStageDeadline = (req: Request, res: Response): Promise<a
 
 
 
-const materialArrivalCompletionStatus = async (req: Request, res: Response): Promise<any> => {
+export const materialArrivalCompletionStatus = async (req: Request, res: Response): Promise<any> => {
     try {
         const { projectId } = req.params;
         const form = await MaterialArrivalModel.findOne({ projectId });
@@ -1172,7 +1173,83 @@ const materialArrivalCompletionStatus = async (req: Request, res: Response): Pro
 };
 
 
-export {
-    setMaterialArrivalStageDeadline,
-    materialArrivalCompletionStatus
+
+export const syncMaterialArrivalToAccounts = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { projectId } = req.params;
+        // Assuming you pass the specific arrival number in the body to know which one to sync
+        const { materialArrivalDeptNumber } = req.body; 
+
+        if (!projectId || !materialArrivalDeptNumber) {
+            return res.status(400).json({ 
+                ok: false, 
+                message: "Project ID and Material Arrival Dept Number are required" 
+            });
+        }
+
+        // 1. Fetch the Material Arrival record for the whole project
+        const arrivalDoc = await MaterialArrivalModel.findOne({ projectId });
+
+        if (!arrivalDoc) {
+            return res.status(404).json({ ok: false, message: "Material Arrival record not found for this project" });
+        }
+
+        // 2. Find the specific arrival item in the list for this sync operation
+        const arrivalItem = arrivalDoc.materialArrivalList.find(
+            (item) => item.materialArrivalDeptNumber === materialArrivalDeptNumber
+        );
+
+        if (!arrivalItem) {
+            return res.status(404).json({ 
+                ok: false, 
+                message: `Material Arrival item with dept number ${materialArrivalDeptNumber} not found in this project's list.` 
+            });
+        }
+
+        // 3. Ensure we have the root reference to link back to Accounting
+        if (!arrivalItem.orderMaterialDeptNumber) {
+            return res.status(400).json({
+                ok: false,
+                message: "Missing 'orderMaterialDeptNumber' in the arrival item. Cannot link to accounts."
+            });
+        }
+
+        // 4. Find and Update the existing Accounting Record
+        const updatedAccountingRecord = await AccountingModel.findOneAndUpdate(
+            {
+                // Find it using the root order material reference
+                orderMaterialDeptNumber: arrivalItem.orderMaterialDeptNumber
+            },
+            {
+                $set: {
+                    materialArrivalDeptNumber: arrivalItem.materialArrivalDeptNumber,
+                    // We link the main document ID, but you could also link arrivalItem._id if you need sub-document tracking
+                    materialArrivalRefId: arrivalDoc._id 
+                }
+            },
+            { new: true } 
+        );
+
+        if (!updatedAccountingRecord) {
+             return res.status(404).json({ 
+                ok: false, 
+                message: "Corresponding Accounting record not found to sync material arrival." 
+            });
+        }
+
+        // 5. Return success
+        return res.status(200).json({
+            ok: true,
+            message: "Successfully synced Material Arrival details to the Central Accounting Record",
+            accountingId: updatedAccountingRecord._id
+        });
+
+    } catch (err: any) {
+        console.error("Sync Material Arrival to Accounts Error:", err);
+        return res.status(500).json({
+            ok: false,
+            error: "Failed to sync material arrival to accounting",
+            message: err?.message
+        });
+    }
 };

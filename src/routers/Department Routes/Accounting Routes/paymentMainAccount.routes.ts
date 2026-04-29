@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
-import { deletePaymentAcc, getAllPaymentsAcc, getAllPaymentsAccWihtoutPaginationForExport, getSinglePaymentAcc, sendPaymentToAcc, uploadCashPaymentProofOnly, verifyAndProcessCashPayment } from "../../../controllers/Department controllers/Accounting Controller/PaymentMainAcc_controllers/paymentMainAcc.controller";
+import { deletePaymentAcc, getAllPaymentsAcc, getAllPaymentsAccWihtoutPaginationForExport, getSinglePaymentAcc, sendPaymentToAcc, syncPaymentDeptToLogistics, uploadCashPaymentProofOnly, verifyAndProcessCashPayment } from "../../../controllers/Department controllers/Accounting Controller/PaymentMainAcc_controllers/paymentMainAcc.controller";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
 
 const paymentAccRoutes = Router();
@@ -14,6 +14,7 @@ paymentAccRoutes
     .delete("/deletepayments/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), deletePaymentAcc)
     .get("/getsinglepayments/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), getSinglePaymentAcc,)
     .post("/syncpaymenttoaccounts/:paymentId", multiRoleAuthMiddleware("owner", "staff", "CTO"), sendPaymentToAcc)
+    .post("/syncpaymenttologistics/:paymentId", multiRoleAuthMiddleware("owner", "staff", "CTO"), syncPaymentDeptToLogistics)
     .post("/updatepaymentproof/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"),
         imageUploadToS3.array("files"),
         processUploadFiles,

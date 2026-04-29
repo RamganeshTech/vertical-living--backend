@@ -60,6 +60,7 @@ export interface ILogisticsShipment {
   eta: number,   // minutes
 
   trackingId: String,
+  isSyncWithAccounts: boolean
 
   locationHistory: [{
     latitude: number,
@@ -156,7 +157,9 @@ export const LogisticsShipmentSchema = new Schema<ILogisticsShipment>({
   trackingId: {
     type: String,
     default: null
-  },         
+  },
+
+  isSyncWithAccounts: { type: Boolean, default: false },
 
   currentLocation: {
     latitude: Number,
