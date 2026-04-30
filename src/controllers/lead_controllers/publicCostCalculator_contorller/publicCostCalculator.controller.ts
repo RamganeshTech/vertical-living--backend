@@ -1,6 +1,6 @@
 // import PublicQuoteCalculatorModel from '../model/publicQuoteCalculator.model.js';
 import type { Request, Response } from 'express';
-import PublicQuoteCostCalculatorModel from '../../models/publicCostCalculator_model/publicCostCalculator.model';
+import PublicQuoteCostCalculatorModel from '../../../models/lead_model/publicCostCalculator_model/publicCostCalculator.model';
 
 
 

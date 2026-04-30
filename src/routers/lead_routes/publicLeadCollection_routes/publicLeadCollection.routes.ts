@@ -4,8 +4,8 @@ import { Router } from 'express';
 //     getAllPublicLeads, 
 //     getSinglePublicLead 
 // } from '../../controllers/publicLead.controller'; // Adjust path as needed
-import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
-import { createPublicLead, getAllPublicLeads, getSinglePublicLead } from '../../controllers/publicLeadCollection_controllers/publicLeadCollection.controller';
+import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware';
+import { createPublicLead, getAllPublicLeads, getSinglePublicLead } from '../../../controllers/lead_controllers/publicLeadCollection_controllers/publicLeadCollection.controller';
 
 const publicLeadCollectionRoutes = Router();
 

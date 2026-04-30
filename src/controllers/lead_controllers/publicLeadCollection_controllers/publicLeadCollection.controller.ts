@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import PublicLeadCollectionModel from '../../models/publicLeadCollection_model/publicLeadcollection.model';
+import PublicLeadCollectionModel from '../../../models/lead_model/publicLeadCollection_model/publicLeadcollection.model';
 
 import dotenv from "dotenv"
 dotenv.config()
@@ -12,9 +12,9 @@ const VERTICAL_LIVING_ORG_ID = process.env.VERTICAL_LIVING_ORG_ID;
 
 export const createPublicLead = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { 
-             fullName, mobileNumber, projectCategory, 
-            propertyType, budget, location, timeline, serviceType 
+        const {
+            fullName, mobileNumber, projectCategory,
+            propertyType, budget, location, timeline, serviceType
         } = req.body;
 
         console.log("req.body from the ublic tell us about ur project", req.body)
@@ -23,7 +23,7 @@ export const createPublicLead = async (req: Request, res: Response): Promise<any
 
 
         const newLead = new PublicLeadCollectionModel({
-            organizationId:VERTICAL_LIVING_ORG_ID,
+            organizationId: VERTICAL_LIVING_ORG_ID,
             fullName,
             mobileNumber,
             projectCategory,
@@ -41,7 +41,7 @@ export const createPublicLead = async (req: Request, res: Response): Promise<any
             message: "Inquiry submitted successfully",
             data: newLead
         });
-        
+
     } catch (error: any) {
         console.log("error", error)
         res.status(500).json({ ok: false, message: error.message });

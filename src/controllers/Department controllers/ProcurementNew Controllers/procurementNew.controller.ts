@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import ProcurementModelNew, { IProcurementItemsNew } from "../../../models/Department Models/ProcurementNew Model/procurementNew.model";
 import { generateProcurementPdf } from "./procurementPdf";
 import { createShipmentUtil } from "../Logistics Controllers/logistics.controller";
-import { decryptCryptoToken, encryptCryptoToken } from "../../../utils/common features/utils";
 import crypto from 'crypto';
 import mongoose, { Types } from "mongoose";
 import { createPaymentMainAccUtil } from "../Accounting Controller/PaymentMainAcc_controllers/paymentMainAcc.controller";
@@ -1119,7 +1118,7 @@ export const syncLogisticsDept = async (req: Request, res: Response): Promise<an
             },
             destination: {
                 address: procurement?.deliveryLocationDetails?.address || null,
-                contactPerson: procurement?.deliveryLocationDetails?.siteSupervisor || null,
+                contactPerson: procurement?.deliveryLocationDetails?.siteSupervisor || null, 
                 contactPhone: procurement?.deliveryLocationDetails?.phoneNumber || null
             },
             isCreatedAuto: true,

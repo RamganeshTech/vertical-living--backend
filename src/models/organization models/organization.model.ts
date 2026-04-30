@@ -18,7 +18,10 @@ export interface IOrganization extends Document {
     planStatus: "active" | "inactive"
     planValidTill: Date | null
     mode: string
-    gstin: string | null
+    gstin: string | null,
+    facebookPageId: string
+    metaAccessToken: string
+    whatsappPhoneNumberId:string
 
 }
 
@@ -82,6 +85,9 @@ const OrganizationSchema = new Schema<IOrganization>({
     },
     mode: { type: String, default: "manual" },
     gstin: { type: String, default: null },
+    facebookPageId: { type: String, },
+    metaAccessToken: { type: String },
+    whatsappPhoneNumberId: { type: String }
 }, {
     timestamps: true
 });

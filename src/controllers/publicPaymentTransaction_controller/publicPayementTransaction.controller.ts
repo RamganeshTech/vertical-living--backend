@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
-import PublicPaymentTransaction, { ICreateOrderRequest, IVerifyPaymentRequest } from '../../models/publicPaymentTransaction_model/publicPaymentTransaction.model';
+import PublicPaymentTransaction, { ICreateOrderRequest, IVerifyPaymentRequest } from '../../models/organization models/publicPaymentTransaction_model/publicPaymentTransaction.model';
 // import { PublicPaymentTransaction } from '../models/PublicPaymentTransaction';
 
 import dotenv from "dotenv"
