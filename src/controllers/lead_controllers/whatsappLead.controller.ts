@@ -137,7 +137,7 @@ export const getAllWhatsAppLeads = async (req: any, res: Response): Promise<any>
         const query: any = { organizationId: organizationId };
 
         // 1. Get the 60 dummy leads
-        // let leads = generateDummyWALeads(organizationId as string || "YOUR_ORG_ID_HERE");
+        let leads = generateDummyWALeads(organizationId as string || "YOUR_ORG_ID_HERE");
 
         if (status) query.status = status;
 
@@ -147,17 +147,17 @@ export const getAllWhatsAppLeads = async (req: any, res: Response): Promise<any>
             if (endDate) query.createdAt.$lte = new Date(endDate as string);
         }
 
-        const skip = (Number(page) - 1) * Number(limit);
+        // const skip = (Number(page) - 1) * Number(limit);
 
-        const [leads, total] = await Promise.all([
-            WhatsAppLeadModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
-            WhatsAppLeadModel.countDocuments(query)
-        ]);
+        // const [leads, total] = await Promise.all([
+        //     WhatsAppLeadModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+        //     WhatsAppLeadModel.countDocuments(query)
+        // ]);
 
         // 3. Apply Pagination to Dummy Data
-        // const total = leads.length;
-        // const skip = (Number(page) - 1) * Number(limit);
-        // const paginatedLeads = leads.slice(skip, skip + Number(limit));
+        const total = leads.length;
+        const skip = (Number(page) - 1) * Number(limit);
+        const paginatedLeads = leads.slice(skip, skip + Number(limit));
 
         return res.status(200).json({
             ok: true,
@@ -176,15 +176,15 @@ export const getAllWhatsAppLeads = async (req: any, res: Response): Promise<any>
 export const getWhatsAppLeadById = async (req: any, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
-        const lead = await WhatsAppLeadModel.findOne({ _id: id }); // Add orgId check in production
+        // const lead = await WhatsAppLeadModel.findOne({ _id: id }); // Add orgId check in production
         
         
-        if (!lead) return res.status(404).json({ ok: false, message: "Lead not found" });
+        // if (!lead) return res.status(404).json({ ok: false, message: "Lead not found" });
         
-        // const organizationId = "sj.dlsk;slkjksld"
-        //  let leads = generateDummyWALeads(organizationId as string || "YOUR_ORG_ID_HERE");
+        const organizationId = "sj.dlsk;slkjksld"
+         let leads = generateDummyWALeads(organizationId as string || "YOUR_ORG_ID_HERE");
 
-        // let lead = leads.find(ele => ele._id === id)
+        let lead = leads.find(ele => ele._id === id)
 
 
 
