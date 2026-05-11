@@ -127,8 +127,8 @@ import PreSalesRoutes from './routers/Quote Routes/preSalesQuote_routes/preSales
 import PreSalesMaterialRateConfigRoutes from './routers/Quote Routes/RateConfig Routes/preSalesRateConfig.routes';
 import MaterialShopRoutes from './routers/shopMaterialDocument_routes/shopMaterialDocument.routes';
 import PublicPaymentTransactionRoutes from './routers/publicPaymentTransaction_routes/publicPaymentTransaction.routes';
-import publiCostCalculatorRoutes from './routers/lead_routes/publicCostCalculator_routes/publicCostCalculator.routes';
-import publicLeadCollectionRoutes from './routers/lead_routes/publicLeadCollection_routes/publicLeadCollection.routes';
+import publiCostCalculatorRoutes from './routers/marketing_routes/lead_routes/publicCostCalculator_routes/publicCostCalculator.routes';
+import publicLeadCollectionRoutes from './routers/marketing_routes/lead_routes/publicLeadCollection_routes/publicLeadCollection.routes';
 import pincodeMasterRoutes from './routers/pincode_routes/pincodeMaster.routes';
 // import pincodeVendorMappingRoutes from './routers/pincode_routes/pincodeVendorMapping.routes';
 import pincodeVendorProjectAssignmentRoutes from './routers/pincode_routes/pincodeVendorProjectAssignment.routes';
@@ -140,8 +140,10 @@ import InstantCostCalculatorProductRoute from './routers/Quote Routes/RateConfig
 import projectConfigRoutes from './routers/projectConfig.routes';
 import designApprovalRoutes from './routers/Stage routes/designApproval_routes/desingApproval.route';
 import InstantCostCalculatorMainRoute from './routers/Quote Routes/RateConfig Routes/instantCostCalculator_routes/instantCostCalculatorMain.routes';
-import leadRoutes from './routers/lead_routes/instagramLead.routes';
-import whatsappRoutes from './routers/lead_routes/whatsappLead.routes';
+import leadRoutes from './routers/marketing_routes/lead_routes/instagramLead.routes';
+import whatsappRoutes from './routers/marketing_routes/lead_routes/whatsappLead.routes';
+import ClassRoomRoutes from './routers/marketing_routes/classRoom_routes/classroom.routes';
+import MetaRoutes from './routers/marketing_routes/lead_routes/meta.routes';
 
 
 // Extend Socket interface for custom properties
@@ -364,6 +366,8 @@ app.use('/api/commonorder', commonOrderRoutes)
 app.use('/api/inventory', InventoryRoutes)
 app.use('/api/recyclematerial', recycleMaterialRoutes)
 
+app.use('/api/classroom', ClassRoomRoutes)
+
 // SOP
 app.use('/api/adminwall', adminWallroutes)
 app.use('/api/workerwall', workerWallRoutes)
@@ -454,7 +458,7 @@ app.use("/api/v1/public/costcalculation", publiCostCalculatorRoutes)
 app.use("/api/v1/public/leadcollection", publicLeadCollectionRoutes)
 app.use("/api/v1/lead", leadRoutes)
 app.use("/api/v1/lead/whatsapp", whatsappRoutes)
-
+app.use("/api/v1/lead/meta", MetaRoutes)
 app.use("/api/pincode", pincodeMasterRoutes)
 // app.use("/api/pincode/mapping", pincodeVendorMappingRoutes)
 app.use("/api/pincode/project-assignment", pincodeVendorProjectAssignmentRoutes)

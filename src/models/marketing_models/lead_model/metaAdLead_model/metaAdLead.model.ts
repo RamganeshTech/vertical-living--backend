@@ -18,7 +18,7 @@ const MetaAdLeadSchema = new Schema<IMetaAdLead>({
     ref: "OrganizationModel",
     required: true
   },
-  metaLeadId: { type: String, required: true, unique: true },
+  metaLeadId: { type: String, required: true },
   formName: { type: String },
   adName: { type: String },
   adId: { type: String },

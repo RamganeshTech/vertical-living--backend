@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import OrganizationModel from '../../models/organization models/organization.model';
-import { WhatsAppLeadModel } from '../../models/lead_model/whatsappLead_model/whatsappLead.model';
+import OrganizationModel from '../../../models/organization models/organization.model';
+import { WhatsAppLeadModel } from '../../../models/marketing_models/lead_model/whatsappLead_model/whatsappLead.model';
 // import { WhatsAppLeadModel } from '../../models/WhatsAppLeadModel';
 // import { OrganizationModel } from '../../models/OrganizationModel';
 
@@ -49,7 +49,7 @@ export const handleWhatsAppWebhook = async (req: Request, res: Response): Promis
                     // 2. Save or Update the Lead
                     await WhatsAppLeadModel.findOneAndUpdate(
                         { phoneNumber: customerPhone, organizationId: org._id },
-                        { 
+                        {
                             customerName: customerName,
                             initialInquiry: messageText, // Or create a lastMessage field in your schema
                             waMessageId: waMessageId,
@@ -107,9 +107,9 @@ const generateDummyWALeads = (organizationId: string) => {
         const lName = lastNames[i % lastNames.length];
         const randomDaysAgo = Math.floor(Math.random() * 30);
         const createdAt = new Date(now.getTime() - randomDaysAgo * 24 * 60 * 60 * 1000);
-        
+
         // Generate a realistic Indian mobile number format
-        const randomPhoneSuffix = Math.floor(10000000 + Math.random() * 90000000); 
+        const randomPhoneSuffix = Math.floor(10000000 + Math.random() * 90000000);
         const phoneNumber = `91${(i % 4) + 6}${randomPhoneSuffix}`; // Starts with 91, then 6,7,8, or 9
 
         dummyLeads.push({
@@ -177,12 +177,12 @@ export const getWhatsAppLeadById = async (req: any, res: Response): Promise<any>
     try {
         const { id } = req.params;
         // const lead = await WhatsAppLeadModel.findOne({ _id: id }); // Add orgId check in production
-        
-        
+
+
         // if (!lead) return res.status(404).json({ ok: false, message: "Lead not found" });
-        
+
         const organizationId = "sj.dlsk;slkjksld"
-         let leads = generateDummyWALeads(organizationId as string || "YOUR_ORG_ID_HERE");
+        let leads = generateDummyWALeads(organizationId as string || "YOUR_ORG_ID_HERE");
 
         let lead = leads.find(ele => ele._id === id)
 

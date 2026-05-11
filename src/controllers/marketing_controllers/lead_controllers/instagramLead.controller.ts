@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { InstagramLeadModel } from '../../models/lead_model/instagramLead_model/instagramLead.model';
-import OrganizationModel from '../../models/organization models/organization.model';
+import { InstagramLeadModel } from '../../../models/marketing_models/lead_model/instagramLead_model/instagramLead.model';
+import OrganizationModel from '../../../models/organization models/organization.model';
 import axios from 'axios';
 
 // import { InstagramLeadModel } from '../models/InstagramLeadModel';
@@ -208,7 +208,7 @@ export const getAllInstagramLeads = async (req: Request, res: Response): Promise
         const [leads, total] = await Promise.all([
             InstagramLeadModel.find(query)
                 .sort({ createdAt: -1 })
-                .skip(skip) 
+                .skip(skip)
                 .limit(Number(limit)),
             InstagramLeadModel.countDocuments(query)
         ]);

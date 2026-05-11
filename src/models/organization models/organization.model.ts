@@ -21,7 +21,10 @@ export interface IOrganization extends Document {
     gstin: string | null,
     facebookPageId: string
     metaAccessToken: string
-    whatsappPhoneNumberId:string
+    metaVerifyToken: string
+    metaDatasetId: string
+    metaDatasetToken: string
+    whatsappPhoneNumberId: string
 
 }
 
@@ -85,8 +88,11 @@ const OrganizationSchema = new Schema<IOrganization>({
     },
     mode: { type: String, default: "manual" },
     gstin: { type: String, default: null },
-    facebookPageId: { type: String, },
-    metaAccessToken: { type: String },
+    facebookPageId: { type: String, default: null },
+    metaAccessToken: { type: String, default: null },
+    metaVerifyToken: { type: String, default: null },
+    metaDatasetId: { type: String, default: null },
+    metaDatasetToken: { type: String, default: null },
     whatsappPhoneNumberId: { type: String }
 }, {
     timestamps: true

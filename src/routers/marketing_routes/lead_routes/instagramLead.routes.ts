@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { getAllInstagramLeads, getInstagramLeadById, handleInstagramWebhook, updateInstagramLeadStatus, verifyInstagramWebhook } from '../../controllers/lead_controllers/instagramLead.controller';
-import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
-import { verifyMetaSignature } from '../../middlewares/metaSignatureMiddleware';
+import { getAllInstagramLeads, getInstagramLeadById, handleInstagramWebhook, updateInstagramLeadStatus, verifyInstagramWebhook } from '../../../controllers/marketing_controllers/lead_controllers/instagramLead.controller';
+import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware';
+import { verifyMetaSignature } from '../../../middlewares/metaSignatureMiddleware';
 
 const leadRoutes = Router();
 

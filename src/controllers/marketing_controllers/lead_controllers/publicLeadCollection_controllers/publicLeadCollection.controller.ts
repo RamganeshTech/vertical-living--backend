@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import PublicLeadCollectionModel from '../../../models/lead_model/publicLeadCollection_model/publicLeadcollection.model';
+import PublicLeadCollectionModel from '../../../../models/marketing_models/lead_model/publicLeadCollection_model/publicLeadcollection.model';
 
 import dotenv from "dotenv"
 dotenv.config()
