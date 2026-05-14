@@ -1,4 +1,5 @@
 
+import mongoose from "mongoose";
 import CTOModel from "../../../../models/CTO model/CTO.model";
 import StaffModel from "../../../../models/staff model/staff.model";
 import UserModel from "../../../../models/usermodel/user.model";
@@ -23,9 +24,11 @@ export const notifyInternalLeadSubscribers = async ({
     sourceTitle
 }: NotifyLeadParams) => {
     try {
+        console.log("getting into notification for lead module")
         // Query: Match the organization AND check if they have leadmodule permission.
+        const orgObjectId = new mongoose.Types.ObjectId(organizationId);
         const targetQuery = {
-            organizationId: organizationId,
+            organizationId: orgObjectId,
             // "permissions.leadmodule": true
             $or: [
                 { "permission.leadmodule.create": true },
@@ -42,6 +45,8 @@ export const notifyInternalLeadSubscribers = async ({
             CTOModel.find(targetQuery).select('_id email').lean(),
             WorkerModel.find(targetQuery).select('_id email').lean(),
         ]);
+
+        console.log(`📊 Found - Users: ${users.length}, Staff: ${staffs.length}, CTOs: ${ctos.length}, Workers: ${workers.length}`);
 
         // Combine all found users and attach their specific model name
         const notificationTargets = [
@@ -84,7 +89,9 @@ export const notifyInternalLeadSubscribers = async ({
                     label: 'View Lead',
                 },
                 projectId: null
-            })
+            }).catch(err => {
+                    console.error(`❌ Failed to create notification for ${target?.id?.toString()}:`, err);
+                })
         );
 
         await Promise.all(notifyPromises);
@@ -107,6 +114,7 @@ export const notifyInternalLeadSubscribers = async ({
 
         // console.log(`✅ Lead notification sent to ${notificationTargets.length} internal users.`);
         console.log(`✅ CRM notification sent via ${sourceTitle} to ${notificationTargets.length} users.`);
+        
 
     } catch (error) {
         console.error("❌ Error notifying lead subscribers:", error);

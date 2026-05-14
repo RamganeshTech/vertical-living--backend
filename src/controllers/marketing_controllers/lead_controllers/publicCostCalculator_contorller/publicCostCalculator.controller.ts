@@ -496,8 +496,11 @@ export const createPublicQuote = async (req: Request, res: Response):Promise<any
         });
 
         await newQuote.save();
-        
+        console.log("VERTICAL_LIVING_ORG_ID",VERTICAL_LIVING_ORG_ID)
+        console.log("outside if condiiton of the notificaiton's cost calcualtor")
        if (VERTICAL_LIVING_ORG_ID) {
+        console.log("inside if condiiton of the notificaiton's cost calcualtor")
+
     notifyInternalLeadSubscribers({
         organizationId: VERTICAL_LIVING_ORG_ID, 
         leadName: name, 
