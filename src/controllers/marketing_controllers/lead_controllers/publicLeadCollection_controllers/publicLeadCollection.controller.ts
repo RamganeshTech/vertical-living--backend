@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import PublicLeadCollectionModel from '../../../../models/marketing_models/lead_model/publicLeadCollection_model/publicLeadcollection.model';
 
 import dotenv from "dotenv"
+import { notifyInternalLeadSubscribers } from '../lead_utils/leadUtils';
 dotenv.config()
 
 /**
@@ -35,6 +36,17 @@ export const createPublicLead = async (req: Request, res: Response): Promise<any
         });
 
         await newLead.save();
+
+
+        // 🚀 Trigger Notification in the background
+        if (VERTICAL_LIVING_ORG_ID) {
+            notifyInternalLeadSubscribers({
+                organizationId: VERTICAL_LIVING_ORG_ID,
+                leadName: fullName,
+                leadPhone: mobileNumber,
+                sourceTitle: "Inquiry Form"
+            }).catch(err => console.error("Notification trigger failed:", err));
+        }
 
         res.status(201).json({
             ok: true,

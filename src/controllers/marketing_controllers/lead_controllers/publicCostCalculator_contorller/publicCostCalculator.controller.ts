@@ -6,6 +6,7 @@ import PublicQuoteCostCalculatorModel from '../../../../models/marketing_models/
 
 
 import dotenv from "dotenv"
+import { notifyInternalLeadSubscribers } from '../lead_utils/leadUtils';
 dotenv.config()
 
 
@@ -495,6 +496,16 @@ export const createPublicQuote = async (req: Request, res: Response):Promise<any
         });
 
         await newQuote.save();
+        
+       if (VERTICAL_LIVING_ORG_ID) {
+    notifyInternalLeadSubscribers({
+        organizationId: VERTICAL_LIVING_ORG_ID, 
+        leadName: name, 
+        leadPhone: phone,
+        sourceTitle: "Cost Calculator"
+    }).catch(err => console.error("Notification trigger failed:", err));
+}
+        
 
         res.status(201).json({
             ok: true,
