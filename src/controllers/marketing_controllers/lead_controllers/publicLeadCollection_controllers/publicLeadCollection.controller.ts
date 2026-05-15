@@ -15,7 +15,7 @@ export const createPublicLead = async (req: Request, res: Response): Promise<any
     try {
         const {
             fullName, mobileNumber, projectCategory,
-            propertyType, budget, location, timeline, serviceType
+            propertyType, budget, location, timeline, serviceType, source
         } = req.body;
 
         console.log("req.body from the ublic tell us about ur project", req.body)
@@ -32,7 +32,9 @@ export const createPublicLead = async (req: Request, res: Response): Promise<any
             budget,
             location,
             timeline,
-            serviceType
+            serviceType,
+            source
+
         });
 
         await newLead.save();

@@ -12,12 +12,14 @@ export interface IPublicLead extends Document {
     timeline: string;
     serviceType: string;
     createdAt: Date;
+    source: string
+
 }
 
 const PublicLeadSchema: Schema = new Schema(
     {
         organizationId: { type: String, required: true, index: true },
-        leadNumber: { type: String,  },
+        leadNumber: { type: String, },
         fullName: { type: String, required: true },
         mobileNumber: { type: String, required: true },
         projectCategory: { type: String },
@@ -26,6 +28,7 @@ const PublicLeadSchema: Schema = new Schema(
         location: { type: String },
         timeline: { type: String },
         serviceType: { type: String },
+        source: { type: String, default: null }
     },
     { timestamps: true }
 );

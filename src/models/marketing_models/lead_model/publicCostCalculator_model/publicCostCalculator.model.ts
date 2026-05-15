@@ -23,7 +23,8 @@ const PublicQuoteSchema = new mongoose.Schema({
         uploadedAt: { type: Date, default: new Date() }
     },
     config: { type: Object, default: {} },
-    consent:{type:Boolean, default:null}
+    consent: { type: Boolean, default: null },
+    source: { type: String, default: null }
 }, { timestamps: true });
 
 
@@ -38,7 +39,7 @@ PublicQuoteSchema.pre("save", async function (next) {
             .model("PublicQuoteCostCalculator")
             .findOne({ organizationId: this.organizationId }, { quoteNumber: 1 })
             .sort({ createdAt: -1 });
-  
+
         let nextNumber = 1;
         if (lastDoc && lastDoc.quoteNumber) {
             const match = lastDoc.quoteNumber.match(/(\d+)$/);
