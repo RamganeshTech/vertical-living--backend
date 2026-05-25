@@ -535,10 +535,10 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
 
 
 
-        //     const whatsIncluded = `• All modular furniture as per approved design.
-        // • Quality raw materials and premium hardware.
-        // • Professional factory finish and edge-banding.
-        // • On-site installation and finishing by skilled teams.`
+        
+        
+        
+        
 
 
         const whatsIncluded = `
@@ -554,9 +554,9 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
   Special finishes or different edge band thickness can be provided based on your preference with a revised quote.
 `;
 
-        //     const whatsNotIncluded = `• Civil, and plumbing works.
-        // • Granite or Quartz countertop supply and fitting.
-        // • External appliances and loose furniture items.`
+        
+        
+        
 
         const whatsNotIncluded = `
 • Electrical, Plumbing, Painting & Civil Works (Unless Specifically Quoted)  
@@ -570,9 +570,9 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
 `;
 
 
-        //     const whatIsFree = `• Standard design consultation.
-        // • Basic maintenance kit and support.
-        // • Multiple Quote Variations.`
+        
+        
+        
 
         const whatIsFree = `Complimentary (Applicable for projects above ₹5,00,000):
     • Electrical labour for open-wall wiring only
@@ -630,7 +630,6 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
 
 `
 
-        console.log()
 
         const updatedQuote = await PreSalesQuoteModel.findByIdAndUpdate(
             quoteId,
