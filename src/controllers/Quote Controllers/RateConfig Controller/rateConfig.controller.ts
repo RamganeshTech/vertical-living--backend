@@ -5,6 +5,7 @@ import { createItemVersionSnapshot } from "./rateConfigVersion.controller";
 import { RoleBasedRequest } from "../../../types/types";
 import { getModelNameByRole } from "../../../utils/common features/utils";
 import { RateConfigBackupModel } from "../../../models/Quote Model/RateConfigBackup_model/rateConfigBackup.model";
+import redisClient from "../../../config/redisClient";
 
 
 
@@ -88,6 +89,14 @@ export const getMaterialItemsForFittings = async (req: Request, res: Response): 
     }
 
 
+    // const cacheKey = `rate-config-admin:${organizationId}:${categoryName}:${itemName || 'all'}`;
+
+
+    // // ✅ 2. Try to get from Redis
+    // const cachedData = await redisClient.get(cacheKey);
+    // if (cachedData) {
+    //     return res.status(200).json({ ok: true, message: "Items fetched from cache", data: JSON.parse(cachedData) });
+    // }
 
 
     // ✅ FIX: Use a regex to match the categoryName regardless of surrounding spaces
@@ -135,6 +144,8 @@ export const getMaterialItemsForFittings = async (req: Request, res: Response): 
 
 
     const items = await ItemModel.find(query).lean();
+
+    // await redisClient.set(cacheKey, JSON.stringify(items), {EX:60 * 10});
 
     return res.status(200).json({
       ok: true,

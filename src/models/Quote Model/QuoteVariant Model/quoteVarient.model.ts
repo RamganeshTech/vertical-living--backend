@@ -10,6 +10,14 @@ export interface IQuoteFurniture extends IFurniture {
     // laminateBrand: string | null;
     innerLaminateBrand: string | null;
     outerLaminateBrand: string | null;
+
+
+    works: INonModularWorkRow[]
+
+    included: string
+    excluded: string
+    materialsAndBrands: string
+    engineeringDescription: string
 }
 
 export interface IQuoteVarientMain extends IMaterialQuote {
@@ -43,6 +51,16 @@ export interface IQuoteVarientUpload {
     url: string;
     originalName?: string;
     uploadedAt: Date
+}
+
+
+
+export interface INonModularWorkRow {
+    workName: string;
+    totalSqft: number;
+    sqftRate: number;
+    labourRate: number;
+    totalAmount: number;
 }
 
 const uploadSchema = new Schema<IQuoteVarientUpload>({
@@ -109,7 +127,7 @@ const QuoteSimpleItemSchema = new Schema<ISimpleItem>(
         description: { type: String, default: null },
         brandId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
         brandName: { type: String, default: null },
-  imageUrl: { type: String, default: null },
+        imageUrl: { type: String, default: null },
 
         quantity: { type: Number, default: 0 },
         cost: { type: Number, default: 0 },
@@ -118,6 +136,17 @@ const QuoteSimpleItemSchema = new Schema<ISimpleItem>(
     },
     { _id: true }
 );
+
+
+
+const NonModularWorkRowSchema = new mongoose.Schema<INonModularWorkRow>({
+    workName: { type: String, default: "" },
+    totalSqft: { type: Number, default: 0 },
+    sqftRate: { type: Number, default: 0 },
+    labourRate: { type: Number, default: 0 }, // Optional: separate labour rate per row
+    totalAmount: { type: Number, default: 0 }
+}, { _id: true });
+
 
 // Each furniture entry
 const QuoteFurnitureSchema = new mongoose.Schema<IQuoteFurniture>({
@@ -149,6 +178,24 @@ const QuoteFurnitureSchema = new mongoose.Schema<IQuoteFurniture>({
     // laminateBrand: { type: String, default: null },
     innerLaminateBrand: { type: String, default: null },
     outerLaminateBrand: { type: String, default: null },
+
+
+
+    // Non-Modular Table Data
+    works: { type: [NonModularWorkRowSchema], default: [] },
+
+
+    typeOfWork: {type: String, default:"modular"},
+    typeOfNonModularWork: {type:String , default:null},
+
+
+
+    // Non-Modular Text Areas
+    included: { type: String, default: null },
+    excluded: { type: String, default: null },
+    materialsAndBrands: { type: String, default: null },
+    engineeringDescription: { type: String, default: null },
+
 }, { _id: true });
 
 

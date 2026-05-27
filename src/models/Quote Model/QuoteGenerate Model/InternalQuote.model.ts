@@ -37,11 +37,19 @@ export interface ISimpleItem {
   description: string | null;
   brandId: Types.ObjectId | null;
   brandName: string,
-  imageUrl?:string,
+  imageUrl?: string,
   quantity: number;
   cost: number;
   profitOnMaterial?: number
   rowTotal: number;
+}
+
+export interface INonModularWorkRow {
+  workName: string;
+  totalSqft: number;
+  sqftRate: number;
+  labourRate: number;
+  totalAmount: number;
 }
 
 export interface IFurniture {
@@ -70,6 +78,16 @@ export interface IFurniture {
   outerLaminateBrandId: Types.ObjectId
 
 
+  typeOfWork:string
+  typeOfNonModularWork: string | null 
+
+
+  works: INonModularWorkRow[]
+
+  // included: string
+  // excluded: string
+  // materialsAndBrands: string
+  // engineeringDescription: string
 }
 
 
@@ -228,7 +246,7 @@ const SimpleItemSchema = new Schema<ISimpleItem>(
     description: { type: String, default: null },
     brandId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
     brandName: { type: String, default: null },
-  imageUrl: { type: String, default: null },
+    imageUrl: { type: String, default: null },
 
     quantity: { type: Number, default: 0 },
     profitOnMaterial: { type: Number, default: 0 },
@@ -237,6 +255,15 @@ const SimpleItemSchema = new Schema<ISimpleItem>(
   },
   { _id: true }
 );
+
+
+const NonModularWorkRowSchema = new mongoose.Schema<INonModularWorkRow>({
+  workName: { type: String, default: "" },
+  totalSqft: { type: Number, default: 0 },
+  sqftRate: { type: Number, default: 0 },
+  labourRate: { type: Number, default: 0 }, // Optional: separate labour rate per row
+  totalAmount: { type: Number, default: 0 }
+}, { _id: true });
 
 // Each furniture entry
 const FurnitureSchema = new mongoose.Schema<IFurniture>({
@@ -267,6 +294,20 @@ const FurnitureSchema = new mongoose.Schema<IFurniture>({
   plywoodBrandId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
   innerLaminateBrandId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
   outerLaminateBrandId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
+
+
+
+  typeOfWork: { type: String, default: "modular", enum: ["modular", "non-modular"] },
+  typeOfNonModularWork: { type: String, default: null }, // e.g., "civil", "electrical", "plumbing"
+
+  // Non-Modular Table Data
+  works: { type: [NonModularWorkRowSchema], default: [] },
+
+  // Non-Modular Text Areas
+  // included: { type: String, default: null },
+  // excluded: { type: String, default: null },
+  // materialsAndBrands: { type: String, default: null },
+  // engineeringDescription: { type: String, default: null },
 
 
 }, { _id: true });
@@ -373,7 +414,7 @@ const InternalQuoteSchema = new mongoose.Schema<IMaterialQuote>({
   innerLaminateId: { type: Schema.Types.ObjectId, default: null },
   outerLaminateId: { type: Schema.Types.ObjectId, default: null },
   sqftRateWork: { type: [SqftWorkSchema], default: [] },
-  furnitures: [FurnitureSchema],
+  furnitures: [FurnitureSchema],    // this is where the first normal work has been done 
 
   commonMaterials: { type: [SimpleItemSchema], default: [] },
   commonProfitOverride: { type: Number, default: 0 },
@@ -381,7 +422,7 @@ const InternalQuoteSchema = new mongoose.Schema<IMaterialQuote>({
   globalTransportation: { type: Number, default: 0 },
   globalProfitPercent: { type: Number, default: 0 },
 
-  mainQuote: { type: mainQuote, default: null },
+  mainQuote: { type: mainQuote, default: null }, //this is for not normal quote, this is for advanced quote version 
 
   grandTotal: { type: Number, default: 0 },
   notes: { type: String, default: null }

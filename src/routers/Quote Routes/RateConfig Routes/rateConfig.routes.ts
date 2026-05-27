@@ -16,12 +16,15 @@ import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3
 const RateConfigRoutes = Router();
 
 
-//  not used
+// helper routes
+//  not used (used to give all the items in single category based on the value we are passing eg: ?categoryName="plywood")
 RateConfigRoutes.get("/categories/fittings/:organizationId",  multiRoleAuthMiddleware("owner","CTO", "staff"), getMaterialItemsForFittings);
 //  not used
 RateConfigRoutes.get("/categories/all/:organizationId",  multiRoleAuthMiddleware("owner","CTO", "staff"), getMaterialItemsForallCategories);
 
 RateConfigRoutes.put("/categories/:categoryId/description", multiRoleAuthMiddleware("owner","CTO", "staff"),  updateCategoryDescriptions);
+
+
 
 
 

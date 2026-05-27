@@ -13,6 +13,7 @@ import dotenv from 'dotenv';
 import { OrderMaterialHistoryModel } from "../../../models/Stage Models/Ordering Material Model/OrderMaterialHistory.model";
 import { populateWithAssignedToField } from "../../../utils/populateWithRedis";
 import QuoteVarientGenerateModel from "../../../models/Quote Model/QuoteVariant Model/quoteVarient.model";
+import redisClient from "../../../config/redisClient";
 dotenv.config()
 
 // Initialize Gemini (Ensure your API Key is in .env)
@@ -62,6 +63,19 @@ export const getMaterialItemsByCategoryForQuote = async (req: Request, res: Resp
     if (!categoryName) {
       return res.status(400).json({ ok: false, message: "Category (e.g., plywood) is required" });
     }
+
+
+    
+    const cacheKey = `rate-config-admin-item:${organizationId}:${categoryName}`;
+
+
+    // ✅ 2. Try to get from Redis
+    const cachedData = await redisClient.get(cacheKey);
+    if (cachedData) {
+        return res.status(200).json({ ok: true, message: "Items fetched from cache", data: JSON.parse(cachedData) });
+    }
+
+
     //     console.log("im gettni called")
     // console.log("categoryName", categoryName)
     const items = await ItemModel.find({
@@ -74,6 +88,9 @@ export const getMaterialItemsByCategoryForQuote = async (req: Request, res: Resp
       }
     });
     // console.log("item", items)
+
+    await redisClient.set(cacheKey, JSON.stringify(items), {EX:60 * 10});
+
   
     return res.status(200).json({
       ok: true,
@@ -474,8 +491,101 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
     //  NEW VERSION
 
     // --- GEMINI SCOPE OF WORK GENERATION ---
+    
+    
     const furnituresWithAIQuotes = await Promise.all(
       furnitures.map(async (furniture: any, index: number) => {
+
+
+        // ✅ NON-MODULAR WORKS: Skip AI and generate static descriptions
+        if (furniture?.typeOfWork === "non-modular") {
+          
+          // Calculate the total SqFt across all sub-works in this block
+          // const totalSqftArea = (furniture?.works || []).reduce((sum: number, w: any) => sum + (Number(w.totalSqft) || 0), 0);
+          // const workTypeStr = furniture?.typeOfNonModularWork ? furniture?.typeOfNonModularWork.toUpperCase() : "CIVIL/SITE";
+
+          const works = furniture?.works || [];
+          const totalSqftArea = works.reduce((sum: number, w: any) => sum + (Number(w.totalSqft) || 0), 0);
+          
+          // Extract the first row's details for the description
+          const firstWork = works[0] || {};
+          const firstWorkName = firstWork.workName ? firstWork.workName.toLowerCase() : "primary site execution";
+          const firstWorkSqft = firstWork.totalSqft || totalSqftArea;
+
+          const workCategory = (furniture?.typeOfNonModularWork || "CIVIL/SITE").toLowerCase();
+          const workTypeStr = workCategory.toUpperCase();
+
+          // 1. Build dynamic, highly-engineered sentences
+          let engSentences = [];
+
+          // Sentence 1: Dynamic Fact based on the first row's Sqft
+          engSentences.push(`Execution of ${workTypeStr} works covering an estimated aggregate area of ${totalSqftArea} sq.ft, initiating specifically with ${firstWorkName} operations spanning ${firstWorkSqft} sq.ft.`);
+
+          // Sentences 2-5: Work-Specific Technical Boundaries
+          switch (workCategory) {
+            case 'electrical':
+              engSentences.push(`All conduit routing and load-balancing protocols are strictly executed as per approved schematic diagrams to ensure absolute circuit integrity.`);
+              engSentences.push(`Ad-hoc site modifications by the client are strictly prohibited to prevent phase imbalances and maintain zero-tolerance safety compliance.`);
+              engSentences.push(`Cable termination and switchgear integration utilize industry-grade insulations to mitigate thermal overload and electrical fatigue.`);
+              engSentences.push(`Final commissioning is subject to standardized continuity verification and resistance testing prior to handover.`);
+              break;
+              
+            case 'plumbing':
+              engSentences.push(`Piping layouts and gradient sloping are mathematically calibrated to ensure optimal hydrostatic pressure and uninterrupted flow dynamics.`);
+              engSentences.push(`On-site scope deviations are strictly restricted to maintain the integrity of leak-proof fusion joints and structural waterproofing.`);
+              engSentences.push(`Material selections prioritize high-tensile, corrosion-resistant polymers designed to withstand long-term environmental and pressure-induced fatigue.`);
+              engSentences.push(`The entire network undergoes rigorous pressure testing to validate joint integrity prior to wall concealment or final sealing.`);
+              break;
+
+            case 'civil':
+              engSentences.push(`Masonry, demolition, and structural modifications are conducted with strict adherence to predetermined load-bearing limitations and architectural tolerances.`);
+              engSentences.push(`Unauthorized on-site dimensional alterations are prohibited to preserve the structural equilibrium and safety coefficient of the primary framework.`);
+              engSentences.push(`Substrate preparation involves precise leveling and standardized curing periods to ensure optimal mechanical bonding for subsequent finishes.`);
+              engSentences.push(`Execution relies on industrial-grade compounds formulated for high-compressive strength and long-term dimensional stability.`);
+              break;
+
+            case 'painting':
+              engSentences.push(`Surface engineering involves meticulous micro-abrasion, leveling, and substrate priming to achieve maximum chemical adhesion of subsequent coats.`);
+              engSentences.push(`Sequential curing parameters and coat thickness are strictly regulated to prevent delamination, micro-fractures, or environmental degradation.`);
+              engSentences.push(`Client-initiated immediate re-works are minimized to allow optimal polymerization and cross-linking of the architectural finishes.`);
+              engSentences.push(`Final delivery ensures a uniform, high-durability protective membrane resistant to standard mechanical wear and UV exposure.`);
+              break;
+
+            default:
+              engSentences.push(`All technical procedures are strictly executed as per approved layout schematics to ensure architectural and mechanical integrity.`);
+              engSentences.push(`Ad-hoc site modifications are strictly prohibited to prevent cascading structural deviations and maintain safety compliance.`);
+              engSentences.push(`Material application and structural integration rely on industry-grade methodologies to prevent long-term environmental fatigue.`);
+              engSentences.push(`Final handover is subject to comprehensive quality assurance testing aligned with professional interior engineering standards.`);
+          }
+
+          const generatedEngDesc = engSentences.join(" ");
+
+          return {
+            ...furniture,
+            // If the user already typed something, keep it. Otherwise, use these smart defaults:
+            // engineeringDescription:  `Execution of ${workTypeStr} works covering a total estimated area of ${totalSqftArea} sq.ft. Includes materials and labor as per specified site requirements, structural limits, and standard industry practices.`,
+            
+            // included:  `Standard materials, labor, and execution for the specified ${workTypeStr} tasks.`,
+            
+            // excluded:  "Any tasks, hidden structural damages, or scope not explicitly mentioned in the works table.",
+            
+            // materialsAndBrands:  "Standard market-grade materials as per site requirements and prior client approval.",
+            
+            // scopeOfWork: `${workTypeStr} Works Execution`
+
+
+            engineeringDescription: furniture.engineeringDescription || generatedEngDesc,
+            
+            included: furniture.included || `Standard materials, labor, and technical execution for the specified ${workTypeStr} tasks as per approved schematics.`,
+            
+            excluded: furniture.excluded || "Any ad-hoc structural modifications, hidden internal damages discovered post-demolition, or scope not explicitly quantified in the works table.",
+            
+            materialsAndBrands: furniture.materialsAndBrands || "Standard industrial-grade materials formulated for specific site requirements and engineering tolerances.",
+            
+            scopeOfWork: furniture.scopeOfWork || `${workTypeStr} Works Execution`
+          };
+        }
+
 
         await delay(500 * index); // to prevent 429 errors it will be occuring because of calling the gemini api continiously,
         //  it will suspect and it will block us because of rate limiting

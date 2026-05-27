@@ -408,6 +408,18 @@ export const editQuoteMaterial = async (req: Request, res: Response): Promise<an
         gluesTotal: Number(furniture.gluesTotal || 0),
         nonBrandMaterialsTotal: Number(furniture.nonBrandMaterialsTotal || 0),
         furnitureTotal: Number(furniture.furnitureTotal || 0),
+
+
+        // ✅ NEW FIELDS PARSED AND SAVED HERE
+        typeOfWork: furniture.typeOfWork || "modular",
+        typeOfNonModularWork: furniture.typeOfNonModularWork || null,
+        works: (furniture.works || []).map((w: any) => ({
+            workName: w.workName || "",
+            totalSqft: Number(w.totalSqft || 0),
+            sqftRate: Number(w.sqftRate || 0),
+            labourRate: Number(w.labourRate || 0),
+            totalAmount: Number(w.totalAmount || 0)
+        })),
       };
     });
 
