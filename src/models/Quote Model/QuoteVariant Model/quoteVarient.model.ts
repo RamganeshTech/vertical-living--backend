@@ -59,6 +59,8 @@ export interface INonModularWorkRow {
     workName: string;
     totalSqft: number;
     sqftRate: number;
+     noofLabours: number
+  noofDays: number
     labourRate: number;
     totalAmount: number;
 }
@@ -143,6 +145,8 @@ const NonModularWorkRowSchema = new mongoose.Schema<INonModularWorkRow>({
     workName: { type: String, default: "" },
     totalSqft: { type: Number, default: 0 },
     sqftRate: { type: Number, default: 0 },
+     noofLabours: { type: Number, default: 0 },
+  noofDays: { type: Number, default: 0 },
     labourRate: { type: Number, default: 0 }, // Optional: separate labour rate per row
     totalAmount: { type: Number, default: 0 }
 }, { _id: true });

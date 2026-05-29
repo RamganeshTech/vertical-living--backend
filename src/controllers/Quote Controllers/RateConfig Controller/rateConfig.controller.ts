@@ -42,6 +42,72 @@ export const getMaterialCategories = async (req: Request, res: Response): Promis
 };
 
 
+export const getMaterialCategoriesPreSales = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { organizationId } = req.params;
+
+    if (!organizationId) {
+      return res.status(400).json({
+        ok: false,
+        message: "organizationId is required",
+      });
+    }
+
+    const categories = await CategoryModel.find({ organizationId, isProductSpecific: true }).lean();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Pre Sales Categories fetched successfully",
+      data: categories,
+    });
+  } catch (error: any) {
+    console.error("Error fetching categories:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+
+
+export const getMaterialCategoriesInternalQuote = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { organizationId } = req.params;
+
+    if (!organizationId) {
+      return res.status(400).json({
+        ok: false,
+        message: "organizationId is required",
+      });
+    }
+
+    const categories = await CategoryModel.find({ organizationId, $or: [
+    { isProductSpecific: false },
+    { isProductSpecific: { $exists: false } }
+  ] }).lean();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Pre Sales Categories fetched successfully",
+      data: categories,
+    });
+  } catch (error: any) {
+    console.error("Error fetching categories:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+
+
 /**
  * Get all material items under a specific category
  */

@@ -226,7 +226,9 @@ export const getLabourSalaryByCategoryName = async (req: Request, res: Response)
     return res.status(200).json({
       ok: true,
       data: totalSalary,
-      itemCount: items.length
+      itemCount: items.length,
+      message: "fetched the sum of all cost of the category mentioned"
+
     });
   } catch (error: any) {
     return res.status(500).json({

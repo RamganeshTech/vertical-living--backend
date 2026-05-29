@@ -9,8 +9,6 @@ const paymentAccRoutes = Router();
 paymentAccRoutes
     .get("/getallpayments", multiRoleAuthMiddleware("owner", "staff", "CTO"), getAllPaymentsAcc)
     .get("/getallpayments-export", multiRoleAuthMiddleware("owner", "staff", "CTO"), getAllPaymentsAccWihtoutPaginationForExport)
-    // .post("/createinvoice",multiRoleAuthMiddleware("owner", "staff", "CTO"),  createInvoice)
-    // .put("/updateinvoice/:id",multiRoleAuthMiddleware("owner", "staff", "CTO"),  updateInvoice)
     .delete("/deletepayments/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), deletePaymentAcc)
     .get("/getsinglepayments/:id", multiRoleAuthMiddleware("owner", "staff", "CTO"), getSinglePaymentAcc,)
     .post("/syncpaymenttoaccounts/:paymentId", multiRoleAuthMiddleware("owner", "staff", "CTO"), sendPaymentToAcc)

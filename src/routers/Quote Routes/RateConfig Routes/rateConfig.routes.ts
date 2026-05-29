@@ -9,7 +9,9 @@ import { createMaterialCategory,   createMaterialItems,
   updateMaterialCategoryAndSyncItems,
   getMaterialItemsForallCategories,
   updateCategoryDescriptions,
-  updateMaterialCategoryAndSyncItemsV2, } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
+  updateMaterialCategoryAndSyncItemsV2,
+  getMaterialCategoriesPreSales,
+  getMaterialCategoriesInternalQuote, } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
 
@@ -32,6 +34,8 @@ RateConfigRoutes.put("/categories/:categoryId/description", multiRoleAuthMiddlew
  * CATEGORY ROUTES
 */
 RateConfigRoutes.get("/categories/:organizationId",  multiRoleAuthMiddleware("owner","CTO", "staff"), getMaterialCategories);
+RateConfigRoutes.get("/categories/v1/presales/:organizationId",  multiRoleAuthMiddleware("owner","CTO", "staff"), getMaterialCategoriesPreSales);
+RateConfigRoutes.get("/categories/v1/internalquote/:organizationId",  multiRoleAuthMiddleware("owner","CTO", "staff"), getMaterialCategoriesInternalQuote);
 // Create category (e.g., Plywood, Adhesive, etc.)
 RateConfigRoutes.post("/categories", multiRoleAuthMiddleware("owner","CTO", "staff"), createMaterialCategory);
 RateConfigRoutes.put("/categories/update/:organizationId/:categoryId", multiRoleAuthMiddleware("owner","CTO", "staff"), updateMaterialCategoryAndSyncItemsV2);
