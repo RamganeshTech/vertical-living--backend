@@ -19,11 +19,23 @@ export const sendNewLeadEmail = async ({ to, leadName, leadPhone, sourceTitle, c
         },
     });
 
-    const receivedTime = new Date().toLocaleString('en-IN', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-        hour12: true,
-    });
+    // const receivedTime = new Date().toLocaleString('en-IN', {
+    //     timeZone: 'Asia/Kolkata', // ✅ FORCE INDIAN STANDARD TIME
+    //     dateStyle: 'medium',
+    //     timeStyle: 'short',
+    //     hour12: true,
+    // });
+
+
+const receivedTime = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+}).format(new Date());
 
     await transporter.sendMail({
         from: `${COMPANY_NAME} CRM <noreply@verticalliving.com>`,
