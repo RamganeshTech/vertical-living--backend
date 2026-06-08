@@ -126,6 +126,87 @@ export const handleInstagramWebhook = async (req: Request, res: Response): Promi
     res.sendStatus(404);
 };
 
+export const getAllInstagramLeadsByMeta = async (req: Request, res: Response): Promise<any> => {
+    try{
+
+        const { organizationId } = req.query; 
+
+        const org = await OrganizationModel.findById(organizationId);
+        if (!org || !org.metaAccessToken || !org.facebookPageId) {
+            return res.status(400).json({ ok: false, message: "Meta credentials missing for this tenant." });
+        }
+
+        // STEP 1: Dynamically exchange your System User Token for a Page Access Token
+        const pageTokenUrl = `https://graph.facebook.com/v25.0/${org.facebookPageId}`;
+        const pageTokenResponse = await axios.get(pageTokenUrl, {
+            params: {
+                fields: 'access_token',
+                access_token: org.metaAccessToken
+            }
+        });
+
+        const pageAccessToken = pageTokenResponse.data?.access_token;
+        console.log("---------Page token response:", pageTokenResponse.data);
+
+        if (!pageAccessToken) {
+            return res.status(400).json({ ok: false, message: "Failed to retrieve Page Access Token from Meta." });
+        }
+
+        // STEP 2: Use the fetched Page Access Token to access the conversations endpoint
+        const metaUrl = `https://graph.facebook.com/v25.0/${org.facebookPageId}/conversations`;
+        const response = await axios.get(metaUrl, {
+            params: {
+                platform: 'instagram',
+                fields: 'id,updated_time,participants,messages.limit(1){message}',
+                access_token: pageAccessToken // <-- Using the Page Token here fixes the #190 error
+            }
+        });
+
+        // Format data cleanly for your CRM frontend UI list
+        const threads = response.data.data.map((thread: any) => ({
+            conversationId: thread.id,
+            lastUpdated: thread.updated_time,
+            customer: thread.participants?.data?.[0] || { name: "Instagram User", id: "unknown" },
+            lastMessage: thread.messages?.data?.[0]?.message || ""
+        }));
+
+        return res.status(200).json({ ok: true, data: threads });
+    } catch (error: any) {
+        console.error("Meta Fetch Conversations Error:", error.response?.data || error.message);
+        return res.status(500).json({ ok: false, error: "Failed to fetch live chat list from Meta." });
+    }
+};
+
+
+export const getInstagramLeadByIdByMeta = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { id } = req.params; // This is the conversationId returned from the previous list endpoint
+        const { organizationId } = req.query;
+
+        const org = await OrganizationModel.findById(organizationId);
+        if (!org || !org.metaAccessToken) {
+            return res.status(400).json({ ok: false, message: "Missing system tokens." });
+        }
+
+        // Fetch individual messages belonging to this thread
+        const metaUrl = `https://graph.facebook.com/v25.0/${id}`;
+        const response = await axios.get(metaUrl, {
+            params: {
+                fields: 'messages{message,from,timestamp}',
+                access_token: org.metaAccessToken
+            }
+        });
+
+        // Reverse messages to show chronological conversation flow (oldest to newest)
+        const chatHistory = response.data.messages?.data?.reverse() || [];
+
+        return res.status(200).json({ ok: true, data: chatHistory });
+    } catch (error: any) {
+        console.error("Meta Fetch Thread Error:", error.response?.data || error.message);
+        return res.status(500).json({ ok: false, error: "Failed to load chat history." });
+    }
+};
+
 // --- DUMMY DATA GENERATOR (For UI Testing) ---
 const generateDummyLeads = (organizationId: string) => {
     const firstNames = ["Rahul", "Priya", "Amit", "Sneha", "Karthik", "Anjali", "Vikram", "Neha", "Arjun", "Pooja", "Siddharth", "Kavya", "Rohan", "Shruti", "Aditya"];

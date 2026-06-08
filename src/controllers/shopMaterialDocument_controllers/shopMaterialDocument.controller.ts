@@ -463,7 +463,7 @@ export const extractShopMaterialDocDetails = async (req: Request, res: Response)
 
     // 4. Use your preferred Gemini syntax
     const result = await genAI.models.generateContent({
-      model: "gemini-2.0-flash-lite",
+      model: "gemini-2.5-flash",
       contents: [
         {
           role: 'user',
@@ -833,7 +833,7 @@ let aiExtractedItems: any[] = [];
             const pageData = base64Pages[i];
 
             const result = await genAI.models.generateContent({
-                model: "gemini-2.0-flash-lite",
+                model: "gemini-2.5-flash",
                 contents: [{
                     role: 'user',
                     parts: [

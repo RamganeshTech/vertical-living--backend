@@ -360,7 +360,7 @@ export const updatePreSalesQuote = async (req: Request, res: Response): Promise<
                 // 7. REDEFINE TEXT: Do not copy the "Inclusions" or "Exclusions" and "Disclaimers text verbatim. but dont mention the label like inclusion, exclusions, disclaimer, you have to Professionally redefine them into engineering language (e.g., instead of "2mm edge banding included," use "Fabrication includes a standardized 2mm edge-sealing protocol on all exposed substrate perimeters").
 
                 const aiResult = await genAI.models.generateContent({
-                    model: "gemini-2.0-flash-lite",
+                    model: "gemini-2.5-flash",
                     contents: [{ role: 'user', parts: [{ text: promptText }] }],
                     config: { temperature: 0.5, maxOutputTokens: 400 },
                 });

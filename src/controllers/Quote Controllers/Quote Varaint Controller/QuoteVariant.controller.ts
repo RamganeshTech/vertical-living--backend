@@ -651,7 +651,7 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
       `;
 
           const result = await genAI.models.generateContent({
-            model: "gemini-2.0-flash-lite",
+            model: "gemini-2.5-flash",
             contents: [{ role: 'user', parts: [{ text: promptText }] }],
             config: {
               temperature: 0.7, // Slightly higher for better elaboration on brands
