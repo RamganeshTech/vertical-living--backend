@@ -7,7 +7,7 @@ import { populateDiscussion, formatUserData } from './populateDiscussion.util';
 // import { SocketService } from '../services/socketService';
 import { Types } from 'mongoose';
 import { RoleBasedRequest } from '../../../types/types';
-import { IConvo, IssueDiscussionModel } from '../../../models/Stage Models/Issue Discussion Model/issueDiscussion.model';
+import { IConvo, IssueDiscussionModel } from '../../../models/Stage Models/ticket operation Model/ticketOperation.model';
 import { SocketService } from '../../../config/socketService';
 import { getModelNameByRole } from '../../../utils/common features/utils';
 

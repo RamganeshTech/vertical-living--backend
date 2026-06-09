@@ -101,7 +101,7 @@ import BillAccountRoutes from './routers/Department Routes/Accounting Routes/bil
 import PurchaseAccRoutes from './routers/Department Routes/Accounting Routes/purchaseAcc.routes';
 import VendorPaymentRoutes from './routers/Department Routes/Accounting Routes/vendorPayment.routes';
 // import { setupDiscussionSocket } from './controllers/stage controllers/Issue Discussion Controllers/issueDiscussionSocket';
-import issueDiscussionRoutes from './routers/Stage routes/Issue Discussion Routes/issueDiscussion.routes';
+import issueDiscussionRoutes from './routers/Stage routes/ticket operation Routes/ticketOperation.routes';
 // import { SubContractModel } from './models/SubContract Model/subContract.model';
 // import SubContractRoutes from './routers/SubContract Routes/subContract.routes';
 
