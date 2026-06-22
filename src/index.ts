@@ -830,10 +830,14 @@ connectDB()
 
 
 
-    server.listen(PORT, () => {   // <- start the HTTP server, not app
+    const mainServer = server.listen(PORT, () => {   // <- start the HTTP server, not app
       console.log("DB connected");
       console.log(`Server listening on http://localhost:${PORT}`);
     });
+
+    mainServer.timeout = 600000;          // 10 min
+    mainServer.keepAliveTimeout = 620000; // slightly more than nginx's proxy_read_timeout
+    mainServer.headersTimeout = 630000;   // must be more than keepAliveTimeout
   })
   .catch((error: Error) => {
     console.log("error from DB connection", error.message);
