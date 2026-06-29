@@ -1,6 +1,6 @@
 import express from "express";
 import { imageUploadToS3, processUploadFiles } from "../../../utils/s3Uploads/s3upload";
-import { createMainInternalQuoteResidentialVersion, createMaterialQuote,  deleteMaterialQuoteById,  duplicateInternalQuote,  editQuoteMaterial,  getMaterialQuoteEntries, getSingleInternalQuoteResidentialVersion, updateMainInternalQuoteResidentialVersion, updateSqftRateQuoteContent } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/internalQuote.controller";
+import { createMainInternalQuoteResidentialVersion, createMaterialQuote,  deleteMaterialQuoteById,  duplicateInternalQuote,  editQuoteMaterial,  getMaterialQuoteEntries, getProductSpecificQuotes, getSingleInternalQuoteResidentialVersion, toggleProductSpecificQuote, updateMainInternalQuoteResidentialVersion, updateSqftRateQuoteContent } from "../../../controllers/Quote Controllers/QuoteGenerate Controller/internalQuote.controller";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 import { getMaterialCategories } from "../../../controllers/Quote Controllers/RateConfig Controller/rateConfig.controller";
 import {  createVariantQuotePdfGenerator, deleteClientQuote, extractQuoteToOrderMaterial, getMaterialItemsByCategoryForQuote, getMaterialQuoteSingle, getVariantQuoteDetails, updateQuoteVaraintforClient } from "../../../controllers/Quote Controllers/Quote Varaint Controller/QuoteVariant.controller";
@@ -81,6 +81,18 @@ QuoteRouter.put(
   updateSqftRateQuoteContent
 );
 
+
+
+QuoteRouter.get(
+  '/get/product-specific/:organizationId',
+  multiRoleAuthMiddleware('owner', 'staff', 'CTO'), // if required
+  getProductSpecificQuotes
+);
+
+
+
+QuoteRouter.patch("/toggle/product-specific/:quoteId", 
+  toggleProductSpecificQuote);
 
 
 

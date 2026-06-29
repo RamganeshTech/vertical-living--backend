@@ -845,3 +845,118 @@ export const updateSqftRateQuoteContent = async (req: Request, res: Response): P
 
 
 
+/**
+ * GET /api/v1/internal-quotes/product-specific
+ *
+ * Returns a lightweight list of all quotes marked isProductSpecific = true,
+ * scoped to the requesting user's organization.
+ *
+ * Used to populate the "select existing product" dropdown when building
+ * a new quote — selecting an entry lets the frontend pull its `furnitures`
+ * array (with fittings, accessories, core materials, nbms, glues,
+ * fabrication cost, totals) and inject it as a new product line.
+ *
+ * No pagination — intentionally a single full list fetch.
+ */
+export const getProductSpecificQuotes = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const {organizationId} = req.params; // adjust based on your auth middleware
+
+    if (!organizationId) {
+      return res.status(400).json({
+        success: false,
+        message: "Organization context missing.",
+      });
+    }
+
+    const productSpecificQuotes = await InternalQuoteEntryModel.find({
+      organizationId,
+      isProductSpecific: true,
+    })
+      .select({
+        _id: 1,
+        quoteNo: 1,
+        mainQuoteName: 1,
+        quoteType: 1,
+        quoteCategory: 1,
+        projectId: 1,
+        furnitures: 1,
+        grandTotal: 1,
+        isProductSpecific: 1,
+      })
+      .populate({ path: "projectId", select: "_id projectName" }) // adjust fields if ProjectModel uses a different name field
+      .lean();
+
+    return res.status(200).json({
+      ok: true,
+      count: productSpecificQuotes.length,
+      data: productSpecificQuotes,
+    });
+  } catch (error: any) {
+    console.error("Error fetching product-specific quotes:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Failed to fetch product-specific quotes.",
+      error: error?.message,
+    });
+  }
+};
+
+
+
+
+/**
+ * PATCH /api/v1/quote/quotegenerate/toggle/product-specific/:quoteId
+ *
+ * Toggles (sets) the isProductSpecific flag on a single quote.
+ * Body: { isProductSpecific: boolean }
+ *
+ * Single DB call — findByIdAndUpdate with the value the frontend sends,
+ * no separate find + save round trip.
+ */
+export const toggleProductSpecificQuote = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { quoteId } = req.params;
+    const { isProductSpecific } = req.body;
+
+    if (!quoteId) {
+      return res.status(400).json({
+        success: false,
+        message: "quoteId is required.",
+      });
+    }
+
+    if (typeof isProductSpecific !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "isProductSpecific must be a boolean.",
+      });
+    }
+
+    const updatedQuote = await InternalQuoteEntryModel.findByIdAndUpdate(
+      quoteId,
+      { $set: { isProductSpecific } },
+      { new: true, select: { _id: 1, isProductSpecific: 1, mainQuoteName: 1 , quoteNo: 1, } }
+    );
+
+    if (!updatedQuote) {
+      return res.status(404).json({
+        success: false,
+        message: "Quote not found.",
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: `Quote marked as ${isProductSpecific ? "" : "not "}product specific.`,
+      data: updatedQuote,
+    });
+  } catch (error: any) {
+    console.error("Error toggling isProductSpecific:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Failed to toggle isProductSpecific.",
+      error: error?.message,
+    });
+  }
+};

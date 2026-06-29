@@ -185,6 +185,8 @@ export interface IMaterialQuote extends Document {
   mainQuote: IMainInternalQuote
   sqftRateWork: ISqftRate[]
 
+  isProductSpecific: boolean
+
   createdAt?: Date
   updatedAt?: Date
 }
@@ -407,10 +409,10 @@ const InternalQuoteSchema = new mongoose.Schema<IMaterialQuote>({
   },
   mainQuoteName: { type: String, default: null },
 
-  quoteType: { type: String, default: null },
+  quoteType: { type: String, default: null },   // sqft or basic or advanced (third option differs)
 
   quoteCategory: {
-    type: String,
+    type: String,   // residential or commercial 
     default: null,
   },
 
@@ -429,7 +431,9 @@ const InternalQuoteSchema = new mongoose.Schema<IMaterialQuote>({
   mainQuote: { type: mainQuote, default: null }, //this is for not normal quote, this is for advanced quote version 
 
   grandTotal: { type: Number, default: 0 },
-  notes: { type: String, default: null }
+  notes: { type: String, default: null },
+
+  isProductSpecific: { type: Boolean, default: false }
 }, { timestamps: true });
 
 
