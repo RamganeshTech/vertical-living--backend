@@ -92,6 +92,7 @@ QuoteRouter.get(
 
 
 QuoteRouter.patch("/toggle/product-specific/:quoteId", 
+  multiRoleAuthMiddleware('owner', 'staff', 'CTO'), // if required
   toggleProductSpecificQuote);
 
 

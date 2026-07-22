@@ -6,7 +6,6 @@ import { getRateConfigBackups, getSingleRateConfigBackup, restoreFromBackup } fr
 
 const RateConfigBackupRoutes = Router();
 
-//  old version of getting salary of single person by category Id
 //  used in the quotes
 RateConfigBackupRoutes.get("/get-all", multiRoleAuthMiddleware("owner","CTO", "staff"),  getRateConfigBackups);
 RateConfigBackupRoutes.put("/restore/:organizationId/:backupId", multiRoleAuthMiddleware("owner","CTO", "staff"),  restoreFromBackup);

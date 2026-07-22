@@ -864,7 +864,7 @@ export const getProductSpecificQuotes = async (req: Request, res: Response): Pro
 
     if (!organizationId) {
       return res.status(400).json({
-        success: false,
+        ok: false,
         message: "Organization context missing.",
       });
     }
@@ -921,14 +921,14 @@ export const toggleProductSpecificQuote = async (req: Request, res: Response): P
 
     if (!quoteId) {
       return res.status(400).json({
-        success: false,
+        ok: false,
         message: "quoteId is required.",
       });
     }
 
     if (typeof isProductSpecific !== "boolean") {
       return res.status(400).json({
-        success: false,
+        ok: false,
         message: "isProductSpecific must be a boolean.",
       });
     }
@@ -941,7 +941,7 @@ export const toggleProductSpecificQuote = async (req: Request, res: Response): P
 
     if (!updatedQuote) {
       return res.status(404).json({
-        success: false,
+        ok: false,
         message: "Quote not found.",
       });
     }

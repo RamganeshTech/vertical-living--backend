@@ -240,7 +240,7 @@ const isAuthenticated = async (req: RoleBasedRequest, res: Response) => {
         if (cachedData) {
             return res.status(200).json({
                 data: JSON.parse(cachedData),
-                message: "client is authenticated form cache", ok: true
+                message: "owner is authenticated form cache", ok: true
             })
         }
 

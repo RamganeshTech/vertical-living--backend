@@ -1,0 +1,998 @@
+
+// ============================
+// GET ALL EB LOGS (with filters)
+
+import type { Response } from "express";
+import { RoleBasedRequest } from "../../types/types";
+import EBLogModel, { IEBLog } from "../../models/eb_model/ebLog.model";
+import { PremisesModel } from "../../models/eb_model/premises.model";
+import { ITariff, TariffModel } from "../../models/eb_model/tariff.model";
+// import EBLogModel, { type IEBLog } from "../models/eb_models/ebLog.model";
+// import type { RoleBasedRequest } from "../../../utils/types";
+// import { PremisesModel } from "../../../models/New_Model/eb_models/premises.model";
+// import { createAuditLog } from "../audit_controllers/audit.controllers";
+// import { archiveData } from "../deleteArchieve_controller/deleteArchieve.controller";
+// import { TariffModel, type ITariff } from "../../../models/New_Model/eb_models/tariff.model";
+// import { invalidateAllEBDerivedCache } from "./tariff.controller";
+
+
+
+
+// export const invalidateEBCache = async (organizationId: string): Promise<void> => {
+//     try {
+//         const pattern = `org:${organizationId}:eb*`;
+//         const stream = redisClient.scanStream({ match: pattern, count: 100 });
+
+//         const keysToDelete: string[] = [];
+//         for await (const keys of stream) {
+//             keysToDelete.push(...keys);
+//         }
+
+//         if (keysToDelete.length > 0) {
+//             await redisClient.del(...keysToDelete);
+//         }
+//     } catch (redisError) {
+//         console.error("Redis Invalidate Error (EB):", redisError);
+//     }
+// };
+
+
+// ============================
+export const getEBLogs = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+
+    try {
+        const { organizationId } = req.params;
+        const {
+            premisesId,
+            fromDate,
+            toDate,
+            minReading,
+            maxReading,
+            search, // matches ebLogNo
+            // minAmount, maxAmount -> plug in once an amount field exists on the model
+        } = req.query as Record<string, string | undefined>;
+
+        if (!organizationId) {
+            return res.status(400).json({ ok: false, message: "organizationId is required" });
+        }
+
+        // const hasFilters = premisesId || fromDate || toDate || minReading || maxReading || search;
+        // const cacheKey = REDIS_KEYS.schoolEBLogs(organizationId);
+
+        // // 1. ATTEMPT CACHE READ — only for the unfiltered base list
+        // if (!hasFilters) {
+        //     try {
+        //         const cachedData = await redisClient.get(cacheKey);
+        //         if (cachedData) {
+        //             return res.status(200).json({ ok: true, data: JSON.parse(cachedData), message: "retrived from cache" });
+        //         }
+        //     } catch (redisError) {
+        //         console.error("Redis Get Error (EBLogs):", redisError);
+        //     }
+        // }
+
+        const filter: Record<string, any> = { organizationId };
+
+        if (premisesId) {
+            filter.premisesId = premisesId;
+        }
+
+        if (fromDate || toDate) {
+            filter.date = {};
+            if (fromDate) filter.date.$gte = new Date(fromDate);
+            if (toDate) filter.date.$lte = new Date(toDate);
+        }
+
+        if (minReading || maxReading) {
+            filter.meterReading = {};
+            if (minReading) filter.meterReading.$gte = Number(minReading);
+            if (maxReading) filter.meterReading.$lte = Number(maxReading);
+        }
+
+        if (search) {
+            filter.ebLogNo = { $regex: search, $options: "i" };
+        }
+
+        const logs = await EBLogModel.find(filter)
+            .populate("premisesId", "premisesName")
+            .sort({ date: 1, time: 1 })
+            .lean();
+
+        // 3. UPDATE CACHE — only for the unfiltered base list
+        // if (!hasFilters) {
+        //     try {
+        //         await redisClient.setex(cacheKey, 3600, JSON.stringify(logs));
+        //     } catch (redisError) {
+        //         console.error("Redis Set Error (EBLogs):", redisError);
+        //     }
+        // }
+
+        return res.status(200).json({ ok: true, data: logs });
+    } catch (error: any) {
+        console.error(error);
+        return res.status(500).json({ ok: false, message: "Internal server error" });
+    }
+};
+
+// ============================
+// GET EB LOG BY ID
+// ============================
+export const getEBLogById = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { organizationId, logId } = req.params;
+
+        if (!organizationId || !logId) {
+            return res.status(400).json({ ok: false, message: "organizationId and logId are required" });
+        }
+
+        // const cacheKey = REDIS_KEYS.schoolEBLogById(organizationId, logId);
+
+        // try {
+        //     const cachedData = await redisClient.get(cacheKey);
+        //     if (cachedData) {
+        //         return res.status(200).json({ ok: true, data: JSON.parse(cachedData), message: "retrived from cache" });
+        //     }
+        // } catch (redisError) {
+        //     console.error("Redis Get Error (EBLog by id):", redisError);
+        // }
+
+        const log = await EBLogModel.findOne({ _id: logId, organizationId })
+            .populate("premisesId", "premisesName")
+            .lean();
+
+        if (!log) {
+            return res.status(404).json({ ok: false, message: "EB log not found" });
+        }
+
+        // try {
+        //     await redisClient.setex(cacheKey, 3600, JSON.stringify(log));
+        // } catch (redisError) {
+        //     console.error("Redis Set Error (EBLog by id):", redisError);
+        // }
+
+        return res.status(200).json({ ok: true, data: log });
+    } catch (error: any) {
+        console.error(error);
+        return res.status(500).json({ ok: false, message: "Internal server error" });
+    }
+};
+
+// ============================
+// CREATE EB LOG
+// ============================
+export const createEBLog = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { organizationId } = req.params;
+        const { premisesId, date, time, meterReading, note } = req.body;
+
+        if (!organizationId || !premisesId || !date || !time || meterReading === undefined) {
+            return res.status(400).json({ ok: false, message: "organizationId, premisesId, date, time and meterReading are required" });
+        }
+
+        if (typeof meterReading !== "number") {
+            return res.status(400).json({ ok: false, message: "meterReading must be a number" });
+        }
+
+        // const premises = await PremisesModel.findOne({ _id: premisesId, organizationId });
+        // if (!premises) {
+        //     return res.status(404).json({ ok: false, message: "Premises not found for this school" });
+        // }
+
+
+        // find the previous log for this premises (latest one before this date/time)
+        const previousLog = await EBLogModel.findOne({
+            organizationId,
+            premisesId,
+            date: { $lte: date },
+        })
+            .sort({ date: -1, time: -1 })
+            .lean();
+
+        let kwUsed: number | null = null;
+        if (previousLog) {
+            const diff = meterReading - previousLog.meterReading;
+            kwUsed = diff >= 0 ? diff : null; // guard against bad/reset readings
+        }
+
+        // ebLogNo is auto-generated in the pre-save hook
+        const newLog = await EBLogModel.create({
+            organizationId,
+            premisesId,
+            date,
+            time,
+            meterReading,
+            note,
+        });
+
+        // INVALIDATE CACHE
+        // try {
+        //     // await redisClient.del(REDIS_KEYS.schoolEBLogs(organizationId));
+        //     // await invalidateEBCache(organizationId);
+        //     await invalidateAllEBDerivedCache(organizationId);
+        // } catch (redisError) {
+        //     console.error("Redis Del Error (Create EBLog):", redisError);
+        // }
+
+        // await createAuditLog(req, {
+        //     action: "create",
+        //     module: "ebLog",
+        //     targetId: newLog?._id,
+        //     description: `EB log created (${newLog.ebLogNo})`,
+        //     status: "success"
+        // });
+
+        return res.status(201).json({ ok: true, data: newLog });
+    } catch (error: any) {
+        console.error(error);
+        return res.status(500).json({ ok: false, error: error?.message, message: "Internal server error" });
+    }
+};
+
+// ============================
+// UPDATE EB LOG
+// ============================
+export const updateEBLog = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { organizationId, logId } = req.params;
+        const { date, time, meterReading, note } = req.body;
+
+        if (!organizationId || !logId) {
+            return res.status(400).json({ ok: false, message: "organizationId and logId are required" });
+        }
+
+        const log = await EBLogModel.findOne({ _id: logId, organizationId });
+
+        if (!log) {
+            return res.status(404).json({ ok: false, message: "EB log not found" });
+        }
+
+        if (date !== undefined) log.date = date;
+        if (time !== undefined) log.time = time;
+        if (meterReading !== undefined) {
+            if (typeof meterReading !== "number") {
+                return res.status(400).json({ ok: false, message: "meterReading must be a number" });
+            }
+            log.meterReading = meterReading;
+        }
+        if (note !== undefined) log.note = note;
+
+        // recompute kwUsed if date or meterReading changed
+        if (date !== undefined || meterReading !== undefined) {
+            const previousLog = await EBLogModel.findOne({
+                organizationId,
+                premisesId: log.premisesId,
+                _id: { $ne: log._id },
+                date: { $lte: log.date },
+            })
+                .sort({ date: -1, time: -1 })
+                .lean();
+
+            if (previousLog) {
+                const diff = log.meterReading - previousLog.meterReading;
+                log.kwUsed = diff >= 0 ? diff : null;
+            } else {
+                log.kwUsed = null;
+            }
+        }
+
+        await log.save(); // isNew is false here, so ebLogNo is untouched
+
+        // INVALIDATE CACHE
+        // try {
+        //     // await redisClient.del(REDIS_KEYS.schoolEBLogs(organizationId));
+
+        //     // await redisClient.del(REDIS_KEYS.schoolEBLogById(organizationId, logId));
+        //     // await invalidateEBCache(organizationId);
+        //     await invalidateAllEBDerivedCache(organizationId);
+
+        // } catch (redisError) {
+        //     console.error("Redis Del Error (Update EBLog):", redisError);
+        // }
+
+        // await createAuditLog(req, {
+        //     action: "update",
+        //     module: "ebLog",
+        //     targetId: log._id,
+        //     description: `EB log updated (${log.ebLogNo})`,
+        //     status: "success"
+        // });
+
+        return res.status(200).json({ ok: true, data: log });
+    } catch (error: any) {
+        console.error(error);
+        return res.status(500).json({ ok: false, error: error?.message, message: "Internal server error" });
+    }
+};
+
+// ============================
+// DELETE EB LOG (single)
+// ============================
+export const deleteEBLog = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { organizationId, logId } = req.params;
+
+        if (!organizationId || !logId) {
+            return res.status(400).json({ ok: false, message: "organizationId and logId are required" });
+        }
+
+        const log = await EBLogModel.findOneAndDelete({ _id: logId, organizationId });
+
+        if (!log) {
+            return res.status(404).json({ ok: false, message: "EB log not found" });
+        }
+
+        // INVALIDATE CACHE
+        // try {
+        //     // await redisClient.del(REDIS_KEYS.schoolEBLogs(organizationId));
+        //     // await redisClient.del(REDIS_KEYS.schoolEBLogById(organizationId, logId));
+
+
+        //     // await invalidateEBCache(organizationId);
+        //     await invalidateAllEBDerivedCache(organizationId);
+
+        // } catch (redisError) {
+        //     console.error("Redis Del Error (Delete EBLog):", redisError);
+        // }
+
+
+
+
+        // await archiveData({
+        //     organizationId: log.organizationId,
+        //     category: "ebLog",
+        //     originalId: log._id,
+        //     deletedData: log.toObject(), // Convert Mongoose doc to plain object
+        //     deletedBy: req.user!._id || null,
+        //     reason: null, // Optional reason from body
+        // });
+
+
+        // await createAuditLog(req, {
+        //     action: "delete",
+        //     module: "ebLog",
+        //     targetId: log._id,
+        //     description: `EB log deleted (${log.ebLogNo})`,
+        //     status: "success"
+        // });
+
+        return res.status(200).json({ ok: true, message: "EB log deleted successfully" });
+    } catch (error: any) {
+        console.error(error);
+        return res.status(500).json({ ok: false, message: "Internal server error" });
+    }
+};
+
+
+
+//  DASHBOARD CONTROLLER
+
+
+export type LeanEBLog = Omit<IEBLog, keyof Document>;
+
+// Gets the most recent log with date <= the given date, for a premises
+export const getReadingAtOrBefore = async (
+    organizationId: string,
+    premisesId: string,
+    date: Date
+): Promise<IEBLog | null> => {
+    return EBLogModel.findOne({
+        organizationId,
+        premisesId,
+        date: { $lte: date },
+    })
+        .sort({ date: -1, time: -1 })
+        .lean<LeanEBLog>();
+};
+
+// Consumption within [rangeStart, rangeEnd] = (reading on/before rangeEnd) - (reading before rangeStart)
+export const computeConsumption = async (
+    organizationId: string,
+    premisesId: string,
+    rangeStart: Date,
+    rangeEnd: Date
+): Promise<number | null> => {
+    const endReading = await getReadingAtOrBefore(organizationId, premisesId, rangeEnd);
+    const beforeStart = new Date(rangeStart.getTime() - 1);
+    const startReading = await getReadingAtOrBefore(organizationId, premisesId, beforeStart);
+
+    if (!endReading || !startReading) {
+        return null; // not enough data to compute
+    }
+
+    const diff = endReading.meterReading - startReading.meterReading;
+    return diff >= 0 ? diff : null; // guard against bad/reset readings
+};
+
+// Day-boundary helpers
+export const getStartOfDay = (date: Date): Date => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+};
+
+export const getEndOfDay = (date: Date): Date => {
+    const d = new Date(date);
+    d.setHours(23, 59, 59, 999);
+    return d;
+};
+
+
+
+
+// ============================
+// DASHBOARD OVERVIEW
+// - total consumption yesterday (all premises)
+// - recent 10 logs
+// ============================
+export const getEBDashboardOverview = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { organizationId } = req.params;
+
+        if (!organizationId) {
+            return res.status(400).json({ ok: false, message: "organizationId is required" });
+        }
+
+        // const todayStamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+        // const cacheKey = REDIS_KEYS.schoolEBDashboard(organizationId, todayStamp!);
+
+        // // 1. ATTEMPT CACHE READ
+        // try {
+        //     const cachedData = await redisClient.get(cacheKey);
+        //     if (cachedData) {
+        //         return res.status(200).json({ ok: true, data: JSON.parse(cachedData), message: "retrived from cache" });
+        //     }
+        // } catch (redisError) {
+        //     console.error("Redis Get Error (EB Dashboard):", redisError);
+        // }
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const rangeStart = getStartOfDay(yesterday);
+        const rangeEnd = getEndOfDay(yesterday);
+
+        const premisesList = await PremisesModel.find({ organizationId, isActive: true }).lean();
+
+        let totalConsumptionYesterday = 0;
+        let premisesWithData = 0;
+
+        for (const premises of premisesList) {
+            const consumption = await computeConsumption(
+                organizationId,
+                premises._id.toString(),
+                rangeStart,
+                rangeEnd
+            );
+            if (consumption !== null) {
+                totalConsumptionYesterday += consumption;
+                premisesWithData += 1;
+            }
+        }
+
+        const recentLogs = await EBLogModel.find({ organizationId })
+            .populate("premisesId", "premisesName")
+            .sort({ date: -1, time: -1, createdAt: -1 })
+            .limit(10)
+            .lean();
+
+        const responseData = {
+            totalConsumptionYesterday: Math.round(totalConsumptionYesterday * 100) / 100,
+            premisesReportedYesterday: premisesWithData,
+            totalPremises: premisesList.length,
+            recentLogs,
+        };
+
+        // 3. UPDATE CACHE — short TTL since this is computed data
+        // try {
+        //     await redisClient.setex(cacheKey, 600, JSON.stringify(responseData)); // 10 min
+        // } catch (redisError) {
+        //     console.error("Redis Set Error (EB Dashboard):", redisError);
+        // }
+
+        return res.status(200).json({ ok: true, data: responseData });
+    } catch (error: any) {
+        console.error(error);
+        return res.status(500).json({ ok: false, message: "Internal server error" });
+    }
+};
+
+// ============================
+// PREMISES ANALYTICS
+// - per premises: yesterday consumption, 30-day avg, projected this month, total kw used 
+// ============================
+export const getEBPremisesAnalytics = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { organizationId } = req.params;
+
+        if (!organizationId) {
+            return res.status(400).json({ ok: false, message: "organizationId is required" });
+        }
+
+        // const todayStamp = new Date().toISOString().split("T")[0];
+        // const cacheKey = REDIS_KEYS.schoolEBPremisesAnalytics(organizationId, todayStamp!);
+
+        // // 1. ATTEMPT CACHE READ
+        // try {
+        //     const cachedData = await redisClient.get(cacheKey);
+        //     if (cachedData) {
+        //         return res.status(200).json({ ok: true, data: JSON.parse(cachedData), message: "retrived from cache" });
+        //     }
+        // } catch (redisError) {
+        //     console.error("Redis Get Error (EB Premises Analytics):", redisError);
+        // }
+
+        const premisesList = await PremisesModel.find({ organizationId, isActive: true }).lean();
+
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const yesterdayStart = getStartOfDay(yesterday);
+        const yesterdayEnd = getEndOfDay(yesterday);
+
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDayStart = getStartOfDay(thirtyDaysAgo);
+        const thirtyDayEnd = getEndOfDay(today);
+
+        const monthStart = getStartOfDay(new Date(today.getFullYear(), today.getMonth(), 1));
+        const monthEnd = getEndOfDay(today);
+        const daysElapsedThisMonth = today.getDate(); // 1-indexed, e.g. 20 on the 20th
+        const daysInThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+        const analytics = [];
+
+        for (const premises of premisesList) {
+            const premisesIdStr = premises._id.toString();
+
+            const yesterdayConsumption = await computeConsumption(
+                organizationId,
+                premisesIdStr,
+                yesterdayStart,
+                yesterdayEnd
+            );
+
+            const thirtyDayConsumption = await computeConsumption(
+                organizationId,
+                premisesIdStr,
+                thirtyDayStart,
+                thirtyDayEnd
+            );
+            const avg30DayConsumption =
+                thirtyDayConsumption !== null ? thirtyDayConsumption / 30 : null;
+
+            const monthToDateConsumption = await computeConsumption(
+                organizationId,
+                premisesIdStr,
+                monthStart,
+                monthEnd
+            );
+            let projectedThisMonth: number | null = null;
+            if (monthToDateConsumption !== null && daysElapsedThisMonth > 0) {
+                const avgDailyThisMonth = monthToDateConsumption / daysElapsedThisMonth;
+                projectedThisMonth = avgDailyThisMonth * daysInThisMonth;
+            }
+
+            // NEW: lifetime total consumption for this premises
+            // = latest meterReading - the very first ever meterReading logged
+            const firstLog = await EBLogModel.findOne({ organizationId, premisesId: premisesIdStr })
+                .sort({ date: 1, time: 1 })
+                .lean();
+
+            const latestLog = await EBLogModel.findOne({ organizationId, premisesId: premisesIdStr })
+                .sort({ date: -1, time: -1 })
+                .lean();
+
+            let totalConsumption: number | null = null;
+            if (firstLog && latestLog) {
+                const diff = latestLog.meterReading - firstLog.meterReading;
+                totalConsumption = diff >= 0 ? diff : null;
+            }
+
+            analytics.push({
+                premisesId: premises._id,
+                premisesName: premises.premisesName,
+                yesterdayConsumption:
+                    yesterdayConsumption !== null ? Math.round(yesterdayConsumption * 100) / 100 : null,
+                avg30DayConsumption:
+                    avg30DayConsumption !== null ? Math.round(avg30DayConsumption * 100) / 100 : null,
+                projectedThisMonthConsumption:
+                    projectedThisMonth !== null ? Math.round(projectedThisMonth * 100) / 100 : null,
+                totalConsumption:
+                    totalConsumption !== null ? Math.round(totalConsumption * 100) / 100 : null,
+            });
+        }
+
+        // 3. UPDATE CACHE
+        // try {
+        //     await redisClient.setex(cacheKey, 600, JSON.stringify(analytics)); // 10 min
+        // } catch (redisError) {
+        //     console.error("Redis Set Error (EB Premises Analytics):", redisError);
+        // }
+
+        return res.status(200).json({ ok: true, data: analytics });
+    } catch (error: any) {
+        console.error(error);
+        return res.status(500).json({ ok: false, message: "Internal server error" });
+    }
+};
+
+
+
+// Fetches a premises' tariff + sanctionedLoad in one call.
+// Returns tariff: null if no tariff configured (caller should skip cost calc, not error).
+export const getPremisesTariffContext = async (
+    organizationId: string,
+    premisesId: string
+): Promise<{ tariff: Pick<ITariff, "slabs" | "fixedChargePerKw"> | null; sanctionedLoad: number }> => {
+    const premises = await PremisesModel.findOne({ _id: premisesId, organizationId }).lean();
+    if (!premises) return { tariff: null, sanctionedLoad: 0 };
+
+    const tariff = premises.tariffId
+        ? await TariffModel.findById(premises.tariffId).lean()
+        : null;
+
+    return {
+        tariff: tariff ? { slabs: tariff.slabs, fixedChargePerKw: tariff.fixedChargePerKw } : null,
+        sanctionedLoad: premises.sanctionedLoad || 0,
+    };
+};
+
+interface SeriesPoint {
+    label: string;
+    kwUsed: number | null;
+    cost: number | null
+}
+
+// Computes bucketed consumption for ONE premises across the given buckets.
+// Uses actual sorted meterReadings — immune to any backdated/out-of-order inserts.
+export const computeSeriesForPremises = async (
+    organizationId: string,
+    premisesId: string,
+    buckets: { bucketStart: Date; bucketEnd: Date; label: string }[],
+    // tariff: Pick<ITariff, "slabs" | "fixedChargePerKw"> | null,
+    // sanctionedLoad: number
+
+): Promise<SeriesPoint[]> => {
+    if (buckets.length === 0) return [];
+
+    const { tariff, sanctionedLoad } = await getPremisesTariffContext(organizationId, premisesId);
+
+
+    const firstBucket = buckets[0];
+    const lastBucket = buckets[buckets.length - 1];
+
+    if (!firstBucket || !lastBucket) return []; // guard, satisfies TS
+
+    const rangeStart = firstBucket.bucketStart;
+    const rangeEnd = lastBucket.bucketEnd;
+
+    // const rangeStart = buckets[0].bucketStart;
+    // const rangeEnd = buckets[buckets.length - 1].bucketEnd;
+
+    // baseline reading just before the range starts
+    const baseline = await getReadingAtOrBefore(
+        organizationId,
+        premisesId,
+        new Date(rangeStart.getTime() - 1)
+    );
+
+    // all logs inside the range, sorted chronologically (NOT insertion order)
+    const logsInRange = await EBLogModel.find({
+        organizationId,
+        premisesId,
+        date: { $gte: rangeStart, $lte: rangeEnd },
+    })
+        .sort({ date: 1, time: 1 })
+        .lean();
+
+    let carryReading = baseline?.meterReading ?? null;
+    let logCursor = 0;
+    const points: SeriesPoint[] = [];
+
+    for (const bucket of buckets) {
+        // advance cursor through logs that fall inside this bucket, keep the LAST one
+        let bucketEndReading: number | null = null;
+        // while (
+        //     logCursor < logsInRange.length &&
+        //     logsInRange[logCursor].date <= bucket.bucketEnd
+        // ) {
+        while (logCursor < logsInRange.length) {
+
+            // bucketEndReading = logsInRange[logCursor].meterReading;
+            // logCursor++;
+
+            const currentLog = logsInRange[logCursor];
+            if (!currentLog || currentLog.date > bucket.bucketEnd) break;
+            bucketEndReading = currentLog.meterReading;
+            logCursor++;
+        }
+
+        if (bucketEndReading === null) {
+            // no new reading this bucket — no consumption data for this slice
+            points.push({ label: bucket.label, kwUsed: null, cost: null });
+            continue;
+        }
+
+        const kwUsed =
+            carryReading !== null && bucketEndReading >= carryReading
+                ? Math.round((bucketEndReading - carryReading) * 100) / 100
+                : null;
+
+
+        const cost = kwUsed !== null && tariff ? calculateBillAmount(kwUsed, tariff, sanctionedLoad) : null;
+        points.push({ label: bucket.label, kwUsed, cost });
+
+        // points.push({ label: bucket.label, kwUsed });
+        carryReading = bucketEndReading;
+    }
+
+    return points;
+};
+
+export type ChartGranularity = "day" | "month";
+
+interface Bucket {
+    bucketStart: Date;
+    bucketEnd: Date;
+    label: string;
+}
+
+export const generateBuckets = (
+    rangeStart: Date,
+    rangeEnd: Date,
+    granularity: ChartGranularity
+): Bucket[] => {
+    const buckets: Bucket[] = [];
+
+    if (granularity === "day") {
+        const cursor = new Date(rangeStart);
+        cursor.setHours(0, 0, 0, 0);
+        while (cursor <= rangeEnd) {
+            const bucketStart = new Date(cursor);
+            const bucketEnd = new Date(cursor);
+            bucketEnd.setHours(23, 59, 59, 999);
+            buckets.push({
+                bucketStart,
+                bucketEnd,
+                // label: bucketStart.toISOString().split("T")[0], // "YYYY-MM-DD"
+                label: bucketStart.toISOString().split("T")[0] ?? "", // fallback, split always returns at least 1 element in practice
+
+            });
+            cursor.setDate(cursor.getDate() + 1);
+        }
+    } else {
+        // month
+        const cursor = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+        while (cursor <= rangeEnd) {
+            const bucketStart = new Date(cursor);
+            const bucketEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999);
+            buckets.push({
+                bucketStart,
+                bucketEnd,
+                label: `${bucketStart.getFullYear()}-${String(bucketStart.getMonth() + 1).padStart(2, "0")}`, // "YYYY-MM"
+            });
+            cursor.setMonth(cursor.getMonth() + 1);
+        }
+    }
+
+    return buckets;
+};
+
+// for custom ranges: day buckets if range is short, month buckets if long
+export const resolveGranularity = (rangeStart: Date, rangeEnd: Date): ChartGranularity => {
+    const diffDays = (rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24);
+    return diffDays <= 62 ? "day" : "month"; // ~2 months threshold, tweak if needed
+};
+
+// ============================
+// EB CONSUMPTION CHART
+// period: today | week | month | year | custom
+// premisesId: optional -> if omitted, returns series for ALL premises (for comparison)
+// fromDate/toDate: required only when period=custom
+// ============================
+export const getEBConsumptionChart = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { organizationId } = req.params;
+        const { period = "week", premisesId, fromDate, toDate } = req.query as Record<string, string | undefined>;
+
+        if (!organizationId) {
+            return res.status(400).json({ ok: false, message: "organizationId is required" });
+        }
+
+        const validPeriods = ["today", "week", "month", "year", "custom"];
+        if (!validPeriods.includes(period)) {
+            return res.status(400).json({ ok: false, message: `period must be one of: ${validPeriods.join(", ")}` });
+        }
+
+        if (period === "custom" && (!fromDate || !toDate)) {
+            return res.status(400).json({ ok: false, message: "fromDate and toDate are required for custom period" });
+        }
+
+        // ---- resolve range + granularity (all calendar-based) ----
+        const today = new Date();
+        let rangeStart: Date;
+        let rangeEnd: Date;
+        let granularity: "day" | "month";
+
+        switch (period) {
+            case "today": {
+                rangeStart = getStartOfDay(today);
+                rangeEnd = getEndOfDay(today);
+                granularity = "day";
+                break;
+            }
+            case "week": {
+                // this calendar week, Monday to Sunday
+                const dayOfWeek = today.getDay(); // 0 = Sunday
+                const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                const monday = new Date(today);
+                monday.setDate(today.getDate() - diffToMonday);
+                rangeStart = getStartOfDay(monday);
+
+                const sunday = new Date(monday);
+                sunday.setDate(monday.getDate() + 6);
+                rangeEnd = getEndOfDay(sunday);
+
+                granularity = "day";
+                break;
+            }
+            case "month": {
+                // this calendar month
+                rangeStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                rangeEnd = getEndOfDay(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+                granularity = "day";
+                break;
+            }
+            case "year": {
+                // this calendar year
+                rangeStart = new Date(today.getFullYear(), 0, 1);
+                rangeEnd = getEndOfDay(new Date(today.getFullYear(), 11, 31));
+                granularity = "month";
+                break;
+            }
+            case "custom":
+            default: {
+                rangeStart = getStartOfDay(new Date(fromDate as string));
+                rangeEnd = getEndOfDay(new Date(toDate as string));
+                granularity = resolveGranularity(rangeStart, rangeEnd);
+                break;
+            }
+        }
+
+        if (rangeStart > rangeEnd) {
+            return res.status(400).json({ ok: false, message: "fromDate cannot be after toDate" });
+        }
+
+        const dateStamp = today.toISOString().split("T")[0] ?? "";
+        // const cacheKey = REDIS_KEYS.schoolEBChart(organizationId, period, premisesId || "all", dateStamp);
+
+        // // 1. ATTEMPT CACHE READ (skip cache for custom ranges)
+        // if (period !== "custom") {
+        //     try {
+        //         const cachedData = await redisClient.get(cacheKey);
+        //         if (cachedData) {
+        //             return res.status(200).json({ ok: true, data: JSON.parse(cachedData), message: "retrived from cache" });
+        //         }
+        //     } catch (redisError) {
+        //         console.error("Redis Get Error (EB Chart):", redisError);
+        //     }
+        // }
+
+        // ---- resolve premises to chart ----
+        const premisesFilter: Record<string, any> = { organizationId, isActive: true };
+        if (premisesId) premisesFilter._id = premisesId;
+
+        const premisesList = await PremisesModel.find(premisesFilter).lean();
+
+        if (premisesList.length === 0) {
+            return res.status(404).json({ ok: false, message: "No premises found" });
+        }
+
+        const buckets = generateBuckets(rangeStart, rangeEnd, granularity);
+
+        const chartData = [];
+        for (const premises of premisesList) {
+            const series = await computeSeriesForPremises(
+                organizationId,
+                premises._id.toString(),
+                buckets
+            );
+            chartData.push({
+                premisesId: premises._id,
+                premisesName: premises.premisesName,
+                series,
+            });
+        }
+
+        const responseData = {
+            period,
+            granularity,
+            rangeStart,
+            rangeEnd,
+            premises: chartData,
+        };
+
+        // 3. UPDATE CACHE
+        // if (period !== "custom") {
+        //     try {
+        //         await redisClient.setex(cacheKey, 600, JSON.stringify(responseData)); // 10 min
+        //     } catch (redisError) {
+        //         console.error("Redis Set Error (EB Chart):", redisError);
+        //     }
+        // }
+
+        return res.status(200).json({ ok: true, data: responseData });
+    } catch (error: any) {
+        console.error(error);
+        return res.status(500).json({ ok: false, message: "Internal server error" });
+    }
+};
+
+
+
+export const calculateBillAmount = (
+    totalUnits: number,
+    tariff: Pick<ITariff, "slabs" | "fixedChargePerKw">,
+    sanctionedLoad: number
+): number => {
+    let remaining = totalUnits;
+    let previousUpto = 0;
+    let unitsCost = 0;
+
+    for (const slab of tariff.slabs) {
+        if (remaining <= 0) break;
+        const slabCapacity = slab.upto === null ? remaining : slab.upto - previousUpto;
+        const unitsInThisSlab = Math.min(remaining, slabCapacity);
+        unitsCost += unitsInThisSlab * slab.ratePerUnit;
+        remaining -= unitsInThisSlab;
+        if (slab.upto !== null) previousUpto = slab.upto;
+    }
+
+    const fixedCost = (sanctionedLoad || 0) * (tariff.fixedChargePerKw || 0);
+    return Math.round((unitsCost + fixedCost) * 100) / 100;
+};
+
+
+export const getEBDashboardBillKpis = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { organizationId } = req.params;
+        if (!organizationId) return res.status(400).json({ ok: false, message: "organizationId is required" });
+
+        const premisesList = await PremisesModel.find({ organizationId, isActive: true }).lean();
+
+        const today = new Date();
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const monthEnd = getEndOfDay(today);
+        const daysElapsed = today.getDate();
+        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+        let monthlyProjectedBill = 0;
+        let projectedUnitsThisMonth = 0;
+        let monthToDateBill = 0;
+
+        for (const premises of premisesList) {
+            const { tariff, sanctionedLoad } = await getPremisesTariffContext(organizationId, premises._id.toString());
+            if (!tariff) continue;
+
+            const mtdUnits = await computeConsumption(organizationId, premises._id.toString(), monthStart, monthEnd);
+            if (mtdUnits === null) continue;
+
+            const projectedUnits = (mtdUnits / daysElapsed) * daysInMonth;
+            monthlyProjectedBill += calculateBillAmount(projectedUnits, tariff, sanctionedLoad);
+            monthToDateBill += calculateBillAmount(mtdUnits, tariff, sanctionedLoad);
+            projectedUnitsThisMonth += projectedUnits;
+        }
+
+        return res.status(200).json({
+            ok: true,
+            data: {
+                monthlyProjectedBill: Math.round(monthlyProjectedBill * 100) / 100,
+                projectedUnitsThisMonth: Math.round(projectedUnitsThisMonth * 100) / 100,
+                estimatedDailyEBCost: Math.round((monthToDateBill / daysElapsed) * 100) / 100,
+            },
+        });
+    } catch (error: any) {
+        console.error(error);
+        return res.status(500).json({ ok: false, message: "Internal server error" });
+    }
+};

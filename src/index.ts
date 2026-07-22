@@ -144,6 +144,9 @@ import leadRoutes from './routers/marketing_routes/lead_routes/instagramLead.rou
 import whatsappRoutes from './routers/marketing_routes/lead_routes/whatsappLead.routes';
 import ClassRoomRoutes from './routers/marketing_routes/classRoom_routes/classroom.routes';
 import MetaRoutes from './routers/marketing_routes/lead_routes/meta.routes';
+import premisesRoutes from './routers/eb_routes/premises.routes';
+import ebLogsRoutes from './routers/eb_routes/ebLog.routes';
+import tariffRoutes from './routers/eb_routes/tariff.routes';
 
 
 // Extend Socket interface for custom properties
@@ -459,9 +462,22 @@ app.use("/api/v1/public/leadcollection", publicLeadCollectionRoutes)
 app.use("/api/v1/lead", leadRoutes)
 app.use("/api/v1/lead/whatsapp", whatsappRoutes)
 app.use("/api/v1/lead/meta", MetaRoutes)
+
+
+
+
 app.use("/api/pincode", pincodeMasterRoutes)
 // app.use("/api/pincode/mapping", pincodeVendorMappingRoutes)
 app.use("/api/pincode/project-assignment", pincodeVendorProjectAssignmentRoutes)
+
+
+
+
+app.use('/api/premises', premisesRoutes)
+app.use('/api/eb/logs', ebLogsRoutes)
+app.use('/api/eb/tariff', tariffRoutes)
+
+
 
 
 // SHORTLIST API

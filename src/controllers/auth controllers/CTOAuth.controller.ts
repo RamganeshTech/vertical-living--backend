@@ -315,7 +315,7 @@ const CTOIsAuthenticated = async (req: RoleBasedRequest, res: Response) => {
         if (cachedData) {
             return res.status(200).json({
                 data: JSON.parse(cachedData),
-                message: "client is authenticated form cache", ok: true
+                message: "cto is authenticated form cache", ok: true
             })
         }
 

@@ -57,6 +57,7 @@ export const createOrderPublicTransaction = async (req: Request<{}, {}, ICreateO
     });
 
   } catch (error: any) {
+    console.log("error in the create order ublic transaction", error)
     res.status(500).json({ ok: false, message: error.message });
   }
 };
@@ -92,6 +93,7 @@ export const verifyPaymentPublicTransaction = async (req: Request<{}, {}, IVerif
       return res.status(400).json({ ok: false, message: "Invalid signature" });
     }
   } catch (error: any) {
+    console.log("error in the verify order public transaction", error)
     res.status(500).json({ ok: false, message: error.message });
   }
 };

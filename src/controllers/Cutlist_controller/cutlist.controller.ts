@@ -167,6 +167,7 @@ export const saveCutlist = async (req: RoleBasedRequest, res: Response): Promise
 
 /* 1. CREATE CONTROLLER
  * Extracts specific fields before saving
+NOT USED
  */
 export const createCutlist = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
@@ -230,6 +231,8 @@ export const createCutlist = async (req: RoleBasedRequest, res: Response): Promi
 /**
  * 2. UPDATE CONTROLLER
  * Extracts only allowed fields for update
+NOT USED
+ * 
  */
 export const updateCutlist = async (req: Request, res: Response): Promise<any> => {
     try {
