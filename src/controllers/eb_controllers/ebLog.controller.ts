@@ -94,8 +94,8 @@ export const getEBLogs = async (req: RoleBasedRequest, res: Response): Promise<a
         }
 
         const logs = await EBLogModel.find(filter)
-            .populate("premisesId", "premisesName")
-            .sort({ date: 1, time: 1 })
+            .populate("premisesId", "premisesName _id")
+            .sort({ createdAt: -1 })
             .lean();
 
         // 3. UPDATE CACHE — only for the unfiltered base list
@@ -623,7 +623,11 @@ export const getEBPremisesAnalytics = async (req: RoleBasedRequest, res: Respons
 export const getPremisesTariffContext = async (
     organizationId: string,
     premisesId: string
-): Promise<{ tariff: Pick<ITariff, "slabs" | "fixedChargePerKw"> | null; sanctionedLoad: number }> => {
+): Promise<{
+    // tariff: Pick<ITariff, "slabs" | "fixedChargePerKw"> | null;
+    tariff: Pick<ITariff, "slabs" | "fixedChargePerKw" | "isTelescopic"> | null;
+    sanctionedLoad: number
+}> => {
     const premises = await PremisesModel.findOne({ _id: premisesId, organizationId }).lean();
     if (!premises) return { tariff: null, sanctionedLoad: 0 };
 
@@ -632,7 +636,8 @@ export const getPremisesTariffContext = async (
         : null;
 
     return {
-        tariff: tariff ? { slabs: tariff.slabs, fixedChargePerKw: tariff.fixedChargePerKw } : null,
+        // tariff: tariff ? { slabs: tariff.slabs, fixedChargePerKw: tariff.fixedChargePerKw } : null,
+        tariff: tariff ? { slabs: tariff.slabs, fixedChargePerKw: tariff.fixedChargePerKw, isTelescopic: tariff.isTelescopic } : null,
         sanctionedLoad: premises.sanctionedLoad || 0,
     };
 };
@@ -645,6 +650,7 @@ interface SeriesPoint {
 
 // Computes bucketed consumption for ONE premises across the given buckets.
 // Uses actual sorted meterReadings — immune to any backdated/out-of-order inserts.
+//  if you cahgne the bug inthis chagne for the computeSeriesFroPremisesCharge function also 
 export const computeSeriesForPremises = async (
     organizationId: string,
     premisesId: string,
@@ -755,7 +761,8 @@ export const generateBuckets = (
                 bucketStart,
                 bucketEnd,
                 // label: bucketStart.toISOString().split("T")[0], // "YYYY-MM-DD"
-                label: bucketStart.toISOString().split("T")[0] ?? "", // fallback, split always returns at least 1 element in practice
+                // label: bucketStart.toISOString().split("T")[0] ?? "", // fallback, split always returns at least 1 element in practice
+                label: `${bucketStart.getFullYear()}-${String(bucketStart.getMonth() + 1).padStart(2, "0")}-${String(bucketStart.getDate()).padStart(2, "0")}`,
 
             });
             cursor.setDate(cursor.getDate() + 1);
@@ -932,20 +939,30 @@ export const getEBConsumptionChart = async (req: RoleBasedRequest, res: Response
 
 export const calculateBillAmount = (
     totalUnits: number,
-    tariff: Pick<ITariff, "slabs" | "fixedChargePerKw">,
+    // tariff: Pick<ITariff, "slabs" | "fixedChargePerKw">,
+    tariff: Pick<ITariff, "slabs" | "fixedChargePerKw" | "isTelescopic">,
     sanctionedLoad: number
 ): number => {
     let remaining = totalUnits;
     let previousUpto = 0;
     let unitsCost = 0;
 
-    for (const slab of tariff.slabs) {
-        if (remaining <= 0) break;
-        const slabCapacity = slab.upto === null ? remaining : slab.upto - previousUpto;
-        const unitsInThisSlab = Math.min(remaining, slabCapacity);
-        unitsCost += unitsInThisSlab * slab.ratePerUnit;
-        remaining -= unitsInThisSlab;
-        if (slab.upto !== null) previousUpto = slab.upto;
+    if (tariff.isTelescopic) {
+
+        for (const slab of tariff.slabs) {
+            if (remaining <= 0) break;
+            const slabCapacity = slab.upto === null ? remaining : slab.upto - previousUpto;
+            const unitsInThisSlab = Math.min(remaining, slabCapacity);
+            unitsCost += unitsInThisSlab * slab.ratePerUnit;
+            remaining -= unitsInThisSlab;
+            if (slab.upto !== null) previousUpto = slab.upto;
+        }
+    } else {
+        // find first slab where totalUnits fits, using the same upto/ratePerUnit shape
+        const matchedSlab = tariff.slabs.find(
+            (slab) => slab.upto === null || totalUnits <= slab.upto
+        );
+        unitsCost = matchedSlab ? totalUnits * matchedSlab.ratePerUnit : 0;
     }
 
     const fixedCost = (sanctionedLoad || 0) * (tariff.fixedChargePerKw || 0);
@@ -991,6 +1008,198 @@ export const getEBDashboardBillKpis = async (req: RoleBasedRequest, res: Respons
                 estimatedDailyEBCost: Math.round((monthToDateBill / daysElapsed) * 100) / 100,
             },
         });
+    } catch (error: any) {
+        console.error(error);
+        return res.status(500).json({ ok: false, message: "Internal server error" });
+    }
+};
+
+
+
+//  to get the cost of one premises year adn monly wise alone 
+
+// buckets one-per-calendar-year, mirrors generateBuckets' month branch
+export const generateYearBuckets = (rangeStart: Date, rangeEnd: Date): Bucket[] => {
+    const buckets: Bucket[] = [];
+    const cursor = new Date(rangeStart.getFullYear(), 0, 1);
+
+    while (cursor <= rangeEnd) {
+        const bucketStart = new Date(cursor.getFullYear(), 0, 1);
+        const bucketEnd = new Date(cursor.getFullYear(), 11, 31, 23, 59, 59, 999);
+        buckets.push({
+            bucketStart,
+            bucketEnd,
+            label: `${bucketStart.getFullYear()}`,
+        });
+        cursor.setFullYear(cursor.getFullYear() + 1);
+    }
+
+    return buckets;
+};
+
+
+
+
+// Computes bucketed consumption for ONE premises across the given buckets.
+// Uses actual sorted meterReadings — immune to any backdated/out-of-order inserts.
+export const computeSeriesForPremisesCharge = async (
+    organizationId: string,
+    premisesId: string,
+    buckets: { bucketStart: Date; bucketEnd: Date; label: string }[],
+    // tariff: Pick<ITariff, "slabs" | "fixedChargePerKw"> | null,
+    // sanctionedLoad: number
+
+): Promise<SeriesPoint[]> => {
+    if (buckets.length === 0) return [];
+
+    const { tariff, sanctionedLoad } = await getPremisesTariffContext(organizationId, premisesId);
+
+
+    const firstBucket = buckets[0];
+    const lastBucket = buckets[buckets.length - 1];
+
+    if (!firstBucket || !lastBucket) return []; // guard, satisfies TS
+
+    const rangeStart = firstBucket.bucketStart;
+    const rangeEnd = lastBucket.bucketEnd;
+
+    // const rangeStart = buckets[0].bucketStart;
+    // const rangeEnd = buckets[buckets.length - 1].bucketEnd;
+
+    // baseline reading just before the range starts
+    const baseline = await getReadingAtOrBefore(
+        organizationId,
+        premisesId,
+        new Date(rangeStart.getTime() - 1)
+    );
+
+    // all logs inside the range, sorted chronologically (NOT insertion order)
+    const logsInRange = await EBLogModel.find({
+        organizationId,
+        premisesId,
+        date: { $gte: rangeStart, $lte: rangeEnd },
+    })
+        .sort({ date: 1, time: 1 })
+        .lean();
+
+    let carryReading = baseline?.meterReading ?? null;
+    let logCursor = 0;
+    const points: SeriesPoint[] = [];
+
+    for (const bucket of buckets) {
+        let bucketEndReading: number | null = null;
+        let firstReadingInBucket: number | null = null;
+
+        while (logCursor < logsInRange.length) {
+            const currentLog = logsInRange[logCursor];
+            if (!currentLog || currentLog.date > bucket.bucketEnd) break;
+            if (firstReadingInBucket === null) firstReadingInBucket = currentLog.meterReading;
+            bucketEndReading = currentLog.meterReading;
+            logCursor++;
+        }
+
+        if (bucketEndReading === null) {
+            points.push({ label: bucket.label, kwUsed: null, cost: null });
+            continue;
+        }
+
+        // use carryReading if we have it; otherwise fall back to this bucket's own first reading
+        const effectiveStart = carryReading !== null ? carryReading : firstReadingInBucket;
+
+        // require at least two distinct readings to compute a real delta —
+        // a single lone reading with no prior baseline means "unknown", not "zero"
+        const hasRealDelta = effectiveStart !== null && bucketEndReading !== effectiveStart;
+
+        const kwUsed =
+            effectiveStart !== null && bucketEndReading >= effectiveStart && hasRealDelta
+                ? Math.round((bucketEndReading - effectiveStart) * 100) / 100
+                : null;
+
+        const cost = kwUsed !== null && tariff ? calculateBillAmount(kwUsed, tariff, sanctionedLoad) : null;
+        points.push({ label: bucket.label, kwUsed, cost });
+
+        carryReading = bucketEndReading;
+    }
+
+    return points;
+};
+
+
+// ============================
+// EB COST SUMMARY — single premises, monthly-within-a-year OR yearly-across-years
+// view=monthly requires: year
+// view=yearly requires: fromYear, toYear
+// ============================
+export const getPremisesCostSummary = async (req: RoleBasedRequest, res: Response): Promise<any> => {
+    try {
+        const { organizationId, premisesId } = req.params;
+        const { view = "monthly", year, fromYear, toYear } = req.query as Record<string, string | undefined>;
+
+        if (!organizationId || !premisesId) {
+            return res.status(400).json({ ok: false, message: "organizationId and premisesId are required" });
+        }
+
+        const validViews = ["monthly", "yearly"];
+        if (!validViews.includes(view)) {
+            return res.status(400).json({ ok: false, message: `view must be one of: ${validViews.join(", ")}` });
+        }
+
+        let rangeStart: Date;
+        let rangeEnd: Date;
+        let buckets: Bucket[];
+
+        if (view === "monthly") {
+            if (!year) {
+                return res.status(400).json({ ok: false, message: "year is required for view=monthly" });
+            }
+            const y = parseInt(year, 10);
+            rangeStart = new Date(y, 0, 1);
+            rangeEnd = getEndOfDay(new Date(y, 11, 31));
+            buckets = generateBuckets(rangeStart, rangeEnd, "month");
+        } else {
+            if (!fromYear || !toYear) {
+                return res.status(400).json({ ok: false, message: "fromYear and toYear are required for view=yearly" });
+            }
+            const fy = parseInt(fromYear, 10);
+            const ty = parseInt(toYear, 10);
+            if (fy > ty) {
+                return res.status(400).json({ ok: false, message: "fromYear cannot be after toYear" });
+            }
+            rangeStart = new Date(fy, 0, 1);
+            rangeEnd = getEndOfDay(new Date(ty, 11, 31));
+            buckets = generateYearBuckets(rangeStart, rangeEnd);
+        }
+
+        const series = await computeSeriesForPremisesCharge(organizationId, premisesId, buckets);
+
+
+         // total for whatever range is currently selected (free — just sum the series we already have)
+        const selectedRangeTotalCost = series.reduce((sum, point) => sum + (point.cost ?? 0), 0);
+
+        // fixed "current calendar year" total, independent of view/year/fromYear/toYear
+        const now = new Date();
+        const currentYearStart = new Date(now.getFullYear(), 0, 1);
+        const currentYearEnd = getEndOfDay(new Date(now.getFullYear(), 11, 31));
+        const currentYearBuckets = generateBuckets(currentYearStart, currentYearEnd, "month");
+        const currentYearSeries = await computeSeriesForPremisesCharge(organizationId, premisesId, currentYearBuckets);
+        const currentYearTotalCost = currentYearSeries.reduce((sum, point) => sum + (point.cost ?? 0), 0);
+
+        return res.status(200).json({
+            ok: true,
+            data: {
+                view,
+                rangeStart,
+                rangeEnd,
+                series,
+                selectedRangeTotalCost,
+                currentYearTotalCost,
+            },
+        });
+
+        // return res.status(200).json({
+        //     ok: true,
+        //     data: { view, rangeStart, rangeEnd, series },
+        // });
     } catch (error: any) {
         console.error(error);
         return res.status(500).json({ ok: false, message: "Internal server error" });

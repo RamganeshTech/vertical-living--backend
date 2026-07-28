@@ -28,7 +28,7 @@ export const getPremises = async (req: RoleBasedRequest, res: Response): Promise
 
         // const premises = await PremisesModel.find({ organizationId }).sort({ createdAt: -1 }).lean();
         const premises = await PremisesModel.find({ organizationId })
-            .populate("tariffId", "tariffName")
+            .populate("tariffId", "tariffName _id fixedChargePerKw")
             .sort({ createdAt: -1 })
             .lean();
 
@@ -50,10 +50,10 @@ export const getPremises = async (req: RoleBasedRequest, res: Response): Promise
 
 export const getPremisesById = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
-        const { organizationId, premisesId } = req.params;
+        const { premisesId } = req.params;
 
-        if (!organizationId || !premisesId) {
-            return res.status(400).json({ ok: false, message: "organizationId and premisesId are required" });
+        if (!premisesId) {
+            return res.status(400).json({ ok: false, message: "premisesId are required" });
         }
 
         // const cacheKey = REDIS_KEYS.schoolPremisesById(organizationId, premisesId);
@@ -68,8 +68,8 @@ export const getPremisesById = async (req: RoleBasedRequest, res: Response): Pro
         //     console.error("Redis Get Error (Premises by id):", redisError);
         // }
 
-        const premises = await PremisesModel.findOne({ _id: premisesId, organizationId })
-            .populate("tariffId", "tariffName")
+        const premises = await PremisesModel.findById(premisesId)
+            .populate("tariffId", "tariffName _id fixedChargePerKw isTelescopic")
             .lean();
 
         if (!premises) {

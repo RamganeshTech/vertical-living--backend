@@ -134,7 +134,7 @@ export const getTariffById = async (req: RoleBasedRequest, res: Response): Promi
 export const createTariff = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { organizationId } = req.params;
-        const { tariffName, fixedChargePerKw, slabs } = req.body;
+        const { tariffName, fixedChargePerKw, slabs, isTelescopic } = req.body;
 
         if (!organizationId || !tariffName || fixedChargePerKw === undefined) {
             return res.status(400).json({ ok: false, message: "organizationId, tariffName and fixedChargePerKw are required" });
@@ -142,6 +142,12 @@ export const createTariff = async (req: RoleBasedRequest, res: Response): Promis
 
         if (typeof fixedChargePerKw !== "number") {
             return res.status(400).json({ ok: false, message: "fixedChargePerKw must be a number" });
+        }
+
+
+        if(isTelescopic && typeof isTelescopic !=="boolean"){
+            return res.status(400).json({ ok: false, message: "isTelescopic must be a boolean value" });
+
         }
 
         if (slabs !== undefined && !Array.isArray(slabs)) {
@@ -163,6 +169,7 @@ export const createTariff = async (req: RoleBasedRequest, res: Response): Promis
             tariffName,
             fixedChargePerKw,
             slabs: slabs || [],
+            isTelescopic,
         });
 
         // INVALIDATE CACHE
@@ -194,7 +201,7 @@ export const createTariff = async (req: RoleBasedRequest, res: Response): Promis
 export const updateTariff = async (req: RoleBasedRequest, res: Response): Promise<any> => {
     try {
         const { organizationId, tariffId } = req.params;
-        const { tariffName, fixedChargePerKw, slabs, isActive } = req.body;
+        const { tariffName, fixedChargePerKw, slabs, isActive, isTelescopic } = req.body;
 
         if (!organizationId || !tariffId) {
             return res.status(400).json({ ok: false, message: "organizationId and tariffId are required" });
@@ -236,6 +243,11 @@ export const updateTariff = async (req: RoleBasedRequest, res: Response): Promis
 
         if (typeof isActive === "boolean") {
             tariff.isActive = isActive;
+        }
+
+
+         if (typeof isTelescopic === "boolean") {
+            tariff.isTelescopic = isTelescopic;
         }
 
         await tariff.save();
