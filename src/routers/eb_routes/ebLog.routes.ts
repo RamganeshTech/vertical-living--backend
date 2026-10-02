@@ -9,6 +9,7 @@ getEBDashboardOverview,
 getEBConsumptionChart,
 getEBDashboardBillKpis,
 getPremisesCostSummary,} from "../../controllers/eb_controllers/ebLog.controller";
+import { getPremisesConsumptionCostComparison } from "../../controllers/eb_controllers/ebDashboard.controller";
 
 
 const ebLogsRoutes = Router();
@@ -94,6 +95,14 @@ ebLogsRoutes.get(
     "/analytics/:organizationId/:premisesId/charge",
     multiRoleAuthMiddleware("owner", "staff", "CTO",),
     getPremisesCostSummary
+);
+
+
+
+ebLogsRoutes.get(
+    "/:organizationId/premises-comparison",
+    multiRoleAuthMiddleware("owner", "staff", "CTO",),
+    getPremisesConsumptionCostComparison
 );
 
 

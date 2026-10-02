@@ -1,6 +1,7 @@
 import { type Response } from "express";
 import { RoleBasedRequest } from "../../types/types";
 import { PremisesModel } from "../../models/eb_model/premises.model";
+import mongoose from "mongoose";
 
 // ============================
 // GET ALL PREMISES
@@ -90,6 +91,57 @@ export const getPremisesById = async (req: RoleBasedRequest, res: Response): Pro
     }
 };
 
+
+export const getPremisesDropdown = async (
+  req: RoleBasedRequest,
+  res: Response
+): Promise<any> => {
+  try {
+    const { organizationId } = req.params;
+    const { isActive = "true" } = req.query as Record<string, string | undefined>;
+
+    if (!organizationId) {
+      return res.status(400).json({
+        ok: false,
+        message: "organizationId is required",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(organizationId)) {
+      return res.status(400).json({
+        ok: false,
+        message: "Invalid organizationId",
+      });
+    }
+
+    // Build filter query
+    const filter: Record<string, any> = {
+      organizationId: new mongoose.Types.ObjectId(organizationId),
+    };
+
+    // Filter by active status if provided ('true' | 'false' | 'all')
+    if (isActive !== "all") {
+      filter.isActive = isActive === "true";
+    }
+
+    // Project only fields needed for dropdowns and sort alphabetically
+    const premises = await PremisesModel.find(filter)
+      .select("_id premisesName consumerNumber")
+      .sort({ premisesName: 1 })
+      .lean();
+
+    return res.status(200).json({
+      ok: true,
+      data: premises,
+    });
+  } catch (error: any) {
+    console.error("Error fetching premises dropdown:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+    });
+  }
+};
 
 // ============================
 // CREATE PREMISES

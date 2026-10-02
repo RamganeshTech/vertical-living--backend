@@ -20,6 +20,7 @@ export interface IOrganization extends Document {
     mode: string
     gstin: string | null,
     facebookPageId: string
+    metaAdAccountId: string   // format: "act_1234567890" — store WITH "act_" prefix
     metaAccessToken: string
     metaVerifyToken: string
     metaDatasetId: string
@@ -89,6 +90,7 @@ const OrganizationSchema = new Schema<IOrganization>({
     mode: { type: String, default: "manual" },
     gstin: { type: String, default: null },
     facebookPageId: { type: String, default: null },
+    metaAdAccountId: { type: String, default: null },
     metaAccessToken: { type: String, default: null },
     metaVerifyToken: { type: String, default: null },
     metaDatasetId: { type: String, default: null },

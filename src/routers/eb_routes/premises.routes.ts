@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { multiRoleAuthMiddleware } from "../../middlewares/multiRoleAuthMiddleware";
-import { createPremises, deletePremises, getPremises, getPremisesById, updatePremises } from "../../controllers/eb_controllers/premises.controller";
+import { createPremises, deletePremises, getPremises, getPremisesById, getPremisesDropdown, updatePremises } from "../../controllers/eb_controllers/premises.controller";
 
 
 const premisesRoutes = Router();
@@ -21,6 +21,13 @@ premisesRoutes.get(
     "/get-single/:premisesId",
     multiRoleAuthMiddleware("owner", "staff", "CTO",),
     getPremisesById
+);
+
+
+premisesRoutes.get(
+  "/dropdown/:organizationId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  getPremisesDropdown
 );
 
 // ============================   

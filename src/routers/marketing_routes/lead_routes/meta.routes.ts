@@ -3,6 +3,7 @@ import { getAllInstagramLeads, getInstagramLeadById, handleInstagramWebhook, upd
 import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware';
 import { verifyMetaSignature } from '../../../middlewares/metaSignatureMiddleware';
 import { getMetaAdLeads, MetaWebhookforAd, updateMetaLeadStatus, verifyMetaWebhook } from '../../../controllers/marketing_controllers/lead_controllers/meadLead.controller';
+import { getMetaAds, getMetaAdSets, getMetaCampaignPerformance, getMetaCampaigns, getMetaInsights } from '../../../controllers/marketing_controllers/lead_controllers/meta_leads/metaLead.controller';
 
 const MetaRoutes = Router();
 
@@ -23,5 +24,15 @@ MetaRoutes.get('/all-leads', multiRoleAuthMiddleware("owner", "CTO", "staff"), g
 
 // PUT: Update the lead status and send Conversions API (CAPI) update to Meta
 MetaRoutes.put('/update-status', multiRoleAuthMiddleware("owner", "CTO", "staff"), updateMetaLeadStatus);
+
+
+
+
+MetaRoutes.get("/campaigns", multiRoleAuthMiddleware("owner", "CTO", "staff"), getMetaCampaigns);
+MetaRoutes.get("/adsets", multiRoleAuthMiddleware("owner", "CTO", "staff"), getMetaAdSets);
+MetaRoutes.get("/ads", multiRoleAuthMiddleware("owner", "CTO", "staff"), getMetaAds);
+MetaRoutes.get("/insights", multiRoleAuthMiddleware("owner", "CTO", "staff"), getMetaInsights);
+MetaRoutes.get("/campaign-performance", multiRoleAuthMiddleware("owner", "CTO", "staff"), getMetaCampaignPerformance);
+
 
 export default MetaRoutes;

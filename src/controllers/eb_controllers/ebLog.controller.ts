@@ -385,6 +385,7 @@ export const getReadingAtOrBefore = async (
 };
 
 // Consumption within [rangeStart, rangeEnd] = (reading on/before rangeEnd) - (reading before rangeStart)
+// returns units only. Use for plain totals (e.g. "yesterday", "this week")
 export const computeConsumption = async (
     organizationId: string,
     premisesId: string,
@@ -401,6 +402,29 @@ export const computeConsumption = async (
 
     const diff = endReading.meterReading - startReading.meterReading;
     return diff >= 0 ? diff : null; // guard against bad/reset readings
+};
+
+
+// Units AND the real number of days they cover (between the two actual readings)
+// returns units AND the real number of days between the two
+// readings used ({ units, days }).
+// Use whenever you divide by days (daily avg, projections).
+export const computeConsumptionWindow = async (
+    organizationId: string,
+    premisesId: string,
+    rangeStart: Date,
+    rangeEnd: Date
+): Promise<{ units: number; days: number } | null> => {
+    const endReading = await getReadingAtOrBefore(organizationId, premisesId, rangeEnd);
+    const startReading = await getReadingAtOrBefore(organizationId, premisesId, new Date(rangeStart.getTime() - 1));
+    if (!endReading || !startReading) return null;
+
+    const units = endReading.meterReading - startReading.meterReading;
+    if (units < 0) return null; // reset / bad reading
+
+    const days =
+        (new Date(endReading.date).getTime() - new Date(startReading.date).getTime()) / 86400000;
+    return { units, days };
 };
 
 // Day-boundary helpers
@@ -551,25 +575,30 @@ export const getEBPremisesAnalytics = async (req: RoleBasedRequest, res: Respons
                 yesterdayEnd
             );
 
-            const thirtyDayConsumption = await computeConsumption(
+            const thirtyDayConsumption = await computeConsumptionWindow(
                 organizationId,
                 premisesIdStr,
                 thirtyDayStart,
                 thirtyDayEnd
             );
             const avg30DayConsumption =
-                thirtyDayConsumption !== null ? thirtyDayConsumption / 30 : null;
+                // thirtyDayConsumption !== null ? thirtyDayConsumption / 30 : null;
+                thirtyDayConsumption && thirtyDayConsumption.days >= 1 ? thirtyDayConsumption.units / thirtyDayConsumption.days : null;
 
-            const monthToDateConsumption = await computeConsumption(
+            const monthToDateConsumption = await computeConsumptionWindow(
                 organizationId,
                 premisesIdStr,
                 monthStart,
                 monthEnd
             );
             let projectedThisMonth: number | null = null;
-            if (monthToDateConsumption !== null && daysElapsedThisMonth > 0) {
-                const avgDailyThisMonth = monthToDateConsumption / daysElapsedThisMonth;
-                projectedThisMonth = avgDailyThisMonth * daysInThisMonth;
+            // if (monthToDateConsumption !== null && daysElapsedThisMonth > 0) {
+            //     const avgDailyThisMonth = monthToDateConsumption / daysElapsedThisMonth;
+            //     projectedThisMonth = avgDailyThisMonth * daysInThisMonth;
+            // }
+
+            if (monthToDateConsumption && monthToDateConsumption.days >= 1) {
+                projectedThisMonth = (monthToDateConsumption.units / monthToDateConsumption.days) * daysInThisMonth;
             }
 
             // NEW: lifetime total consumption for this premises
@@ -792,7 +821,7 @@ export const resolveGranularity = (rangeStart: Date, rangeEnd: Date): ChartGranu
 };
 
 // ============================
-// EB CONSUMPTION CHART
+// EB CONSUMPTION CHART used to give you the how mucu does each premise ha consumed the eb and the cost also 
 // period: today | week | month | year | custom
 // premisesId: optional -> if omitted, returns series for ALL premises (for comparison)
 // fromDate/toDate: required only when period=custom
@@ -991,12 +1020,18 @@ export const getEBDashboardBillKpis = async (req: RoleBasedRequest, res: Respons
             const { tariff, sanctionedLoad } = await getPremisesTariffContext(organizationId, premises._id.toString());
             if (!tariff) continue;
 
-            const mtdUnits = await computeConsumption(organizationId, premises._id.toString(), monthStart, monthEnd);
-            if (mtdUnits === null) continue;
+            // const mtdUnits = await computeConsumption(organizationId, premises._id.toString(), monthStart, monthEnd);
+            const win = await computeConsumptionWindow(organizationId, premises._id.toString(), monthStart, monthEnd);
+            // if (mtdUnits === null) continue;
+            if (!win || win.days < 1) continue; // need readings at least a day apart
 
-            const projectedUnits = (mtdUnits / daysElapsed) * daysInMonth;
+
+            const dailyUnits = win.units / win.days;
+            const projectedUnits = dailyUnits * daysInMonth;
+
+            // const projectedUnits = (mtdUnits / daysElapsed) * daysInMonth;
             monthlyProjectedBill += calculateBillAmount(projectedUnits, tariff, sanctionedLoad);
-            monthToDateBill += calculateBillAmount(mtdUnits, tariff, sanctionedLoad);
+            // monthToDateBill += calculateBillAmount(mtdUnits, tariff, sanctionedLoad);
             projectedUnitsThisMonth += projectedUnits;
         }
 
@@ -1005,7 +1040,7 @@ export const getEBDashboardBillKpis = async (req: RoleBasedRequest, res: Respons
             data: {
                 monthlyProjectedBill: Math.round(monthlyProjectedBill * 100) / 100,
                 projectedUnitsThisMonth: Math.round(projectedUnitsThisMonth * 100) / 100,
-                estimatedDailyEBCost: Math.round((monthToDateBill / daysElapsed) * 100) / 100,
+                estimatedDailyEBCost: Math.round((monthlyProjectedBill / daysElapsed) * 100) / 100,
             },
         });
     } catch (error: any) {
@@ -1173,7 +1208,7 @@ export const getPremisesCostSummary = async (req: RoleBasedRequest, res: Respons
         const series = await computeSeriesForPremisesCharge(organizationId, premisesId, buckets);
 
 
-         // total for whatever range is currently selected (free — just sum the series we already have)
+        // total for whatever range is currently selected (free — just sum the series we already have)
         const selectedRangeTotalCost = series.reduce((sum, point) => sum + (point.cost ?? 0), 0);
 
         // fixed "current calendar year" total, independent of view/year/fromYear/toYear
