@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getAllInstagramLeads, getInstagramLeadById, handleInstagramWebhook, updateInstagramLeadStatus, verifyInstagramWebhook } from '../../../controllers/marketing_controllers/lead_controllers/instagramLead.controller';
 import { multiRoleAuthMiddleware } from '../../../middlewares/multiRoleAuthMiddleware';
 import { verifyMetaSignature } from '../../../middlewares/metaSignatureMiddleware';
-import { getMetaAdLeads, MetaWebhookforAd, updateMetaLeadStatus, verifyMetaWebhook } from '../../../controllers/marketing_controllers/lead_controllers/meadLead.controller';
+import { getMetaAdLeads, getMetaAdLeadsv1, MetaWebhookforAd, updateMetaLeadStatus, verifyMetaWebhook } from '../../../controllers/marketing_controllers/lead_controllers/meadLead.controller';
 import { getMetaAds, getMetaAdSets, getMetaCampaignPerformance, getMetaCampaigns, getMetaInsights } from '../../../controllers/marketing_controllers/lead_controllers/meta_leads/metaLead.controller';
 
 const MetaRoutes = Router();
@@ -15,12 +15,18 @@ MetaRoutes.get('/webhook/:organizationId', verifyMetaWebhook);
 MetaRoutes.post('/webhook/:organizationId', MetaWebhookforAd);
 
 
+// New: one URL per Meta account
+MetaRoutes.get('/webhook/account/:accountId', verifyMetaWebhook);
+MetaRoutes.post('/webhook/account/:accountId', MetaWebhookforAd);
+
+
 // ==========================================
 // 2. PROTECTED ROUTES (Your Frontend UI talks to these)
 // ==========================================
 
 // GET: Fetch the leads to display in your CRM table
 MetaRoutes.get('/all-leads', multiRoleAuthMiddleware("owner", "CTO", "staff"), getMetaAdLeads);
+MetaRoutes.get('/v1/all-leads', multiRoleAuthMiddleware("owner", "CTO", "staff"), getMetaAdLeadsv1);
 
 // PUT: Update the lead status and send Conversions API (CAPI) update to Meta
 MetaRoutes.put('/update-status', multiRoleAuthMiddleware("owner", "CTO", "staff"), updateMetaLeadStatus);

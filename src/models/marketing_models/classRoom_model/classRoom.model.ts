@@ -1,7 +1,7 @@
 import { Schema, model } from 'mongoose';
 
 
-import mongoose, { Document, Types } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 // Defines the dynamic content formats
 export interface IContentBlock {
@@ -35,7 +35,7 @@ const ContentBlockSchema = new Schema<IContentBlock>({
   type: { 
     type: String, 
     enum: ['paragraph', 'list', 'heading', 'callout',], 
-    required: true 
+    required: true
   },
   text: { 
     type: String 
@@ -56,7 +56,7 @@ const ContentBlockSchema = new Schema<IContentBlock>({
 const TabSchema = new Schema<ITab>({
   title: { 
     type: String, 
-    required: true 
+    required: true
   },
   order: { 
     type: Number, 
