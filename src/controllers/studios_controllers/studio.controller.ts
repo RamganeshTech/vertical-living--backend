@@ -890,13 +890,14 @@
 
 import { NextFunction, Request, Response } from "express";
 import multer from "multer";
-import { Error as MongooseError, Types } from "mongoose";
+import mongoose, { Error as MongooseError, Types } from "mongoose";
 import { PDFDocument } from "pdf-lib";
 import { GoogleGenAI } from "@google/genai";
 import { jsonrepair } from "jsonrepair";
 import StudioModel, { STUDIO_STATUSES, StudioStatus } from "../../models/studios_model/studio.model";
 import ProjectModel from "../../models/project model/project.model";
 import { s3, S3_BUCKET } from "../../config/awssdk";
+import { RoleBasedRequest } from "../../types/types";
 
 /**
  * Studio read and delete controllers.
@@ -970,7 +971,8 @@ import { s3, S3_BUCKET } from "../../config/awssdk";
             { $limit: limit },
             {
             $project: {
-                name: 1,
+                quoteName: 1,
+                quoteNo: 1,
                 status: 1,
                 projectId: 1,
                 floorPlan: 1,
@@ -1080,12 +1082,191 @@ import { s3, S3_BUCKET } from "../../config/awssdk";
     };
 
 
-// // controllers/studioController.ts  (adjust the import paths to your project)
-// import type { Request, Response } from "express";
-// import { Error as MongooseError } from "mongoose";
-// import StudioModel from "../models/StudioModel";
+export const createStudio = async (
+  req: RoleBasedRequest,
+  res: Response
+): Promise<any> => {
+  try {
+    const { projectId, quoteName } = req.body;
+    const { organizationId } = req.params;
+    const userId = req?.user?._id
 
-interface CreateStudioPayload {
+
+    if (!organizationId) {
+      return res.status(400).json({
+        ok: false,
+        message: "Organization ID is required",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(organizationId)) {
+      return res.status(400).json({
+        ok: false,
+        message: "Invalid organization ID",
+      });
+    }
+
+    if (projectId && !mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({
+        ok: false,
+        message: "Invalid project ID",
+      });
+    }
+
+    if (!quoteName || typeof quoteName !== "string" || !quoteName.trim()) {
+      return res.status(400).json({
+        ok: false,
+        message: "Quote name is required",
+      });
+    }
+
+    const studio = await StudioModel.create({
+      organizationId,
+      ...(projectId && { projectId }),
+      quoteName: quoteName.trim(),
+      createdBy: userId
+    });
+
+    return res.status(201).json({
+      ok: true,
+      message: "Studio created successfully",
+      data: studio,
+    });
+  } catch (error) {
+    if (error instanceof MongooseError.ValidationError) {
+      return res.status(400).json({
+        ok: false,
+        message: "Studio data is invalid",
+        errors: Object.entries(error.errors).map(
+          ([path, e]) => `${path}: ${e.message}`
+        ),
+      });
+    }
+
+    console.error("createStudio failed", error);
+
+    return res.status(500).json({
+      ok: false,
+      message: "Could not create the studio",
+    });
+  }
+};
+
+
+export const updateStudio = async (
+  req: RoleBasedRequest,
+  res: Response
+): Promise<any> => {
+  try {
+    const { organizationId, studioId } = req.params;
+    const { name, projectId } = req.body;
+    const userId = req?.user?._id
+
+
+    if (!mongoose.Types.ObjectId.isValid(organizationId)) {
+      return res.status(400).json({
+        ok: false,
+        message: "Invalid organization ID",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(studioId)) {
+      return res.status(400).json({
+        ok: false,
+        message: "Invalid studio ID",
+      });
+    }
+
+    const updateData: Record<string, unknown> = {};
+
+    if (name !== undefined) {
+      if (
+        typeof name !== "string" ||
+        !name.trim() ||
+        name.trim().length > 200
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "Name must be a non-empty string with at most 200 characters",
+        });
+      }
+
+      updateData.name = name.trim();
+    }
+
+    if (projectId !== undefined) {
+      if (
+        projectId !== null &&
+        (typeof projectId !== "string" ||
+          !mongoose.Types.ObjectId.isValid(projectId))
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "Invalid project ID",
+        });
+      }
+
+      updateData.projectId = projectId;
+    }
+
+    if(userId){
+      updateData.updatedBy = userId;
+    }
+
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        ok: false,
+        message: "Provide name or projectId to update",
+      });
+    }
+
+    const studio = await StudioModel.findOneAndUpdate(
+      {
+        _id: studioId,
+        organizationId,
+      },
+      { $set: updateData },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!studio) {
+      return res.status(404).json({
+        ok: false,
+        message: "Studio not found for this organization",
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: "Studio updated successfully",
+      data: studio,
+    });
+  } catch (error) {
+    if (error instanceof MongooseError.ValidationError) {
+      return res.status(400).json({
+        ok: false,
+        message: "Studio data is invalid",
+        errors: Object.entries(error.errors).map(
+          ([path, e]) => `${path}: ${e.message}`
+        ),
+      });
+    }
+
+    console.error("updateStudio failed", error);
+
+    return res.status(500).json({
+      ok: false,
+      message: "Could not update the studio",
+    });
+  }
+};
+
+
+interface UploadFloorPlanAndExtractPayload {
   name?: string;
   projectId?: string;
   mmPerPixel?: number;
@@ -1106,11 +1287,89 @@ const stripIds = (value: unknown): unknown => {
   return value;
 };
 
-export const createStudio = async (req: Request, res: Response): Promise<any> => {
+
+
+
+//  old version
+
+
+// export const uploadFloorPlanAndExtractStudio = async (req: Request, res: Response): Promise<any> => {
+//   try {
+//     const { organizationId } = req.params;
+//     if (!Types.ObjectId.isValid(organizationId)) {
+//       return res.status(400).json({ ok: false, message: "Invalid organization id" });
+//     }
+
+//     const file = req.file as (Express.Multer.File & { location: string }) | undefined;
+//     if (!file) {
+//       return res.status(400).json({ ok: false, message: "No floor plan file provided" });
+//     }
+
+//     let payload: UploadFloorPlanAndExtractPayload;
+//     try {
+//       payload = JSON.parse(req.body.payload);
+//     } catch {
+//       return res.status(400).json({ ok: false, message: "payload must be valid JSON" });
+//     }
+
+//     const rooms = stripIds(payload.rooms);
+//     if (!Array.isArray(rooms) || rooms.length === 0) {
+//       return res.status(400).json({ ok: false, message: "At least one room is required" });
+//     }
+//     if (payload.projectId && !Types.ObjectId.isValid(payload.projectId)) {
+//       return res.status(400).json({ ok: false, message: "Invalid project id" });
+//     }
+
+//     const mmPerPixel =
+//       typeof payload.mmPerPixel === "number" && payload.mmPerPixel > 0 ? payload.mmPerPixel : undefined;
+//     const userId = (req as Request & { user?: { _id?: string } }).user?._id; // adapt to your auth middleware
+
+//     // only whitelisted fields reach the model: status, lock, version and ids are never taken from the client
+//     const studio = await StudioModel.create({
+//       organizationId,
+//       projectId: payload.projectId,
+//       name: payload.name?.trim() || file.originalname.replace(/\.[^.]+$/, ""),
+//       status: "draft",
+//       floorPlan: {
+//         type: file.mimetype === "application/pdf" ? "pdf" : "image",
+//         url: file.location,
+//         originalName: file.originalname,
+//       },
+//       extraction: { model: "pdf-text-reader", warnings: [], extractedAt: new Date(), mmPerPixel },
+//       importOptions: {
+//         addOpenings: payload.importOptions?.addOpenings ?? true,
+//         addFurniture: payload.importOptions?.addFurniture ?? false,
+//       },
+//       rooms,
+//       createdBy: userId,
+//       updatedBy: userId,
+//     });
+
+//     return res.status(201).json({ ok: true, data: studio });
+//     } catch (error) {
+//       if (error instanceof MongooseError.ValidationError) {
+//         return res.status(400).json({
+//           ok: false,
+//           message: "Studio data is invalid",
+//           errors: Object.entries(error.errors).map(([path, e]) => `${path}: ${e.message}`),
+//         });
+//       }
+//       console.error("createStudio failed", error);
+//       return res.status(500).json({ ok: false, message: "Could not create the studio" });
+//     }
+//   };
+
+
+
+export const uploadFloorPlanAndExtractStudio = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { organizationId } = req.params;
+    const { organizationId, studioId } = req.params;
+
     if (!Types.ObjectId.isValid(organizationId)) {
       return res.status(400).json({ ok: false, message: "Invalid organization id" });
+    }
+    if (!Types.ObjectId.isValid(studioId)) {
+      return res.status(400).json({ ok: false, message: "Invalid studio id" });
     }
 
     const file = req.file as (Express.Multer.File & { location: string }) | undefined;
@@ -1118,7 +1377,7 @@ export const createStudio = async (req: Request, res: Response): Promise<any> =>
       return res.status(400).json({ ok: false, message: "No floor plan file provided" });
     }
 
-    let payload: CreateStudioPayload;
+    let payload: UploadFloorPlanAndExtractPayload;
     try {
       payload = JSON.parse(req.body.payload);
     } catch {
@@ -1129,36 +1388,39 @@ export const createStudio = async (req: Request, res: Response): Promise<any> =>
     if (!Array.isArray(rooms) || rooms.length === 0) {
       return res.status(400).json({ ok: false, message: "At least one room is required" });
     }
-    if (payload.projectId && !Types.ObjectId.isValid(payload.projectId)) {
-      return res.status(400).json({ ok: false, message: "Invalid project id" });
-    }
 
     const mmPerPixel =
       typeof payload.mmPerPixel === "number" && payload.mmPerPixel > 0 ? payload.mmPerPixel : undefined;
     const userId = (req as Request & { user?: { _id?: string } }).user?._id; // adapt to your auth middleware
 
-    // only whitelisted fields reach the model: status, lock, version and ids are never taken from the client
-    const studio = await StudioModel.create({
-      organizationId,
-      projectId: payload.projectId,
-      name: payload.name?.trim() || file.originalname.replace(/\.[^.]+$/, ""),
-      status: "draft",
-      floorPlan: {
-        type: file.mimetype === "application/pdf" ? "pdf" : "image",
-        url: file.location,
-        originalName: file.originalname,
+    // projectId, quoteName, organizationId, status, lock and version are never touched here:
+    // only the floor plan, extraction, import options and rooms are written.
+    const studio = await StudioModel.findOneAndUpdate(
+      { _id: studioId, organizationId },
+      {
+        $set: {
+          floorPlan: {
+            type: file.mimetype === "application/pdf" ? "pdf" : "image",
+            url: file.location,
+            originalName: file.originalname,
+          },
+          extraction: { model: "pdf-text-reader", warnings: [], extractedAt: new Date(), mmPerPixel },
+          importOptions: {
+            addOpenings: payload.importOptions?.addOpenings ?? true,
+            addFurniture: payload.importOptions?.addFurniture ?? false,
+          },
+          rooms,
+          ...(userId && { updatedBy: userId }),
+        },
       },
-      extraction: { model: "pdf-text-reader", warnings: [], extractedAt: new Date(), mmPerPixel },
-      importOptions: {
-        addOpenings: payload.importOptions?.addOpenings ?? true,
-        addFurniture: payload.importOptions?.addFurniture ?? false,
-      },
-      rooms,
-      createdBy: userId,
-      updatedBy: userId,
-    });
+      { new: true, runValidators: true }
+    );
 
-    return res.status(201).json({ ok: true, data: studio });
+    if (!studio) {
+      return res.status(404).json({ ok: false, message: "Studio not found" });
+    }
+
+    return res.status(200).json({ ok: true, message: "Floor plan saved", data: studio });
   } catch (error) {
     if (error instanceof MongooseError.ValidationError) {
       return res.status(400).json({
@@ -1167,7 +1429,104 @@ export const createStudio = async (req: Request, res: Response): Promise<any> =>
         errors: Object.entries(error.errors).map(([path, e]) => `${path}: ${e.message}`),
       });
     }
-    console.error("createStudio failed", error);
-    return res.status(500).json({ ok: false, message: "Could not create the studio" });
+    console.error("uploadFloorPlanAndExtractStudio failed", error);
+    return res.status(500).json({ ok: false, message: "Could not save the floor plan" });
+  }
+};
+
+
+//  UPDATE THE ALL THE TEXT CONTENT OF A SINGLE QUOTE
+
+
+const OBJECT_ID = /^[a-f\d]{24}$/i;
+
+/** Drops the client's `id` everywhere and keeps `_id` only when it is a real ObjectId,
+ *  so saved walls/items keep their ids and new ones (from uid()) get fresh ones from Mongo. */
+const cleanIds = (v: unknown): unknown => {
+  if (Array.isArray(v)) return v.map(cleanIds);
+  if (v && typeof v === "object" && !(v instanceof Date)) {
+    const out: Record<string, unknown> = {};
+    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+      if (k === "id") continue;
+      if (k === "_id") {
+        if (typeof val === "string" && OBJECT_ID.test(val)) out._id = val;
+        continue;
+      }
+      out[k] = cleanIds(val);
+    }
+    return out;
+  }
+  return v;
+};
+
+interface SaveStudioPayload {
+  rooms?: unknown[];
+  defaults?: { ceilingHeight?: number };
+  version?: number; // the version the editor loaded; used to catch two people saving over each other
+}
+
+export const saveStudioEdits = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { organizationId, studioId } = req.params;
+
+    if (!Types.ObjectId.isValid(organizationId)) {
+      return res.status(400).json({ ok: false, message: "Invalid organization id" });
+    }
+    if (!Types.ObjectId.isValid(studioId)) {
+      return res.status(400).json({ ok: false, message: "Invalid studio id" });
+    }
+
+    const body = req.body as SaveStudioPayload;
+    if (!Array.isArray(body.rooms) || body.rooms.length === 0) {
+      return res.status(400).json({ ok: false, message: "At least one room is required" });
+    }
+
+    const userId = (req as Request & { user?: { _id?: string } }).user?._id;
+    const hasVersion = typeof body.version === "number";
+
+    const ceiling = body.defaults?.ceilingHeight;
+    const $set: Record<string, unknown> = {
+      rooms: cleanIds(body.rooms),
+      ...(typeof ceiling === "number" && ceiling > 0 && { "defaults.ceilingHeight": ceiling }),
+      ...(userId && { updatedBy: userId }),
+    };
+
+    // Only rooms (and the ceiling default) are written. projectId, quoteNo, quoteName, status,
+    // floorPlan, extraction, importOptions, lock and createdBy can never change through this route.
+    const studio = await StudioModel.findOneAndUpdate(
+      {
+        _id: studioId,
+        organizationId,
+        "floorPlan.url": { $exists: true }, // the floor plan must be uploaded first
+        ...(hasVersion && { version: body.version }),
+      },
+      { $set, $inc: { version: 1 } },
+      { new: true, runValidators: true }
+    );
+
+    if (!studio) {
+      const current = await StudioModel.findOne({ _id: studioId, organizationId }).select("version floorPlan").lean();
+      if (!current) return res.status(404).json({ ok: false, message: "Studio not found" });
+      if (!current.floorPlan) {
+        return res.status(400).json({ ok: false, message: "Upload a floor plan before saving the studio" });
+      }
+      return res.status(409).json({
+        ok: false,
+        message: "This studio was changed somewhere else. Reload it before saving.",
+        currentVersion: current.version,
+      });
+    }
+
+    return res.status(200).json({ ok: true, message: "Studio saved", data: studio });
+  } catch (error) {
+    if (error instanceof MongooseError.ValidationError) {
+      return res.status(400).json({
+        ok: false,
+        message: "Studio data is invalid",
+        errors: Object.entries(error.errors).map(([path, e]) => `${path}: ${e.message}`),
+      });
+    }
+    console.error("saveStudioEdits failed", error);
+    return res.status(500).json({ ok: false, message: "Could not save the studio" });
   }
 };

@@ -222,7 +222,7 @@ export const verifyMetaWebhookV1 = async (req: Request, res: Response): Promise<
 export const MetaWebhookforAdV1 = async (req: Request, res: Response) => {
     try {
 
-        const {accountId} = req.params
+        const { accountId } = req.params
         const body = req.body;
 
         if (body.object === 'page') {
@@ -357,6 +357,169 @@ async function syncLeadsFromMeta(organization: any) {
     if (ops.length) await MetaAdLeadModel.bulkWrite(ops);
     return ops.length;
 }
+
+
+export const getMetaFormsV2 = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    try {
+        const { organizationId } = req.params;
+
+        if (!organizationId) {
+            res.status(400).json({
+                ok: false,
+                message: "Organization ID is required",
+            });
+            return;
+        }
+
+        // Fetch this organization's Meta account and explicitly include its token.
+        const account = await MetaAdAccountModel.findOne({
+            organizationId,
+        }).select("+metaAccessToken");
+
+        if (!account) {
+            res.status(404).json({
+                ok: false,
+                message: "Meta account not found for this organization",
+            });
+            return;
+        }
+
+        if (!account.facebookPageId || !account.metaAccessToken) {
+            res.status(400).json({
+                ok: false,
+                message: "Facebook Page ID or Meta access token is missing",
+            });
+            return;
+        }
+
+        // Fetch the Instant Forms belonging to the connected Facebook Page.
+        const response = await axios.get(
+            `${GRAPH}/${account.facebookPageId}/leadgen_forms`,
+            {
+                params: {
+                    fields: "id,name,status",
+                    limit: 100,
+                    access_token: account.metaAccessToken,
+                },
+            }
+        );
+
+       
+
+        res.status(200).json({
+            ok: true,
+            message: "Meta forms fetched successfully",
+            data: response.data.data.map(
+                (form: { id: string; name?: string; status?: string }) => ({
+                    id: form.id,
+                    name: form.name ?? "",
+                    status: form.status ?? "",
+                })
+            ),
+        });
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            console.error(
+                "getMetaFormsV2 Meta API error:",
+                error.response?.data ?? error.message
+            );
+        } else {
+            console.error("getMetaFormsV2 error:", error);
+        }
+
+        res.status(500).json({
+            ok: false,
+            message: "Failed to fetch Meta forms",
+        });
+    }
+};
+
+
+export const metaFormLeadsV2 = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { organizationId } = req.params;
+    const { formId } = req.query;
+
+    if (!organizationId) {
+      res.status(400).json({
+        ok: false,
+        message: "Organization ID is required",
+      });
+      return;
+    }
+
+    if (typeof formId !== "string" || !formId.trim()) {
+      res.status(400).json({
+        ok: false,
+        message: "Form ID is required",
+      });
+      return;
+    }
+
+    const settings = await MetaAdAccountModel.findOne({
+      organizationId,
+      facebookPageId: { $exists: true, $nin: [null, ""] },
+    }).select("+metaAccessToken");
+
+    if (!settings?.metaAccessToken || !settings.facebookPageId) {
+      res.status(400).json({
+        ok: false,
+        message: "Meta Page ID or Page Access Token is missing",
+      });
+      return;
+    }
+
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(
+      100,
+      Math.max(1, Number(req.query.limit) || 20)
+    );
+
+    const response = await axios.get(
+      `https://graph.facebook.com/v25.0/${formId.trim()}/leads`,
+      {
+        params: {
+          access_token: settings.metaAccessToken,
+          fields: "id,created_time,form_id,field_data,ad_id",
+          limit: 100,
+        },
+      }
+    );
+
+    const allLeads = response.data.data ?? [];
+    const start = (page - 1) * limit;
+    const leads = allLeads.slice(start, start + limit);
+
+    res.status(200).json({
+      ok: true,
+      message: "Meta form leads fetched successfully",
+      data: leads,
+      pagination: {
+        total: allLeads.length,
+        page,
+        limit,
+        totalPages: Math.ceil(allLeads.length / limit),
+      },
+    });
+  } catch (error: any) {
+    console.error(
+      "metaFormLeadsV2 error:",
+      error.response?.data ?? error.message
+    );
+
+    res.status(500).json({
+      ok: false,
+      message: "Failed to fetch Meta form leads",
+      error: error.response?.data?.error?.message ?? undefined,
+    });
+  }
+};
 
 export const getMetaAdLeadsv1 = async (req: Request, res: Response): Promise<any> => {
     try {

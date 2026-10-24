@@ -660,6 +660,8 @@ export interface IStudio extends Document {
   projectId?: Types.ObjectId;
   floorPlan?: IFile;
   extraction?: IExtractionInfo;
+  quoteNo: string;
+  quoteName: string;
   name: string;
   status: StudioStatus;
   schemaVersion: number;
@@ -881,7 +883,9 @@ const StudioSchema = new Schema<IStudio>(
   {
     organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel", required: true },
     projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel" },
-    floorPlan: { type: FileSchema , default : null},
+    floorPlan: { type: FileSchema, default: null },
+    quoteNo: { type: String, default: null },
+    quoteName: { type: String, default: null },
     extraction: {
       model: { type: String, trim: true, maxlength: 100 },
       warnings: { type: [String], default: [] },
@@ -914,6 +918,32 @@ const StudioSchema = new Schema<IStudio>(
 );
 
 StudioSchema.index({ organizationId: 1, projectId: 1 });
+
+
+// Pre-save hook to automatically generate the studio quote number
+StudioSchema.pre("save", async function () {
+  if (this.isNew && !this.quoteNo) {
+    const lastDoc = await mongoose
+      .model<IStudio>("StudioModel")
+      .findOne(
+        { organizationId: this.organizationId },
+        { quoteNo: 1 }
+      )
+      .sort({ createdAt: -1 });
+
+    let nextNumber = 1;
+
+    if (lastDoc?.quoteNo) {
+      const match = lastDoc.quoteNo.match(/^STU-(\d+)$/);
+
+      if (match) {
+        nextNumber = parseInt(match[1], 10) + 1;
+      }
+    }
+
+    this.quoteNo = `STU-${String(nextNumber).padStart(3, "0")}`;
+  }
+});
 
 const StudioModel = mongoose.model<IStudio>("StudioModel", StudioSchema);
 

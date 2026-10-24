@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { multiRoleAuthMiddleware } from '../../middlewares/multiRoleAuthMiddleware';
 import { imageUploadToS3, processUploadFiles } from '../../utils/s3Uploads/s3upload';
-import { createStudio, deleteStudio, getAllStudios, getStudioById } from '../../controllers/studios_controllers/studio.controller';
+import { uploadFloorPlanAndExtractStudio, deleteStudio, getAllStudios, getStudioById, createStudio, updateStudio, saveStudioEdits } from '../../controllers/studios_controllers/studio.controller';
 
 
 
@@ -21,10 +21,29 @@ const StudiosRoutes = Router();
 StudiosRoutes.post(
   "/:organizationId/create",
   multiRoleAuthMiddleware("owner", "staff", "CTO"),
-  imageUploadToS3.single("file"), // see the first note below
-  processUploadFiles,
   createStudio
 );
+
+StudiosRoutes.patch(
+  "/:organizationId/:studioId",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  updateStudio
+);
+
+StudiosRoutes.put(
+  "/:organizationId/:studioId/upload-floor-plan",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  imageUploadToS3.single("file"), // see the first note below
+  processUploadFiles,
+  uploadFloorPlanAndExtractStudio
+);
+
+StudiosRoutes.put(
+  "/:organizationId/:studioId/update",
+  multiRoleAuthMiddleware("owner", "staff", "CTO"),
+  saveStudioEdits
+);
+
 
 StudiosRoutes.get("/:organizationId", multiRoleAuthMiddleware("owner", "staff", "CTO"), getAllStudios);
 StudiosRoutes.get("/:organizationId/:studioId", multiRoleAuthMiddleware("owner", "staff", "CTO"), getStudioById);
