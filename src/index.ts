@@ -147,7 +147,8 @@ import premisesRoutes from './routers/eb_routes/premises.routes';
 import ebLogsRoutes from './routers/eb_routes/ebLog.routes';
 import tariffRoutes from './routers/eb_routes/tariff.routes';
 import MetaAdAccountRoutes from './routers/marketing_routes/lead_routes/metaAdAccount.route';
-import StudiosRoutes from './routers/studios_routes/studios.routes';
+import StudiosRoutes from './controllers/studios_controllers/new_v1/studio/studio.service';
+// import StudiosRoutes from './routers/studios_routes/studios.routes';
 
 
 // Extend Socket interface for custom properties
@@ -431,6 +432,7 @@ app.use('/api/cutlist', CutlistRoutes)
 app.use('/api/materialshop/document', MaterialShopRoutes)
 
 // studios api
+// app.use('/api/studios', StudiosRoutes)
 app.use('/api/studios', StudiosRoutes)
 
 

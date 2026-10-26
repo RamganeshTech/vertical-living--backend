@@ -53,7 +53,7 @@ const MaterialItemSchema = new Schema<MaterialItemDoc>({
   categoryId: { type: Schema.Types.ObjectId, ref: "MaterialCategoryModel", },
   materialType: { type: String },
   categoryName: { type: String, default: null },
-  data: { type: Schema.Types.Mixed, }, // { brand: "Sharon GOLD-BWP", thickness: "19mm", rate: 159.75, notes: "Waterproof" }
+  data: { type: Schema.Types.Mixed, }, // { brand: "Sharon GOLD-BWP", thickness: "19mm", rs: 159.75, notes: "Waterproof" }
   isExtractedByGemini: { type: Boolean, default: false }
 }, { timestamps: true });
 
