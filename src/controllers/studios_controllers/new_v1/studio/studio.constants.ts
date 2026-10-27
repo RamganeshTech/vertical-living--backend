@@ -1,3 +1,4 @@
+//  studio.constants.ts (backend)
 /**
  * Studio module — shared constant lists.
  * Every enum used by the Mongoose schema and by request validation lives here,

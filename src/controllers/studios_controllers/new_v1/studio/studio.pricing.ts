@@ -79,7 +79,15 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
     return furnitureItem.totalPrice;
   }
   const materialCost = roundCurrency(sumBreakdown(furnitureItem.priceBreakdown) + accessoriesTotal);
-  const labourCost = roundCurrency((materialCost * pricingSettings.labourPercentage) / 100);
+  // const labourCost = roundCurrency((materialCost * pricingSettings.labourPercentage) / 100);
+
+  const SQUARE_MILLIMETRES_PER_SQUARE_FOOT = 92903.04;
+  const labourArea = (furnitureItem.width * furnitureItem.height) / SQUARE_MILLIMETRES_PER_SQUARE_FOOT;
+  const labourCost =
+    furnitureItem.labourCategoryName && furnitureItem.labourRatePerSquareFoot > 0
+      ? roundCurrency(labourArea * furnitureItem.labourRatePerSquareFoot)
+      : roundCurrency((materialCost * pricingSettings.labourPercentage) / 100);
+
   const installationCost = roundCurrency((materialCost * pricingSettings.installationPercentage) / 100);
   const marginAmount = roundCurrency(((materialCost + labourCost + installationCost) * pricingSettings.marginPercentage) / 100);
   furnitureItem.materialCost = materialCost;

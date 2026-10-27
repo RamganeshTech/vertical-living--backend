@@ -1,3 +1,4 @@
+
 import type { Types } from "mongoose";
 import type {
   CEILING_TYPES,
@@ -71,6 +72,9 @@ export interface PricedFields {
   unitPrice: number;
   quantity: number;
   unit: PriceUnit;
+  labourCategoryName: string | null;
+  labourRatePerSquareFoot: number;
+  labourCost: number;
   totalPrice: number;
 }
 
@@ -268,6 +272,8 @@ export interface FurnitureItem extends PricedFields {
   isCustomSize: boolean;
   shutterFinishOverride: MaterialSelection | null;
   accessories: FurnitureAccessory[];
+  materialOverrides?: FurnitureMaterials | null;
+
   pricingMethod: FurniturePricingMethod;
   priceBreakdown: PriceBreakdownLine[];
   materialCost: number;

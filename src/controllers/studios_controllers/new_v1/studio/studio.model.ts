@@ -119,6 +119,10 @@ const pricedDefinition = {
   quantity: nonNegativeNumber(0),
   unit: enumField(PRICE_UNITS, "piece"),
   totalPrice: nonNegativeNumber(0),
+  usesMaterialItem: { type: Boolean, default: false },
+  labourCategoryName: { type: String, default: null },
+  labourRatePerSquareFoot: nonNegativeNumber(0),
+  labourCost: nonNegativeNumber(0),
 };
 
 const areaDefinition = {
@@ -338,7 +342,8 @@ const FurnitureItemSchema = new Schema<FurnitureItem>(
     pricingMethod: enumField(FURNITURE_PRICING_METHODS, "computedFromPanels"),
     priceBreakdown: { type: [PriceBreakdownLineSchema], default: [] },
     materialCost: nonNegativeNumber(0),
-    labourCost: nonNegativeNumber(0),
+    materialOverrides: { type: FurnitureMaterialsSchema, default: null },
+    // labourCost: nonNegativeNumber(0),
     installationCost: nonNegativeNumber(0),
     marginAmount: nonNegativeNumber(0),
     ...pricedDefinition,
