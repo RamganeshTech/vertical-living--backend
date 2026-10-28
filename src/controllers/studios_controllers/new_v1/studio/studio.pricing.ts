@@ -100,8 +100,12 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
 
 /** Lights are priced per item: every light record is one fitting, so quantity is 1 and the unit is "piece". */
 const recalculateLight = (light: StudioLight): number => {
-  light.quantity = 1;
-  light.unit = "piece";
+  // light.quantity = 1;
+  // light.unit = "piece";
+   if (!light.usesMaterialItem) {
+    light.quantity = 1;
+    light.unit = "piece";
+  }
   const fittingTotal = recalculateLine(light);
   const wiringTotal = recalculateLine(light.wiring);
   return light.isIncludedInQuote ? roundCurrency(fittingTotal + wiringTotal) : 0;

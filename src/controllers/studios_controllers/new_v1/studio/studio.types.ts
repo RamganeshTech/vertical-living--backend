@@ -201,6 +201,8 @@ export interface Opening extends PricedFields {
   hasGrill: boolean;
   isIncludedInQuote: boolean;
   priceBreakdown: PriceBreakdownLine[];
+    materialSelection?: MaterialSelection | null;   // add this
+
 }
 
 export interface Skirting extends PricedFields {

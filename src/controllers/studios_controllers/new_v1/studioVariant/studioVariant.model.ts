@@ -239,6 +239,7 @@ const OpeningSchema = new Schema<Opening>(
     hasGrill: { type: Boolean, default: false },
     isIncludedInQuote: { type: Boolean, default: false },
     priceBreakdown: { type: [PriceBreakdownLineSchema], default: [] },
+    materialSelection: { type: MaterialSelectionSchema, default: null },
     ...pricedDefinition,
   },
   withId
