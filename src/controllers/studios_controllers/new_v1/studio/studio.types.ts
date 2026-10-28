@@ -72,6 +72,7 @@ export interface PricedFields {
   unitPrice: number;
   quantity: number;
   unit: PriceUnit;
+  usesMaterialItem?: boolean;
   labourCategoryName: string | null;
   labourRatePerSquareFoot: number;
   labourCost: number;
