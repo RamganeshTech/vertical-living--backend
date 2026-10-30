@@ -66,14 +66,14 @@ export const getMaterialItemsByCategoryForQuote = async (req: Request, res: Resp
 
 
     
-    const cacheKey = `rate-config-admin-item:${organizationId}:${categoryName}`;
+    // const cacheKey = `rate-config-admin-item:${organizationId}:${categoryName}`;
 
 
-    // ✅ 2. Try to get from Redis
-    const cachedData = await redisClient.get(cacheKey);
-    if (cachedData) {
-        return res.status(200).json({ ok: true, message: "Items fetched from cache", data: JSON.parse(cachedData) });
-    }
+    // // ✅ 2. Try to get from Redis
+    // const cachedData = await redisClient.get(cacheKey);
+    // if (cachedData) {
+    //     return res.status(200).json({ ok: true, message: "Items fetched from cache", data: JSON.parse(cachedData) });
+    // }
 
 
     //     console.log("im gettni called")
@@ -89,7 +89,7 @@ export const getMaterialItemsByCategoryForQuote = async (req: Request, res: Resp
     });
     // console.log("item", items)
 
-    await redisClient.set(cacheKey, JSON.stringify(items), {EX:60 * 10});
+    // await redisClient.set(cacheKey, JSON.stringify(items), {EX:60 * 10});
 
   
     return res.status(200).json({
