@@ -157,7 +157,38 @@ export const getLabourItemsByCategory = async (req: Request, res: Response): Pro
 
 
 
+//  used to get the labrou sqft rate based on the cateogryId
+export const getSingleLabourRateConfigSqftRate = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { organizationId, categoryId } = req.params;
 
+    if (!organizationId) {
+      return res.status(400).json({
+        ok: false,
+        message: "organizationId is required",
+      });
+    }
+
+    const item = await LabourRateModel.findOne({ organizationId, categoryId}).lean();
+
+    // const salary = Object.entries(item?.data || {}).reduce((acc, [key, value]) => acc + value, 0);
+    // const salary = items.reduce((acc, item) => acc + Number(item?.data?.Rs || 0), 0);
+    const salary = item?.data?.Rs || 0;
+
+    return res.status(200).json({
+      ok: true,
+      message: "labours salary successfully",
+      data: salary || 0,
+    });
+  } catch (error: any) {
+    console.error("Error fetching labrou items:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
 
 // GET CONTORLELR TO GET ALL THE FIELDS AND  CLACUALTE AS SNIGLE LABOR COST
 //  IT IS USED INT HE OLD VERION  (NOT TEMPLATES VERSION)

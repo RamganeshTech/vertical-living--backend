@@ -65,6 +65,7 @@ import type {
   StudioRate,
   Wall,
   WallLayer,
+  StudioLabourCosts,
 } from "./studio.types";
 
 /* ------------------------------------------------------------------ */
@@ -550,6 +551,17 @@ const ExtractionDetailsSchema = new Schema<ExtractionDetails>(
   withoutId
 );
 
+const StudioLabourCost = new Schema<StudioLabourCosts>(
+  {
+    categoryId: { type: Schema.Types.ObjectId, ref: "LabourRateCategoryModel", default: null },
+    categoryName: { type: String,  default: null },
+    ratePerSquareFoot: { type: Number,  default: 0 },
+    totalSquareFeet: { type: Number,  default: 0 },   // computed, stored for the record
+    totalCost: { type: Number,  default: 0 },         // computed, stored for the record
+  },
+  withId
+)
+
 const StudioSchema = new Schema<IStudio>(
   {
     organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel", required: true },
@@ -587,6 +599,7 @@ const StudioSchema = new Schema<IStudio>(
       defaultLightingMode: enumField(LIGHTING_MODES, "day"),
     },
     rooms: { type: [RoomSchema], default: [] },
+    labourCost: { type: [StudioLabourCost], default: [] },
     totals: {
       subtotal: nonNegativeNumber(0),
       adjustmentAmount: { type: Number, default: 0 },

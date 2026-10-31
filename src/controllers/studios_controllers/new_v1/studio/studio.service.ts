@@ -451,6 +451,8 @@ export const updateStudio = async (request: Request, response: StudioApiResponse
       }
     }
     if (changes.studioRates) studio.set("studioRates", changes.studioRates);
+    if (changes.labourCost) studio.set("labourCost", changes.labourCost);
+
     let restoredPriceCount = 0;
     if (changes.rooms) {
       if (isPriceLocked) restoredPriceCount = keepLockedPrices(studio.toObject<IStudio>().rooms, changes.rooms);

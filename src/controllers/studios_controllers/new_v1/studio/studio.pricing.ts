@@ -1,3 +1,4 @@
+// studio.pricing.ts
 /**
  * Pricing integrity for a studio.
  *
@@ -79,14 +80,28 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
     return furnitureItem.totalPrice;
   }
   const materialCost = roundCurrency(sumBreakdown(furnitureItem.priceBreakdown) + accessoriesTotal);
-  // const labourCost = roundCurrency((materialCost * pricingSettings.labourPercentage) / 100);
 
-  const SQUARE_MILLIMETRES_PER_SQUARE_FOOT = 92903.04;
-  const labourArea = (furnitureItem.width * furnitureItem.height) / SQUARE_MILLIMETRES_PER_SQUARE_FOOT;
-  const labourCost =
-    furnitureItem.labourCategoryName && furnitureItem.labourRatePerSquareFoot > 0
-      ? roundCurrency(labourArea * furnitureItem.labourRatePerSquareFoot)
-      : roundCurrency((materialCost * pricingSettings.labourPercentage) / 100);
+  //  before 
+  // // // const labourCost = roundCurrency((materialCost * pricingSettings.labourPercentage) / 100);
+  // const SQUARE_MILLIMETRES_PER_SQUARE_FOOT = 92903.04;
+  // const labourArea = (furnitureItem.width * furnitureItem.height) / SQUARE_MILLIMETRES_PER_SQUARE_FOOT;
+  // const labourCost =
+  //   furnitureItem.labourCategoryName && furnitureItem.labourRatePerSquareFoot > 0
+  //     ? roundCurrency(labourArea * furnitureItem.labourRatePerSquareFoot)
+  //     : roundCurrency((materialCost * pricingSettings.labourPercentage) / 100);
+
+
+  // after 
+  // The frontend knows the furniture's build (bed/table/storage) and works out the correct labour
+  // area for it; the backend has no furniture catalog to re-derive that shape from width/height alone,
+  // so it trusts the labourCost the frontend sent, the same way it already trusts unitPrice everywhere else.
+  // const labourCost =
+  //   furnitureItem.labourCategoryName && furnitureItem.labourRatePerSquareFoot > 0
+  //     ? roundCurrency(furnitureItem.labourCost)
+  //     : roundCurrency((materialCost * pricingSettings.labourPercentage) / 100);
+
+
+  const labourCost = 0;
 
   const installationCost = roundCurrency((materialCost * pricingSettings.installationPercentage) / 100);
   const marginAmount = roundCurrency(((materialCost + labourCost + installationCost) * pricingSettings.marginPercentage) / 100);
@@ -102,7 +117,7 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
 const recalculateLight = (light: StudioLight): number => {
   // light.quantity = 1;
   // light.unit = "piece";
-   if (!light.usesMaterialItem) {
+  if (!light.usesMaterialItem) {
     light.quantity = 1;
     light.unit = "piece";
   }
@@ -151,9 +166,11 @@ export const recalculateRoom = (room: Room, pricingSettings: PricingSettings): n
 
 /** Recalculates every line, room and the project totals in place, and returns the totals. */
 export const recalculateStudioPricing = (
-  studio: { rooms: Room[]; pricingSettings: PricingSettings; totals: StudioTotals }
+  studio: { rooms: Room[]; pricingSettings: PricingSettings; totals: StudioTotals, labourCost?: { totalCost: number }[] }
 ): StudioTotals => {
-  const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0));
+  // const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0));
+  const labourTotal = roundCurrency((studio.labourCost ?? []).reduce((sum, row) => sum + row.totalCost, 0));
+const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0) + labourTotal);
   // The project adjustment (+ or −) applies to the whole subtotal, before GST.
   const adjustmentAmount = roundCurrency((subtotal * (studio.pricingSettings.projectAdjustmentPercentage ?? 0)) / 100);
   const taxableAmount = roundCurrency(subtotal + adjustmentAmount);

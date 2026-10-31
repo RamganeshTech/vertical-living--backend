@@ -6,7 +6,8 @@ import { createLabourCategory,   createLabourItems,
   getLabourCategories,
   getLabourItemsByCategory,
   getSingleLabourRateConfigCost,
-  getLabourSalaryByCategoryName, } from "../../../controllers/Quote Controllers/RateConfig Controller/labourRateConfig.controllers";
+  getLabourSalaryByCategoryName,
+  getSingleLabourRateConfigSqftRate, } from "../../../controllers/Quote Controllers/RateConfig Controller/labourRateConfig.controllers";
 import { multiRoleAuthMiddleware } from "../../../middlewares/multiRoleAuthMiddleware";
 
 
@@ -20,6 +21,9 @@ LabourRateConfigRoutes.get("/categories/:organizationId/:categoryId/items", mult
 //  old version of getting salary of single person by category Id
 //  used in the quotes
 LabourRateConfigRoutes.get("/categories/:organizationId/singlesalary/:categoryId", multiRoleAuthMiddleware("owner","CTO", "staff"),  getSingleLabourRateConfigCost);
+LabourRateConfigRoutes.get("/categories/:organizationId/sqft-rate/:categoryId",
+   multiRoleAuthMiddleware("owner","CTO", "staff"), 
+ getSingleLabourRateConfigSqftRate);
 
 //  new version of getting salary of single person by category name 
 LabourRateConfigRoutes.get("/categories/:organizationId/singlesalary",  multiRoleAuthMiddleware("owner","CTO", "staff"), getLabourSalaryByCategoryName);

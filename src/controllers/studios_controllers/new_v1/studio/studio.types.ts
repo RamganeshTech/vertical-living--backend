@@ -202,7 +202,7 @@ export interface Opening extends PricedFields {
   hasGrill: boolean;
   isIncludedInQuote: boolean;
   priceBreakdown: PriceBreakdownLine[];
-    materialSelection?: MaterialSelection | null;   // add this
+  materialSelection?: MaterialSelection | null;   // add this
 
 }
 
@@ -496,6 +496,14 @@ export interface EditLock {
   expiresAt: Date | null;
 }
 
+export interface StudioLabourCosts {
+  categoryId: Types.ObjectId
+  categoryName: string | null;
+  ratePerSquareFoot: number;
+  totalSquareFeet: number;   // computed, stored for the record
+  totalCost: number;         // computed, stored for the record
+}
+
 export interface IStudio {
   _id: Types.ObjectId;
   organizationId: Types.ObjectId;
@@ -517,6 +525,8 @@ export interface IStudio {
   quotationDetails: QuotationDetails;
   viewerSettings: ViewerSettings;
   rooms: Room[];
+
+  labourCost: StudioLabourCosts[]
   totals: StudioTotals;
   lock: EditLock;
   createdBy: Types.ObjectId | null;

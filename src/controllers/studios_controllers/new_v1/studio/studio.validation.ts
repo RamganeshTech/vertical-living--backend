@@ -31,6 +31,7 @@ import type {
   StudioSettings,
   StudioRateSource,
   StudioStatus,
+  StudioLabourCosts,
 } from "./studio.types";
 
 export type ParseResult<ParsedValue> = { isValid: true; value: ParsedValue } | { isValid: false; errors: string[] };
@@ -118,6 +119,9 @@ export interface UpdateStudioPayload {
   pricingSettings?: Partial<PricingSettings>;
   viewerSettings?: { shadowCastingLightLimit?: number; defaultLightingMode?: LightingMode };
   studioRates?: StudioRatePayload[];
+  // labourCost?: StudioLabourCosts[];
+  labourCost?: JsonRecord[];
+
   quotationDetails?: QuotationDetails;
   rooms?: JsonRecord[];
 }
@@ -360,6 +364,10 @@ export const parseStudioSettingsPayload = (body: unknown): ParseResult<StudioSet
     staffAdjustmentLimits: { minimumPercentage: isFiniteNumber(minimumPercentage) ? minimumPercentage : 0, maximumPercentage: isFiniteNumber(maximumPercentage) ? maximumPercentage : 0 },
     production: { inHouseShutterFinishes: finishes },
   };
+
+
+
+
   if (errors.length > 0) return { isValid: false, errors };
   return { isValid: true, value: settings };
 };
@@ -414,6 +422,10 @@ export const parseUpdateStudioPayload = (body: unknown): ParseResult<UpdateStudi
   if (body.rooms !== undefined) {
     if (!Array.isArray(body.rooms) || !body.rooms.every(isRecord)) errors.push("rooms must be an array of room objects");
     else parsedPayload.rooms = removeClientGeneratedIds(body.rooms) as JsonRecord[];
+  }
+  if (body.labourCost !== undefined) {
+    if (!Array.isArray(body.labourCost) || !body.labourCost.every(isRecord)) errors.push("labourCost must be an array of labour cost objects");
+    else parsedPayload.labourCost = body.labourCost  as JsonRecord[];
   }
   if (errors.length > 0) return { isValid: false, errors };
   return { isValid: true, value: parsedPayload };
