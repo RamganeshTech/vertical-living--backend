@@ -607,11 +607,17 @@ const StudioSchema = new Schema<IStudio>(
       grandTotal: nonNegativeNumber(0),
     },
     lock: {
-      userId: { type: Schema.Types.ObjectId, ref: "UserModel", default: null },
+      lockerModel: {type:String, default:null},
+      userId: { type: Schema.Types.ObjectId, refPath: "lockerModel", default: null },
       expiresAt: { type: Date, default: null },
     },
-    createdBy: { type: Schema.Types.ObjectId, ref: "UserModel", default: null },
-    updatedBy: { type: Schema.Types.ObjectId, ref: "UserModel", default: null },
+
+    
+    createrModel: {type:String, default:null},
+    createdBy: { type: Schema.Types.ObjectId, refPath: "createrModel", default: null },
+
+    updaterModel: { type: String, default: null },
+    updatedBy: { type: Schema.Types.ObjectId, refPath: "updaterModel", default: null },
   },
   { timestamps: true, optimisticConcurrency: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

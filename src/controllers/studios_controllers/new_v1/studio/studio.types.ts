@@ -493,6 +493,7 @@ export interface StudioSettings {
 
 export interface EditLock {
   userId: Types.ObjectId | null;
+  lockerModel:string
   expiresAt: Date | null;
 }
 
@@ -530,7 +531,9 @@ export interface IStudio {
   totals: StudioTotals;
   lock: EditLock;
   createdBy: Types.ObjectId | null;
+  createrModel: string | null;
   updatedBy: Types.ObjectId | null;
+  updaterModel: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

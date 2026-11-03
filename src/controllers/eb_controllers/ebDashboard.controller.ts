@@ -273,9 +273,13 @@ const computePremisesPeriodUsage = async (
     // no reading at all, or the latest reading is older than the period -> nothing recorded in it
     if (!endLog || endLog.date < start) return empty("no_readings_in_period");
 
-    let startLog = await EBLogModel.findOne({ organizationId, premisesId, date: { $lt: start } })
-        .sort({ date: -1, time: -1 })
-        .lean();
+    // let startLog = await EBLogModel.findOne({ organizationId, premisesId, date: { $lt: start } })
+    //     .sort({ date: -1, time: -1 })
+    //     .lean();
+
+    let startLog = await EBLogModel.findOne({ organizationId, premisesId, date: { $gte: start, $lte: end } })
+    .sort({ date: 1, time: 1 })
+    .lean();
 
     if (!startLog) {
         startLog = await EBLogModel.findOne({ organizationId, premisesId, date: { $gte: start, $lte: end } })
