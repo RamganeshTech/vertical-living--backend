@@ -65,11 +65,13 @@ import type {
   StudioRate,
   Wall,
   WallLayer,
+  StudioLabourCosts,
+  IAdditionalCharges,
 } from "../studio/studio.types";
 
 
 export interface IStudioVariant extends IStudio {
-    studioId: Types.ObjectId
+  studioId: Types.ObjectId
 }
 
 /* ------------------------------------------------------------------ */
@@ -147,6 +149,11 @@ const MaterialSelectionSchema = new Schema<MaterialSelection>(
     colour: { type: String, trim: true, default: "" },
     brandName: trimmedString("", 200),
     textureImageUrl: { type: String, trim: true, default: "", maxlength: 2000 },
+    // Swatch picked from the Material Library (librarydesign.model.ts). When set, the 3D viewer
+    // should use its image as the texture instead of textureImageUrl. Left textureImageUrl untouched,
+    // and did not remove it, so this can be reverted by just not using libraryDesignId.
+    libraryDesignId: { type: Schema.Types.ObjectId, ref: "LibraryDesign", default: null },
+
     rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "RateConfigurationModel", default: null },
     rateConfigurationItemName: trimmedString(""),
     unitPrice: nonNegativeNumber(0),
@@ -553,13 +560,44 @@ const ExtractionDetailsSchema = new Schema<ExtractionDetails>(
   withoutId
 );
 
+
+
+
+const additionalChargeSchema = new Schema<IAdditionalCharges>(
+  {
+    workName: { type: String, trim: true,
+    },
+    amount: {
+       type: Number,
+      validate: {
+        validator: Number.isInteger,
+        message: "amount must be an integer",
+      },
+    },
+  },
+  withId
+);
+
+
+
+const StudioLabourCost = new Schema<StudioLabourCosts>(
+  {
+    categoryId: { type: Schema.Types.ObjectId, ref: "LabourRateCategoryModel", default: null },
+    categoryName: { type: String, default: null },
+    ratePerSquareFoot: { type: Number, default: 0 },
+    totalSquareFeet: { type: Number, default: 0 },   // computed, stored for the record
+    totalCost: { type: Number, default: 0 },         // computed, stored for the record
+  },
+  withId
+)
+
 const StudioVariantSchema = new Schema<IStudioVariant>(
   {
     organizationId: { type: Schema.Types.ObjectId, ref: "OrganizationModel", required: true },
     projectId: { type: Schema.Types.ObjectId, ref: "ProjectModel", default: null },
     quoteNo: { type: String, trim: true, default: "" },
     studioId: { type: Schema.Types.ObjectId, ref: "StudioModel", required: true },
-    quoteName: { type: String, trim: true,  maxlength: MAXIMUM_QUOTE_NAME_LENGTH },
+    quoteName: { type: String, trim: true, maxlength: MAXIMUM_QUOTE_NAME_LENGTH },
     status: enumField(STUDIO_STATUSES, "draft"),
     schemaVersion: { type: Number, default: STUDIO_SCHEMA_VERSION },
     version: { type: Number, min: 1, default: 1 },
@@ -578,6 +616,7 @@ const StudioVariantSchema = new Schema<IStudioVariant>(
       projectAdjustmentPercentage: { type: Number, min: PROJECT_ADJUSTMENT_BOUNDS.minimumPercentage, max: PROJECT_ADJUSTMENT_BOUNDS.maximumPercentage, default: 0 },
     },
     studioRates: { type: [StudioRateSchema], default: [] },
+
     priceLock: {
       isLocked: { type: Boolean, default: false },
       lockedAt: { type: Date, default: null },
@@ -591,6 +630,8 @@ const StudioVariantSchema = new Schema<IStudioVariant>(
       defaultLightingMode: enumField(LIGHTING_MODES, "day"),
     },
     rooms: { type: [RoomSchema], default: [] },
+    additionalCharges: { type: [additionalChargeSchema], default: [] },
+    labourCost: { type: [StudioLabourCost], default: [] },
     totals: {
       subtotal: nonNegativeNumber(0),
       adjustmentAmount: { type: Number, default: 0 },

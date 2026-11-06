@@ -66,6 +66,7 @@ import type {
   Wall,
   WallLayer,
   StudioLabourCosts,
+  IAdditionalCharges,
 } from "./studio.types";
 
 /* ------------------------------------------------------------------ */
@@ -144,6 +145,10 @@ const MaterialSelectionSchema = new Schema<MaterialSelection>(
     colour: { type: String, trim: true, default: "" },
     brandName: trimmedString("", 200),
     textureImageUrl: { type: String, trim: true, default: "", maxlength: 2000 },
+    // Swatch picked from the Material Library (librarydesign.model.ts). When set, the 3D viewer
+    // should use its image as the texture instead of textureImageUrl. Left textureImageUrl untouched,
+    // and did not remove it, so this can be reverted by just not using libraryDesignId.
+    libraryDesignId: { type: Schema.Types.ObjectId, ref: "LibraryDesign", default: null },
     rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "RateConfigurationModel", default: null },
     rateConfigurationItemName: trimmedString(""),
     unitPrice: nonNegativeNumber(0),
@@ -551,13 +556,30 @@ const ExtractionDetailsSchema = new Schema<ExtractionDetails>(
   withoutId
 );
 
+
+const additionalChargeSchema = new Schema<IAdditionalCharges>(
+  {
+    workName: { type: String, trim: true,
+    },
+    amount: {
+       type: Number,
+      validate: {
+        validator: Number.isInteger,
+        message: "amount must be an integer",
+      },
+    },
+  },
+  withId
+);
+
+
 const StudioLabourCost = new Schema<StudioLabourCosts>(
   {
     categoryId: { type: Schema.Types.ObjectId, ref: "LabourRateCategoryModel", default: null },
-    categoryName: { type: String,  default: null },
-    ratePerSquareFoot: { type: Number,  default: 0 },
-    totalSquareFeet: { type: Number,  default: 0 },   // computed, stored for the record
-    totalCost: { type: Number,  default: 0 },         // computed, stored for the record
+    categoryName: { type: String, default: null },
+    ratePerSquareFoot: { type: Number, default: 0 },
+    totalSquareFeet: { type: Number, default: 0 },   // computed, stored for the record
+    totalCost: { type: Number, default: 0 },         // computed, stored for the record
   },
   withId
 )
@@ -600,6 +622,7 @@ const StudioSchema = new Schema<IStudio>(
     },
     rooms: { type: [RoomSchema], default: [] },
     labourCost: { type: [StudioLabourCost], default: [] },
+    additionalCharges: {type: [additionalChargeSchema], default:[]},
     totals: {
       subtotal: nonNegativeNumber(0),
       adjustmentAmount: { type: Number, default: 0 },
@@ -607,13 +630,13 @@ const StudioSchema = new Schema<IStudio>(
       grandTotal: nonNegativeNumber(0),
     },
     lock: {
-      lockerModel: {type:String, default:null},
+      lockerModel: { type: String, default: null },
       userId: { type: Schema.Types.ObjectId, refPath: "lockerModel", default: null },
       expiresAt: { type: Date, default: null },
     },
 
-    
-    createrModel: {type:String, default:null},
+
+    createrModel: { type: String, default: null },
     createdBy: { type: Schema.Types.ObjectId, refPath: "createrModel", default: null },
 
     updaterModel: { type: String, default: null },

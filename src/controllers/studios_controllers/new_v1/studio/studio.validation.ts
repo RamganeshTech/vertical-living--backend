@@ -121,6 +121,7 @@ export interface UpdateStudioPayload {
   studioRates?: StudioRatePayload[];
   // labourCost?: StudioLabourCosts[];
   labourCost?: JsonRecord[];
+  additionalCharges?: JsonRecord[];
 
   quotationDetails?: QuotationDetails;
   rooms?: JsonRecord[];
@@ -425,8 +426,17 @@ export const parseUpdateStudioPayload = (body: unknown): ParseResult<UpdateStudi
   }
   if (body.labourCost !== undefined) {
     if (!Array.isArray(body.labourCost) || !body.labourCost.every(isRecord)) errors.push("labourCost must be an array of labour cost objects");
-    else parsedPayload.labourCost = body.labourCost  as JsonRecord[];
+    else parsedPayload.labourCost = body.labourCost as JsonRecord[];
   }
+
+  if (body.additionalCharges !== undefined) {
+    if (!Array.isArray(body.additionalCharges) || !body.additionalCharges.every(isRecord)) {
+      errors.push("additionalCharges must be an array of additional charge objects");
+    } else {
+      parsedPayload.additionalCharges = body.additionalCharges as JsonRecord[];
+    }
+  }
+
   if (errors.length > 0) return { isValid: false, errors };
   return { isValid: true, value: parsedPayload };
 };

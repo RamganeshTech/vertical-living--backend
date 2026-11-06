@@ -1,4 +1,4 @@
-
+  
 import type { Types } from "mongoose";
 import type {
   CEILING_TYPES,
@@ -96,6 +96,7 @@ export interface MaterialSelection {
   /** Brand and catalogue image of the chosen swatch (empty for built-in colours). */
   brandName: string;
   textureImageUrl: string;
+  libraryDesignId: Types.ObjectId
   rateConfigurationItemId: Types.ObjectId | null;
   rateConfigurationItemName: string;
   unitPrice: number;
@@ -384,6 +385,11 @@ export interface PricingSettings {
   projectAdjustmentPercentage: number;
 }
 
+
+export interface IAdditionalCharges {
+  workName:string, 
+  amount:number;
+}
 export interface StudioTotals {
   /** Sum of the rooms. */
   subtotal: number;
@@ -528,6 +534,7 @@ export interface IStudio {
   rooms: Room[];
 
   labourCost: StudioLabourCosts[]
+  additionalCharges: IAdditionalCharges[]
   totals: StudioTotals;
   lock: EditLock;
   createdBy: Types.ObjectId | null;

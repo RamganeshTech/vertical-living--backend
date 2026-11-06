@@ -42,6 +42,7 @@ import type { StudioRatePayload } from "./studio.validation";
 import type {
   ApiErrorResponse,
   ApiSuccessResponse,
+  IAdditionalCharges,
   IStudio,
   StudioListItem,
   StudioListResult,
@@ -387,6 +388,19 @@ export const listStudios = async (request: Request, response: StudioApiResponse<
 /* Update                                                              */
 /* ------------------------------------------------------------------ */
 
+// const mergeAdditionalCharges = (
+//   existing: IAdditionalCharges[] = [],
+//   incoming: IAdditionalCharges[]
+// ): IAdditionalCharges[] => {
+//   const merged = [...existing];
+//   for (const charge of incoming) {
+//     const matchIndex = merged.findIndex((item) => item.workName === charge.workName);
+//     if (matchIndex >= 0) merged[matchIndex] = { ...merged[matchIndex], ...charge };
+//     else merged.push(charge);
+//   }
+//   return merged;
+// };
+
 export const updateStudio = async (request: Request, response: StudioApiResponse<StudioDocument>): Promise<void> => {
   try {
     const routeIds = readRouteIds(request, response, true);
@@ -452,6 +466,16 @@ export const updateStudio = async (request: Request, response: StudioApiResponse
     }
     if (changes.studioRates) studio.set("studioRates", changes.studioRates);
     if (changes.labourCost) studio.set("labourCost", changes.labourCost);
+    // if (changes.additionalCharges) {
+    //   studio.set(
+    //     "additionalCharges",
+    //     mergeAdditionalCharges(studio.toObject<IStudio>().additionalCharges, changes.additionalCharges as unknown as  IAdditionalCharges[])
+    //   );
+    // }
+
+    if (changes.additionalCharges) {
+      studio.set("additionalCharges", changes.additionalCharges as unknown as IAdditionalCharges[]);
+    }
 
     let restoredPriceCount = 0;
     if (changes.rooms) {

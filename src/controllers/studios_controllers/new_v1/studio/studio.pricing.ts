@@ -166,10 +166,14 @@ export const recalculateRoom = (room: Room, pricingSettings: PricingSettings): n
 
 /** Recalculates every line, room and the project totals in place, and returns the totals. */
 export const recalculateStudioPricing = (
-  studio: { rooms: Room[]; pricingSettings: PricingSettings; totals: StudioTotals, labourCost?: { totalCost: number }[] }
+  studio: { rooms: Room[]; pricingSettings: PricingSettings; totals: StudioTotals, labourCost?: { totalCost: number }[] ;  additionalCharges?: { amount?: number }[] }
 ): StudioTotals => {
   // const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0));
   const labourTotal = roundCurrency((studio.labourCost ?? []).reduce((sum, row) => sum + row.totalCost, 0));
+  const additionalChargesTotal = roundCurrency(
+  (studio.additionalCharges ?? []).reduce((sum, charge) => sum + (charge.amount ?? 0), 0)
+);
+
 const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0) + labourTotal);
   // The project adjustment (+ or −) applies to the whole subtotal, before GST.
   const adjustmentAmount = roundCurrency((subtotal * (studio.pricingSettings.projectAdjustmentPercentage ?? 0)) / 100);
@@ -178,7 +182,8 @@ const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runni
   studio.totals.subtotal = subtotal;
   studio.totals.adjustmentAmount = adjustmentAmount;
   studio.totals.gstAmount = gstAmount;
-  studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount);
+  // studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount);
+  studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount + additionalChargesTotal);
   return { subtotal, adjustmentAmount, gstAmount, grandTotal: studio.totals.grandTotal };
 };
 
