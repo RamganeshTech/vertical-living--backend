@@ -124,7 +124,7 @@ export const MAXIMUM_SHARE_LINKS = 20;
 /** Defaults applied when a studio is created. Percentages are editable per studio. */
 export const DEFAULT_PRICING_SETTINGS = {
   labourPercentage: 12,
-  installationPercentage: 8,
+  // installationPercentage: 8,
   marginPercentage: 30,
   gstPercentage: 18,
   /** Raise or lower the whole project (before GST); staff stay within the limits in Studio settings. */

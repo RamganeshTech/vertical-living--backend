@@ -31,7 +31,7 @@ import type {
   StudioSettings,
   StudioRateSource,
   StudioStatus,
-  StudioLabourCosts,
+  // StudioLabourCosts,
 } from "./studio.types";
 
 export type ParseResult<ParsedValue> = { isValid: true; value: ParsedValue } | { isValid: false; errors: string[] };
@@ -120,7 +120,7 @@ export interface UpdateStudioPayload {
   viewerSettings?: { shadowCastingLightLimit?: number; defaultLightingMode?: LightingMode };
   studioRates?: StudioRatePayload[];
   // labourCost?: StudioLabourCosts[];
-  labourCost?: JsonRecord[];
+  // labourCost?: JsonRecord[];
   additionalCharges?: JsonRecord[];
 
   quotationDetails?: QuotationDetails;
@@ -255,7 +255,7 @@ export const parsePercentageGroup = (candidate: unknown, errors: string[], field
     return undefined;
   }
   const parsedSettings: Partial<PricingSettings> = {};
-  const settingNames: (keyof PricingSettings)[] = ["labourPercentage", "installationPercentage", "marginPercentage", "gstPercentage", "projectAdjustmentPercentage"];
+  const settingNames: (keyof PricingSettings)[] = ["labourPercentage", "marginPercentage", "gstPercentage", "projectAdjustmentPercentage"];
   for (const settingName of settingNames) {
     const settingValue = candidate[settingName];
     if (settingValue === undefined) continue;
@@ -424,10 +424,12 @@ export const parseUpdateStudioPayload = (body: unknown): ParseResult<UpdateStudi
     if (!Array.isArray(body.rooms) || !body.rooms.every(isRecord)) errors.push("rooms must be an array of room objects");
     else parsedPayload.rooms = removeClientGeneratedIds(body.rooms) as JsonRecord[];
   }
-  if (body.labourCost !== undefined) {
-    if (!Array.isArray(body.labourCost) || !body.labourCost.every(isRecord)) errors.push("labourCost must be an array of labour cost objects");
-    else parsedPayload.labourCost = body.labourCost as JsonRecord[];
-  }
+ 
+    //  removed recently because the laboru rates are applied for each furnitures
+  // if (body.labourCost !== undefined) {
+  //   if (!Array.isArray(body.labourCost) || !body.labourCost.every(isRecord)) errors.push("labourCost must be an array of labour cost objects");
+  //   else parsedPayload.labourCost = body.labourCost as JsonRecord[];
+  // }
 
   if (body.additionalCharges !== undefined) {
     if (!Array.isArray(body.additionalCharges) || !body.additionalCharges.every(isRecord)) {

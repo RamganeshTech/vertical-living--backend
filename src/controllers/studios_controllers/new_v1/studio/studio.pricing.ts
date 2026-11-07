@@ -101,9 +101,12 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
   //     : roundCurrency((materialCost * pricingSettings.labourPercentage) / 100);
 
 
-  const labourCost = 0;
+  // const labourCost = 0;
 
-  const installationCost = roundCurrency((materialCost * pricingSettings.installationPercentage) / 100);
+    const labourCost = roundCurrency(furnitureItem.labourCost);
+
+  // const installationCost = roundCurrency((materialCost * pricingSettings.installationPercentage) / 100);
+  const installationCost = 0; // installation is no longer a percentage-based charge
   const marginAmount = roundCurrency(((materialCost + labourCost + installationCost) * pricingSettings.marginPercentage) / 100);
   furnitureItem.materialCost = materialCost;
   furnitureItem.labourCost = labourCost;
@@ -169,12 +172,13 @@ export const recalculateStudioPricing = (
   studio: { rooms: Room[]; pricingSettings: PricingSettings; totals: StudioTotals, labourCost?: { totalCost: number }[]; additionalCharges?: { amount?: number }[] }
 ): StudioTotals => {
   // const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0));
-  const labourTotal = roundCurrency((studio.labourCost ?? []).reduce((sum, row) => sum + row.totalCost, 0));
+  // const labourTotal = roundCurrency((studio.labourCost ?? []).reduce((sum, row) => sum + row.totalCost, 0));
   //   const additionalChargesTotal = roundCurrency(
   //   (studio.additionalCharges ?? []).reduce((sum, charge) => sum + (charge.amount ?? 0), 0)
   // );
 
-  const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0) + labourTotal);
+  // const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0) + labourTotal);
+  const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0));
   // The project adjustment (+ or −) applies to the whole subtotal, before GST.
   const adjustmentAmount = roundCurrency((subtotal * (studio.pricingSettings.projectAdjustmentPercentage ?? 0)) / 100);
   const taxableAmount = roundCurrency(subtotal + adjustmentAmount);

@@ -74,6 +74,7 @@ export interface PricedFields {
   unit: PriceUnit;
   usesMaterialItem?: boolean;
   labourCategoryName: string | null;
+  labourCategoryId: Types.ObjectId | null;
   labourRatePerSquareFoot: number;
   labourCost: number;
   totalPrice: number;
@@ -102,6 +103,9 @@ export interface MaterialSelection {
   unitPrice: number;
   unit: PriceUnit;
 }
+
+
+
 
 /** One line of a price breakdown (for furniture and openings). */
 export interface PriceBreakdownLine {
@@ -378,7 +382,7 @@ export interface Room {
 
 export interface PricingSettings {
   labourPercentage: number;
-  installationPercentage: number;
+  // installationPercentage: number;
   marginPercentage: number;
   gstPercentage: number;
   /** + raises, − lowers the whole project before GST. */
@@ -503,13 +507,13 @@ export interface EditLock {
   expiresAt: Date | null;
 }
 
-export interface StudioLabourCosts {
-  categoryId: Types.ObjectId
-  categoryName: string | null;
-  ratePerSquareFoot: number;
-  totalSquareFeet: number;   // computed, stored for the record
-  totalCost: number;         // computed, stored for the record
-}
+// export interface StudioLabourCosts {
+//   categoryId: Types.ObjectId
+//   categoryName: string | null;
+//   ratePerSquareFoot: number;
+//   totalSquareFeet: number;   // computed, stored for the record
+//   totalCost: number;         // computed, stored for the record
+// }
 
 export interface IStudio {
   _id: Types.ObjectId;
@@ -533,7 +537,7 @@ export interface IStudio {
   viewerSettings: ViewerSettings;
   rooms: Room[];
 
-  labourCost: StudioLabourCosts[]
+  // labourCost: StudioLabourCosts[]
   additionalCharges: IAdditionalCharges[]
   totals: StudioTotals;
   lock: EditLock;

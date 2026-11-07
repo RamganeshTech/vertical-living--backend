@@ -65,7 +65,7 @@ import type {
   StudioRate,
   Wall,
   WallLayer,
-  StudioLabourCosts,
+  // StudioLabourCosts,
   IAdditionalCharges,
 } from "./studio.types";
 
@@ -123,6 +123,7 @@ const pricedDefinition = {
   totalPrice: nonNegativeNumber(0),
   usesMaterialItem: { type: Boolean, default: false },
   labourCategoryName: { type: String, default: null },
+  labourCategoryId: {type: Schema.Types.ObjectId, ref: "LabourRateCategoryModel", default: null},
   labourRatePerSquareFoot: nonNegativeNumber(0),
   labourCost: nonNegativeNumber(0),
 };
@@ -573,16 +574,16 @@ const additionalChargeSchema = new Schema<IAdditionalCharges>(
 );
 
 
-const StudioLabourCost = new Schema<StudioLabourCosts>(
-  {
-    categoryId: { type: Schema.Types.ObjectId, ref: "LabourRateCategoryModel", default: null },
-    categoryName: { type: String, default: null },
-    ratePerSquareFoot: { type: Number, default: 0 },
-    totalSquareFeet: { type: Number, default: 0 },   // computed, stored for the record
-    totalCost: { type: Number, default: 0 },         // computed, stored for the record
-  },
-  withId
-)
+// const StudioLabourCost = new Schema<StudioLabourCosts>(
+//   {
+//     categoryId: { type: Schema.Types.ObjectId, ref: "LabourRateCategoryModel", default: null },
+//     categoryName: { type: String, default: null },
+//     ratePerSquareFoot: { type: Number, default: 0 },
+//     totalSquareFeet: { type: Number, default: 0 },   // computed, stored for the record
+//     totalCost: { type: Number, default: 0 },         // computed, stored for the record
+//   },
+//   withId
+// )
 
 const StudioSchema = new Schema<IStudio>(
   {
@@ -602,7 +603,7 @@ const StudioSchema = new Schema<IStudio>(
     },
     pricingSettings: {
       labourPercentage: { type: Number, min: 0, max: 500, default: DEFAULT_PRICING_SETTINGS.labourPercentage },
-      installationPercentage: { type: Number, min: 0, max: 500, default: DEFAULT_PRICING_SETTINGS.installationPercentage },
+      // installationPercentage: { type: Number, min: 0, max: 500, default: DEFAULT_PRICING_SETTINGS.installationPercentage },
       marginPercentage: { type: Number, min: 0, max: 500, default: DEFAULT_PRICING_SETTINGS.marginPercentage },
       gstPercentage: { type: Number, min: 0, max: 100, default: DEFAULT_PRICING_SETTINGS.gstPercentage },
       projectAdjustmentPercentage: { type: Number, min: PROJECT_ADJUSTMENT_BOUNDS.minimumPercentage, max: PROJECT_ADJUSTMENT_BOUNDS.maximumPercentage, default: 0 },
@@ -621,7 +622,7 @@ const StudioSchema = new Schema<IStudio>(
       defaultLightingMode: enumField(LIGHTING_MODES, "day"),
     },
     rooms: { type: [RoomSchema], default: [] },
-    labourCost: { type: [StudioLabourCost], default: [] },
+    // labourCost: { type: [StudioLabourCost], default: [] },
     additionalCharges: {type: [additionalChargeSchema], default:[]},
     totals: {
       subtotal: nonNegativeNumber(0),
@@ -708,7 +709,7 @@ const StudioSettingsSchema = new Schema<StudioSettings>(
     },
     pricingDefaults: {
       labourPercentage: { type: Number, min: 0, max: 500, default: DEFAULT_PRICING_SETTINGS.labourPercentage },
-      installationPercentage: { type: Number, min: 0, max: 500, default: DEFAULT_PRICING_SETTINGS.installationPercentage },
+      // installationPercentage: { type: Number, min: 0, max: 500, default: DEFAULT_PRICING_SETTINGS.installationPercentage },
       marginPercentage: { type: Number, min: 0, max: 500, default: DEFAULT_PRICING_SETTINGS.marginPercentage },
       gstPercentage: { type: Number, min: 0, max: 100, default: DEFAULT_PRICING_SETTINGS.gstPercentage },
       projectAdjustmentPercentage: { type: Number, min: PROJECT_ADJUSTMENT_BOUNDS.minimumPercentage, max: PROJECT_ADJUSTMENT_BOUNDS.maximumPercentage, default: 0 },

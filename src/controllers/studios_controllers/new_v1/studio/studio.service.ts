@@ -465,7 +465,10 @@ export const updateStudio = async (request: Request, response: StudioApiResponse
       }
     }
     if (changes.studioRates) studio.set("studioRates", changes.studioRates);
-    if (changes.labourCost) studio.set("labourCost", changes.labourCost);
+
+    //  removed recently because the laboru rates are applied for each furnitures
+    // if (changes.labourCost) studio.set("labourCost", changes.labourCost);
+
     // if (changes.additionalCharges) {
     //   studio.set(
     //     "additionalCharges",
