@@ -1,4 +1,4 @@
-  
+
 import type { Types } from "mongoose";
 import type {
   CEILING_TYPES,
@@ -102,6 +102,8 @@ export interface MaterialSelection {
   rateConfigurationItemName: string;
   unitPrice: number;
   unit: PriceUnit;
+  thickness: number // only meaningful for plywood / laminate selections
+
 }
 
 
@@ -119,6 +121,10 @@ export interface PriceBreakdownLine {
   quantity: number;
   unit: PriceUnit;
   totalPrice: number;
+  thickness: number // only meaningful for plywood / laminate selections
+  sheetAreaSqft: number;
+  sheetsRequired: number;
+
 }
 
 /** Where an object sits: against a wall (position along it) or free in the room (room coordinates). */
@@ -314,7 +320,7 @@ export interface LightWiring {
   totalPrice: number;
 }
 
-export interface StudioLight extends PricedFields {
+export interface StudioLight extends Omit<PricedFields, "unit"> {
   _id: Types.ObjectId;
   lightType: LightType;
   mountType: LightMountType;
@@ -325,6 +331,7 @@ export interface StudioLight extends PricedFields {
   isSwitchedOn: boolean;
   placement: ObjectPlacement;
   height: number;
+  unit: string;
   lengthInRunningFeet: number;
   isIncludedInQuote: boolean;
   wiring: LightWiring;
@@ -391,8 +398,8 @@ export interface PricingSettings {
 
 
 export interface IAdditionalCharges {
-  workName:string, 
-  amount:number;
+  workName: string,
+  amount: number;
 }
 export interface StudioTotals {
   /** Sum of the rooms. */
@@ -503,7 +510,7 @@ export interface StudioSettings {
 
 export interface EditLock {
   userId: Types.ObjectId | null;
-  lockerModel:string
+  lockerModel: string
   expiresAt: Date | null;
 }
 

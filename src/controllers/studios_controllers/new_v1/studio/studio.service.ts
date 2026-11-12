@@ -23,7 +23,7 @@ import mongoose, { Types } from "mongoose";
 import type { FilterQuery, HydratedDocument } from "mongoose";
 import StudioModel, { formatQuoteNumber, StudioSettingsModel } from "./studio.model";
 import { DEFAULT_STAFF_ADJUSTMENT_LIMITS, MAXIMUM_SHARE_LINKS, PRICE_MANAGER_ROLES } from "./studio.constants";
-import { keepLockedPrices, recalculateStudioPricing } from "./studio.pricing";
+import { buildSheetSummary, keepLockedPrices, recalculateStudioPricing } from "./studio.pricing";
 import {
   escapeRegularExpression,
   isRecord,
@@ -486,6 +486,7 @@ export const updateStudio = async (request: Request, response: StudioApiResponse
       studio.set("rooms", changes.rooms);
     }
     recalculateStudioPricing(studio);
+    // studio.sheetSummary = buildSheetSummary(studio.rooms);   // new
     studio.version += 1;
     studio.updatedBy = readUserId(request);
     await studio.save();

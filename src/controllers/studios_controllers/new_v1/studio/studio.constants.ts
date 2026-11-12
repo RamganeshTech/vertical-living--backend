@@ -110,6 +110,7 @@ export const PRICE_UNITS = [
   "lumpSum",
 ] as const;
 
+export const SHEET_AREA_SQFT = 32;
 export const FLOOR_PLAN_IMPORT_MODES = ["replace", "append"] as const;
 
 /** Where a studio's own rate came from: typed by the designer, picked from the Rate Configuration, or read from a price list. */

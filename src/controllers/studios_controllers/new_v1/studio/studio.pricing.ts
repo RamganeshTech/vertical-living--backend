@@ -66,6 +66,19 @@ const recalculateOpening = (opening: Opening): number => {
   return opening.isIncludedInQuote ? opening.totalPrice : 0;
 };
 
+//  not used anywhere
+export const buildSheetSummary = (rooms: Room[]) => {
+  const groups = new Map<string, { key: string; thickness: number; name: string; sqft: number; sheetAreaSqft: number }>();
+  for (const room of rooms) for (const item of room.furniture) for (const line of item.priceBreakdown) {
+    if (!line.thickness || !line.sheetAreaSqft) continue;
+    const key = `${line.rateConfigurationItemId}|${line.thickness}`;
+    const g = groups.get(key) ?? { key, thickness: line.thickness, name: line.rateConfigurationItemName, sqft: 0, sheetAreaSqft: line.sheetAreaSqft };
+    g.sqft += line.quantity;
+    groups.set(key, g);
+  }
+  return [...groups.values()].map((g) => ({ ...g, sheetsToOrder: Math.ceil(g.sqft / g.sheetAreaSqft) }));
+};
+
 export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSettings: PricingSettings): number => {
   const accessoriesTotal = roundCurrency(
     furnitureItem.accessories.reduce((runningTotal, accessory) => runningTotal + recalculateLine(accessory), 0)
@@ -79,6 +92,7 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
     furnitureItem.totalPrice = furnitureItem.materialCost;
     return furnitureItem.totalPrice;
   }
+
   const materialCost = roundCurrency(sumBreakdown(furnitureItem.priceBreakdown) + accessoriesTotal);
 
   //  before 
@@ -103,7 +117,7 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
 
   // const labourCost = 0;
 
-    const labourCost = roundCurrency(furnitureItem.labourCost);
+  const labourCost = roundCurrency(furnitureItem.labourCost);
 
   // const installationCost = roundCurrency((materialCost * pricingSettings.installationPercentage) / 100);
   const installationCost = 0; // installation is no longer a percentage-based charge
@@ -117,16 +131,27 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
 };
 
 /** Lights are priced per item: every light record is one fitting, so quantity is 1 and the unit is "piece". */
-const recalculateLight = (light: StudioLight): number => {
-  // light.quantity = 1;
-  // light.unit = "piece";
-  if (!light.usesMaterialItem) {
-    light.quantity = 1;
-    light.unit = "piece";
-  }
-  const fittingTotal = recalculateLine(light);
-  const wiringTotal = recalculateLine(light.wiring);
-  return light.isIncludedInQuote ? roundCurrency(fittingTotal + wiringTotal) : 0;
+// const recalculateLight = (light: StudioLight): number => {
+//   // light.quantity = 1;
+//   // light.unit = "piece";
+//   if (!light.usesMaterialItem) {
+//     light.quantity = 1;
+//     light.unit = "piece";
+//   }
+//   const fittingTotal = recalculateLine(light);
+//   const wiringTotal = recalculateLine(light.wiring);
+//   return light.isIncludedInQuote ? roundCurrency(fittingTotal + wiringTotal) : 0;
+// };
+
+//  above one si old , now this is the new one 
+export const recalculateLight = (light: StudioLight): number => {
+  const quantity = light.quantity > 0 ? light.quantity : 1;
+  const fittingTotal = roundCurrency(light.unitPrice * quantity);
+  const wiringTotal = roundCurrency(light.wiring?.unitPrice * (light.wiring?.quantity || 1));
+  light.unit = "piece";
+  light.quantity = quantity;
+  light.totalPrice = roundCurrency(fittingTotal + wiringTotal);
+  return light.totalPrice;
 };
 
 const recalculateIncluded = (pricedItem: PricedLine & { isIncludedInQuote: boolean }): number => {

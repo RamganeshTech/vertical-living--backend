@@ -120,7 +120,7 @@ const colourString = (defaultValue: string) => ({
 });
 
 const pricedDefinition = {
-  rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "RateConfigurationModel", default: null },
+  rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
   rateConfigurationItemName: trimmedString(""),
   unitPrice: nonNegativeNumber(0),
   quantity: nonNegativeNumber(0),
@@ -148,13 +148,18 @@ const MaterialSelectionSchema = new Schema<MaterialSelection>(
     materialType: trimmedString("", 100),
     colour: { type: String, trim: true, default: "" },
     brandName: trimmedString("", 200),
+
+
     textureImageUrl: { type: String, trim: true, default: "", maxlength: 2000 },
+    thickness: nonNegativeNumber(0), // only meaningful for plywood / laminate selections
+
+
     // Swatch picked from the Material Library (librarydesign.model.ts). When set, the 3D viewer
     // should use its image as the texture instead of textureImageUrl. Left textureImageUrl untouched,
     // and did not remove it, so this can be reverted by just not using libraryDesignId.
-    libraryDesignId: { type: Schema.Types.ObjectId, ref: "LibraryDesign", default: null },
+    libraryDesignId: { type: Schema.Types.ObjectId, ref: "LibraryDesignModel", default: null },
 
-    rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "RateConfigurationModel", default: null },
+    rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
     rateConfigurationItemName: trimmedString(""),
     unitPrice: nonNegativeNumber(0),
     unit: enumField(PRICE_UNITS, "squareFoot"),
@@ -166,11 +171,14 @@ const PriceBreakdownLineSchema = new Schema<PriceBreakdownLine>(
   {
     label: trimmedString("", 300),
     rateKey: trimmedString("", 100),
-    rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "RateConfigurationModel", default: null },
+    rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
     rateConfigurationItemName: trimmedString(""),
     unitPrice: nonNegativeNumber(0),
     quantity: nonNegativeNumber(0),
     unit: enumField(PRICE_UNITS, "piece"),
+    thickness: nonNegativeNumber(0), // only meaningful for plywood / laminate selections
+    sheetAreaSqft: nonNegativeNumber(0),   // sheet size of the SKU, copied from MaterialItem at compute time
+    sheetsRequired: nonNegativeNumber(0),  // Math.ceil(quantity / sheetAreaSqft), computed per line
     totalPrice: nonNegativeNumber(0),
   },
   withId
@@ -395,9 +403,12 @@ const StudioLightSchema = new Schema<StudioLight>(
     placement: { type: ObjectPlacementSchema, default: () => ({ placementType: "freeStanding" }) },
     height: nonNegativeNumber(0),
     lengthInRunningFeet: nonNegativeNumber(0),
+
     isIncludedInQuote: { type: Boolean, default: true },
     wiring: { type: LightWiringSchema, default: () => ({}) },
     ...pricedDefinition,
+    unit: { type: String, enum: ["piece"], default: "piece" },
+
     // Lights are priced per item (one record = one fitting).
     quantity: { type: Number, min: 0, default: 1 },
   },
@@ -467,7 +478,7 @@ const RoomSchema = new Schema<Room>(
 const StudioRateSchema = new Schema<StudioRate>(
   {
     rateKey: { type: String, required: true, trim: true, maxlength: 100 },
-    rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "RateConfigurationModel", default: null },
+    rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
     rateConfigurationItemName: trimmedString(""),
     unitPrice: nonNegativeNumber(0),
     unit: enumField(PRICE_UNITS, "piece"),
@@ -565,10 +576,11 @@ const ExtractionDetailsSchema = new Schema<ExtractionDetails>(
 
 const additionalChargeSchema = new Schema<IAdditionalCharges>(
   {
-    workName: { type: String, trim: true,
+    workName: {
+      type: String, trim: true,
     },
     amount: {
-       type: Number,
+      type: Number,
       validate: {
         validator: Number.isInteger,
         message: "amount must be an integer",

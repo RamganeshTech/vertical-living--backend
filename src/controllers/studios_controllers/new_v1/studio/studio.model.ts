@@ -1,70 +1,20 @@
 import mongoose, { Schema } from "mongoose";
 import {
-  CEILING_TYPES,
-  COLOUR_TEMPERATURES_KELVIN,
-  DEFAULT_PRICING_SETTINGS,
-  DEFAULT_STAFF_ADJUSTMENT_LIMITS,
-  PROJECT_ADJUSTMENT_BOUNDS,
-  DEFAULT_SHADOW_CASTING_LIGHT_LIMIT,
-  DEFAULT_WALL_HEIGHT_MILLIMETRES,
-  ELECTRICAL_POINT_TYPES,
-  EXTRACTION_SOURCES,
-  FLOOR_FINISH_TYPES,
-  FLOOR_PLAN_FILE_TYPES,
-  FURNITURE_PRICING_METHODS,
-  LENGTH_UNITS,
-  LIGHT_MOUNT_TYPES,
-  LIGHT_TYPES,
-  LIGHTING_MODES,
-  MAXIMUM_QUOTE_NAME_LENGTH,
-  OPENING_TYPES,
-  PLACEMENT_TYPES,
-  PRICE_UNITS,
-  QUOTE_NUMBER_PREFIX,
-  ROOM_KINDS,
-  ROOM_LAYOUT_TEMPLATES,
-  SHUTTER_TYPES,
-  SKIRTING_MATERIALS,
-  STUDIO_RATE_SOURCES,
-  STUDIO_SCHEMA_VERSION,
-  STUDIO_STATUSES,
-  WALL_LABELS,
-  WALL_LAYER_TYPES,
-  WALL_ROWS,
-  WALLPAPER_PATTERNS,
+  CEILING_TYPES, COLOUR_TEMPERATURES_KELVIN, DEFAULT_PRICING_SETTINGS, DEFAULT_STAFF_ADJUSTMENT_LIMITS, PROJECT_ADJUSTMENT_BOUNDS,
+  DEFAULT_SHADOW_CASTING_LIGHT_LIMIT, DEFAULT_WALL_HEIGHT_MILLIMETRES, ELECTRICAL_POINT_TYPES, EXTRACTION_SOURCES, FLOOR_FINISH_TYPES,
+  FLOOR_PLAN_FILE_TYPES, FURNITURE_PRICING_METHODS, LENGTH_UNITS, LIGHT_MOUNT_TYPES, LIGHT_TYPES,
+  LIGHTING_MODES, MAXIMUM_QUOTE_NAME_LENGTH, OPENING_TYPES, PLACEMENT_TYPES,
+  PRICE_UNITS, QUOTE_NUMBER_PREFIX, ROOM_KINDS, ROOM_LAYOUT_TEMPLATES, SHUTTER_TYPES,
+  SKIRTING_MATERIALS, STUDIO_RATE_SOURCES, STUDIO_SCHEMA_VERSION, STUDIO_STATUSES, WALL_LABELS,
+  WALL_LAYER_TYPES, WALL_ROWS, WALLPAPER_PATTERNS,
 } from "./studio.constants";
+
 import type {
-  CeilingFinish,
-  CoveLight,
-  DecorItem,
-  ElectricalPoint,
-  ExtractionDetails,
-  FloorFinish,
-  FloorPlanFile,
-  FurnitureAccessory,
-  FurnitureItem,
-  FurnitureMaterials,
-  IStudio,
-  LightWiring,
-  MaterialSelection,
-  ObjectPlacement,
-  Opening,
-  PlanBox,
-  PriceBreakdownLine,
-  ClientDetails,
-  CompanyDetails,
-  PaymentStage,
-  PriceListFile,
-  QuotationDetails,
-  ShareLink,
-  StudioSettings,
-  Room,
-  RoomPricing,
-  Skirting,
-  StudioLight,
-  StudioRate,
-  Wall,
-  WallLayer,
+  CeilingFinish, CoveLight, DecorItem, ElectricalPoint, ExtractionDetails, FloorFinish, FloorPlanFile,
+  FurnitureAccessory, FurnitureItem, FurnitureMaterials, IStudio, LightWiring, MaterialSelection,
+  ObjectPlacement, Opening, PlanBox, PriceBreakdownLine, ClientDetails, CompanyDetails, PaymentStage, PriceListFile,
+  QuotationDetails, ShareLink, StudioSettings, Room, RoomPricing, Skirting, StudioLight,
+  StudioRate, Wall, WallLayer,
   // StudioLabourCosts,
   IAdditionalCharges,
 } from "./studio.types";
@@ -98,7 +48,7 @@ const numberEnumField = <AllowedValue extends number>(allowedValues: readonly Al
   enum: [...allowedValues],
   default: defaultValue,
 });
-const nonNegativeNumber = (defaultValue: number) => ({ type: Number, min: 0, default: defaultValue });
+const nonNegativeNumber = (defaultValue: number | null) => ({ type: Number, min: 0, default: defaultValue });
 /** Coordinates and positions: any value is accepted so plans of any size reload exactly. */
 const anyNumber = (defaultValue: number) => ({ type: Number, default: defaultValue });
 const trimmedString = (defaultValue: string, maximumLength = 200) => ({
@@ -115,7 +65,7 @@ const colourString = (defaultValue: string) => ({
 });
 
 const pricedDefinition = {
-  rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "RateConfigurationModel", default: null },
+  rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
   rateConfigurationItemName: trimmedString(""),
   unitPrice: nonNegativeNumber(0),
   quantity: nonNegativeNumber(0),
@@ -123,7 +73,7 @@ const pricedDefinition = {
   totalPrice: nonNegativeNumber(0),
   usesMaterialItem: { type: Boolean, default: false },
   labourCategoryName: { type: String, default: null },
-  labourCategoryId: {type: Schema.Types.ObjectId, ref: "LabourRateCategoryModel", default: null},
+  labourCategoryId: { type: Schema.Types.ObjectId, ref: "LabourRateCategoryModel", default: null },
   labourRatePerSquareFoot: nonNegativeNumber(0),
   labourCost: nonNegativeNumber(0),
 };
@@ -146,14 +96,18 @@ const MaterialSelectionSchema = new Schema<MaterialSelection>(
     colour: { type: String, trim: true, default: "" },
     brandName: trimmedString("", 200),
     textureImageUrl: { type: String, trim: true, default: "", maxlength: 2000 },
+    thickness: nonNegativeNumber(null), // only meaningful for plywood / laminate selections
+    
     // Swatch picked from the Material Library (librarydesign.model.ts). When set, the 3D viewer
     // should use its image as the texture instead of textureImageUrl. Left textureImageUrl untouched,
     // and did not remove it, so this can be reverted by just not using libraryDesignId.
-    libraryDesignId: { type: Schema.Types.ObjectId, ref: "LibraryDesign", default: null },
-    rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "RateConfigurationModel", default: null },
+    libraryDesignId: { type: Schema.Types.ObjectId, ref: "LibraryDesignModel", default: null },
+    rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
     rateConfigurationItemName: trimmedString(""),
     unitPrice: nonNegativeNumber(0),
     unit: enumField(PRICE_UNITS, "squareFoot"),
+
+
   },
   withoutId
 );
@@ -162,12 +116,15 @@ const PriceBreakdownLineSchema = new Schema<PriceBreakdownLine>(
   {
     label: trimmedString("", 300),
     rateKey: trimmedString("", 100),
-    rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "RateConfigurationModel", default: null },
+    rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
     rateConfigurationItemName: trimmedString(""),
     unitPrice: nonNegativeNumber(0),
     quantity: nonNegativeNumber(0),
     unit: enumField(PRICE_UNITS, "piece"),
     totalPrice: nonNegativeNumber(0),
+    sheetAreaSqft: nonNegativeNumber(0),   // sheet size of the SKU, copied from MaterialItem at compute time
+    sheetsRequired: nonNegativeNumber(0),  // Math.ceil(quantity / sheetAreaSqft), computed per line
+    thickness: nonNegativeNumber(0), // only meaningful for plywood / laminate selections
   },
   withId
 );
@@ -391,10 +348,12 @@ const StudioLightSchema = new Schema<StudioLight>(
     isSwitchedOn: { type: Boolean, default: true },
     placement: { type: ObjectPlacementSchema, default: () => ({ placementType: "freeStanding" }) },
     height: nonNegativeNumber(0),
+    
     lengthInRunningFeet: nonNegativeNumber(0),
     isIncludedInQuote: { type: Boolean, default: true },
     wiring: { type: LightWiringSchema, default: () => ({}) },
     ...pricedDefinition,
+    unit: { type: String, enum: ["piece"], default: "piece" },
     // Lights are priced per item (one record = one fitting).
     quantity: { type: Number, min: 0, default: 1 },
   },
@@ -464,7 +423,7 @@ const RoomSchema = new Schema<Room>(
 const StudioRateSchema = new Schema<StudioRate>(
   {
     rateKey: { type: String, required: true, trim: true, maxlength: 100 },
-    rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "RateConfigurationModel", default: null },
+    rateConfigurationItemId: { type: Schema.Types.ObjectId, ref: "MaterialItemModel", default: null },
     rateConfigurationItemName: trimmedString(""),
     unitPrice: nonNegativeNumber(0),
     unit: enumField(PRICE_UNITS, "piece"),
@@ -560,10 +519,11 @@ const ExtractionDetailsSchema = new Schema<ExtractionDetails>(
 
 const additionalChargeSchema = new Schema<IAdditionalCharges>(
   {
-    workName: { type: String, trim: true,
+    workName: {
+      type: String, trim: true,
     },
     amount: {
-       type: Number,
+      type: Number,
       validate: {
         validator: Number.isInteger,
         message: "amount must be an integer",
@@ -623,7 +583,7 @@ const StudioSchema = new Schema<IStudio>(
     },
     rooms: { type: [RoomSchema], default: [] },
     // labourCost: { type: [StudioLabourCost], default: [] },
-    additionalCharges: {type: [additionalChargeSchema], default:[]},
+    additionalCharges: { type: [additionalChargeSchema], default: [] },
     totals: {
       subtotal: nonNegativeNumber(0),
       adjustmentAmount: { type: Number, default: 0 },
