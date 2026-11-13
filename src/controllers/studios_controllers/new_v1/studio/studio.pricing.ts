@@ -117,16 +117,21 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
 
   // const labourCost = 0;
 
-  const labourCost = roundCurrency(furnitureItem.labourCost);
+  const labourCost = roundCurrency(furnitureItem.labourCost); // kept for the room-wise Labour display only — not added to totals below
+
 
   // const installationCost = roundCurrency((materialCost * pricingSettings.installationPercentage) / 100);
   const installationCost = 0; // installation is no longer a percentage-based charge
-  const marginAmount = roundCurrency(((materialCost + labourCost + installationCost) * pricingSettings.marginPercentage) / 100);
+  // const marginAmount = roundCurrency(((materialCost + labourCost + installationCost) * pricingSettings.marginPercentage) / 100);
+  const marginAmount = roundCurrency((materialCost * pricingSettings.marginPercentage) / 100); // margin on material only
+
   furnitureItem.materialCost = materialCost;
   furnitureItem.labourCost = labourCost;
   furnitureItem.installationCost = installationCost;
   furnitureItem.marginAmount = marginAmount;
-  furnitureItem.totalPrice = roundCurrency(materialCost + labourCost + installationCost + marginAmount);
+  // furnitureItem.totalPrice = roundCurrency(materialCost + labourCost + installationCost + marginAmount);
+  furnitureItem.totalPrice = roundCurrency(materialCost + installationCost + marginAmount);
+
   return furnitureItem.totalPrice;
 };
 
@@ -193,33 +198,73 @@ export const recalculateRoom = (room: Room, pricingSettings: PricingSettings): n
 };
 
 /** Recalculates every line, room and the project totals in place, and returns the totals. */
-export const recalculateStudioPricing = (
-  studio: { rooms: Room[]; pricingSettings: PricingSettings; totals: StudioTotals, labourCost?: { totalCost: number }[]; additionalCharges?: { amount?: number }[] }
-): StudioTotals => {
-  // const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0));
-  // const labourTotal = roundCurrency((studio.labourCost ?? []).reduce((sum, row) => sum + row.totalCost, 0));
-  //   const additionalChargesTotal = roundCurrency(
-  //   (studio.additionalCharges ?? []).reduce((sum, charge) => sum + (charge.amount ?? 0), 0)
-  // );
+// export const recalculateStudioPricing = (
+//   studio: { rooms: Room[]; pricingSettings: PricingSettings; totals: StudioTotals, labourCost?: { totalCost: number }[]; additionalCharges?: { amount?: number }[] }
+// ): StudioTotals => {
+//   // const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0));
+//   // const labourTotal = roundCurrency((studio.labourCost ?? []).reduce((sum, row) => sum + row.totalCost, 0));
+//   //   const additionalChargesTotal = roundCurrency(
+//   //   (studio.additionalCharges ?? []).reduce((sum, charge) => sum + (charge.amount ?? 0), 0)
+//   // );
 
-  // const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0) + labourTotal);
-  const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0));
-  // The project adjustment (+ or −) applies to the whole subtotal, before GST.
+//   // const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0) + labourTotal);
+//   const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0));
+//   // The project adjustment (+ or −) applies to the whole subtotal, before GST.
+//   const adjustmentAmount = roundCurrency((subtotal * (studio.pricingSettings.projectAdjustmentPercentage ?? 0)) / 100);
+//   const taxableAmount = roundCurrency(subtotal + adjustmentAmount);
+//   const gstAmount = roundCurrency((taxableAmount * studio.pricingSettings.gstPercentage) / 100);
+//   studio.totals.subtotal = subtotal;
+//   studio.totals.adjustmentAmount = adjustmentAmount;
+//   studio.totals.gstAmount = gstAmount;
+//   // studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount);
+//   // studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount + additionalChargesTotal);
+
+
+//   const additionalChargesTotal = roundCurrency((studio.additionalCharges ?? []).reduce((sum, charge) => sum + (charge.amount ?? 0), 0));
+//   const additionalChargesMargin = roundCurrency((additionalChargesTotal * studio.pricingSettings.marginPercentage) / 100);
+//   const additionalChargesWithMargin = roundCurrency(additionalChargesTotal + additionalChargesMargin);
+//   studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount + additionalChargesWithMargin);
+
+
+//   return { subtotal, adjustmentAmount, gstAmount, grandTotal: studio.totals.grandTotal };
+// };
+
+
+export const recalculateStudioPricing = (
+  studio: {
+    rooms: Room[];
+    pricingSettings: PricingSettings;
+    totals: StudioTotals;
+    additionalCharges?: { amount?: number }[];
+    labourPlan?: { latestRecord?: { labourCost?: number } | null } | null;
+    hub?: { materialPercentage?: number | null; labourPercentage?: number | null } | null;
+  }
+): StudioTotals => {
+  const roomsSubtotal = roundCurrency(
+    studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0)
+  );
+
+  // Labour: the Labour Engine's all-trades total; falls back to the per-furniture sum for studios with no plan calculated yet.
+  // Hub's labour % applied once here, not per furniture item.
+  const furnitureLabourFallback = roundCurrency(
+    studio.rooms.reduce((sum, room) => sum + room.furniture.reduce((s, item) => s + item.labourCost, 0), 0)
+  );
+  const labourBase = studio.labourPlan?.latestRecord?.labourCost ?? furnitureLabourFallback;
+  const labourTotal = roundCurrency(labourBase * (1 + (studio.hub?.labourPercentage ?? 0) / 100));
+
+  const subtotal = roundCurrency(roomsSubtotal + labourTotal);
+
   const adjustmentAmount = roundCurrency((subtotal * (studio.pricingSettings.projectAdjustmentPercentage ?? 0)) / 100);
   const taxableAmount = roundCurrency(subtotal + adjustmentAmount);
   const gstAmount = roundCurrency((taxableAmount * studio.pricingSettings.gstPercentage) / 100);
   studio.totals.subtotal = subtotal;
   studio.totals.adjustmentAmount = adjustmentAmount;
   studio.totals.gstAmount = gstAmount;
-  // studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount);
-  // studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount + additionalChargesTotal);
-
 
   const additionalChargesTotal = roundCurrency((studio.additionalCharges ?? []).reduce((sum, charge) => sum + (charge.amount ?? 0), 0));
   const additionalChargesMargin = roundCurrency((additionalChargesTotal * studio.pricingSettings.marginPercentage) / 100);
   const additionalChargesWithMargin = roundCurrency(additionalChargesTotal + additionalChargesMargin);
   studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount + additionalChargesWithMargin);
-
 
   return { subtotal, adjustmentAmount, gstAmount, grandTotal: studio.totals.grandTotal };
 };

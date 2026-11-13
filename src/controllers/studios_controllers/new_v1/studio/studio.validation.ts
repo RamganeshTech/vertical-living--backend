@@ -1,3 +1,4 @@
+// studio.validation.ts
 /**
  * Request parsing for the Studio module. Every function takes `unknown` input from the request
  * and returns either typed data or a list of readable error messages. Deep shape checks for rooms
@@ -33,6 +34,8 @@ import type {
   StudioStatus,
   // StudioLabourCosts,
 } from "./studio.types";
+import { parseStudioLabourPlan } from "../labourEngine/studioLabourPlan";
+import { StudioLabourPlan } from "../labourEngine/labourEngine.types";
 
 export type ParseResult<ParsedValue> = { isValid: true; value: ParsedValue } | { isValid: false; errors: string[] };
 
@@ -122,9 +125,12 @@ export interface UpdateStudioPayload {
   // labourCost?: StudioLabourCosts[];
   // labourCost?: JsonRecord[];
   additionalCharges?: JsonRecord[];
-
+  hub?: { hubId: string | null; materialPercentage: number | null; labourPercentage: number | null };
   quotationDetails?: QuotationDetails;
   rooms?: JsonRecord[];
+
+  labourPlan?: Pick<StudioLabourPlan, "settings" | "latestRecord">;
+  clientApproved?: boolean;
 }
 
 /** A studio rate as sent by the browser; `_id` is kept only when it is a real ObjectId. */
@@ -373,6 +379,30 @@ export const parseStudioSettingsPayload = (body: unknown): ParseResult<StudioSet
   return { isValid: true, value: settings };
 };
 
+
+const parseHub = (value: unknown, errors: string[]): UpdateStudioPayload["hub"] | undefined => {
+  if (value === undefined) return undefined;
+  if (value === null) return { hubId: null, materialPercentage: null, labourPercentage: null };
+  if (!isRecord(value)) {
+    errors.push("hub must be an object");
+    return undefined;
+  }
+  const { hubId, materialPercentage, labourPercentage } = value;
+  if (hubId !== null && typeof hubId !== "string") {
+    errors.push("hub.hubId must be a string or null");
+    return undefined;
+  }
+  if (materialPercentage !== null && !isFiniteNumber(materialPercentage)) {
+    errors.push("hub.materialPercentage must be a number or null");
+    return undefined;
+  }
+  if (labourPercentage !== null && !isFiniteNumber(labourPercentage)) {
+    errors.push("hub.labourPercentage must be a number or null");
+    return undefined;
+  }
+  return { hubId: hubId ?? null, materialPercentage: materialPercentage ?? null, labourPercentage: labourPercentage ?? null };
+};
+
 export const parseUpdateStudioPayload = (body: unknown): ParseResult<UpdateStudioPayload> => {
   if (!isRecord(body)) return { isValid: false, errors: ["Request body must be a JSON object"] };
   const errors: string[] = [];
@@ -395,6 +425,21 @@ export const parseUpdateStudioPayload = (body: unknown): ParseResult<UpdateStudi
     if (isOneOf(STUDIO_STATUSES, body.status)) parsedPayload.status = body.status;
     else errors.push(`status must be one of: ${STUDIO_STATUSES.join(", ")}`);
   }
+
+  const hub = parseHub(body.hub, errors);
+  if (hub !== undefined) parsedPayload.hub = hub;
+
+  const labourPlan = parseStudioLabourPlan(body.labourPlan, errors);
+  if (labourPlan) parsedPayload.labourPlan = labourPlan;
+
+  if (body.clientApproved !== undefined) {
+    if (typeof body.clientApproved === "boolean") {
+      parsedPayload.clientApproved = body.clientApproved;
+    } else {
+      errors.push("clientApproved must be true or false");
+    }
+  }
+
   const pricingSettings = parsePercentageGroup(body.pricingSettings, errors);
   if (pricingSettings) parsedPayload.pricingSettings = pricingSettings;
 
@@ -424,8 +469,8 @@ export const parseUpdateStudioPayload = (body: unknown): ParseResult<UpdateStudi
     if (!Array.isArray(body.rooms) || !body.rooms.every(isRecord)) errors.push("rooms must be an array of room objects");
     else parsedPayload.rooms = removeClientGeneratedIds(body.rooms) as JsonRecord[];
   }
- 
-    //  removed recently because the laboru rates are applied for each furnitures
+
+  //  removed recently because the laboru rates are applied for each furnitures
   // if (body.labourCost !== undefined) {
   //   if (!Array.isArray(body.labourCost) || !body.labourCost.every(isRecord)) errors.push("labourCost must be an array of labour cost objects");
   //   else parsedPayload.labourCost = body.labourCost as JsonRecord[];

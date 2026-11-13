@@ -97,7 +97,7 @@ const MaterialSelectionSchema = new Schema<MaterialSelection>(
     brandName: trimmedString("", 200),
     textureImageUrl: { type: String, trim: true, default: "", maxlength: 2000 },
     thickness: nonNegativeNumber(null), // only meaningful for plywood / laminate selections
-    
+
     // Swatch picked from the Material Library (librarydesign.model.ts). When set, the 3D viewer
     // should use its image as the texture instead of textureImageUrl. Left textureImageUrl untouched,
     // and did not remove it, so this can be reverted by just not using libraryDesignId.
@@ -348,7 +348,7 @@ const StudioLightSchema = new Schema<StudioLight>(
     isSwitchedOn: { type: Boolean, default: true },
     placement: { type: ObjectPlacementSchema, default: () => ({ placementType: "freeStanding" }) },
     height: nonNegativeNumber(0),
-    
+
     lengthInRunningFeet: nonNegativeNumber(0),
     isIncludedInQuote: { type: Boolean, default: true },
     wiring: { type: LightWiringSchema, default: () => ({}) },
@@ -596,6 +596,28 @@ const StudioSchema = new Schema<IStudio>(
       expiresAt: { type: Date, default: null },
     },
 
+    labourPlan: {
+      type: Schema.Types.Mixed,
+      default: null,
+    },
+    clientApproved: {
+      type: Boolean,
+      default: false,
+    },
+
+    hub: {
+      hubId: { type: Schema.Types.ObjectId, ref: "HubModel", default: null },
+
+      materialPercentage: {
+        type: Number,
+        default: null,
+      },
+
+      labourPercentage: {
+        type: Number,
+        default: null,
+      },
+    },
 
     createrModel: { type: String, default: null },
     createdBy: { type: Schema.Types.ObjectId, refPath: "createrModel", default: null },

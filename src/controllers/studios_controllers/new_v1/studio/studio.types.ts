@@ -1,4 +1,4 @@
-
+// studio.types.ts
 import type { Types } from "mongoose";
 import type {
   CEILING_TYPES,
@@ -27,6 +27,7 @@ import type {
   WALL_ROWS,
   WALLPAPER_PATTERNS,
 } from "./studio.constants";
+import { StudioLabourPlan } from "../labourEngine/labourEngine.types";
 
 /* ------------------------------------------------------------------ */
 /* Enum types                                                          */
@@ -543,6 +544,19 @@ export interface IStudio {
   quotationDetails: QuotationDetails;
   viewerSettings: ViewerSettings;
   rooms: Room[];
+
+
+   hub: {
+        hubId: Types.ObjectId | null
+        materialPercentage: number | null,
+        labourPercentage: number | null
+      },
+  
+  /** Labour Engine plan for this quote: settings, latest calculation record and history. */
+  labourPlan: StudioLabourPlan | null;
+
+  /** Set when the client approves the quote; the labour plan is then frozen. */
+  clientApproved: boolean;
 
   // labourCost: StudioLabourCosts[]
   additionalCharges: IAdditionalCharges[]

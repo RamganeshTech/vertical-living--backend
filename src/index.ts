@@ -150,6 +150,7 @@ import MetaAdAccountRoutes from './routers/marketing_routes/lead_routes/metaAdAc
 import StudiosRoutes from './controllers/studios_controllers/new_v1/studio/studio.service';
 import StudentVariantRoutes from './controllers/studios_controllers/new_v1/studioVariant/studioVariant.routes';
 import LibraryDesignRoutes from './routers/libraryDesign_routes/libraryDesign.routes';
+import hubRoutes from './controllers/studios_controllers/new_v1/hubs/hub.routes';
 // import StudiosRoutes from './routers/studios_routes/studios.routes';
 
 
@@ -438,6 +439,9 @@ app.use('/api/materialshop/document', MaterialShopRoutes)
 app.use('/api/studios', StudiosRoutes)
 app.use('/api/studio-variants', StudentVariantRoutes)
 app.use('/api/library-desings', LibraryDesignRoutes)
+app.use("/api/hubs", hubRoutes);
+// app.use('/api/trade-rate-config', TradeRateRoutes)
+// app.use('/api/labour-config', CarpentoryRateRoutes)
 
 
 

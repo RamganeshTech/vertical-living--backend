@@ -2,14 +2,6 @@ import { Router } from "express";
 import { multiRoleAuthMiddleware } from "../../middlewares/multiRoleAuthMiddleware";
 import { imageUploadToS3, processUploadFiles } from "../../utils/s3Uploads/s3upload";
 import { deleteLibraryDesign, getAllLibraryDesigns, getLibraryDesignById, getLibraryDesignsForDropdown, uploadLibraryDesigns } from "../../controllers/libraryDesign_controller/libraryDesign.controller";
-// import { imageUploadToS3 } from "../middleware/imageUpload"; // ADJUST: your existing S3 upload middleware
-// import { processUploadFiles } from "../middleware/processUploadFiles"; // ADJUST: your existing middleware
-// import {
-//   uploadLibraryDesigns,
-//   getAllLibraryDesigns,
-//   getLibraryDesignById,
-//   deleteLibraryDesign,
-// } from "./librarydesign.controller";
 
 const PRICING_ROLES = ["owner", "staff", "CTO"]
 const NETWORK_READ_ROLES = ["owner", "staff", "CTO"]

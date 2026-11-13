@@ -1,3 +1,4 @@
+//studio.service.ts
 /**
  * Studio service: business logic and routes in one module (the routes call these handlers directly).
  * Mount it once in the app, for example:   app.use("/api/studio", StudiosRoutes);
@@ -55,6 +56,9 @@ import {
   processUploadFiles,
 } from "./studio.crmImports";
 import type { RoleBasedRequest } from "./studio.crmImports";
+import { StudioLabourPlan } from "../labourEngine/labourEngine.types";
+import { mergeStudioLabourPlan, setStudioLabourPlanFrozen } from "../labourEngine/studioLabourPlan";
+import LabourEngineRoutes from "../labourEngine/labourEngine.routes";
 
 type StudioDocument = HydratedDocument<IStudio>;
 
@@ -454,6 +458,13 @@ export const updateStudio = async (request: Request, response: StudioApiResponse
     if (changes.quotationDetails) studio.set("quotationDetails", changes.quotationDetails);
     if (changes.projectId !== undefined) studio.projectId = changes.projectId ? new Types.ObjectId(changes.projectId) : null;
     if (changes.status !== undefined) studio.status = changes.status;
+    if (changes.hub !== undefined) {
+      studio.set("hub", {
+        hubId: changes.hub.hubId ? new Types.ObjectId(changes.hub.hubId) : null,
+        materialPercentage: changes.hub.materialPercentage,
+        labourPercentage: changes.hub.labourPercentage,
+      });
+    }
     if (changes.pricingSettings) {
       for (const [settingName, settingValue] of Object.entries(changes.pricingSettings)) {
         studio.set(`pricingSettings.${settingName}`, settingValue);
@@ -463,6 +474,36 @@ export const updateStudio = async (request: Request, response: StudioApiResponse
       for (const [settingName, settingValue] of Object.entries(changes.viewerSettings)) {
         studio.set(`viewerSettings.${settingName}`, settingValue);
       }
+    }
+    // Labour Engine: client approval (owner and CTO only) freezes the labour plan, as does the price lock.
+    if (changes.clientApproved !== undefined && changes.clientApproved !== studio.clientApproved) {
+      if (!isPriceManager(request)) {
+        sendError(response, 403, "Only the owner or CTO can mark a quote as approved by the client.");
+        return;
+      }
+      studio.clientApproved = changes.clientApproved;
+    }
+
+    if (changes.labourPlan) {
+      const savedLabourPlan = studio.toObject<IStudio>().labourPlan as StudioLabourPlan | null;
+
+      studio.set(
+        "labourPlan",
+        mergeStudioLabourPlan(
+          savedLabourPlan,
+          changes.labourPlan,
+          isPriceLocked || studio.clientApproved === true
+        )
+      );
+    } else if (studio.clientApproved === true) {
+      studio.set(
+        "labourPlan",
+        setStudioLabourPlanFrozen(
+          studio.toObject<IStudio>().labourPlan as StudioLabourPlan | null,
+          isPriceLocked,
+          true
+        )
+      );
     }
     if (changes.studioRates) studio.set("studioRates", changes.studioRates);
 
@@ -525,6 +566,14 @@ export const setPriceLock = async (request: Request, response: StudioApiResponse
       return;
     }
     const userId = readUserId(request);
+    studio.set(
+      "labourPlan",
+      setStudioLabourPlanFrozen(
+        studio.toObject<IStudio>().labourPlan as StudioLabourPlan | null,
+        payload.value.isLocked,
+        studio.clientApproved === true
+      )
+    );
     studio.set("priceLock", payload.value.isLocked ? { isLocked: true, lockedAt: new Date(), lockedBy: userId } : { isLocked: false, lockedAt: null, lockedBy: null });
     studio.version += 1;
     studio.updatedBy = userId;
@@ -807,6 +856,7 @@ const priceLockRoles = multiRoleAuthMiddleware("owner", "CTO");
 
 export const StudiosRoutes = Router();
 
+StudiosRoutes.use("/:organizationId/labour-engine", LabourEngineRoutes);
 // Public route first, so "/shared/…" is never read as an organisation and studio id. No role middleware on purpose.
 StudiosRoutes.get("/shared/:shareToken", getSharedStudio);
 // Settings before "/:organizationId/:studioId", so "settings" is never read as a studio id.
