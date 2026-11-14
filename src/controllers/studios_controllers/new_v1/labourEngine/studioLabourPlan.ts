@@ -3,7 +3,7 @@
  * The labour plan saved on each studio (studio.labourPlan), sent by the browser with the normal updateStudio
  * call. Once prices are locked or the client has approved, the plan is frozen: later saves cannot change it.
  */
-import type { FurnitureBuildRoute, LabourCalculationRecord, LabourPlanSettings, StudioLabourPlan } from "./labourEngine.types";
+import type { FurnitureBuildRoute, LabourCalculationRecord, LabourPlanSettings, LabourTradeCostSummary, StudioLabourPlan } from "./labourEngine.types";
 
 export const MAXIMUM_LABOUR_PLAN_HISTORY = 20;
 const SIZE_METHODS = ["rft", "stepped", "fixed"] as const;
@@ -41,6 +41,27 @@ const parseSettings = (candidate: unknown, errors: string[]): LabourPlanSettings
   };
 };
 
+const parseTradeCostSummary = (candidate: unknown): LabourTradeCostSummary | null => {
+  if (!isRecord(candidate)) return null;
+  return {
+    name: textOr(candidate.name, "", 80),
+    cost: finiteOr(candidate.cost, 0),
+    skilledManDays: finiteOr(candidate.skilledManDays, 0),
+    helperDays: finiteOr(candidate.helperDays, 0),
+    days: finiteOr(candidate.days, 0),
+  };
+};
+
+const parseCostByTrade = (candidate: unknown): Record<string, LabourTradeCostSummary> => {
+  if (!isRecord(candidate)) return {};
+  const result: Record<string, LabourTradeCostSummary> = {};
+  for (const [key, value] of Object.entries(candidate)) {
+    const trade = parseTradeCostSummary(value);
+    if (trade) result[key] = trade;
+  }
+  return result;
+};
+
 const parseRecord = (candidate: unknown): LabourCalculationRecord | null => {
   if (!isRecord(candidate)) return null;
   const sizeMethod = SIZE_METHODS.includes(candidate.sizeMethod as (typeof SIZE_METHODS)[number]) ? (candidate.sizeMethod as LabourCalculationRecord["sizeMethod"]) : "rft";
@@ -59,6 +80,8 @@ const parseRecord = (candidate: unknown): LabourCalculationRecord | null => {
     sizedHoursMethodA: finiteOr(candidate.sizedHoursMethodA, 0),
     sizedHoursMethodB: finiteOr(candidate.sizedHoursMethodB, 0),
     sizedHoursFixed: finiteOr(candidate.sizedHoursFixed, 0),
+    costByTrade: parseCostByTrade(candidate.costByTrade),
+
   };
 };
 

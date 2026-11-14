@@ -391,7 +391,7 @@ export const listStudios = async (request: Request, response: StudioApiResponse<
 /* ------------------------------------------------------------------ */
 /* Update                                                              */
 /* ------------------------------------------------------------------ */
-
+//  ths update studio contrller is what called when the frontend user clicks the save chagnes so single controller only 
 // const mergeAdditionalCharges = (
 //   existing: IAdditionalCharges[] = [],
 //   incoming: IAdditionalCharges[]

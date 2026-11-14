@@ -367,3 +367,156 @@ export const findHubByLocation = async (req: Request, res: Response): Promise<an
     });
   }
 };
+
+
+
+
+
+import * as XLSX from "xlsx";
+
+interface IHubRow {
+  city?: string;
+  latitude?: number;
+  longitude?: number;
+  startingPincode?: string;
+  endingPincode?: string;
+  materialPercentage?: number;
+  labourPercentage?: number;
+  isActive?: boolean;
+}
+
+/**
+ * Bulk import hubs from an Excel file.
+ * Column headers in the sheet must exactly match the HubModel field names:
+ * city, latitude, longitude, startingPincode, endingPincode, materialPercentage, labourPercentage, isActive
+ */
+export const importHubsFromExcel = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { organizationId } = req.params;
+
+    if (!organizationId) {
+      return res.status(400).json({
+        ok: false,
+        message: "organizationId is required",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        ok: false,
+        message: "Excel file is required",
+      });
+    }
+
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+
+    // defval: "" ensures missing cells come through as empty string instead of being dropped
+    const rows: IHubRow[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    if (!rows.length) {
+      return res.status(400).json({
+        ok: false,
+        message: "The uploaded sheet has no data rows",
+      });
+    }
+
+    const validDocs: any[] = [];
+    const errors: { row: number; reason: string }[] = [];
+
+    rows.forEach((row, index) => {
+      const rowNumber = index + 2; // +2 accounts for header row + 1-based indexing
+
+      const city = String(row.city || "").trim();
+
+      if (!city) {
+        errors.push({ row: rowNumber, reason: "city is required" });
+        return;
+      }
+
+      const latitude =
+        row.latitude !== undefined && row.latitude !== "" ? Number(row.latitude) : null;
+      const longitude =
+        row.longitude !== undefined && row.longitude !== "" ? Number(row.longitude) : null;
+
+      if (row.latitude !== undefined && row.latitude !== "" && isNaN(latitude as number)) {
+        errors.push({ row: rowNumber, reason: "latitude must be a valid number" });
+        return;
+      }
+
+      if (row.longitude !== undefined && row.longitude !== "" && isNaN(longitude as number)) {
+        errors.push({ row: rowNumber, reason: "longitude must be a valid number" });
+        return;
+      }
+
+      const startingPincode = row.startingPincode ? String(row.startingPincode).trim() : null;
+      const endingPincode = row.endingPincode ? String(row.endingPincode).trim() : null;
+
+      if (
+        startingPincode &&
+        endingPincode &&
+        Number(startingPincode) > Number(endingPincode)
+      ) {
+        errors.push({ row: rowNumber, reason: "startingPincode cannot be greater than endingPincode" });
+        return;
+      }
+
+      const materialPercentage =
+        row.materialPercentage !== undefined && row.materialPercentage !== ""
+          ? Number(row.materialPercentage)
+          : 0;
+      const labourPercentage =
+        row.labourPercentage !== undefined && row.labourPercentage !== ""
+          ? Number(row.labourPercentage)
+          : 0;
+
+      if (isNaN(materialPercentage) || isNaN(labourPercentage)) {
+        errors.push({ row: rowNumber, reason: "materialPercentage / labourPercentage must be valid numbers" });
+        return;
+      }
+
+      let isActive = true;
+      if (row.isActive !== undefined && row.isActive !== "") {
+        const val = String(row.isActive).trim().toLowerCase();
+        isActive = val === "true" || val === "1" || val === "yes";
+      }
+
+      validDocs.push({
+        organizationId,
+        city,
+        latitude,
+        longitude,
+        startingPincode,
+        endingPincode,
+        materialPercentage,
+        labourPercentage,
+        isActive,
+      });
+    });
+
+    let insertedHubs: any[] = [];
+
+    if (validDocs.length) {
+      insertedHubs = await HubModel.insertMany(validDocs, { ordered: false });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: `Import complete: ${insertedHubs.length} inserted, ${errors.length} failed`,
+      data: {
+        insertedCount: insertedHubs.length,
+        failedCount: errors.length,
+        inserted: insertedHubs,
+        errors,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error importing hubs from excel:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};

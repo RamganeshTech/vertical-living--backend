@@ -47,6 +47,18 @@ export interface LabourPlanSettings {
   targetDays: number | null;
 }
 
+
+
+/** One trade's share of a saved calculation — the per-trade split shown in documents/review. */
+export interface LabourTradeCostSummary {
+  name: string;
+  cost: number;
+  skilledManDays: number;
+  helperDays: number;
+  days: number;
+}
+
+
 export interface LabourCalculationRecord {
   calculatedAt: string;
   configVersion: number;
@@ -62,6 +74,7 @@ export interface LabourCalculationRecord {
   sizedHoursMethodA: number;
   sizedHoursMethodB: number;
   sizedHoursFixed: number;
+  costByTrade: Record<string, LabourTradeCostSummary>;
 }
 
 /** Stored on the studio as studio.labourPlan (answer F1: kept in the studio document, no extra collection). */

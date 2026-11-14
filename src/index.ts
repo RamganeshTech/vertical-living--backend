@@ -438,8 +438,8 @@ app.use('/api/materialshop/document', MaterialShopRoutes)
 // app.use('/api/studios', StudiosRoutes)
 app.use('/api/studios', StudiosRoutes)
 app.use('/api/studio-variants', StudentVariantRoutes)
-app.use('/api/library-desings', LibraryDesignRoutes)
 app.use("/api/hubs", hubRoutes);
+app.use('/api/library-desings', LibraryDesignRoutes)
 // app.use('/api/trade-rate-config', TradeRateRoutes)
 // app.use('/api/labour-config', CarpentoryRateRoutes)
 

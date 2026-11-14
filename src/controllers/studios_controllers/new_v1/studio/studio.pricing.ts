@@ -250,7 +250,11 @@ export const recalculateStudioPricing = (
     studio.rooms.reduce((sum, room) => sum + room.furniture.reduce((s, item) => s + item.labourCost, 0), 0)
   );
   const labourBase = studio.labourPlan?.latestRecord?.labourCost ?? furnitureLabourFallback;
-  const labourTotal = roundCurrency(labourBase * (1 + (studio.hub?.labourPercentage ?? 0) / 100));
+  // const labourTotal = roundCurrency(labourBase * (1 + (studio.hub?.labourPercentage ?? 0) / 100));
+
+  const labourAfterHub = roundCurrency(labourBase * (1 + (studio.hub?.labourPercentage ?? 0) / 100));
+  const labourMargin = roundCurrency((labourAfterHub * studio.pricingSettings.marginPercentage) / 100);
+  const labourTotal = roundCurrency(labourAfterHub + labourMargin);
 
   const subtotal = roundCurrency(roomsSubtotal + labourTotal);
 
