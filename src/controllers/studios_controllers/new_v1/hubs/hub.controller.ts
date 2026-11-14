@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import HubModel from "./hub.model"; // adjust path as needed
+import * as XLSX from "xlsx";
 
 /**
  * Create a new hub
@@ -372,17 +373,27 @@ export const findHubByLocation = async (req: Request, res: Response): Promise<an
 
 
 
-import * as XLSX from "xlsx";
+
+// interface IHubRow {
+//   city?: string;
+//   latitude?: number;
+//   longitude?: number;
+//   startingPincode?: string;
+//   endingPincode?: string;
+//   materialPercentage?: number;
+//   labourPercentage?: number;
+//   isActive?: boolean;
+// }
 
 interface IHubRow {
   city?: string;
-  latitude?: number;
-  longitude?: number;
-  startingPincode?: string;
-  endingPincode?: string;
-  materialPercentage?: number;
-  labourPercentage?: number;
-  isActive?: boolean;
+  latitude?: number | string;
+  longitude?: number | string;
+  startingPincode?: string | number;
+  endingPincode?: string | number;
+  materialPercentage?: number | string;
+  labourPercentage?: number | string;
+  isActive?: boolean | string;
 }
 
 /**

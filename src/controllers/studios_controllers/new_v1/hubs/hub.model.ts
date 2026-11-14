@@ -13,6 +13,8 @@ export interface IHub extends Document {
   isActive: boolean;
 }
 
+
+
 const hubSchema = new Schema<IHub>(
   {
     organizationId: {
