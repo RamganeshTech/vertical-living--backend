@@ -11,7 +11,7 @@ import {
 
 import type {
   CeilingFinish, CoveLight, DecorItem, ElectricalPoint, ExtractionDetails, FloorFinish, FloorPlanFile,
-  FurnitureAccessory, FurnitureItem, FurnitureMaterials, IStudio, LightWiring, MaterialSelection,
+  FurnitureAccessory, FurnitureItem, FurnitureMaterials, FurnitureLabour, IStudio, LightWiring, MaterialSelection,
   ObjectPlacement, Opening, PlanBox, PriceBreakdownLine, ClientDetails, CompanyDetails, PaymentStage, PriceListFile,
   QuotationDetails, ShareLink, StudioSettings, Room, RoomPricing, Skirting, StudioLight,
   StudioRate, Wall, WallLayer,
@@ -75,8 +75,37 @@ const pricedDefinition = {
   labourCategoryName: { type: String, default: null },
   labourCategoryId: { type: Schema.Types.ObjectId, ref: "LabourRateCategoryModel", default: null },
   labourRatePerSquareFoot: nonNegativeNumber(0),
-  labourCost: nonNegativeNumber(0),
+  labourCost: nonNegativeNumber(0),          // previously it was ust labourcost , now it si labour object
+
+  // labour: {                                         // for eg: 
+  //   trade: { type: String, default: null },        // "carpentry" (fixed today, not hardcoded so it can change later)
+  //   labourCount: { type: String, default: null },  // how many carpenters needed
+  //   days: { type: String, default: null },         // how many days
+  //   skilledHours: { type: String, default: null }, // total skilled hours
+  //   helperHours: { type: String, default: null },  // helper hours (fraction of carpenter hours, not a separate person-type)
+  //   labourCost: { type: String, default: null },   // final ₹ cost
+  // }
 };
+
+
+
+const FurnitureLabourSchema = new Schema<FurnitureLabour>(
+  {
+    trade: { type: String, trim: true, default: "carpentry" },
+    route: { type: String, trim: true, default: null },
+    labourCount: nonNegativeNumber(0),
+    days: nonNegativeNumber(0),
+    manDays: nonNegativeNumber(0),
+    hoursPerDay: nonNegativeNumber(0),
+    skilledHours: nonNegativeNumber(0),
+    helperHours: nonNegativeNumber(0),
+    skilledCost: nonNegativeNumber(0),
+    helperCost: nonNegativeNumber(0),
+    labourCost: nonNegativeNumber(0),
+    method: { type: String, trim: true, default: "", maxlength: 500 },
+  },
+  withoutId
+);
 
 const areaDefinition = {
   grossAreaInSquareFeet: nonNegativeNumber(0),
@@ -312,6 +341,7 @@ const FurnitureItemSchema = new Schema<FurnitureItem>(
     installationCost: nonNegativeNumber(0),
     marginAmount: nonNegativeNumber(0),
     ...pricedDefinition,
+      labour: { type: FurnitureLabourSchema, default: null },
   },
   withId
 );

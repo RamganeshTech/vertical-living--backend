@@ -19,6 +19,11 @@ const parseSettings = (candidate: unknown, errors: string[]): LabourPlanSettings
   const siteFactorPercentage = finiteOr(source.siteFactorPercentage, 0);
   if (siteFactorPercentage < 0 || siteFactorPercentage > 200) errors.push("labourPlan.settings.siteFactorPercentage must be between 0 and 200");
   const crewOverrides: Record<string, number> = {};
+
+  const excludedTrades = Array.isArray(source.excludedTrades)
+    ? source.excludedTrades.filter((key): key is string => typeof key === "string").map((key) => key.slice(0, 60)).slice(0, 50)
+    : [];
+
   if (isRecord(source.crewOverrides)) {
     for (const [tradeKey, crew] of Object.entries(source.crewOverrides)) {
       const count = Math.round(finiteOr(crew, 0));
@@ -38,6 +43,7 @@ const parseSettings = (candidate: unknown, errors: string[]): LabourPlanSettings
     moduleRoutes,
     startDate: typeof source.startDate === "string" && source.startDate ? source.startDate.slice(0, 30) : null,
     targetDays,
+    excludedTrades 
   };
 };
 

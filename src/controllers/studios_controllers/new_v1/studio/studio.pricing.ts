@@ -79,6 +79,32 @@ export const buildSheetSummary = (rooms: Room[]) => {
   return [...groups.values()].map((g) => ({ ...g, sheetsToOrder: Math.ceil(g.sqft / g.sheetAreaSqft) }));
 };
 
+
+const finiteOrZero = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+export const furnitureLabourCostOf = (furnitureItem: Pick<FurnitureItem, "labour" | "labourCost">): number =>
+  furnitureItem.labour ? finiteOrZero(furnitureItem.labour.labourCost) : finiteOrZero(furnitureItem.labourCost);
+
+const recalculateFurnitureLabour = (furnitureItem: FurnitureItem, labourCost: number): void => {
+  const sent = furnitureItem.labour;
+  if (!sent) return;
+  const hoursPerDay = finiteOrZero(sent.hoursPerDay);
+  const skilledHours = finiteOrZero(sent.skilledHours);
+  const labourCount = Math.max(1, Math.round(finiteOrZero(sent.labourCount)) || 1);
+  const manDays = hoursPerDay > 0 ? skilledHours / hoursPerDay : 0;
+  sent.labourCount = labourCount;
+  sent.manDays = Math.round(manDays * 100) / 100;
+  sent.days = hoursPerDay > 0 ? Math.ceil((manDays / labourCount) * 2 - 1e-9) / 2 : finiteOrZero(sent.days);
+  sent.skilledHours = Math.round(skilledHours * 100) / 100;
+  sent.helperHours = Math.round(finiteOrZero(sent.helperHours) * 100) / 100;
+  sent.helperCost = Math.min(roundCurrency(finiteOrZero(sent.helperCost)), labourCost);
+  sent.skilledCost = roundCurrency(labourCost - sent.helperCost);
+  sent.labourCost = labourCost;
+};
+
 export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSettings: PricingSettings): number => {
   const accessoriesTotal = roundCurrency(
     furnitureItem.accessories.reduce((runningTotal, accessory) => runningTotal + recalculateLine(accessory), 0)
@@ -87,6 +113,8 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
     const productTotal = roundCurrency(furnitureItem.unitPrice * furnitureItem.quantity);
     furnitureItem.materialCost = roundCurrency(productTotal + accessoriesTotal);
     furnitureItem.labourCost = 0;
+    furnitureItem.labour = null;
+
     furnitureItem.installationCost = 0;
     furnitureItem.marginAmount = 0;
     furnitureItem.totalPrice = furnitureItem.materialCost;
@@ -117,7 +145,8 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
 
   // const labourCost = 0;
 
-  const labourCost = roundCurrency(furnitureItem.labourCost); // kept for the room-wise Labour display only — not added to totals below
+  // const labourCost = roundCurrency(furnitureItem.labourCost); // kept for the room-wise Labour display only — not added to totals below
+  const labourCost = roundCurrency(furnitureLabourCostOf(furnitureItem));
 
 
   // const installationCost = roundCurrency((materialCost * pricingSettings.installationPercentage) / 100);
@@ -127,6 +156,7 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
 
   furnitureItem.materialCost = materialCost;
   furnitureItem.labourCost = labourCost;
+  recalculateFurnitureLabour(furnitureItem, labourCost);
   furnitureItem.installationCost = installationCost;
   furnitureItem.marginAmount = marginAmount;
   // furnitureItem.totalPrice = roundCurrency(materialCost + labourCost + installationCost + marginAmount);
@@ -246,9 +276,15 @@ export const recalculateStudioPricing = (
 
   // Labour: the Labour Engine's all-trades total; falls back to the per-furniture sum for studios with no plan calculated yet.
   // Hub's labour % applied once here, not per furniture item.
+  
+  // const furnitureLabourFallback = roundCurrency(
+  //   studio.rooms.reduce((sum, room) => sum + room.furniture.reduce((s, item) => s + item.labourCost, 0), 0)
+  // );
+
   const furnitureLabourFallback = roundCurrency(
-    studio.rooms.reduce((sum, room) => sum + room.furniture.reduce((s, item) => s + item.labourCost, 0), 0)
+    studio.rooms.reduce((sum, room) => sum + room.furniture.reduce((s, item) => s + furnitureLabourCostOf(item), 0), 0)
   );
+
   const labourBase = studio.labourPlan?.latestRecord?.labourCost ?? furnitureLabourFallback;
   // const labourTotal = roundCurrency(labourBase * (1 + (studio.hub?.labourPercentage ?? 0) / 100));
 

@@ -1,0 +1,653 @@
+///////////////////////////////CHAGES STARTED///////////////////////////////
+// studioInternalQuote.util.ts  (NEW FILE)
+/**
+ * Turns a saved 3D studio into the shape of the internal quote model ("MaterialQuoteModel").
+ *
+ * Pure functions only: no database, no Express. The internal quote model and its schema are NOT changed;
+ * everything here only reads the studio and fills the internal quote's existing fields.
+ *
+ * One furniture item of the studio  ->  one "modular" entry of internalQuote.furnitures[]:
+ *   coreMaterials[0]           carcass + shutter boards (plywood sheets), inner and outer laminate sheets,
+ *                              and the carpenters and days of the WHOLE furniture
+ *   coreMaterials[1]           back panel board (its own thickness); carpenters 0, days 0
+ *   fittingsAndAccessories[]   hinges, handles, drawer channels, hanging rod + every accessory of the unit
+ *   nonBrandMaterials[]        worktop, glass / mirror, plinth, upholstered headboard
+ *   glues[]                    empty (the studio does not calculate glue yet)
+ *
+ * Everything that does not belong to a furniture  ->  internalQuote.commonMaterials[] (same row shape as
+ * fittings and accessories): the wall, floor, ceiling, door, window, light, electrical point and decor
+ * materials, one row per room and finish, and the labour of the other trades (painters, tile masons, ceiling
+ * fixers ...), one row per trade. works[] and glues[] are never filled.
+ *
+ * Row totals follow the internal quote's own formulas (replies of 16 Nov):
+ *   core row      = (material of the row + labour / rows + fabrication / rows) × (1 + furnitureProfit / 100)
+ *   simple row    = quantity × cost × (1 + profit / 100)      profit = the row's profitOnMaterial, else the furniture's
+ *   common row    = quantity × cost + (sum of every common row's quantity × cost × commonProfitOverride %) / rows
+ *                   -> the profit of the whole common pool, split evenly: every row gets the same flat amount.
+ *                   commonProfitOverride = the studio margin % (the global profit %).
+ *   furniture     = core + fittings + glues + non-brand
+ * Labour is read from the furniture's "labour" object (labourCost only for studios saved before it existed).
+ * Margin is on material AND labour, the same as the studio.
+ *
+ * Every figure that is an assumption (not something the studio stores) is in STUDIO_QUOTE_ASSUMPTIONS below,
+ * in one place, so it can be corrected without touching the logic.
+ */
+import type { FurnitureItem, IStudio, PriceBreakdownLine, Room } from "./studio.types";
+import { furnitureLabourCostOf } from "./studio.pricing";
+import { SHEET_AREA_SQFT } from "./studio.constants";
+
+/* ------------------------------------------------------------------ */
+/* Assumptions: check these with the site team                         */
+/* ------------------------------------------------------------------ */
+
+export const STUDIO_QUOTE_ASSUMPTIONS = {
+  /** Used only when the studio line has no thickness (no CRM plywood chosen). Taken from internal quote Q-53. */
+  defaultCarcassThickness: 16,
+  defaultBackPanelThickness: 12,
+  defaultLaminateThickness: 0.8,
+  /** Inner laminate = this many faces of every board (carcass + shutter). Q-53 shows about one sheet per plywood sheet. */
+  innerLaminateFacesPerBoard: 1,
+  /** Shutters bought ready (no plywood, no laminate). Every other shutter finish is a sheet on a board: plywood + outer laminate. */
+  readyMadeShutterRateKeys: ["shutter.glass", "shutter.lacqueredGlass"],
+  /**
+   * false: days = exact man-days / carpenters (2 decimals), so carpenters × days adds up to the Labour Engine's
+   *        man-days. true: each furniture's days are rounded up to half a day (the site schedule figure); over a
+   *        whole home this adds about 40% more carpenter-days than the engine calculated.
+   */
+  roundDaysUpToHalfDay: false,
+  /** Group names written in the description of each common material row. */
+  commonGroupNames: { walls: "Wall finishes", floor: "Flooring", ceiling: "False ceiling", openings: "Doors and windows", lighting: "Lighting", electrical: "Electrical points", decor: "Decor", labour: "Site labour" },
+  /**
+   * true (reply of 16 Nov, third revision): the global profit % is applied to the common materials too. It is
+   *       saved as commonProfitOverride; the profit of the whole pool is split evenly across the rows.
+   *       NOTE: the studio adds margin on labour but NOT on wall, floor, ceiling, door, window, light,
+   *       electrical and decor materials, so the internal quote is higher than the studio by the profit on
+   *       those materials (summary.commonMaterialProfitNotInStudio).
+   * false: no pool profit; material rows carry no profit and labour rows carry the studio margin as their own
+   *       profitOnMaterial, so the internal quote total equals the studio total.
+   */
+  applyGlobalProfitToCommonMaterials: true,
+  /**
+   * true: the labour of the other trades (painters, tile masons, ceiling fixers, electricians ...) is added to
+   * commonMaterials, one row per trade (quantity = man-days, cost = rate per man-day). false: it is left out,
+   * and the internal quote total is lower than the studio total by that labour.
+   */
+  includeSiteLabourInCommonMaterials: true,
+  /** The internal quote's default type and category for a quote created from a studio. */
+  quoteType: "basic",
+  defaultQuoteCategory: "residential",
+} as const;
+
+/* ------------------------------------------------------------------ */
+/* Internal quote shapes (copied from the internal quote model; that file is not imported or changed) */
+/* ------------------------------------------------------------------ */
+
+interface QuantityAndThickness { quantity: number | null; thickness: number | null }
+
+export interface InternalQuoteCoreMaterial {
+  itemName: string | null;
+  imageUrl: string | null;
+  plywoodNos: QuantityAndThickness;
+  laminateNos: QuantityAndThickness;
+  innerLaminate: QuantityAndThickness;
+  outerLaminate: QuantityAndThickness;
+  carpenters: number;
+  days: number;
+  profitOnMaterial: number;
+  profitOnLabour: number;
+  rowTotal: number;
+  remarks: string | null;
+}
+
+export interface InternalQuoteSimpleItem {
+  itemName: string | null;
+  description: string | null;
+  brandId: unknown | null;
+  brandName: string | null;
+  imageUrl: string | null;
+  quantity: number;
+  profitOnMaterial: number;
+  cost: number;
+  rowTotal: number;
+}
+
+export interface InternalQuoteFurniture {
+  furnitureName: string;
+  dimention: { height: number | null; width: number | null; depth: number | null };
+  furnitureProfit: number;
+  fabricationCost: number;
+  coreMaterials: InternalQuoteCoreMaterial[];
+  fittingsAndAccessories: InternalQuoteSimpleItem[];
+  glues: InternalQuoteSimpleItem[];
+  nonBrandMaterials: InternalQuoteSimpleItem[];
+  coreMaterialsTotal: number;
+  fittingsAndAccessoriesTotal: number;
+  gluesTotal: number;
+  nonBrandMaterialsTotal: number;
+  furnitureTotal: number;
+  plywoodBrandId: unknown | null;
+  innerLaminateBrandId: unknown | null;
+  outerLaminateBrandId: unknown | null;
+  typeOfWork: "modular" | "non-modular";
+  typeOfNonModularWork: string | null;
+  works: never[]; // never filled from a studio
+}
+
+export interface InternalQuoteFromStudio {
+  quoteNo: string | null;
+  quoteType: string;
+  organizationId: unknown;
+  projectId: unknown | null;
+  mainQuoteName: string | null;
+  quoteCategory: string | null;
+  plywoodBrandId: unknown | null;
+  innerLaminateId: unknown | null;
+  outerLaminateId: unknown | null;
+  sqftRateWork: never[];
+  furnitures: InternalQuoteFurniture[];
+  commonMaterials: InternalQuoteSimpleItem[];
+  commonProfitOverride: number;
+  globalTransportation: number;
+  globalProfitPercent: number;
+  mainQuote: null;
+  grandTotal: number;
+  notes: string;
+  isProductSpecific: boolean;
+}
+
+export interface StudioToInternalQuoteResult {
+  quote: InternalQuoteFromStudio;
+  /** Things the person should know: missing rates, assumed thickness, units with no labour detail, what was left out. */
+  warnings: string[];
+  summary: {
+    furnitureCount: number;
+    plywoodSheets: number;
+    laminateSheets: number;
+    carpenterDays: number;
+    /** Labour before margin: furniture labour, and the labour of the other trades. */
+    furnitureLabourCost: number;
+    otherLabourCost: number;
+    /** furnitureTotal includes the furniture profit. Walls to site labour are the commonMaterials rows BEFORE profit (quantity × cost). */
+    furnitureTotal: number;
+    wallsTotal: number;
+    floorTotal: number;
+    ceilingTotal: number;
+    openingsTotal: number;
+    lightingTotal: number;
+    electricalTotal: number;
+    decorTotal: number;
+    siteLabourTotal: number;
+    /** Profit added on the common materials rows, on top of the totals above. */
+    commonProfitPercentage: number;
+    commonProfitAmount: number;
+    grandTotal: number;
+    /**
+     * Check against the studio (its total before adjustment and GST).
+     * differenceFromStudio = internal quote - studio. commonMaterialProfitNotInStudio is the part of it that is
+     * expected: profit on common MATERIALS, which the studio does not add. The rest is rupee rounding.
+     */
+    studioSubtotal: number;
+    commonMaterialProfitNotInStudio: number;
+    differenceFromStudio: number;
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Small helpers                                                       */
+/* ------------------------------------------------------------------ */
+
+const toNumber = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+const roundTwo = (value: number): number => Math.round(toNumber(value) * 100) / 100;
+const sheetsFor = (squareFeet: number): number => (squareFeet > 0 ? Math.ceil(squareFeet / SHEET_AREA_SQFT - 1e-9) : 0);
+
+/** "tvUnit" -> "Tv unit", "queenBedWithStorage" -> "Queen bed with storage". */
+const readableName = (camelCaseName: string): string => {
+  const words = String(camelCaseName ?? "").replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase().trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : "Furniture";
+};
+
+const UNIT_WORDS: Record<string, string> = { squareFoot: "sq ft", runningFoot: "running ft", piece: "nos", pair: "pairs", set: "sets", sheet: "sheets", pack: "packs", litre: "litres", lumpSum: "lump sum" };
+
+const isBoardBackedShutter = (rateKey: string): boolean =>
+  rateKey.startsWith("shutter.") && !(STUDIO_QUOTE_ASSUMPTIONS.readyMadeShutterRateKeys as readonly string[]).includes(rateKey);
+
+const isFittingRateKey = (rateKey: string): boolean =>
+  rateKey === "hinge" || rateKey === "drawerChannel" || rateKey === "hangingRod" || rateKey.startsWith("handle.");
+
+const simpleItem = (itemName: string, description: string | null, brandId: unknown | null, brandName: string, quantity: number, cost: number, profitPercentage: number): InternalQuoteSimpleItem => ({
+  itemName,
+  description,
+  brandId: brandId ?? null,
+  brandName: brandName || null,
+  imageUrl: null,
+  quantity: roundTwo(quantity),
+  profitOnMaterial: 0,
+  cost: roundTwo(cost),
+  // Same working as the internal quote: quantity × cost, plus the furniture profit %.
+  rowTotal: roundTwo(quantity * cost * (1 + profitPercentage / 100)),
+});
+
+const lineAsSimpleItem = (line: PriceBreakdownLine, profitPercentage: number): InternalQuoteSimpleItem =>
+  simpleItem(line.label, UNIT_WORDS[line.unit] ?? line.unit ?? null, line.rateConfigurationItemId, line.rateConfigurationItemName, toNumber(line.quantity), toNumber(line.unitPrice), profitPercentage);
+
+/** Days of the furniture's crew for the internal quote (see roundDaysUpToHalfDay). */
+const daysForQuote = (labour: { days: number; manDays: number; labourCount: number }): number =>
+  STUDIO_QUOTE_ASSUMPTIONS.roundDaysUpToHalfDay ? toNumber(labour.days) : roundTwo(toNumber(labour.manDays) / Math.max(1, toNumber(labour.labourCount)));
+
+const sumRowTotals = (rows: ReadonlyArray<{ rowTotal: number }>): number => Math.round(rows.reduce((sum, row) => sum + toNumber(row.rowTotal), 0));
+
+/* ------------------------------------------------------------------ */
+/* One furniture item                                                  */
+/* ------------------------------------------------------------------ */
+
+export const furnitureToInternalQuote = (item: FurnitureItem, room: Room, marginPercentage: number, labourFactor: number, warnings: string[]): InternalQuoteFurniture => {
+  const furnitureName = `${room.name || "Room"} ${readableName(item.furnitureType)}${item.code ? ` (${item.code})` : ""}`;
+  // The studio adds no margin on a catalogue product (bought ready), so its profit is 0 here too.
+  const profitPercentage = item.pricingMethod === "rateConfigurationItem" ? 0 : marginPercentage;
+  const profitFactor = 1 + profitPercentage / 100;
+  const lines = item.priceBreakdown ?? [];
+
+  const carcassLines = lines.filter((line) => line.rateKey.startsWith("carcass."));
+  const backPanelLines = lines.filter((line) => line.rateKey === "backPanel");
+  const shutterBoardLines = lines.filter((line) => isBoardBackedShutter(line.rateKey));
+  const fittingLines = lines.filter((line) => isFittingRateKey(line.rateKey));
+  const otherLines = lines.filter((line) => !carcassLines.includes(line) && !backPanelLines.includes(line) && !shutterBoardLines.includes(line) && !fittingLines.includes(line));
+
+  const carcassSquareFeet = carcassLines.reduce((sum, line) => sum + toNumber(line.quantity), 0);
+  const shutterSquareFeet = shutterBoardLines.reduce((sum, line) => sum + toNumber(line.quantity), 0);
+  const backPanelSquareFeet = backPanelLines.reduce((sum, line) => sum + toNumber(line.quantity), 0);
+
+  // Plywood: carcass boards + the boards behind laminate / acrylic shutters, in whole 8 × 4 ft sheets (32 sq ft).
+  const boardSquareFeet = carcassSquareFeet + shutterSquareFeet;
+  const plywoodSheets = sheetsFor(boardSquareFeet);
+  const innerLaminateSheets = sheetsFor(boardSquareFeet * STUDIO_QUOTE_ASSUMPTIONS.innerLaminateFacesPerBoard);
+  const outerLaminateSheets = sheetsFor(shutterSquareFeet);
+  const backPanelSheets = sheetsFor(backPanelSquareFeet);
+
+  const carcassThickness = toNumber(carcassLines[0]?.thickness) || toNumber(room.furnitureMaterials?.carcassBoard?.thickness);
+  const backPanelThickness = toNumber(backPanelLines[0]?.thickness) || toNumber(room.furnitureMaterials?.backPanel?.thickness);
+  const laminateThickness = toNumber(shutterBoardLines[0]?.thickness);
+  if (plywoodSheets > 0 && !carcassThickness) warnings.push(`${furnitureName}: no plywood thickness chosen in the studio; ${STUDIO_QUOTE_ASSUMPTIONS.defaultCarcassThickness} mm assumed.`);
+
+  // Labour of the whole furniture goes in the FIRST core material row, the way the internal quote is typed.
+  const labour = item.labour ?? null;
+  // Labour is read from the labour object; hub labour % (if any) is applied here because the studio applies it on the total.
+  const labourCost = roundTwo(furnitureLabourCostOf(item) * labourFactor);
+  if (!labour && labourCost > 0) warnings.push(`${furnitureName}: saved before labour details were stored; carpenters and days are 0. Open the studio and save it once to fill them.`);
+
+  const boardMaterialCost = [...carcassLines, ...shutterBoardLines].reduce((sum, line) => sum + toNumber(line.totalPrice), 0);
+  const backPanelCost = backPanelLines.reduce((sum, line) => sum + toNumber(line.totalPrice), 0);
+  if (plywoodSheets > 0 && boardMaterialCost <= 0) warnings.push(`${furnitureName}: board and laminate rates are 0 in the studio, so the material amount is 0.`);
+
+  // Internal quote formula: labour (and fabrication, 0 here) is split evenly across the core material rows.
+  const hasMainRow = plywoodSheets > 0 || labourCost > 0;
+  const coreRowCount = (hasMainRow ? 1 : 0) + (backPanelSheets > 0 ? 1 : 0);
+  const labourPerRow = coreRowCount > 0 ? labourCost / coreRowCount : 0;
+  const coreMaterials: InternalQuoteCoreMaterial[] = [];
+  if (hasMainRow) {
+    coreMaterials.push({
+      itemName: furnitureName,
+      imageUrl: null,
+      plywoodNos: { quantity: plywoodSheets, thickness: carcassThickness || STUDIO_QUOTE_ASSUMPTIONS.defaultCarcassThickness },
+      laminateNos: { quantity: innerLaminateSheets + outerLaminateSheets, thickness: laminateThickness || STUDIO_QUOTE_ASSUMPTIONS.defaultLaminateThickness },
+      innerLaminate: { quantity: innerLaminateSheets, thickness: STUDIO_QUOTE_ASSUMPTIONS.defaultLaminateThickness },
+      outerLaminate: { quantity: outerLaminateSheets, thickness: laminateThickness || STUDIO_QUOTE_ASSUMPTIONS.defaultLaminateThickness },
+      carpenters: labour ? toNumber(labour.labourCount) : 0,
+      days: labour ? daysForQuote(labour) : 0,
+      profitOnMaterial: 0,
+      profitOnLabour: 0,
+      rowTotal: roundTwo((boardMaterialCost + labourPerRow) * profitFactor),
+      remarks: `From 3D studio: boards ${roundTwo(boardSquareFeet)} sq ft (carcass ${roundTwo(carcassSquareFeet)} + shutters ${roundTwo(shutterSquareFeet)}); `
+        + `material ₹${roundTwo(boardMaterialCost)}; labour of the whole furniture ₹${roundTwo(labourCost)}${coreRowCount > 1 ? ` (split over ${coreRowCount} rows)` : ""}`
+        + (labour ? ` (${labour.skilledHours} skilled h + ${labour.helperHours} helper h = ${labour.manDays} carpenter man-days, ${labour.days} days on site for ${labour.labourCount} carpenters, ${labour.route ?? "site"} made)` : ""),
+    });
+  }
+  if (backPanelSheets > 0) {
+    coreMaterials.push({
+      itemName: "Back panel",
+      imageUrl: null,
+      plywoodNos: { quantity: backPanelSheets, thickness: backPanelThickness || STUDIO_QUOTE_ASSUMPTIONS.defaultBackPanelThickness },
+      laminateNos: { quantity: 0, thickness: 0 },
+      innerLaminate: { quantity: 0, thickness: 0 },
+      outerLaminate: { quantity: 0, thickness: 0 },
+      carpenters: 0,
+      days: 0,
+      profitOnMaterial: 0,
+      profitOnLabour: 0,
+      rowTotal: roundTwo((backPanelCost + labourPerRow) * profitFactor),
+      remarks: `From 3D studio: back panel ${roundTwo(backPanelSquareFeet)} sq ft; material ₹${roundTwo(backPanelCost)}; labour share ₹${roundTwo(labourPerRow)}`,
+    });
+  }
+
+  const fittingsAndAccessories: InternalQuoteSimpleItem[] = [
+    ...fittingLines.map((line) => lineAsSimpleItem(line, profitPercentage)),
+    ...(item.accessories ?? []).map((accessory) =>
+      simpleItem(accessory.label || readableName(accessory.accessoryType), "Accessory", accessory.rateConfigurationItemId, accessory.rateConfigurationItemName, Math.max(1, toNumber(accessory.quantity) || 1), toNumber(accessory.unitPrice), profitPercentage)),
+  ];
+
+  const nonBrandMaterials: InternalQuoteSimpleItem[] = otherLines.map((line) => lineAsSimpleItem(line, profitPercentage));
+  // A catalogue product (bought ready) has no boards: it goes in as one line.
+  if (item.pricingMethod === "rateConfigurationItem") {
+    nonBrandMaterials.push(simpleItem(item.rateConfigurationItemName || readableName(item.furnitureType), "Catalogue product", item.rateConfigurationItemId, item.rateConfigurationItemName, Math.max(1, toNumber(item.quantity) || 1), toNumber(item.unitPrice), profitPercentage));
+  }
+
+  const coreMaterialsTotal = sumRowTotals(coreMaterials);
+  const fittingsAndAccessoriesTotal = sumRowTotals(fittingsAndAccessories);
+  const nonBrandMaterialsTotal = sumRowTotals(nonBrandMaterials);
+
+  return {
+    furnitureName,
+    dimention: { height: toNumber(item.height) || null, width: toNumber(item.width) || null, depth: toNumber(item.depth) || null }, // millimetres, as in the studio
+    furnitureProfit: profitPercentage,
+    fabricationCost: 0,
+    coreMaterials,
+    fittingsAndAccessories,
+    glues: [],
+    nonBrandMaterials,
+    coreMaterialsTotal,
+    fittingsAndAccessoriesTotal,
+    gluesTotal: 0,
+    nonBrandMaterialsTotal,
+    furnitureTotal: coreMaterialsTotal + fittingsAndAccessoriesTotal + nonBrandMaterialsTotal,
+    plywoodBrandId: carcassLines[0]?.rateConfigurationItemId ?? null,
+    innerLaminateBrandId: null, // the studio has no inner laminate choice yet
+    outerLaminateBrandId: shutterBoardLines[0]?.rateConfigurationItemId ?? null,
+    typeOfWork: "modular",
+    typeOfNonModularWork: null,
+    works: [],
+  };
+};
+
+/* ------------------------------------------------------------------ */
+/* Common materials: walls, floor, ceiling, lights, electrical points  */
+/* ------------------------------------------------------------------ */
+
+interface PricedPart { unitPrice?: number; quantity?: number; unit?: string; totalPrice?: number; rateConfigurationItemId?: unknown; rateConfigurationItemName?: string }
+
+/** Collects priced parts into common material rows: parts with the same name and rate become one row. */
+const createCommonRows = (groupName: string) => {
+  const rowsByKey = new Map<string, InternalQuoteSimpleItem>();
+  return {
+    add: (itemName: string, part: PricedPart | null | undefined, quantityOverride?: number): void => {
+      if (!part) return;
+      const quantity = toNumber(quantityOverride ?? part.quantity);
+      if (quantity <= 0) return;
+      const unit = String(part.unit ?? "squareFoot");
+      const rate = toNumber(part.unitPrice);
+      const key = `${itemName}|${unit}|${rate}`;
+      const row = rowsByKey.get(key) ?? {
+        itemName,
+        description: `${groupName} · ${UNIT_WORDS[unit] ?? unit}`,
+        brandId: part.rateConfigurationItemId ?? null,
+        brandName: part.rateConfigurationItemName || null,
+        imageUrl: null,
+        quantity: 0,
+        profitOnMaterial: 0, // the studio adds no margin on these materials
+        cost: roundTwo(rate),
+        rowTotal: 0,
+      };
+      row.quantity = roundTwo(row.quantity + quantity);
+      row.rowTotal = roundTwo(row.rowTotal + rate * quantity); // quantity × cost
+      rowsByKey.set(key, row);
+    },
+    rows: (): InternalQuoteSimpleItem[] => [...rowsByKey.values()],
+  };
+};
+
+const totalOf = (rows: ReadonlyArray<{ rowTotal: number }>): number => roundTwo(rows.reduce((sum, row) => sum + toNumber(row.rowTotal), 0));
+
+/**
+ * Walls, floor (with skirting), ceiling (with cove light), lights (with wiring) and electrical points of every
+ * room, and its doors, windows and decor items, as common material rows: quantity × cost, the same amounts the
+ * studio totals use (rowTotal here is before profit; the profit is added in studioToInternalQuote).
+ */
+export const roomFinishesToCommonMaterials = (rooms: ReadonlyArray<Room>): Record<"walls" | "floor" | "ceiling" | "openings" | "lighting" | "electrical" | "decor", InternalQuoteSimpleItem[]> => {
+  const names = STUDIO_QUOTE_ASSUMPTIONS.commonGroupNames;
+  const walls = createCommonRows(names.walls);
+  const floor = createCommonRows(names.floor);
+  const ceiling = createCommonRows(names.ceiling);
+  const lighting = createCommonRows(names.lighting);
+  const electrical = createCommonRows(names.electrical);
+  const openings = createCommonRows(names.openings);
+  const decor = createCommonRows(names.decor);
+  for (const room of rooms) {
+    const roomName = room.name || "Room";
+    for (const wall of room.walls ?? []) {
+      for (const layer of wall.layers ?? []) walls.add(`${roomName}: ${readableName(layer.layerType)}`, layer);
+    }
+    if (room.floor) {
+      floor.add(`${roomName}: ${readableName(room.floor.finishType)} floor`, room.floor);
+      const skirting = room.floor.skirting;
+      if (skirting && String(skirting.material ?? "none") !== "none") floor.add(`${roomName}: ${readableName(String(skirting.material))} skirting`, skirting);
+    }
+    if (room.ceiling && String(room.ceiling.ceilingType) !== "none") {
+      ceiling.add(`${roomName}: ${readableName(room.ceiling.ceilingType)} false ceiling`, room.ceiling);
+      if (room.ceiling.hasCoveLight) ceiling.add(`${roomName}: Cove LED strip with driver`, room.ceiling.coveLight);
+    }
+    for (const light of room.lights ?? []) {
+      // Same as the studio's recalculateLight: every light is counted, quantity at least 1, wiring at least 1.
+      lighting.add(`${roomName}: ${readableName(light.lightType)}`, { ...light, unit: "piece" }, toNumber(light.quantity) > 0 ? toNumber(light.quantity) : 1);
+      if (light.wiring && toNumber(light.wiring.unitPrice) > 0) lighting.add(`${roomName}: Wiring for ${readableName(light.lightType).toLowerCase()}`, light.wiring, toNumber(light.wiring.quantity) || 1);
+    }
+    for (const point of room.electricalPoints ?? []) {
+      if (point.isIncludedInQuote) electrical.add(`${roomName}: ${readableName(point.pointType)}`, point);
+    }
+    for (const opening of room.openings ?? []) {
+      // Same as the studio's recalculateOpening: only openings included in the quote; a door or window priced
+      // from several lines (frame, shutter, mesh, grill ...) goes in as one piece at its total price.
+      if (!opening.isIncludedInQuote) continue;
+      const productName = String(opening.productType ?? "").trim();
+      const itemName = `${roomName}: ${readableName(opening.openingType)}${productName ? `, ${readableName(productName).toLowerCase()}` : ""}`;
+      if ((opening.priceBreakdown ?? []).length > 0) openings.add(itemName, { unitPrice: toNumber(opening.totalPrice), unit: "piece" }, 1);
+      else openings.add(itemName, opening);
+    }
+    for (const decorItem of room.decorItems ?? []) {
+      if (decorItem.isIncludedInQuote) decor.add(`${roomName}: ${decorItem.label || readableName(decorItem.decorType)}`, decorItem);
+    }
+  }
+  return { walls: walls.rows(), floor: floor.rows(), ceiling: ceiling.rows(), openings: openings.rows(), lighting: lighting.rows(), electrical: electrical.rows(), decor: decor.rows() };
+};
+
+/* ------------------------------------------------------------------ */
+/* Common materials: labour of the other trades                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One common material row per trade, from the Labour Engine record saved on the studio
+ * (labourPlan.latestRecord.costByTrade). The furniture labour is already inside each furniture, so it is taken
+ * out of the carpentry row; what is left there is room setting-out, the buffer day and wall panelling.
+ *
+ *   quantity = skilled man-days of the trade
+ *   cost     = trade cost × (1 + hub labour %) / man-days     -> rate per man-day, helpers included
+ *   rowTotal = quantity × cost here (before profit; the profit is added in studioToInternalQuote)
+ */
+export const siteLabourToCommonMaterials = (studio: IStudio, furnitureLabourCost: number, labourFactor: number, warnings: string[]): { rows: InternalQuoteSimpleItem[]; costBeforeMargin: number } => {
+  const record = studio.labourPlan?.latestRecord ?? null;
+  if (!record) {
+    warnings.push("This studio has no saved Labour Engine calculation, so only the furniture labour is in the internal quote. Open the studio and save it once.");
+    return { rows: [], costBeforeMargin: 0 };
+  }
+  const groupName = STUDIO_QUOTE_ASSUMPTIONS.commonGroupNames.labour;
+  const rows: InternalQuoteSimpleItem[] = [];
+  let costBeforeMargin = 0;
+  let tradeCostTotal = 0;
+  const addRow = (tradeName: string, note: string, cost: number, skilledManDays: number, daysOnSite: number): void => {
+    if (cost <= 0.005) return;
+    const manDays = roundTwo(skilledManDays) > 0 ? roundTwo(skilledManDays) : 1;
+    const workers = Math.max(1, Math.round(daysOnSite > 0 ? manDays / daysOnSite : 1));
+    rows.push({
+      itemName: `Labour: ${tradeName}`,
+      description: `${groupName} · ${manDays} man-days (about ${workers} ${workers === 1 ? "worker" : "workers"} × ${roundTwo(manDays / workers)} days)${note ? ` · ${note}` : ""}`,
+      brandId: null,
+      brandName: null,
+      imageUrl: null,
+      quantity: manDays,
+      profitOnMaterial: 0,
+      cost: roundTwo((cost * labourFactor) / manDays),
+      rowTotal: roundTwo(cost * labourFactor),
+    });
+    costBeforeMargin += cost;
+  };
+  for (const [tradeKey, trade] of Object.entries(record.costByTrade ?? {})) {
+    const cost = toNumber(trade.cost);
+    tradeCostTotal += cost;
+    const tradeName = String(trade.name || readableName(tradeKey)).split(" (")[0];
+    if (tradeKey === "carpentry") {
+      // Furniture (module) labour is all carpentry; it is already in the furniture entries.
+      const otherCost = Math.max(0, cost - furnitureLabourCost);
+      const share = cost > 0 ? otherCost / cost : 0;
+      addRow(tradeName, "setting-out, buffer and wall panelling; furniture labour is inside each furniture", otherCost, toNumber(trade.skilledManDays) * share, toNumber(trade.days) * share);
+    } else {
+      addRow(tradeName, "", cost, toNumber(trade.skilledManDays), toNumber(trade.days));
+    }
+  }
+  // A record saved before the per-trade costs existed (or with costs that do not add up): keep the total right.
+  const missing = roundTwo(toNumber(record.labourCost) - (tradeCostTotal > 0 ? tradeCostTotal : furnitureLabourCost));
+  if (missing > 1) addRow("Other trades", "no per-trade split saved on this studio", missing, 0, 0);
+  return { rows, costBeforeMargin: roundTwo(costBeforeMargin) };
+};
+
+/* ------------------------------------------------------------------ */
+/* The whole studio                                                    */
+/* ------------------------------------------------------------------ */
+
+/** "Name: message" repeated for many furniture items becomes one line: "12 furniture items: message (Name, Name, Name and 9 more)". */
+const groupWarnings = (warnings: string[]): string[] => {
+  const namesByMessage = new Map<string, string[]>();
+  const grouped: string[] = [];
+  for (const warning of [...new Set(warnings)]) {
+    const separatorIndex = warning.indexOf("): ");
+    if (separatorIndex < 0) { grouped.push(warning); continue; }
+    const message = warning.slice(separatorIndex + 3);
+    namesByMessage.set(message, [...(namesByMessage.get(message) ?? []), warning.slice(0, separatorIndex + 1)]);
+  }
+  const fromFurniture = [...namesByMessage].map(([message, names]) =>
+    names.length === 1 ? `${names[0]}: ${message}` : `${names.length} furniture items: ${message} (${names.slice(0, 3).join(", ")}${names.length > 3 ? ` and ${names.length - 3} more` : ""})`);
+  return [...fromFurniture, ...grouped];
+};
+
+export const studioToInternalQuote = (studio: IStudio, options: { quoteNo?: string | null; quoteCategory?: string | null } = {}): StudioToInternalQuoteResult => {
+  const warnings: string[] = [];
+  const marginPercentage = toNumber(studio.pricingSettings?.marginPercentage);
+  // The studio applies the hub labour % once on the labour total; here it goes on every labour amount, so the totals agree.
+  const labourFactor = 1 + toNumber(studio.hub?.labourPercentage) / 100;
+  const rooms = studio.rooms ?? [];
+
+  const furnitures: InternalQuoteFurniture[] = [];
+  let furnitureLabourCost = 0;
+  for (const room of rooms) {
+    for (const item of room.furniture ?? []) {
+      furnitures.push(furnitureToInternalQuote(item, room, marginPercentage, labourFactor, warnings));
+      furnitureLabourCost += furnitureLabourCostOf(item);
+    }
+  }
+  furnitureLabourCost = roundTwo(furnitureLabourCost);
+  if (furnitures.length === 0) warnings.push("This studio has no furniture, so the internal quote has no furniture rows.");
+
+  // Everything that does not belong to a furniture goes to commonMaterials.
+  const finishes = roomFinishesToCommonMaterials(rooms);
+  const names = STUDIO_QUOTE_ASSUMPTIONS.commonGroupNames;
+  for (const [groupName, groupRows] of [[names.walls, finishes.walls], [names.floor, finishes.floor], [names.ceiling, finishes.ceiling], [names.openings, finishes.openings], [names.lighting, finishes.lighting], [names.electrical, finishes.electrical], [names.decor, finishes.decor]] as const) {
+    const unpriced = groupRows.filter((row) => row.rowTotal <= 0).length;
+    if (unpriced > 0) warnings.push(`${groupName}: ${unpriced} of ${groupRows.length} rows have no rate in the studio, so their amount is 0.`);
+  }
+  const siteLabour = STUDIO_QUOTE_ASSUMPTIONS.includeSiteLabourInCommonMaterials
+    ? siteLabourToCommonMaterials(studio, furnitureLabourCost, labourFactor, warnings)
+    : { rows: [] as InternalQuoteSimpleItem[], costBeforeMargin: 0 };
+  if (!STUDIO_QUOTE_ASSUMPTIONS.includeSiteLabourInCommonMaterials) warnings.push("The labour of the other trades (painting, tiling, ceiling, electrical ...) is not in this internal quote.");
+  const materialRows = [...finishes.walls, ...finishes.floor, ...finishes.ceiling, ...finishes.openings, ...finishes.lighting, ...finishes.electrical, ...finishes.decor];
+  const commonMaterials = [...materialRows, ...siteLabour.rows];
+
+  // Profit on the common pool. Up to here every common rowTotal is quantity × cost (before profit).
+  const materialBase = totalOf(materialRows);
+  const labourBase = totalOf(siteLabour.rows);
+  // Group totals for the summary, before profit (the pool profit is a flat amount per row, so it is shown on its own).
+  const groupBase = {
+    walls: totalOf(finishes.walls), floor: totalOf(finishes.floor), ceiling: totalOf(finishes.ceiling), openings: totalOf(finishes.openings),
+    lighting: totalOf(finishes.lighting), electrical: totalOf(finishes.electrical), decor: totalOf(finishes.decor),
+  };
+  let commonProfitPercentage = 0;
+  let commonProfitAmount = 0;
+  let commonMaterialProfitNotInStudio = 0;
+  if (STUDIO_QUOTE_ASSUMPTIONS.applyGlobalProfitToCommonMaterials) {
+    // Internal quote rule: profit of the whole pool = sum of (quantity × cost) × commonProfitOverride %,
+    // split evenly across all rows, so every row gets the same flat amount. No row has its own profit %.
+    commonProfitPercentage = marginPercentage;
+    commonProfitAmount = roundTwo(((materialBase + labourBase) * commonProfitPercentage) / 100);
+    const profitPerRow = commonMaterials.length > 0 ? commonProfitAmount / commonMaterials.length : 0;
+    for (const row of commonMaterials) row.rowTotal = roundTwo(row.rowTotal + profitPerRow);
+    commonMaterialProfitNotInStudio = roundTwo((materialBase * commonProfitPercentage) / 100);
+    if (commonMaterialProfitNotInStudio > 0) warnings.push(`The internal quote adds ${commonProfitPercentage}% profit on wall, floor, ceiling, door, window, light, electrical and decor materials (₹${commonMaterialProfitNotInStudio}). The studio price does not have this profit, so the internal quote is higher than the studio by this amount.`);
+  } else {
+    // Same as the studio: no margin on materials; margin on labour, carried by each labour row.
+    for (const row of siteLabour.rows) {
+      row.profitOnMaterial = marginPercentage;
+      row.rowTotal = roundTwo(row.rowTotal * (1 + marginPercentage / 100));
+    }
+    commonProfitAmount = roundTwo((labourBase * marginPercentage) / 100);
+  }
+  if ((studio.additionalCharges ?? []).length > 0) warnings.push("The studio's additional charges are not copied into the internal quote.");
+
+  const firstId = (pick: (furniture: InternalQuoteFurniture) => unknown | null): unknown | null => {
+    for (const furniture of furnitures) { const found = pick(furniture); if (found) return found; }
+    return null;
+  };
+  const furnitureTotal = roundTwo(furnitures.reduce((sum, furniture) => sum + furniture.furnitureTotal, 0));
+  const grandTotal = Math.round(furnitureTotal + totalOf(commonMaterials));
+  const coreRows = furnitures.flatMap((furniture) => furniture.coreMaterials);
+  const studioSubtotal = roundTwo(toNumber(studio.totals?.subtotal));
+
+  return {
+    quote: {
+      quoteNo: options.quoteNo ?? null,
+      quoteType: STUDIO_QUOTE_ASSUMPTIONS.quoteType,
+      organizationId: studio.organizationId,
+      projectId: studio.projectId ?? null,
+      mainQuoteName: studio.quoteName || studio.quoteNo || null,
+      quoteCategory: options.quoteCategory ?? STUDIO_QUOTE_ASSUMPTIONS.defaultQuoteCategory,
+      plywoodBrandId: firstId((furniture) => furniture.plywoodBrandId),
+      innerLaminateId: null,
+      outerLaminateId: firstId((furniture) => furniture.outerLaminateBrandId),
+      sqftRateWork: [],
+      furnitures,
+      commonMaterials,
+      // The profit % of the common pool (the global profit %); 0 when each labour row carries its own profit instead.
+      commonProfitOverride: commonProfitPercentage,
+      globalTransportation: 0,
+      globalProfitPercent: marginPercentage,
+      mainQuote: null,
+      grandTotal,
+      notes: `Created from 3D studio ${studio.quoteNo} (version ${studio.version})`,
+      isProductSpecific: false,
+    },
+    warnings: groupWarnings(warnings),
+    summary: {
+      furnitureCount: furnitures.length,
+      plywoodSheets: coreRows.reduce((sum, row) => sum + toNumber(row.plywoodNos.quantity), 0),
+      laminateSheets: coreRows.reduce((sum, row) => sum + toNumber(row.laminateNos.quantity), 0),
+      carpenterDays: roundTwo(coreRows.reduce((sum, row) => sum + row.carpenters * row.days, 0)),
+      furnitureLabourCost,
+      otherLabourCost: siteLabour.costBeforeMargin,
+      furnitureTotal,
+      wallsTotal: groupBase.walls,
+      floorTotal: groupBase.floor,
+      ceilingTotal: groupBase.ceiling,
+      openingsTotal: groupBase.openings,
+      lightingTotal: groupBase.lighting,
+      electricalTotal: groupBase.electrical,
+      decorTotal: groupBase.decor,
+      siteLabourTotal: labourBase,
+      commonProfitPercentage,
+      commonProfitAmount,
+      grandTotal,
+      studioSubtotal,
+      commonMaterialProfitNotInStudio,
+      // = commonMaterialProfitNotInStudio (plus a few rupees of rounding) when the studio was saved with the current pricing.
+      differenceFromStudio: roundTwo(grandTotal - studioSubtotal),
+    },
+  };
+};
+///////////////////////////////CHAGES ENDED///////////////////////////////

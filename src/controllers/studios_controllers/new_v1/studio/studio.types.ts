@@ -268,6 +268,22 @@ export interface FurnitureMaterials {
   hangingRod: MaterialSelection;
 }
 
+/** Full labour detail of one furniture item, from the Labour Engine (saved next to labourCost). */
+export interface FurnitureLabour {
+  trade: string;
+  route: string | null;
+  labourCount: number;
+  days: number;
+  manDays: number;
+  hoursPerDay: number;
+  skilledHours: number;
+  helperHours: number;
+  skilledCost: number;
+  helperCost: number;
+  labourCost: number;
+  method: string;
+}
+
 export interface FurnitureItem extends PricedFields {
   _id: Types.ObjectId;
   code: string;
@@ -295,6 +311,7 @@ export interface FurnitureItem extends PricedFields {
   labourCost: number;
   installationCost: number;
   marginAmount: number;
+  labour?: FurnitureLabour | null;
 }
 
 export interface DecorItem extends PricedFields {

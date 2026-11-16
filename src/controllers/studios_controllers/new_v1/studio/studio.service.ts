@@ -59,6 +59,8 @@ import type { RoleBasedRequest } from "./studio.crmImports";
 import { StudioLabourPlan } from "../labourEngine/labourEngine.types";
 import { mergeStudioLabourPlan, setStudioLabourPlanFrozen } from "../labourEngine/studioLabourPlan";
 import LabourEngineRoutes from "../labourEngine/labourEngine.routes";
+import QuoteRouter from "../../../../routers/Quote Routes/QuoteGenerate Routes/quoteGenerate.routes";
+import StudioInternalQuoteRoutes from "./studioInternalQuote.controller";
 
 type StudioDocument = HydratedDocument<IStudio>;
 
@@ -667,6 +669,7 @@ const PRICE_FIELD_NAMES = new Set([
   "marginAmount",
   "priceBreakdown",
   "pricing",
+  "labour",
   "wiring",
 ]);
 
@@ -857,6 +860,10 @@ const priceLockRoles = multiRoleAuthMiddleware("owner", "CTO");
 export const StudiosRoutes = Router();
 
 StudiosRoutes.use("/:organizationId/labour-engine", LabourEngineRoutes);
+// Studio -> internal quote: GET = preview (saves nothing), POST = create. Three path parts, so it never clashes with "/:organizationId/:studioId".
+
+StudiosRoutes.use("/:organizationId/:studioId/internal-quote", StudioInternalQuoteRoutes);
+
 // Public route first, so "/shared/…" is never read as an organisation and studio id. No role middleware on purpose.
 StudiosRoutes.get("/shared/:shareToken", getSharedStudio);
 // Settings before "/:organizationId/:studioId", so "settings" is never read as a studio id.

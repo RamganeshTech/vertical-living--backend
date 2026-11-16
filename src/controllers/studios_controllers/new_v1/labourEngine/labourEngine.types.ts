@@ -45,6 +45,8 @@ export interface LabourPlanSettings {
   moduleRoutes: Record<string, FurnitureBuildRoute>;
   startDate: string | null;
   targetDays: number | null;
+  /** Trade keys turned off for this quote — e.g. skip false-ceiling labour entirely. */
+  excludedTrades: string[];
 }
 
 
