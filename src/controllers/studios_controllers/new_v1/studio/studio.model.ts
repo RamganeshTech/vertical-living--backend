@@ -103,6 +103,9 @@ const FurnitureLabourSchema = new Schema<FurnitureLabour>(
     helperCost: nonNegativeNumber(0),
     labourCost: nonNegativeNumber(0),
     method: { type: String, trim: true, default: "", maxlength: 500 },
+     ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+    dayRate: nonNegativeNumber(0),                                // carpenter day rate the Labour Engine used
+    ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
   },
   withoutId
 );
@@ -135,6 +138,11 @@ const MaterialSelectionSchema = new Schema<MaterialSelection>(
     rateConfigurationItemName: trimmedString(""),
     unitPrice: nonNegativeNumber(0),
     unit: enumField(PRICE_UNITS, "squareFoot"),
+
+     ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+    // Who chose it: "master" (whole home), "room" or "furniture". A whole-home choice skips "room" and "furniture".
+    appliedBy: { type: String, enum: ["", "master", "room", "furniture"], default: "" },
+    ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
 
 
   },
@@ -634,6 +642,16 @@ const StudioSchema = new Schema<IStudio>(
       type: Boolean,
       default: false,
     },
+
+
+        ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+    // Whole-home plywood, inner and outer laminate chosen on the studio variant page.
+    masterMaterials: {
+      plywood: { type: MaterialSelectionSchema, default: null },
+      innerLaminate: { type: MaterialSelectionSchema, default: null },
+      outerLaminate: { type: MaterialSelectionSchema, default: null },
+    },
+    ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
 
     hub: {
       hubId: { type: Schema.Types.ObjectId, ref: "HubModel", default: null },

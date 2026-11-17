@@ -124,8 +124,15 @@ export interface UpdateStudioPayload {
   studioRates?: StudioRatePayload[];
   // labourCost?: StudioLabourCosts[];
   // labourCost?: JsonRecord[];
+
+  
   additionalCharges?: JsonRecord[];
   hub?: { hubId: string | null; materialPercentage: number | null; labourPercentage: number | null };
+
+  ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+  masterMaterials?: { plywood: JsonRecord | null; innerLaminate: JsonRecord | null; outerLaminate: JsonRecord | null };
+  ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
+
   quotationDetails?: QuotationDetails;
   rooms?: JsonRecord[];
 
@@ -380,6 +387,37 @@ export const parseStudioSettingsPayload = (body: unknown): ParseResult<StudioSet
 };
 
 
+////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+/** Whole-home plywood / laminates: null clears them; each one is null or a material selection with a rate item id. */
+const MASTER_MATERIAL_KEYS = ["plywood", "innerLaminate", "outerLaminate"] as const;
+const parseMasterMaterials = (value: unknown, errors: string[]): UpdateStudioPayload["masterMaterials"] | undefined => {
+  if (value === undefined) return undefined;
+  if (value === null) return { plywood: null, innerLaminate: null, outerLaminate: null };
+  if (!isRecord(value)) {
+    errors.push("masterMaterials must be an object");
+    return undefined;
+  }
+  const parsed: NonNullable<UpdateStudioPayload["masterMaterials"]> = { plywood: null, innerLaminate: null, outerLaminate: null };
+  for (const key of MASTER_MATERIAL_KEYS) {
+    const selection = value[key];
+    if (selection === undefined || selection === null) continue;
+    if (!isRecord(selection)) {
+      errors.push(`masterMaterials.${key} must be an object or null`);
+      continue;
+    }
+    const itemId = selection.rateConfigurationItemId;
+    if (itemId !== null && itemId !== undefined && (typeof itemId !== "string" || !mongoose.isValidObjectId(itemId))) {
+      errors.push(`masterMaterials.${key}.rateConfigurationItemId must be an id or null`);
+      continue;
+    }
+    parsed[key] = selection;
+  }
+  return parsed;
+};
+
+///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
+
+
 const parseHub = (value: unknown, errors: string[]): UpdateStudioPayload["hub"] | undefined => {
   if (value === undefined) return undefined;
   if (value === null) return { hubId: null, materialPercentage: null, labourPercentage: null };
@@ -429,6 +467,12 @@ export const parseUpdateStudioPayload = (body: unknown): ParseResult<UpdateStudi
   const hub = parseHub(body.hub, errors);
   if (hub !== undefined) parsedPayload.hub = hub;
 
+    ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+  const masterMaterials = parseMasterMaterials(body.masterMaterials, errors);
+  if (masterMaterials !== undefined) parsedPayload.masterMaterials = masterMaterials;
+  ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
+
+  
   const labourPlan = parseStudioLabourPlan(body.labourPlan, errors);
   if (labourPlan) parsedPayload.labourPlan = labourPlan;
 

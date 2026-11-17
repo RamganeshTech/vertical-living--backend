@@ -103,6 +103,10 @@ const recalculateFurnitureLabour = (furnitureItem: FurnitureItem, labourCost: nu
   sent.helperCost = Math.min(roundCurrency(finiteOrZero(sent.helperCost)), labourCost);
   sent.skilledCost = roundCurrency(labourCost - sent.helperCost);
   sent.labourCost = labourCost;
+
+   ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+  sent.dayRate = finiteOrZero(sent.dayRate);
+  ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
 };
 
 export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSettings: PricingSettings): number => {

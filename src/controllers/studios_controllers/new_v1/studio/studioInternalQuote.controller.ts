@@ -70,7 +70,14 @@ export const previewInternalQuoteFromStudio = async (request: Request, response:
   try {
     const studio = await loadStudio(request, response);
     if (!studio) return;
-    sendSuccess(response, 200, "Internal quote preview from the studio", studioToInternalQuote(studio));
+    // sendSuccess(response, 200, "Internal quote preview from the studio", studioToInternalQuote(studio));
+
+    ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+    // carpenterDayRate: the rate configuration's carpenter day rate, sent by the button (?carpenterDayRate=...).
+    const carpenterDayRate = Number(readParameter(request.query?.carpenterDayRate as string | string[] | undefined)) || 0;
+    sendSuccess(response, 200, "Internal quote preview from the studio", studioToInternalQuote(studio, { carpenterDayRate }));
+    ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
+
   } catch (error) {
     console.error("previewInternalQuoteFromStudio failed", error);
     sendError(response, 500, "Could not prepare the internal quote from this studio");
@@ -89,7 +96,13 @@ export const createInternalQuoteFromStudio = async (request: Request, response: 
     const InternalQuoteModel = mongoose.model(INTERNAL_QUOTE_MODEL_NAME);
     const requestedCategory = typeof request.body?.quoteCategory === "string" ? request.body.quoteCategory.trim() : "";
     const quoteNo = await getNextQuoteNumber(InternalQuoteModel, studio.organizationId);
-    const converted = studioToInternalQuote(studio, { quoteNo, quoteCategory: requestedCategory || null });
+    // const converted = studioToInternalQuote(studio, { quoteNo, quoteCategory: requestedCategory || null });
+
+     ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+    const carpenterDayRate = Number(request.body?.carpenterDayRate) || 0;
+    const converted = studioToInternalQuote(studio, { quoteNo, quoteCategory: requestedCategory || null, carpenterDayRate });
+    ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
+
     if (converted.quote.furnitures.length === 0) {
       sendError(response, 400, "This studio has no furniture to put in an internal quote", converted.warnings);
       return;

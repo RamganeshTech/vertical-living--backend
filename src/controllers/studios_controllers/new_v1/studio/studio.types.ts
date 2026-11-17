@@ -105,6 +105,16 @@ export interface MaterialSelection {
   unit: PriceUnit;
   thickness: number // only meaningful for plywood / laminate selections
 
+  ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+  /**
+   * Who chose this material for a furniture: "master" (the whole-home plywood / laminate choice), "room" (the
+   * "apply to all furniture in this room" tick) or "furniture" (chosen for that furniture alone). A new whole-home
+   * choice is not applied over "room" and "furniture" choices. Empty on older studios.
+   */
+  appliedBy?: "" | "master" | "room" | "furniture";
+  ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
+
+
 }
 
 
@@ -282,6 +292,12 @@ export interface FurnitureLabour {
   helperCost: number;
   labourCost: number;
   method: string;
+
+  ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+  /** Carpenter day rate the Labour Engine used for this furniture (from the Labour Engine / hub rate card). */
+  dayRate?: number;
+  ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
+
 }
 
 export interface FurnitureItem extends PricedFields {
@@ -563,12 +579,18 @@ export interface IStudio {
   rooms: Room[];
 
 
-   hub: {
-        hubId: Types.ObjectId | null
-        materialPercentage: number | null,
-        labourPercentage: number | null
-      },
-  
+  hub: {
+    hubId: Types.ObjectId | null
+    materialPercentage: number | null,
+    labourPercentage: number | null
+  },
+
+  ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+  /** Whole-home plywood, inner and outer laminate chosen on the studio variant page (null when not chosen). */
+  masterMaterials?: StudioMasterMaterials | null;
+  ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
+
+
   /** Labour Engine plan for this quote: settings, latest calculation record and history. */
   labourPlan: StudioLabourPlan | null;
 
@@ -623,3 +645,14 @@ export interface StudioListResult {
   page: number;
   pageSize: number;
 }
+
+
+
+////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+/** Whole-home material choices of the studio variant page. Each one is applied to every furniture of every room. */
+export interface StudioMasterMaterials {
+  plywood: MaterialSelection | null;
+  innerLaminate: MaterialSelection | null;
+  outerLaminate: MaterialSelection | null;
+}
+///////////////////////////////CHANGES ENDED////////////////////////////////////////////////

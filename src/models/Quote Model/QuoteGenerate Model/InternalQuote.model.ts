@@ -168,6 +168,7 @@ export interface IMaterialQuote extends Document {
   quoteType: string | null
   organizationId: Types.ObjectId;
   mainQuoteName: string | null,
+  fromInternalQuote: boolean, 
   projectId: Types.ObjectId;
   furnitures: IFurniture[];
   commonMaterials: ISimpleItem[]
@@ -409,9 +410,11 @@ const InternalQuoteSchema = new mongoose.Schema<IMaterialQuote>({
   },
   mainQuoteName: { type: String, default: null },
 
+
+  fromInternalQuote: {type:Boolean, default: false},
   quoteType: { type: String, default: null },   // sqft or basic or advanced (third option differs)
 
-  quoteCategory: {
+  quoteCategory: {  // so here we ned to uplaod the work or not youtnned to tell me 
     type: String,   // residential or commercial 
     default: null,
   },

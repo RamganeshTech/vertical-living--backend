@@ -467,6 +467,11 @@ export const updateStudio = async (request: Request, response: StudioApiResponse
         labourPercentage: changes.hub.labourPercentage,
       });
     }
+
+     ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+    if (changes.masterMaterials !== undefined) studio.set("masterMaterials", changes.masterMaterials);
+    ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
+    
     if (changes.pricingSettings) {
       for (const [settingName, settingValue] of Object.entries(changes.pricingSettings)) {
         studio.set(`pricingSettings.${settingName}`, settingValue);
