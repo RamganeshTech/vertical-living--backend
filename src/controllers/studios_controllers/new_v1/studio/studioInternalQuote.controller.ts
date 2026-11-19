@@ -18,6 +18,7 @@ import { multiRoleAuthMiddleware } from "./studio.crmImports";
 import type { IStudio } from "./studio.types";
 import { studioToInternalQuote } from "./studioInternalQuote.util";
 
+
 /** Name the internal quote model is registered with: mongoose.model('MaterialQuoteModel', InternalQuoteSchema). */
 const INTERNAL_QUOTE_MODEL_NAME = "MaterialQuoteModel";
 

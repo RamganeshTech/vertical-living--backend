@@ -62,6 +62,11 @@ import LabourEngineRoutes from "../labourEngine/labourEngine.routes";
 import QuoteRouter from "../../../../routers/Quote Routes/QuoteGenerate Routes/quoteGenerate.routes";
 import StudioInternalQuoteRoutes from "./studioInternalQuote.controller";
 
+////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+import StudioFloorPlanAiRoutes from "./studioFloorPlanAi.controller";
+///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
+
+
 type StudioDocument = HydratedDocument<IStudio>;
 
 interface ApiConflictResponse extends ApiErrorResponse {
@@ -439,19 +444,19 @@ export const updateStudio = async (request: Request, response: StudioApiResponse
     if (!isPriceManager(request)) {
       const savedSettings = studio.pricingSettings;
       if (changes.studioRates && rateFingerprint(changes.studioRates) !== rateFingerprint(studio.toObject<IStudio>().studioRates)) {
-        sendError(response, 403, "Only the owner or CTO can change rates. You can adjust the project price instead.");
+        sendError(response, 403, "Only the owner or CTO or staff can change rates. You can adjust the project price instead.");
         return;
       }
       const changedPercentages = Object.entries(changes.pricingSettings ?? {}).filter(([settingName, settingValue]) => settingName !== "projectAdjustmentPercentage" && savedSettings[settingName as keyof typeof savedSettings] !== settingValue);
       if (changedPercentages.length > 0) {
-        sendError(response, 403, "Only the owner or CTO can change labour, installation, margin or GST percentages.");
+        sendError(response, 403, "Only the owner or CTO  or staff can change labour, installation, margin or GST percentages.");
         return;
       }
       const requestedAdjustment = changes.pricingSettings?.projectAdjustmentPercentage;
       if (requestedAdjustment !== undefined && requestedAdjustment !== savedSettings.projectAdjustmentPercentage) {
         const limits = (await loadStudioSettings(routeIds.organizationId)).staffAdjustmentLimits ?? DEFAULT_STAFF_ADJUSTMENT_LIMITS;
         if (requestedAdjustment < limits.minimumPercentage || requestedAdjustment > limits.maximumPercentage) {
-          sendError(response, 403, `Staff can adjust a project from ${limits.minimumPercentage}% to +${limits.maximumPercentage}%. Ask the owner or CTO for more.`);
+          sendError(response, 403, `others users can adjust a project from ${limits.minimumPercentage}% to +${limits.maximumPercentage}%. Ask the owner or CTO or staff  for more.`);
           return;
         }
       }
@@ -468,10 +473,15 @@ export const updateStudio = async (request: Request, response: StudioApiResponse
       });
     }
 
-     ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
     if (changes.masterMaterials !== undefined) studio.set("masterMaterials", changes.masterMaterials);
-    ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
-    
+
+    ///////////////////CHAGNES STARTED//////////////////////////////////
+    // Documents' figures (sheets, BOQ, project cost, quote totals, cut list) worked out by the studio page on save.
+    if (changes.documentsSnapshot !== undefined) {
+      studio.set("documentsSnapshot", changes.documentsSnapshot ? { ...changes.documentsSnapshot, savedAt: new Date().toISOString() } : null);
+    }
+    /////////////////////CHAGNES ENDED///////////////////////////////////
+
     if (changes.pricingSettings) {
       for (const [settingName, settingValue] of Object.entries(changes.pricingSettings)) {
         studio.set(`pricingSettings.${settingName}`, settingValue);
@@ -676,6 +686,12 @@ const PRICE_FIELD_NAMES = new Set([
   "pricing",
   "labour",
   "wiring",
+
+   ///////////////////CHAGNES STARTED//////////////////////////////////
+  "fabricationCost",
+  "fabrication",
+  "documentsSnapshot",
+  /////////////////////CHAGNES ENDED///////////////////////////////////
 ]);
 
 const removePriceFields = (value: unknown): unknown => {
@@ -868,6 +884,11 @@ StudiosRoutes.use("/:organizationId/labour-engine", LabourEngineRoutes);
 // Studio -> internal quote: GET = preview (saves nothing), POST = create. Three path parts, so it never clashes with "/:organizationId/:studioId".
 
 StudiosRoutes.use("/:organizationId/:studioId/internal-quote", StudioInternalQuoteRoutes);
+
+////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+// Floor plan "Extract with AI" (Gemini): POST the rendered page image, get rooms and furniture back. Saves nothing.
+StudiosRoutes.use("/:organizationId/:studioId/floor-plan-ai", StudioFloorPlanAiRoutes);
+///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
 
 // Public route first, so "/shared/…" is never read as an organisation and studio id. No role middleware on purpose.
 StudiosRoutes.get("/shared/:shareToken", getSharedStudio);

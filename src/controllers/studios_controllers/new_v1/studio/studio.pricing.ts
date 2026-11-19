@@ -104,7 +104,7 @@ const recalculateFurnitureLabour = (furnitureItem: FurnitureItem, labourCost: nu
   sent.skilledCost = roundCurrency(labourCost - sent.helperCost);
   sent.labourCost = labourCost;
 
-   ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+  ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
   sent.dayRate = finiteOrZero(sent.dayRate);
   ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
 };
@@ -121,6 +121,12 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
 
     furnitureItem.installationCost = 0;
     furnitureItem.marginAmount = 0;
+
+    ///////////////////CHAGNES STARTED//////////////////////////////////
+    furnitureItem.fabricationCost = 0;
+    furnitureItem.fabrication = null;
+    /////////////////////CHAGNES ENDED///////////////////////////////////
+
     furnitureItem.totalPrice = furnitureItem.materialCost;
     return furnitureItem.totalPrice;
   }
@@ -156,7 +162,20 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
   // const installationCost = roundCurrency((materialCost * pricingSettings.installationPercentage) / 100);
   const installationCost = 0; // installation is no longer a percentage-based charge
   // const marginAmount = roundCurrency(((materialCost + labourCost + installationCost) * pricingSettings.marginPercentage) / 100);
-  const marginAmount = roundCurrency((materialCost * pricingSettings.marginPercentage) / 100); // margin on material only
+
+  ///////////////////CHAGNES STARTED//////////////////////////////////
+  // const marginAmount = roundCurrency((materialCost * pricingSettings.marginPercentage) / 100); // margin on material only
+  // Factory fabrication: the sheets and rate are trusted as sent (like unitPrice); the ₹ is worked out again here.
+  const fabrication = furnitureItem.fabrication ?? null;
+  if (fabrication) {
+    fabrication.sheets = finiteOrZero(fabrication.carcassSheets) + finiteOrZero(fabrication.backPanelSheets);
+    fabrication.squareFeet = Math.round(fabrication.sheets * finiteOrZero(fabrication.sheetAreaSquareFeet || 32) * 100) / 100;
+    fabrication.fabricationCost = roundCurrency(fabrication.squareFeet * finiteOrZero(fabrication.ratePerSquareFoot));
+  }
+  const fabricationCost = fabrication ? fabrication.fabricationCost : 0;
+  furnitureItem.fabricationCost = fabricationCost;
+  const marginAmount = roundCurrency(((materialCost + fabricationCost) * pricingSettings.marginPercentage) / 100); // margin on material + fabrication
+  /////////////////////CHAGNES ENDED///////////////////////////////////
 
   furnitureItem.materialCost = materialCost;
   furnitureItem.labourCost = labourCost;
@@ -164,7 +183,11 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
   furnitureItem.installationCost = installationCost;
   furnitureItem.marginAmount = marginAmount;
   // furnitureItem.totalPrice = roundCurrency(materialCost + labourCost + installationCost + marginAmount);
-  furnitureItem.totalPrice = roundCurrency(materialCost + installationCost + marginAmount);
+
+  ///////////////////CHAGNES STARTED//////////////////////////////////
+  // furnitureItem.totalPrice = roundCurrency(materialCost + installationCost + marginAmount);
+  furnitureItem.totalPrice = roundCurrency(materialCost + fabricationCost + installationCost + marginAmount);
+/////////////////////CHAGNES ENDED///////////////////////////////////
 
   return furnitureItem.totalPrice;
 };
@@ -280,7 +303,7 @@ export const recalculateStudioPricing = (
 
   // Labour: the Labour Engine's all-trades total; falls back to the per-furniture sum for studios with no plan calculated yet.
   // Hub's labour % applied once here, not per furniture item.
-  
+
   // const furnitureLabourFallback = roundCurrency(
   //   studio.rooms.reduce((sum, room) => sum + room.furniture.reduce((s, item) => s + item.labourCost, 0), 0)
   // );

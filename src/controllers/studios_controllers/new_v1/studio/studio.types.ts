@@ -293,12 +293,34 @@ export interface FurnitureLabour {
   labourCost: number;
   method: string;
 
-  ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
   /** Carpenter day rate the Labour Engine used for this furniture (from the Labour Engine / hub rate card). */
   dayRate?: number;
-  ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
 
 }
+
+
+
+///////////////////CHAGNES STARTED//////////////////////////////////
+/** Factory fabrication of one furniture: (carcass + back panel sheets) × sheet sqft × edge banding ₹/sqft. */
+export interface FurnitureFabrication {
+  route: string;
+  edgeBanding: string;
+  edgeBandingLabel: string;
+  ratePerSquareFoot: number;
+  carcassSheets: number;
+  backPanelSheets: number;
+  sheets: number;
+  sheetAreaSquareFeet: number;
+  squareFeet: number;
+  fabricationCost: number;
+  method: string;
+}
+
+/** The documents' calculated figures, built by the studio page and saved as sent (read-only, rebuilt on every save). */
+export type StudioDocumentsSnapshot = Record<string, unknown>;
+
+/////////////////////CHAGNES ENDED///////////////////////////////////
+
 
 export interface FurnitureItem extends PricedFields {
   _id: Types.ObjectId;
@@ -328,6 +350,18 @@ export interface FurnitureItem extends PricedFields {
   installationCost: number;
   marginAmount: number;
   labour?: FurnitureLabour | null;
+
+  ///////////////////CHAGNES STARTED//////////////////////////////////
+  /** Factory fabrication ₹ (0 when built at site); part of totalPrice. */
+  fabricationCost?: number;
+  fabrication?: FurnitureFabrication | null;
+  /////////////////////CHAGNES ENDED///////////////////////////////////
+
+  //////////////////CHANGES STARTED //////////////////////////
+  /** Quantities typed by hand in the Materials panel, per material role (sheets for boards). */
+  materialQuantities?: Record<string, number> | null;
+  /////////////////////////CHGNES ENDED/////////////////////////
+
 }
 
 export interface DecorItem extends PricedFields {
@@ -585,11 +619,15 @@ export interface IStudio {
     labourPercentage: number | null
   },
 
-  ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
   /** Whole-home plywood, inner and outer laminate chosen on the studio variant page (null when not chosen). */
   masterMaterials?: StudioMasterMaterials | null;
-  ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
 
+
+
+  ///////////////////CHAGNES STARTED//////////////////////////////////
+  /** Sheets, BOQ, project cost, quote totals and cut list summary at the last save. */
+  documentsSnapshot?: StudioDocumentsSnapshot | null;
+  /////////////////////CHAGNES ENDED///////////////////////////////////
 
   /** Labour Engine plan for this quote: settings, latest calculation record and history. */
   labourPlan: StudioLabourPlan | null;
@@ -654,5 +692,7 @@ export interface StudioMasterMaterials {
   plywood: MaterialSelection | null;
   innerLaminate: MaterialSelection | null;
   outerLaminate: MaterialSelection | null;
+  backPanel?: MaterialSelection | null;
+
 }
 ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////

@@ -133,7 +133,7 @@ export const DEFAULT_PRICING_SETTINGS = {
 } as const;
 
 /** Roles that may change rates, percentages and price locks, and go beyond the staff adjustment limits (CEO = owner). */
-export const PRICE_MANAGER_ROLES = ["owner", "CTO"] as const;
+export const PRICE_MANAGER_ROLES = ["owner", "CTO", "staff"] as const;
 
 /** How far staff may raise or lower a project's price, unless Studio settings say otherwise. */
 export const DEFAULT_STAFF_ADJUSTMENT_LIMITS = { minimumPercentage: -5, maximumPercentage: 10 } as const;

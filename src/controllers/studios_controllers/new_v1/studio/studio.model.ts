@@ -8,7 +8,9 @@ import {
   SKIRTING_MATERIALS, STUDIO_RATE_SOURCES, STUDIO_SCHEMA_VERSION, STUDIO_STATUSES, WALL_LABELS,
   WALL_LAYER_TYPES, WALL_ROWS, WALLPAPER_PATTERNS,
 } from "./studio.constants";
-
+///////////////////CHAGNES STARTED//////////////////////////////////
+import type { FurnitureFabrication } from "./studio.types";
+/////////////////////CHAGNES ENDED///////////////////////////////////
 import type {
   CeilingFinish, CoveLight, DecorItem, ElectricalPoint, ExtractionDetails, FloorFinish, FloorPlanFile,
   FurnitureAccessory, FurnitureItem, FurnitureMaterials, FurnitureLabour, IStudio, LightWiring, MaterialSelection,
@@ -103,12 +105,33 @@ const FurnitureLabourSchema = new Schema<FurnitureLabour>(
     helperCost: nonNegativeNumber(0),
     labourCost: nonNegativeNumber(0),
     method: { type: String, trim: true, default: "", maxlength: 500 },
-     ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+
     dayRate: nonNegativeNumber(0),                                // carpenter day rate the Labour Engine used
-    ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
+
   },
   withoutId
 );
+
+
+///////////////////CHAGNES STARTED//////////////////////////////////
+const FurnitureFabricationSchema = new Schema<FurnitureFabrication>(
+  {
+    route: { type: String, trim: true, default: "factory" },
+    edgeBanding: { type: String, trim: true, default: "", maxlength: 50 },
+    edgeBandingLabel: { type: String, trim: true, default: "", maxlength: 200 },
+    ratePerSquareFoot: nonNegativeNumber(0),
+    carcassSheets: nonNegativeNumber(0),
+    backPanelSheets: nonNegativeNumber(0),
+    sheets: nonNegativeNumber(0),
+    sheetAreaSquareFeet: nonNegativeNumber(32),
+    squareFeet: nonNegativeNumber(0),
+    fabricationCost: nonNegativeNumber(0),
+    method: { type: String, trim: true, default: "", maxlength: 500 },
+  },
+  withoutId
+);
+
+/////////////////////CHAGNES ENDED///////////////////////////////////
 
 const areaDefinition = {
   grossAreaInSquareFeet: nonNegativeNumber(0),
@@ -139,10 +162,10 @@ const MaterialSelectionSchema = new Schema<MaterialSelection>(
     unitPrice: nonNegativeNumber(0),
     unit: enumField(PRICE_UNITS, "squareFoot"),
 
-     ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+
     // Who chose it: "master" (whole home), "room" or "furniture". A whole-home choice skips "room" and "furniture".
     appliedBy: { type: String, enum: ["", "master", "room", "furniture"], default: "" },
-    ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
+
 
 
   },
@@ -349,7 +372,17 @@ const FurnitureItemSchema = new Schema<FurnitureItem>(
     installationCost: nonNegativeNumber(0),
     marginAmount: nonNegativeNumber(0),
     ...pricedDefinition,
-      labour: { type: FurnitureLabourSchema, default: null },
+    labour: { type: FurnitureLabourSchema, default: null },
+
+    ///////////////////CHAGNES STARTED//////////////////////////////////
+    fabricationCost: nonNegativeNumber(0),
+    fabrication: { type: FurnitureFabricationSchema, default: null },
+    /////////////////////CHAGNES ENDED///////////////////////////////////
+
+    //////////////////CHANGES STARTED //////////////////////////
+    // Quantities typed by hand in the Materials panel ({ carcassBoard: 5, shutterFinish: 64, … }).
+    materialQuantities: { type: Schema.Types.Mixed, default: null },
+    /////////////////////////CHGNES ENDED/////////////////////////
   },
   withId
 );
@@ -638,20 +671,33 @@ const StudioSchema = new Schema<IStudio>(
       type: Schema.Types.Mixed,
       default: null,
     },
+
+    ///////////////////CHAGNES STARTED//////////////////////////////////
+    // Documents' figures at the last save (sheets, BOQ, project cost, quote totals, cut list). Size-capped in validation.
+    documentsSnapshot: {
+      type: Schema.Types.Mixed,
+      default: null,
+    },
+    /////////////////////CHAGNES ENDED///////////////////////////////////
+
+
     clientApproved: {
       type: Boolean,
       default: false,
     },
 
 
-        ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+
     // Whole-home plywood, inner and outer laminate chosen on the studio variant page.
     masterMaterials: {
       plywood: { type: MaterialSelectionSchema, default: null },
       innerLaminate: { type: MaterialSelectionSchema, default: null },
       outerLaminate: { type: MaterialSelectionSchema, default: null },
+        //////////////////CHANGES STARTED //////////////////////////
+      backPanel: { type: MaterialSelectionSchema, default: null },
+      /////////////////////////CHGNES ENDED/////////////////////////
     },
-    ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
+
 
     hub: {
       hubId: { type: Schema.Types.ObjectId, ref: "HubModel", default: null },

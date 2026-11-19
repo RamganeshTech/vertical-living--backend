@@ -130,7 +130,7 @@ export interface UpdateStudioPayload {
   hub?: { hubId: string | null; materialPercentage: number | null; labourPercentage: number | null };
 
   ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
-  masterMaterials?: { plywood: JsonRecord | null; innerLaminate: JsonRecord | null; outerLaminate: JsonRecord | null };
+  masterMaterials?: { plywood: JsonRecord | null; innerLaminate: JsonRecord | null; outerLaminate: JsonRecord | null, backPanel: JsonRecord | null };
   ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
 
   quotationDetails?: QuotationDetails;
@@ -138,6 +138,9 @@ export interface UpdateStudioPayload {
 
   labourPlan?: Pick<StudioLabourPlan, "settings" | "latestRecord">;
   clientApproved?: boolean;
+   ///////////////////CHAGNES STARTED//////////////////////////////////
+  documentsSnapshot?: JsonRecord | null;
+  /////////////////////CHAGNES ENDED///////////////////////////////////
 }
 
 /** A studio rate as sent by the browser; `_id` is kept only when it is a real ObjectId. */
@@ -389,15 +392,19 @@ export const parseStudioSettingsPayload = (body: unknown): ParseResult<StudioSet
 
 ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
 /** Whole-home plywood / laminates: null clears them; each one is null or a material selection with a rate item id. */
-const MASTER_MATERIAL_KEYS = ["plywood", "innerLaminate", "outerLaminate"] as const;
+const MASTER_MATERIAL_KEYS = ["plywood", "innerLaminate", "outerLaminate",  "backPanel"] as const;
 const parseMasterMaterials = (value: unknown, errors: string[]): UpdateStudioPayload["masterMaterials"] | undefined => {
   if (value === undefined) return undefined;
-  if (value === null) return { plywood: null, innerLaminate: null, outerLaminate: null };
+  // if (value === null) return { plywood: null, innerLaminate: null, outerLaminate: null };
+  if (value === null) return { plywood: null, innerLaminate: null, outerLaminate: null, backPanel: null };
+
   if (!isRecord(value)) {
     errors.push("masterMaterials must be an object");
     return undefined;
   }
-  const parsed: NonNullable<UpdateStudioPayload["masterMaterials"]> = { plywood: null, innerLaminate: null, outerLaminate: null };
+  // const parsed: NonNullable<UpdateStudioPayload["masterMaterials"]> = { plywood: null, innerLaminate: null, outerLaminate: null };
+  const parsed: NonNullable<UpdateStudioPayload["masterMaterials"]> = { plywood: null, innerLaminate: null, outerLaminate: null, backPanel: null };
+
   for (const key of MASTER_MATERIAL_KEYS) {
     const selection = value[key];
     if (selection === undefined || selection === null) continue;
@@ -476,6 +483,17 @@ export const parseUpdateStudioPayload = (body: unknown): ParseResult<UpdateStudi
   const labourPlan = parseStudioLabourPlan(body.labourPlan, errors);
   if (labourPlan) parsedPayload.labourPlan = labourPlan;
 
+  
+  ///////////////////CHAGNES STARTED//////////////////////////////////
+  // Documents snapshot: a plain object, at most 1 MB as JSON (it is rebuilt on every save).
+  if (body.documentsSnapshot !== undefined) {
+    if (body.documentsSnapshot === null) parsedPayload.documentsSnapshot = null;
+    else if (typeof body.documentsSnapshot !== "object" || Array.isArray(body.documentsSnapshot)) errors.push("documentsSnapshot must be an object or null");
+    else if (JSON.stringify(body.documentsSnapshot).length > 1_000_000) errors.push("documentsSnapshot is too large (over 1 MB)");
+    else parsedPayload.documentsSnapshot = body.documentsSnapshot as JsonRecord;
+  }
+  /////////////////////CHAGNES ENDED///////////////////////////////////
+  
   if (body.clientApproved !== undefined) {
     if (typeof body.clientApproved === "boolean") {
       parsedPayload.clientApproved = body.clientApproved;
