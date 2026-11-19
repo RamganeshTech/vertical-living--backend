@@ -187,7 +187,7 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
   ///////////////////CHAGNES STARTED//////////////////////////////////
   // furnitureItem.totalPrice = roundCurrency(materialCost + installationCost + marginAmount);
   furnitureItem.totalPrice = roundCurrency(materialCost + fabricationCost + installationCost + marginAmount);
-/////////////////////CHAGNES ENDED///////////////////////////////////
+  /////////////////////CHAGNES ENDED///////////////////////////////////
 
   return furnitureItem.totalPrice;
 };
@@ -254,38 +254,6 @@ export const recalculateRoom = (room: Room, pricingSettings: PricingSettings): n
   return subtotal;
 };
 
-/** Recalculates every line, room and the project totals in place, and returns the totals. */
-// export const recalculateStudioPricing = (
-//   studio: { rooms: Room[]; pricingSettings: PricingSettings; totals: StudioTotals, labourCost?: { totalCost: number }[]; additionalCharges?: { amount?: number }[] }
-// ): StudioTotals => {
-//   // const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0));
-//   // const labourTotal = roundCurrency((studio.labourCost ?? []).reduce((sum, row) => sum + row.totalCost, 0));
-//   //   const additionalChargesTotal = roundCurrency(
-//   //   (studio.additionalCharges ?? []).reduce((sum, charge) => sum + (charge.amount ?? 0), 0)
-//   // );
-
-//   // const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0) + labourTotal);
-//   const subtotal = roundCurrency(studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0));
-//   // The project adjustment (+ or −) applies to the whole subtotal, before GST.
-//   const adjustmentAmount = roundCurrency((subtotal * (studio.pricingSettings.projectAdjustmentPercentage ?? 0)) / 100);
-//   const taxableAmount = roundCurrency(subtotal + adjustmentAmount);
-//   const gstAmount = roundCurrency((taxableAmount * studio.pricingSettings.gstPercentage) / 100);
-//   studio.totals.subtotal = subtotal;
-//   studio.totals.adjustmentAmount = adjustmentAmount;
-//   studio.totals.gstAmount = gstAmount;
-//   // studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount);
-//   // studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount + additionalChargesTotal);
-
-
-//   const additionalChargesTotal = roundCurrency((studio.additionalCharges ?? []).reduce((sum, charge) => sum + (charge.amount ?? 0), 0));
-//   const additionalChargesMargin = roundCurrency((additionalChargesTotal * studio.pricingSettings.marginPercentage) / 100);
-//   const additionalChargesWithMargin = roundCurrency(additionalChargesTotal + additionalChargesMargin);
-//   studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount + additionalChargesWithMargin);
-
-
-//   return { subtotal, adjustmentAmount, gstAmount, grandTotal: studio.totals.grandTotal };
-// };
-
 
 export const recalculateStudioPricing = (
   studio: {
@@ -322,16 +290,28 @@ export const recalculateStudioPricing = (
   const subtotal = roundCurrency(roomsSubtotal + labourTotal);
 
   const adjustmentAmount = roundCurrency((subtotal * (studio.pricingSettings.projectAdjustmentPercentage ?? 0)) / 100);
-  const taxableAmount = roundCurrency(subtotal + adjustmentAmount);
+  /////////////////////////////CHANGES STARTED/////////////////////////////////////
+  // const taxableAmount = roundCurrency(subtotal + adjustmentAmount);
+  // const gstAmount = roundCurrency((taxableAmount * studio.pricingSettings.gstPercentage) / 100);
+  // studio.totals.subtotal = subtotal;
+  // studio.totals.adjustmentAmount = adjustmentAmount;
+  // studio.totals.gstAmount = gstAmount;
+  //
+  // const additionalChargesTotal = roundCurrency((studio.additionalCharges ?? []).reduce((sum, charge) => sum + (charge.amount ?? 0), 0));
+  // const additionalChargesMargin = roundCurrency((additionalChargesTotal * studio.pricingSettings.marginPercentage) / 100);
+  // const additionalChargesWithMargin = roundCurrency(additionalChargesTotal + additionalChargesMargin);
+  // studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount + additionalChargesWithMargin);
+  // Same order as the studio page: materials and labour → additacional charges (with margin) → total → GST.
+  const additionalChargesTotal = roundCurrency((studio.additionalCharges ?? []).reduce((sum, charge) => sum + (charge.amount ?? 0), 0));
+  const additionalChargesWithMargin = roundCurrency(additionalChargesTotal * (1 + studio.pricingSettings.marginPercentage / 100));
+  const taxableAmount = roundCurrency(subtotal + adjustmentAmount + additionalChargesWithMargin);
   const gstAmount = roundCurrency((taxableAmount * studio.pricingSettings.gstPercentage) / 100);
   studio.totals.subtotal = subtotal;
   studio.totals.adjustmentAmount = adjustmentAmount;
   studio.totals.gstAmount = gstAmount;
+  studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount);
+  //////////////////////////////CHAGNES ENDED////////////////////////////////////////
 
-  const additionalChargesTotal = roundCurrency((studio.additionalCharges ?? []).reduce((sum, charge) => sum + (charge.amount ?? 0), 0));
-  const additionalChargesMargin = roundCurrency((additionalChargesTotal * studio.pricingSettings.marginPercentage) / 100);
-  const additionalChargesWithMargin = roundCurrency(additionalChargesTotal + additionalChargesMargin);
-  studio.totals.grandTotal = roundCurrency(taxableAmount + gstAmount + additionalChargesWithMargin);
 
   return { subtotal, adjustmentAmount, gstAmount, grandTotal: studio.totals.grandTotal };
 };
