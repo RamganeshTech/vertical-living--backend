@@ -1,3 +1,5 @@
+//  my version
+
 // studio.types.ts
 import type { Types } from "mongoose";
 import type {
@@ -628,6 +630,12 @@ export interface IStudio {
   /** Sheets, BOQ, project cost, quote totals and cut list summary at the last save. */
   documentsSnapshot?: StudioDocumentsSnapshot | null;
   /////////////////////CHAGNES ENDED///////////////////////////////////
+
+  //////////////////////////CHAGNES STARTED//////////////////////////
+  /** Quote tab "Calculate the fabrication cost" switch. false: factory fabrication is ₹0 everywhere. Missing (older studios) = on. */
+  isFabricationCostEnabled?: boolean;
+  /////////////////////////////CHANGES ENDED//////////////////////////
+
 
   /** Labour Engine plan for this quote: settings, latest calculation record and history. */
   labourPlan: StudioLabourPlan | null;

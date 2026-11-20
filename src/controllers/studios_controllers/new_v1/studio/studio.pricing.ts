@@ -1,3 +1,4 @@
+//  my version 
 // studio.pricing.ts
 /**
  * Pricing integrity for a studio.
@@ -109,7 +110,13 @@ const recalculateFurnitureLabour = (furnitureItem: FurnitureItem, labourCost: nu
   ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
 };
 
-export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSettings: PricingSettings): number => {
+// export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSettings: PricingSettings): number => {
+
+//////////////////////////CHAGNES STARTED//////////////////////////
+// isFabricationCostEnabled = false (Quote tab switch off): factory fabrication is ₹0 and not saved on the unit.
+export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSettings: PricingSettings, isFabricationCostEnabled = true): number => {
+  /////////////////////////////CHANGES ENDED//////////////////////////
+
   const accessoriesTotal = roundCurrency(
     furnitureItem.accessories.reduce((runningTotal, accessory) => runningTotal + recalculateLine(accessory), 0)
   );
@@ -166,7 +173,14 @@ export const recalculateFurnitureItem = (furnitureItem: FurnitureItem, pricingSe
   ///////////////////CHAGNES STARTED//////////////////////////////////
   // const marginAmount = roundCurrency((materialCost * pricingSettings.marginPercentage) / 100); // margin on material only
   // Factory fabrication: the sheets and rate are trusted as sent (like unitPrice); the ₹ is worked out again here.
+
+  // const fabrication = furnitureItem.fabrication ?? null;
+
+  //////////////////////////CHAGNES STARTED//////////////////////////
+  if (!isFabricationCostEnabled) furnitureItem.fabrication = null;
   const fabrication = furnitureItem.fabrication ?? null;
+  /////////////////////////////CHANGES ENDED//////////////////////////
+
   if (fabrication) {
     fabrication.sheets = finiteOrZero(fabrication.carcassSheets) + finiteOrZero(fabrication.backPanelSheets);
     fabrication.squareFeet = Math.round(fabrication.sheets * finiteOrZero(fabrication.sheetAreaSquareFeet || 32) * 100) / 100;
@@ -221,10 +235,18 @@ const recalculateIncluded = (pricedItem: PricedLine & { isIncludedInQuote: boole
   return pricedItem.isIncludedInQuote ? pricedItem.totalPrice : 0;
 };
 
-export const recalculateRoom = (room: Room, pricingSettings: PricingSettings): number => {
+// export const recalculateRoom = (room: Room, pricingSettings: PricingSettings): number => {
+//   const furnitureTotal = roundCurrency(
+//     room.furniture.reduce((runningTotal, furnitureItem) => runningTotal + recalculateFurnitureItem(furnitureItem, pricingSettings), 0)
+//   );
+
+//////////////////////////CHAGNES STARTED//////////////////////////
+export const recalculateRoom = (room: Room, pricingSettings: PricingSettings, isFabricationCostEnabled = true): number => {
   const furnitureTotal = roundCurrency(
-    room.furniture.reduce((runningTotal, furnitureItem) => runningTotal + recalculateFurnitureItem(furnitureItem, pricingSettings), 0)
+    room.furniture.reduce((runningTotal, furnitureItem) => runningTotal + recalculateFurnitureItem(furnitureItem, pricingSettings, isFabricationCostEnabled), 0)
   );
+  /////////////////////////////CHANGES ENDED//////////////////////////
+
   const wallsTotal = recalculateWalls(room.walls);
   const floorTotal = recalculateFloor(room.floor);
   const ceilingTotal = recalculateCeiling(room.ceiling);
@@ -263,11 +285,23 @@ export const recalculateStudioPricing = (
     additionalCharges?: { amount?: number }[];
     labourPlan?: { latestRecord?: { labourCost?: number } | null } | null;
     hub?: { materialPercentage?: number | null; labourPercentage?: number | null } | null;
+     //////////////////////////CHAGNES STARTED//////////////////////////
+    isFabricationCostEnabled?: boolean;
+    /////////////////////////////CHANGES ENDED//////////////////////////
   }
 ): StudioTotals => {
+  // const roomsSubtotal = roundCurrency(
+  //   studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0)
+  // );
+
+   //////////////////////////CHAGNES STARTED//////////////////////////
+  // Missing on older studios = on (as before).
+  const isFabricationCostEnabled = studio.isFabricationCostEnabled !== false;
   const roomsSubtotal = roundCurrency(
-    studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings), 0)
+    studio.rooms.reduce((runningTotal, room) => runningTotal + recalculateRoom(room, studio.pricingSettings, isFabricationCostEnabled), 0)
   );
+  /////////////////////////////CHANGES ENDED//////////////////////////
+  
 
   // Labour: the Labour Engine's all-trades total; falls back to the per-furniture sum for studios with no plan calculated yet.
   // Hub's labour % applied once here, not per furniture item.

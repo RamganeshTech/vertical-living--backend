@@ -1,3 +1,5 @@
+//  my version
+
 import mongoose, { Schema } from "mongoose";
 import {
   CEILING_TYPES, COLOUR_TEMPERATURES_KELVIN, DEFAULT_PRICING_SETTINGS, DEFAULT_STAFF_ADJUSTMENT_LIMITS, PROJECT_ADJUSTMENT_BOUNDS,
@@ -688,12 +690,21 @@ const StudioSchema = new Schema<IStudio>(
 
 
 
+    //////////////////////////CHAGNES STARTED//////////////////////////
+    // Quote tab "Calculate the fabrication cost" switch. Off: factory fabrication is ₹0 in the quote and every document.
+    isFabricationCostEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    /////////////////////////////CHANGES ENDED//////////////////////////
+
+
     // Whole-home plywood, inner and outer laminate chosen on the studio variant page.
     masterMaterials: {
       plywood: { type: MaterialSelectionSchema, default: null },
       innerLaminate: { type: MaterialSelectionSchema, default: null },
       outerLaminate: { type: MaterialSelectionSchema, default: null },
-        //////////////////CHANGES STARTED //////////////////////////
+      //////////////////CHANGES STARTED //////////////////////////
       backPanel: { type: MaterialSelectionSchema, default: null },
       /////////////////////////CHGNES ENDED/////////////////////////
     },

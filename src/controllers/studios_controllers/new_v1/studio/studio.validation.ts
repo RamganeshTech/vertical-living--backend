@@ -1,3 +1,5 @@
+// my version
+
 // studio.validation.ts
 /**
  * Request parsing for the Studio module. Every function takes `unknown` input from the request
@@ -125,7 +127,7 @@ export interface UpdateStudioPayload {
   // labourCost?: StudioLabourCosts[];
   // labourCost?: JsonRecord[];
 
-  
+
   additionalCharges?: JsonRecord[];
   hub?: { hubId: string | null; materialPercentage: number | null; labourPercentage: number | null };
 
@@ -138,7 +140,11 @@ export interface UpdateStudioPayload {
 
   labourPlan?: Pick<StudioLabourPlan, "settings" | "latestRecord">;
   clientApproved?: boolean;
-   ///////////////////CHAGNES STARTED//////////////////////////////////
+  //////////////////////////CHAGNES STARTED//////////////////////////
+  /** Quote tab "Calculate the fabrication cost" switch. */
+  isFabricationCostEnabled?: boolean;
+  /////////////////////////////CHANGES ENDED//////////////////////////
+  ///////////////////CHAGNES STARTED//////////////////////////////////
   documentsSnapshot?: JsonRecord | null;
   /////////////////////CHAGNES ENDED///////////////////////////////////
 }
@@ -392,7 +398,7 @@ export const parseStudioSettingsPayload = (body: unknown): ParseResult<StudioSet
 
 ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
 /** Whole-home plywood / laminates: null clears them; each one is null or a material selection with a rate item id. */
-const MASTER_MATERIAL_KEYS = ["plywood", "innerLaminate", "outerLaminate",  "backPanel"] as const;
+const MASTER_MATERIAL_KEYS = ["plywood", "innerLaminate", "outerLaminate", "backPanel"] as const;
 const parseMasterMaterials = (value: unknown, errors: string[]): UpdateStudioPayload["masterMaterials"] | undefined => {
   if (value === undefined) return undefined;
   // if (value === null) return { plywood: null, innerLaminate: null, outerLaminate: null };
@@ -474,16 +480,16 @@ export const parseUpdateStudioPayload = (body: unknown): ParseResult<UpdateStudi
   const hub = parseHub(body.hub, errors);
   if (hub !== undefined) parsedPayload.hub = hub;
 
-    ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
+  ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
   const masterMaterials = parseMasterMaterials(body.masterMaterials, errors);
   if (masterMaterials !== undefined) parsedPayload.masterMaterials = masterMaterials;
   ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
 
-  
+
   const labourPlan = parseStudioLabourPlan(body.labourPlan, errors);
   if (labourPlan) parsedPayload.labourPlan = labourPlan;
 
-  
+
   ///////////////////CHAGNES STARTED//////////////////////////////////
   // Documents snapshot: a plain object, at most 1 MB as JSON (it is rebuilt on every save).
   if (body.documentsSnapshot !== undefined) {
@@ -493,7 +499,7 @@ export const parseUpdateStudioPayload = (body: unknown): ParseResult<UpdateStudi
     else parsedPayload.documentsSnapshot = body.documentsSnapshot as JsonRecord;
   }
   /////////////////////CHAGNES ENDED///////////////////////////////////
-  
+
   if (body.clientApproved !== undefined) {
     if (typeof body.clientApproved === "boolean") {
       parsedPayload.clientApproved = body.clientApproved;
@@ -504,6 +510,18 @@ export const parseUpdateStudioPayload = (body: unknown): ParseResult<UpdateStudi
 
   const pricingSettings = parsePercentageGroup(body.pricingSettings, errors);
   if (pricingSettings) parsedPayload.pricingSettings = pricingSettings;
+
+
+  //////////////////////////CHAGNES STARTED//////////////////////////
+  if (body.isFabricationCostEnabled !== undefined) {
+    if (typeof body.isFabricationCostEnabled === "boolean") {
+      parsedPayload.isFabricationCostEnabled = body.isFabricationCostEnabled;
+    } else {
+      errors.push("isFabricationCostEnabled must be true or false");
+    }
+  }
+  /////////////////////////////CHANGES ENDED//////////////////////////
+
 
   if (body.viewerSettings !== undefined) {
     if (!isRecord(body.viewerSettings)) {
@@ -573,7 +591,37 @@ export interface FloorPlanUploadPayload {
   extraction: FloorPlanExtractionPayload;
   rooms: JsonRecord[];
   version: number;
+  //////////////////////////CHAGNES STARTED//////////////////////////
+  /** Trade keys to leave out of the labour after this import (all trades: labour starts at ₹0). null: not sent. */
+  excludedTrades: string[] | null;
+  /////////////////////////////CHANGES ENDED//////////////////////////
+
 }
+
+
+//////////////////////////CHAGNES STARTED//////////////////////////
+/** Optional "excludedTrades" form field: a JSON array of trade keys. Not sent or unreadable -> null. */
+const parseExcludedTradesField = (rawValue: unknown, errors: string[]): string[] | null => {
+  if (rawValue === undefined || rawValue === null || rawValue === "") return null;
+  if (typeof rawValue !== "string") {
+    errors.push("excludedTrades must be a JSON array of trade keys");
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(rawValue) as unknown;
+    if (!Array.isArray(parsed)) {
+      errors.push("excludedTrades must be a JSON array of trade keys");
+      return null;
+    }
+    return [...new Set(parsed.filter((key): key is string => typeof key === "string" && key.length > 0).map((key) => key.slice(0, 60)))].slice(0, 50);
+  } catch {
+    errors.push("excludedTrades must be valid JSON");
+    return null;
+  }
+};
+/////////////////////////////CHANGES ENDED//////////////////////////
+
+
 
 const parseJsonField = (fieldName: string, rawValue: unknown, errors: string[]): unknown => {
   if (typeof rawValue !== "string") {
@@ -613,6 +661,11 @@ export const parseFloorPlanUploadPayload = (body: unknown): ParseResult<FloorPla
   const extractionJson = parseJsonField("extraction", body.extraction, errors);
   const roomsJson = parseJsonField("rooms", body.rooms, errors);
 
+  //////////////////////////CHAGNES STARTED//////////////////////////
+  const excludedTrades = parseExcludedTradesField(body.excludedTrades, errors);
+  /////////////////////////////CHANGES ENDED//////////////////////////
+
+
   let extraction: FloorPlanExtractionPayload | null = null;
   if (extractionJson !== undefined) {
     if (!isRecord(extractionJson)) errors.push("extraction must be an object");
@@ -650,6 +703,12 @@ export const parseFloorPlanUploadPayload = (body: unknown): ParseResult<FloorPla
       extraction,
       rooms: removeClientGeneratedIds(roomsJson) as JsonRecord[],
       version: versionNumber,
+
+      //////////////////////////CHAGNES STARTED//////////////////////////
+      excludedTrades,
+      /////////////////////////////CHANGES ENDED//////////////////////////
+
+
     },
   };
 };

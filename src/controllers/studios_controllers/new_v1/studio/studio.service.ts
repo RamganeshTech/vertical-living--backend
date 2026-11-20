@@ -1,3 +1,4 @@
+// my  version
 //studio.service.ts
 /**
  * Studio service: business logic and routes in one module (the routes call these handlers directly).
@@ -269,6 +270,39 @@ export const uploadFloorPlanAndSaveRooms = async (
         ? [...studio.toObject<IStudio>().rooms, ...payload.value.rooms]
         : payload.value.rooms;
     studio.set("rooms", roomsToSave);
+
+    //////////////////////////CHAGNES STARTED//////////////////////////
+    // A fresh floor plan (replace) starts with every labour trade excluded, carpentry included, so the labour is ₹0.
+    // The user ticks the trades they need in the Labour panel. Not done when appending rooms (the user's trade
+    // choices stay), or when the labour is frozen (price lock or client approval).
+    if (payload.value.importMode === "replace" && payload.value.excludedTrades && payload.value.excludedTrades.length > 0) {
+      const savedLabourPlan = (studio.toObject<IStudio>().labourPlan ?? null) as StudioLabourPlan | null;
+      const isLabourFrozen = Boolean(savedLabourPlan?.isFrozen || studio.priceLock?.isLocked || studio.clientApproved);
+      if (!isLabourFrozen) {
+        const savedSettings = savedLabourPlan?.settings;
+        const labourPlan: StudioLabourPlan = {
+          settings: {
+            siteFactorPercentage: savedSettings?.siteFactorPercentage ?? 0,
+            crewOverrides: { ...(savedSettings?.crewOverrides ?? {}) },
+            // The old rooms' units are gone, so their site/factory choices go too.
+            moduleRoutes: {},
+            startDate: savedSettings?.startDate ?? null,
+            targetDays: savedSettings?.targetDays ?? null,
+            excludedTrades: payload.value.excludedTrades,
+          },
+          // The old calculation was for the old rooms; the studio page works out the new one (₹0) and saves it.
+          latestRecord: null,
+          history: savedLabourPlan?.history ?? [],
+          isFrozen: false,
+          frozenAt: null,
+        };
+        studio.set("labourPlan", labourPlan);
+        studio.markModified("labourPlan");
+      }
+    }
+    /////////////////////////////CHANGES ENDED//////////////////////////
+
+
     recalculateStudioPricing(studio);
     studio.version += 1;
     studio.updatedBy = readUserId(request);
@@ -441,6 +475,18 @@ export const updateStudio = async (request: Request, response: StudioApiResponse
       sendError(response, 423, "Prices are locked for this quote. Unlock them to change rates or percentages.");
       return;
     }
+    //////////////////////////CHAGNES STARTED//////////////////////////
+    const isFabricationSwitchChanged = changes.isFabricationCostEnabled !== undefined && changes.isFabricationCostEnabled !== (studio.isFabricationCostEnabled !== false);
+    if (isPriceLocked && isFabricationSwitchChanged) {
+      sendError(response, 423, "Prices are locked for this quote. Unlock them to switch the fabrication cost on or off.");
+      return;
+    }
+    if (isFabricationSwitchChanged && !isPriceManager(request)) {
+      sendError(response, 403, "Only the owner or CTO or staff can switch the fabrication cost on or off.");
+      return;
+    }
+    /////////////////////////////CHANGES ENDED//////////////////////////
+
     if (!isPriceManager(request)) {
       const savedSettings = studio.pricingSettings;
       if (changes.studioRates && rateFingerprint(changes.studioRates) !== rateFingerprint(studio.toObject<IStudio>().studioRates)) {
@@ -487,6 +533,11 @@ export const updateStudio = async (request: Request, response: StudioApiResponse
         studio.set(`pricingSettings.${settingName}`, settingValue);
       }
     }
+    //////////////////////////CHAGNES STARTED//////////////////////////
+    // Quote tab switch; recalculateStudioPricing below zeroes the fabrication when it is off.
+    if (changes.isFabricationCostEnabled !== undefined) studio.isFabricationCostEnabled = changes.isFabricationCostEnabled;
+    /////////////////////////////CHANGES ENDED//////////////////////////
+
     if (changes.viewerSettings) {
       for (const [settingName, settingValue] of Object.entries(changes.viewerSettings)) {
         studio.set(`viewerSettings.${settingName}`, settingValue);
@@ -687,7 +738,7 @@ const PRICE_FIELD_NAMES = new Set([
   "labour",
   "wiring",
 
-   ///////////////////CHAGNES STARTED//////////////////////////////////
+  ///////////////////CHAGNES STARTED//////////////////////////////////
   "fabricationCost",
   "fabrication",
   "documentsSnapshot",
