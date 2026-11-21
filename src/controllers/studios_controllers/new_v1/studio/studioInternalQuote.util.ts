@@ -182,6 +182,8 @@ export interface InternalQuoteFromStudio {
   ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
   /** true = made from the 3D studio (field "fromInternalQuote" in the internal quote model). Typed quotes keep false. */
   fromInternalQuote: boolean;
+    gstPercent: number;
+
   ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
 
 }
@@ -212,6 +214,9 @@ export interface StudioToInternalQuoteResult {
     commonProfitPercentage: number;
     commonProfitAmount: number;
     grandTotal: number;
+        gstPercent: number;
+    gstAmount: number;
+    grandTotalWithGst: number;
     /**
      * Check against the studio (its total before adjustment and GST).
      * differenceFromStudio = internal quote - studio. commonMaterialProfitNotInStudio is the part of it that is
@@ -931,6 +936,8 @@ export const studioToInternalQuote = (studio: IStudio, options: { quoteNo?: stri
       ////////////////////////////////CHANGES STARTED/////////////////////////////////////////
       // Tells the internal quote and quote variant pages to read the studio board amount of each core row.
       fromInternalQuote: true,
+      gstPercent: toNumber(studio.pricingSettings?.gstPercentage),
+
       ///////////////////////////////CHANGES ENDED////////////////////////////////////////////////
 
       mainQuote: null,
@@ -964,7 +971,14 @@ export const studioToInternalQuote = (studio: IStudio, options: { quoteNo?: stri
       commonProfitPercentage,
       commonProfitAmount,
       grandTotal,
+      
+      gstPercent: toNumber(studio.pricingSettings?.gstPercentage),
+      gstAmount: Math.round((grandTotal * toNumber(studio.pricingSettings?.gstPercentage)) / 100),
+      grandTotalWithGst: grandTotal + Math.round((grandTotal * toNumber(studio.pricingSettings?.gstPercentage)) / 100),
+      
       studioSubtotal,
+
+
       commonMaterialProfitNotInStudio,
       // = commonMaterialProfitNotInStudio (plus a few rupees of rounding) when the studio was saved with the current pricing.
       differenceFromStudio: roundTwo(grandTotal - studioSubtotal),

@@ -365,6 +365,11 @@ const FurnitureItemSchema = new Schema<FurnitureItem>(
     hasUpholsteredHeadboard: { type: Boolean, default: false },
     isCustomSize: { type: Boolean, default: false },
     shutterFinishOverride: { type: MaterialSelectionSchema, default: null },
+     //////////////////////////////CHANGES STARTED////////////////////////////
+    // Design variation of the unit ("sliding", "pedestal", "tiltOut", …). null = the standard design.
+    designVariant: { type: String, trim: true, maxlength: 60, default: null },
+    ///////////////////////////////CHAGNES ENDED////////////////////////////////////
+    
     accessories: { type: [FurnitureAccessorySchema], default: [] },
     pricingMethod: enumField(FURNITURE_PRICING_METHODS, "computedFromPanels"),
     priceBreakdown: { type: [PriceBreakdownLineSchema], default: [] },

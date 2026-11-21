@@ -129,7 +129,7 @@ QuoteRouter.get(
 
 
 
-
+//  used to create quote variant from the quote variant 
 QuoteRouter.post(
   "/generatepdf/:quoteId/create",
   multiRoleAuthMiddleware("owner", "staff", "CTO"), // if needed

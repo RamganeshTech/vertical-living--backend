@@ -149,6 +149,7 @@ export const createVariantQuotePdfGenerator = async (req: Request, res: Response
       globalTransportation,
       globalProfitPercent,
       notes = null,
+      gstPercent,
       templateType = "type 1"
     } = req.body;
 
@@ -812,6 +813,7 @@ Complimentary Electrical Labour (Applicable for Projects Above ₹5,00,000)
       globalTransportation,
       globalProfitPercent,
 
+      gstPercent,
       grandTotal,
       notes,
       pdfLink: null,

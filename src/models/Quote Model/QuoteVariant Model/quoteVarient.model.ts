@@ -255,9 +255,15 @@ const QuoteVarientGenerateSchema = new mongoose.Schema<IQuoteVarientMain>({
     commonProfitOverride: { type: Number, default: 0 },
     globalTransportation: { type: Number, default: 0 },
     globalProfitPercent: { type: Number, default: 0 },
+  gstPercent: {type:Number, default : 0},
 
 
     grandTotal: { type: Number, default: 0 },
+
+      // the grand total doent include the gst amount, so in th efrontend we need to calcualted it according to the gst percentage
+      //  eg: grand total will be saved as 10000. and the gst is 10%
+      // so in the frontend it shoul have s a seprate state where it how 11000
+
     notes: { type: String, default: null },
     pdfLink: { type: uploadSchema, default: null },
     pdfType: { type: [pdfType], default: [], }

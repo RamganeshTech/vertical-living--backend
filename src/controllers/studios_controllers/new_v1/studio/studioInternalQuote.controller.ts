@@ -14,6 +14,11 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import StudioModel from "./studio.model";
+
+//////////////////////////////CHANGES STARTED////////////////////////////
+import StudioVariantModel from "../studioVariant/studioVariant.model";
+///////////////////////////////CHAGNES ENDED////////////////////////////////////
+
 import { multiRoleAuthMiddleware } from "./studio.crmImports";
 import type { IStudio } from "./studio.types";
 import { studioToInternalQuote } from "./studioInternalQuote.util";
@@ -31,23 +36,54 @@ const sendError = (response: Response, statusCode: number, message: string, erro
 const readParameter = (parameterValue: string | string[] | undefined): string | undefined =>
   Array.isArray(parameterValue) ? parameterValue[0] : parameterValue;
 
+
+//////////////////////////////CHANGES STARTED////////////////////////////
+/** Where the internal quote is made from: a saved studio, or a saved variation (StudioVariantModel, same schema). */
+type InternalQuoteSource = "studio" | "variant";
+///////////////////////////////CHAGNES ENDED////////////////////////////////////
+
 /** The saved studio of this organisation, or null after sending the error response. */
-const loadStudio = async (request: Request, response: Response): Promise<IStudio | null> => {
+// const loadStudio = async (request: Request, response: Response): Promise<IStudio | null> => {
+//   const organizationId = readParameter(request.params.organizationId);
+//   const studioId = readParameter(request.params.studioId);
+
+
+//////////////////////////////CHANGES STARTED////////////////////////////
+// A variation is read from StudioVariantModel by :variantId; it has the studio's schema, so it converts the same way.
+const loadStudio = async (request: Request, response: Response, source: InternalQuoteSource = "studio"): Promise<IStudio | null> => {
   const organizationId = readParameter(request.params.organizationId);
-  const studioId = readParameter(request.params.studioId);
+  const studioId = readParameter(source === "variant" ? request.params.variantId : request.params.studioId);
+///////////////////////////////CHAGNES ENDED////////////////////////////////////
+
   if (!organizationId || !mongoose.isValidObjectId(organizationId)) {
     sendError(response, 400, "Invalid organization ID");
     return null;
   }
+  // if (!studioId || !mongoose.isValidObjectId(studioId)) {
+  //   sendError(response, 400, "Invalid studio ID");
+  //   return null;
+  // }
+  // const studio = await StudioModel.findOne({ _id: studioId, organizationId }).lean<IStudio>();
+  // if (!studio) {
+  //   sendError(response, 404, "Studio not found for this organization");
+  //   return null;
+  // }
+
+  
+  //////////////////////////////CHANGES STARTED////////////////////////////
   if (!studioId || !mongoose.isValidObjectId(studioId)) {
-    sendError(response, 400, "Invalid studio ID");
+    sendError(response, 400, source === "variant" ? "Invalid variation ID" : "Invalid studio ID");
     return null;
   }
-  const studio = await StudioModel.findOne({ _id: studioId, organizationId }).lean<IStudio>();
+  const studio = source === "variant"
+    ? await StudioVariantModel.findOne({ _id: studioId, organizationId }).lean<IStudio>()
+    : await StudioModel.findOne({ _id: studioId, organizationId }).lean<IStudio>();
   if (!studio) {
-    sendError(response, 404, "Studio not found for this organization");
+    sendError(response, 404, source === "variant" ? "Variation not found for this organization" : "Studio not found for this organization");
     return null;
   }
+  ///////////////////////////////CHAGNES ENDED////////////////////////////////////
+
   return studio;
 };
 
@@ -67,9 +103,17 @@ const getNextQuoteNumber = async (InternalQuoteEntryModel: mongoose.Model<any>, 
 };
 
 /** GET: what the internal quote would hold. Saves nothing. */
-export const previewInternalQuoteFromStudio = async (request: Request, response: Response): Promise<void> => {
+// export const previewInternalQuoteFromStudio = async (request: Request, response: Response): Promise<void> => {
+//   try {
+//     const studio = await loadStudio(request, response);
+
+
+//////////////////////////////CHANGES STARTED////////////////////////////
+const previewInternalQuoteFrom = (source: InternalQuoteSource) => async (request: Request, response: Response): Promise<void> => {
   try {
-    const studio = await loadStudio(request, response);
+    const studio = await loadStudio(request, response, source);
+///////////////////////////////CHAGNES ENDED////////////////////////////////////
+
     if (!studio) return;
     // sendSuccess(response, 200, "Internal quote preview from the studio", studioToInternalQuote(studio));
 
@@ -86,9 +130,16 @@ export const previewInternalQuoteFromStudio = async (request: Request, response:
 };
 
 /** POST: creates the internal quote from the saved studio. */
-export const createInternalQuoteFromStudio = async (request: Request, response: Response): Promise<void> => {
+// export const createInternalQuoteFromStudio = async (request: Request, response: Response): Promise<void> => {
+//   try {
+//     const studio = await loadStudio(request, response);
+
+//////////////////////////////CHANGES STARTED////////////////////////////
+const createInternalQuoteFrom = (source: InternalQuoteSource) => async (request: Request, response: Response): Promise<void> => {
   try {
-    const studio = await loadStudio(request, response);
+    const studio = await loadStudio(request, response, source);
+///////////////////////////////CHAGNES ENDED////////////////////////////////////
+
     if (!studio) return;
     if (!mongoose.modelNames().includes(INTERNAL_QUOTE_MODEL_NAME)) {
       sendError(response, 500, `The internal quote model "${INTERNAL_QUOTE_MODEL_NAME}" is not loaded. Import the internal quote model file once before the studio routes.`);
@@ -109,7 +160,10 @@ export const createInternalQuoteFromStudio = async (request: Request, response: 
       return;
     }
     const createdQuote = await InternalQuoteModel.create(converted.quote);
-    sendSuccess(response, 201, `Internal quote ${quoteNo} created from studio ${studio.quoteNo}`, {
+    // sendSuccess(response, 201, `Internal quote ${quoteNo} created from studio ${studio.quoteNo}`, {
+     //////////////////////////////CHANGES STARTED////////////////////////////
+    sendSuccess(response, 201, `Internal quote ${quoteNo} created from ${source === "variant" ? "variation" : "studio"} ${studio.quoteNo}`, {
+    ///////////////////////////////CHAGNES ENDED////////////////////////////////////
       quote: createdQuote,
       warnings: converted.warnings,
       summary: converted.summary,
@@ -127,8 +181,24 @@ export const createInternalQuoteFromStudio = async (request: Request, response: 
 /** Same roles as the studio editor. Mounted inside the Studio routes (see studio.service.ts). */
 const studioInternalQuoteRoles = multiRoleAuthMiddleware("owner", "staff", "CTO");
 
+// const StudioInternalQuoteRoutes = Router({ mergeParams: true });
+// StudioInternalQuoteRoutes.get("/", studioInternalQuoteRoles, previewInternalQuoteFromStudio);
+// StudioInternalQuoteRoutes.post("/", studioInternalQuoteRoles, createInternalQuoteFromStudio);
+
+//////////////////////////////CHANGES STARTED////////////////////////////
+export const previewInternalQuoteFromStudio = previewInternalQuoteFrom("studio");
+export const createInternalQuoteFromStudio = createInternalQuoteFrom("studio");
+export const previewInternalQuoteFromVariant = previewInternalQuoteFrom("variant");
+export const createInternalQuoteFromVariant = createInternalQuoteFrom("variant");
+
 const StudioInternalQuoteRoutes = Router({ mergeParams: true });
 StudioInternalQuoteRoutes.get("/", studioInternalQuoteRoles, previewInternalQuoteFromStudio);
 StudioInternalQuoteRoutes.post("/", studioInternalQuoteRoles, createInternalQuoteFromStudio);
+
+/** Mounted in studioVariant.routes.ts at "/:organizationId/:variantId/internal-quote". */
+export const StudioVariantInternalQuoteRoutes = Router({ mergeParams: true });
+StudioVariantInternalQuoteRoutes.get("/", studioInternalQuoteRoles, previewInternalQuoteFromVariant);
+StudioVariantInternalQuoteRoutes.post("/", studioInternalQuoteRoles, createInternalQuoteFromVariant);
+///////////////////////////////CHAGNES ENDED////////////////////////////////////
 
 export default StudioInternalQuoteRoutes;

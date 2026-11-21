@@ -344,6 +344,11 @@ export interface FurnitureItem extends PricedFields {
   shutterFinishOverride: MaterialSelection | null;
   accessories: FurnitureAccessory[];
   materialOverrides?: FurnitureMaterials | null;
+  //////////////////////////////CHANGES STARTED////////////////////////////
+  /** Design variation of the unit ("sliding", "pedestal", …). null = the standard design. */
+  designVariant?: string | null;
+  ///////////////////////////////CHAGNES ENDED////////////////////////////////////
+
 
   pricingMethod: FurniturePricingMethod;
   priceBreakdown: PriceBreakdownLine[];

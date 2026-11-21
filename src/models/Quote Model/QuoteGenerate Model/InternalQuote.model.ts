@@ -175,6 +175,7 @@ export interface IMaterialQuote extends Document {
   commonProfitOverride: number,
   globalTransportation: number
   globalProfitPercent: number
+  gstPercent: number;
   quoteCategory: string | null,
   grandTotal: number;
   notes?: string | null;
@@ -434,6 +435,11 @@ const InternalQuoteSchema = new mongoose.Schema<IMaterialQuote>({
   mainQuote: { type: mainQuote, default: null }, //this is for not normal quote, this is for advanced quote version 
 
   grandTotal: { type: Number, default: 0 },
+   // the grand total doent include the gst amount, so in th efrontend we need to calcualted it according to the gst percentage
+  //  eg: grand total will be saved as 10000. and the gst is 10%
+  // so in the frontend it shoul have s a seprate state where it how 11000 
+
+  gstPercent: {type:Number, default : 0},
   notes: { type: String, default: null },
 
   isProductSpecific: { type: Boolean, default: false }
