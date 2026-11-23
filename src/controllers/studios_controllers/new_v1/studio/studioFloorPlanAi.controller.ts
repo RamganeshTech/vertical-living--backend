@@ -34,7 +34,11 @@ const ROOM_KINDS = ["living", "dining", "kitchen", "bedroom", "kidsRoom", "bathr
 const FURNITURE_TYPES = [
   "wardrobe", "kingBedWithStorage", "queenBedWithStorage", "singleBedWithStorage", "bedsideTable", "dressingUnit",
   "tvUnit", "bookshelf", "crockeryUnit", "poojaUnit", "shoeRack", "seatingBench", "mirrorPanel", "studyTable",
-  "sinkUnit", "baseUnit", "drawerUnit", "tallStorageUnit", "wallUnit", "loft", "openWallShelf",
+  //////////////////////////////CHANGES STARTED////////////////////////////
+  // "sinkUnit", "baseUnit", "drawerUnit", "tallStorageUnit", "wallUnit", "loft", "openWallShelf",
+  "sinkUnit", "baseUnit", "drawerUnit", "tallStorageUnit", "wallUnit", "loft", "openWallShelf", "swingUnit",
+///////////////////////////////CHAGNES ENDED////////////////////////////////////
+
 ];
 
 
