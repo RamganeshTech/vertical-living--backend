@@ -28,7 +28,8 @@ import { multiRoleAuthMiddleware } from "./studio.crmImports";
 const MAXIMUM_IMAGE_BYTES = 30 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const DEFAULT_MODEL = "gemini-3.8-flash";
-const ROOM_KINDS = ["living", "dining", "kitchen", "bedroom", "kidsRoom", "bathroom", "balcony", "utility", "pooja", "toilet", "foyer", "study", "other"];
+const ROOM_KINDS = ["living", "dining", "kitchen", "bedroom", "kidsRoom", "bathroom", "balcony",
+   "utility", "pooja", "toilet", "foyer", "study", "lift", "other"];
 /** Keys of FURNITURE_CATALOG in the frontend (catalog/furnitureCatalog.ts). Only modular furniture. */
 const FURNITURE_TYPES = [
   "wardrobe", "kingBedWithStorage", "queenBedWithStorage", "singleBedWithStorage", "bedsideTable", "dressingUnit",
@@ -96,10 +97,12 @@ ROOMS
 - name: the room name exactly as written (e.g. "M.BED", "BED ROOM-2", "KITCHEN", "TOILET", "FOYER", "SIT-OUT", "DRESS", "POOJA", "STORE"). If a space has no name but is clearly a room, give a short name ("Room").
 - Return each named space as its own room even when it is open to another one (a FOYER, DINING or PASSAGE separated from the LIVING only by an opening or dashed line is still its own room).
 - roomKind: one of ${ROOM_KINDS.join(", ")}.
+
 - sizeText: the room size exactly as written as ONE label inside or under the room name (e.g. 12'0" X 14'0", 3600 X 4200, 3.6 X 4.2). Empty string when there is no such label. Never invent it.
 - widthMm / depthMm: the room's inside size in millimetres, width = the horizontal side on the page, depth = the vertical side. Take it from the size label, or, when there is no label, from the room's OWN dimension lines (the figures written along the arrows that run wall to wall inside that room, e.g. 1.50 and 1.35 in metres = 1500 and 1350). Use 0 only when neither is written. Never estimate a size by eye.
 - box_2d: [ymin, xmin, ymax, xmax] of the room's inside (inner face of wall to inner face of wall, not the wall centre and not the label), normalised to 0-1000 of the image. Boxes of rooms next to each other must not overlap; an open passage between two rooms belongs to neither box.
-Do not return stairs, lifts, ducts, shafts, the plot, roads, setbacks, title block, legends or the door/window schedule as rooms.
+- A LIFT / elevator shaft is a room too: roomKind "lift", name as written (e.g. "LIFT"), sizeText/widthMm/depthMm from its label same as any other room, box_2d around its inner walls.
+Do not return stairs, ducts, shafts, the plot, roads, setbacks, title block, legends or the door/window schedule as rooms.
 
 OPENINGS (every door, window, ventilator and open passage in the flat)
 - code: the tag exactly as written next to it (e.g. "D1", "MD", "W2", "KW", "V", "OP0"). Empty string when it has no tag.

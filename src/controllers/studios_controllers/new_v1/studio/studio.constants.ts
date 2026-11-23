@@ -28,6 +28,7 @@ export const ROOM_KINDS = [
   "utility",
   "bathroom",
   "balcony",
+   "lift",
   "other",
 ] as const;
 
